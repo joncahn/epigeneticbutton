@@ -1,0 +1,47 @@
+name: epigeneticbutton
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core bioinformatics tools
+  - bedtools
+  - bowtie2
+  - cutadapt
+  - deeptools
+  - fastqc
+  - homer
+  - idr
+  - kentutils
+  - macs2
+  - meme
+  - multiqc
+  - sra-tools
+  - pigz
+  - samtools
+  - seqkit
+  - shortstack
+  - star
+  - wget
+
+  # R and R packages
+  - r-base
+  - r-dplyr
+  - r-tidyr
+  - r-ggplot2
+  - r-cowplot
+  - r-rcolorbrewer
+  - bioconductor-annotationforge
+  - bioconductor-rrvgo
+  - bioconductor-topgo
+  - r-purrr
+  - bioconductor-limma
+  - bioconductor-edger
+  - r-stringr
+  - r-complexupset
+
+  # Python packages
+  - python
+  - snakemake
+  - pandas
+  - pyyaml 
