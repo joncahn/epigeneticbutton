@@ -1,0 +1,41 @@
+# Path to the sample metadata file
+sample_file: "samples.tsv"
+
+# Path to the directory containing reference genomes
+ref_path: "path/to/reference/genomes"
+
+# Path to the scripts directory
+scripts_dir: "scripts"
+
+# Mapping parameters
+mapping:
+  default:
+    threads: 8
+    memory: "16G"
+  colcen:
+    threads: 8
+    memory: "16G"
+    k: 100
+  colcenall:
+    threads: 8
+    memory: "16G"
+    k: 100
+    mapq: 10
+  all:
+    threads: 8
+    memory: "16G"
+    mapq: 10
+
+# Analysis parameters
+analysis:
+  mark_of_interest: "H3K27ac"  # Default histone mark to focus on
+  perform_analysis: true       # Whether to perform the complete analysis
+  perform_combined: true       # Whether to perform combined analysis per line
+  perform_heatmaps: true       # Whether to generate heatmaps with deeptools
+  perform_te_analysis: false   # Whether to perform TE analysis (takes long time)
+
+# Resource allocation
+resources:
+  threads: 8
+  memory: "16G"
+  tmp_space: "10G" 
