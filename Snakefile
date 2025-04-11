@@ -111,16 +111,15 @@ rule process_sample:
             -r {wildcards.replicate} \
             -d {wildcards.data_type} \
             -g {wildcards.ref_genome} > {log} 2>&1
+        touch {output.chkpt}
         """
 
 # Rule to perform data type specific analysis
 rule analyze_data_type:
     input:
-        # Inputs will be defined based on data type
-        pass
+        ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     output:
-        # Outputs will be defined based on data type
-        pass
+        chkpt = "chkpts/analysis_{data_type}_{sample}_{replicate}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
@@ -135,16 +134,15 @@ rule analyze_data_type:
             -p {config["ref_path"]} \
             -r {wildcards.ref_genome} \
             -d {wildcards.data_type} > {log} 2>&1
+        touch {output.chkpt}
         """
 
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        # Inputs will be defined based on data types
-        pass
+        ref_chkpt = "chkpts/analysis_{data_type}_{sample}_{replicate}.done"
     output:
-        # Outputs will be defined based on analysis type
-        pass
+        chkpt = "chkpts/combined_analysis.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
@@ -157,4 +155,5 @@ rule combined_analysis:
         {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {input.sample_file} \
             -p {config["ref_path"]} > {log} 2>&1
+        touch {output.chkpt}
         """ 
