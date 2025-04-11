@@ -48,16 +48,6 @@ conda env create -f environment.yaml
 conda activate epigeneticbutton
 ```
 
-For faster environment resolution, you can use mamba instead of conda:
-```bash
-# Install mamba in your base environment
-conda install -n base -c conda-forge mamba
-
-# Create the environment using mamba
-mamba env create -f environment.yaml
-mamba activate epigeneticbutton
-```
-
 ## Usage
 
 ### Configuration
