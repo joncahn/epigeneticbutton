@@ -96,8 +96,7 @@ rule process_sample:
     input:
         ref_chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
     output:
-        # Outputs will be defined based on data type
-        pass
+        chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
@@ -108,10 +107,10 @@ rule process_sample:
         """
         # Call the appropriate sample processing script based on data type
         {params.scripts_dir}/MaizeCode_{wildcards.data_type}_sample.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
+            -s {wildcards.sample} \
+            -r {wildcards.replicate} \
+            -d {wildcards.data_type} \
+            -g {wildcards.ref_genome} > {log} 2>&1
         """
 
 # Rule to perform data type specific analysis

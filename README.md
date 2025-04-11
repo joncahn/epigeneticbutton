@@ -42,12 +42,6 @@ git clone https://github.com/joncahn/epigeneticbutton.git
 cd epigeneticbutton
 ```
 
-2. Install dependencies using conda:
-```bash
-conda env create -f environment.yaml
-conda activate epigeneticbutton
-```
-
 ## Usage
 
 ### Configuration
@@ -71,9 +65,26 @@ conda activate epigeneticbutton
 
 ### Running the Pipeline
 
+To run the pipeline locally:
 ```bash
 snakemake --cores <N> --configfile config.yaml
 ```
+
+To run the pipeline on a HPC using qsub:
+```bash
+qsub -V -cwd -pe threads 20 -l m_mem_free=8G -l tmp_free=16G -o pipeline.log -j y -N epigeneticbutton <<-'EOF'
+#!/bin/bash
+snakemake --use-conda --cores 20 --configfile config.yaml
+EOF
+```
+
+This qsub command:
+- Requests 20 threads
+- Allocates 8GB of memory
+- Allocates 16GB of temporary storage
+- Outputs logs to pipeline.log
+- Uses the conda environment
+- Runs snakemake with 20 cores
 
 ### Output Structure
 
