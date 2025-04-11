@@ -42,10 +42,20 @@ git clone https://github.com/joncahn/epigeneticbutton.git
 cd epigeneticbutton
 ```
 
-2. Install dependencies:
+2. Install dependencies using conda:
 ```bash
 conda env create -f environment.yaml
 conda activate epigeneticbutton
+```
+
+For faster environment resolution, you can use mamba instead of conda:
+```bash
+# Install mamba in your base environment
+conda install -n base -c conda-forge mamba
+
+# Create the environment using mamba
+mamba env create -f environment.yaml
+mamba activate epigeneticbutton
 ```
 
 ## Usage
@@ -137,7 +147,7 @@ See the [LICENSE](LICENSE) file for full details.
 If you use EpigeneticButton in your research, please cite:
 
 ```
-[Citation information to be added]
+Cahn, J., Regulski, M., Lynn, J. et al. MaizeCODE reveals bi-directionally expressed enhancers that harbor molecular signatures of maize domestication. Nat Commun 15, 10854 (2024). https://doi.org/10.1038/s41467-024-55195-w
 ```
 
 ## Contact
