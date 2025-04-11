@@ -1,0 +1,16 @@
+name: tf_analysis
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - bowtie2=2.4.2
+  - samtools=1.11
+  - bedtools=2.29.2
+  - macs2=2.2.7.1
+  - deeptools=3.5.1
+  - idr=2.0.4.2
+  - homer=4.11.1
+  - pigz=2.6
+  - meme=5.3.3 

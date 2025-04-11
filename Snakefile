@@ -79,6 +79,8 @@ rule prepare_reference:
         ref_path = config["ref_path"]
     log:
         "logs/prepare_ref_{ref_genome}_{data_type}.log"
+    conda:
+        "envs/reference.yaml"
     shell:
         """
         # Call the original environment preparation script
@@ -100,6 +102,8 @@ rule process_sample:
         scripts_dir = config["scripts_dir"]
     log:
         "logs/process_{data_type}_{sample}_{replicate}.log"
+    conda:
+        "envs/{data_type}_sample.yaml"
     shell:
         """
         # Call the appropriate sample processing script based on data type
@@ -122,6 +126,8 @@ rule analyze_data_type:
         scripts_dir = config["scripts_dir"]
     log:
         "logs/analyze_{data_type}.log"
+    conda:
+        "envs/{data_type}_analysis.yaml"
     shell:
         """
         # Call the appropriate analysis script based on data type
@@ -144,6 +150,8 @@ rule combined_analysis:
         scripts_dir = config["scripts_dir"]
     log:
         "logs/combined_analysis.log"
+    conda:
+        "envs/combined.yaml"
     shell:
         """
         # Call the combined analysis script

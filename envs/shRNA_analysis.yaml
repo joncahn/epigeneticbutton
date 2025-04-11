@@ -1,0 +1,10 @@
+name: shrna_analysis
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - samtools=1.11
+  - deeptools=3.5.1
+  - shortstack=3.8.5 
