@@ -57,7 +57,7 @@ rule create_data_type_directories:
 		expand("{data_type}/plots", data_type=DATA_TYPES)
 	shell:
 		"""
-		for data_type in {DATA_TYPES}; do
+		for data_type in "{DATA_TYPES}"; do
 			mkdir -p ${data_type}/fastq
 			mkdir -p ${data_type}/mapped
 			mkdir -p ${data_type}/tracks
