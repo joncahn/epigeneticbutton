@@ -213,5 +213,5 @@ fi
 rm -f ${ref_dir}/temp_${datatype}*
 
 printf "\nScript finished successfully!\n"
-touch ${datatype}/chkpts/env_${ref}
+
 

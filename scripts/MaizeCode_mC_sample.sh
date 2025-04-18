@@ -266,4 +266,3 @@ else
 fi
 
 printf "\nScript finished successfully!\n"
-touch chkpts/${name}_${ref}

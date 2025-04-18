@@ -2369,4 +2369,3 @@ fi
 ####################
 
 printf "\nCombined analysis script finished successfully for ${analysisname}\n"
-touch combined/chkpts/analysis_${analysisname}

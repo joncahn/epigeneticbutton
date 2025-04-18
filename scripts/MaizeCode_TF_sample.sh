@@ -211,4 +211,3 @@ allmap=$((multi+single))
 awk -v OFS="\t" -v l=$line -v t=$tmp -v m=$chip -v r=$rep -v g=$ref -v a=$tot -v b=$filt -v c=$allmap -v d=$single 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> reports/summary_mapping_stats.txt
 
 printf "\nScript finished successfully!\n"
-touch chkpts/${name}_${ref}

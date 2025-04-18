@@ -259,7 +259,5 @@ else
 	exit 1
 fi
 
-
 printf "\nScript finished successfully!\n"
-touch chkpts/${name}_${ref}
 

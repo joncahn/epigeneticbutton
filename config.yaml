@@ -1,3 +1,6 @@
+# Name of analysis
+analysis_name: "test_snakemake"
+
 # Path to the sample metadata file
 sample_file: "samples.tsv"
 
