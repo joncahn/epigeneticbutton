@@ -42,9 +42,9 @@ git clone https://github.com/joncahn/epigeneticbutton.git
 cd epigeneticbutton
 ```
 
-2. Install snakemake
+2. Install snakemake:
 ```bash
-conda install snakemake
+conda install -c bioconda snakemake
 ```
 
 ## Usage
