@@ -123,7 +123,7 @@ rule analyze_data_type:
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/analyze_{data_type}.log"
+        "logs/analyze_{data_type}_{sample}_{replicate}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
