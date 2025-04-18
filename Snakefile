@@ -44,6 +44,30 @@ for data_type in DATA_TYPES:
         "plots": f"{data_type}/plots"
     }
 
+
+# Rule to create data type-specific directories
+rule create_data_type_directories:
+	output:
+		expand("{data_type}/fastq", data_type=DATA_TYPES),
+		expand("{data_type}/mapped", data_type=DATA_TYPES),
+		expand("{data_type}/tracks", data_type=DATA_TYPES),
+		expand("{data_type}/reports", data_type=DATA_TYPES),
+		expand("{data_type}/logs", data_type=DATA_TYPES),
+		expand("{data_type}/chkpts", data_type=DATA_TYPES),
+		expand("{data_type}/plots", data_type=DATA_TYPES)
+	shell:
+		"""
+		for data_type in {DATA_TYPES}; do
+			mkdir -p ${data_type}/fastq
+			mkdir -p ${data_type}/mapped
+			mkdir -p ${data_type}/tracks
+			mkdir -p ${data_type}/reports
+			mkdir -p ${data_type}/logs
+			mkdir -p ${data_type}/chkpts
+			mkdir -p ${data_type}/plots
+		done
+		"""
+
 # Create all directories
 rule create_directories:
     output:
