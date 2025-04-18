@@ -57,7 +57,7 @@ rule create_data_type_directories:
 		expand("{data_type}/plots", data_type=DATA_TYPES)
 	shell:
 		"""
-		for data_type in "{DATA_TYPES}"; do
+		for data_type in {data_types}; do
 			mkdir -p ${data_type}/fastq
 			mkdir -p ${data_type}/mapped
 			mkdir -p ${data_type}/tracks
@@ -66,7 +66,7 @@ rule create_data_type_directories:
 			mkdir -p ${data_type}/chkpts
 			mkdir -p ${data_type}/plots
 		done
-		"""
+		""".format(data_types=" ".join(DATA_TYPES))
 
 # Create all directories
 rule create_directories:
