@@ -18,6 +18,9 @@ REF_GENOMES = set(samples["ref_genome"].unique())
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
 
+# Define label for the analysis
+analysis_name = config["analysis_name"]
+
 # Define output directories
 DIRS = {
     "chkpts": "chkpts",
@@ -57,7 +60,7 @@ create_directories(DATA_TYPES, DIRS)
 # Rule all to specify final target
 rule all:
 	input:
-		combined/plots/all_genes_{config.analysis_name}_heatmap_regions.pdf
+		chkpts/combined_analysis.done
 
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
@@ -109,11 +112,11 @@ rule analyze_ChIP:
     input:
         ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     output:
-        chkpt = "chkpts/analysis_ChIP_{config.analysis_name}.done"
+        chkpt = "chkpts/analysis_ChIP_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/analysis_ChIP_{config.analysis_name}.log"
+        "logs/analysis_ChIP_{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -132,11 +135,11 @@ rule analyze_RNA:
     input:
         ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     output:
-        chkpt = "chkpts/analysis_RNA_{config.analysis_name}.done"
+        chkpt = "chkpts/analysis_RNA_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/analysis_RNA_{config.analysis_name}.log"
+        "logs/analysis_RNA_{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -155,11 +158,11 @@ rule analyze_TF:
     input:
         ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     output:
-        chkpt = "chkpts/analysis_TF_{config.analysis_name}.done"
+        chkpt = "chkpts/analysis_TF_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/analysis_TF_{config.analysis_name}.log"
+        "logs/analysis_TF_{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -178,11 +181,11 @@ rule analyze_mC:
     input:
         ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     output:
-        chkpt = "chkpts/analysis_mC_{config.analysis_name}.done"
+        chkpt = "chkpts/analysis_mC_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/analysis_mC_{config.analysis_name}.log"
+        "logs/analysis_mC_{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -200,7 +203,7 @@ rule analyze_mC:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        ref_chkpt = "chkpts/analysis_{data_type}_{config.analysis_name}.done"
+        ref_chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     output:
         chkpt = "chkpts/combined_analysis.done"
     params:
