@@ -54,6 +54,11 @@ def create_directories(data_types, dirs):
 # Call the function to create directories
 create_directories(DATA_TYPES, DIRS)
 
+# Rule all to specify final target
+rule all:
+	input:
+		combined/plots/all_genes_{config.analysis_name}_heatmap_regions.pdf
+
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
     input:
