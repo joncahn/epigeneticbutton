@@ -17,8 +17,6 @@ REF_GENOMES = set(samples["ref_genome"].unique())
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
 
-print(DATA_TYPES)
-
 # Define output directories
 DIRS = {
     "chkpts": "chkpts",
@@ -46,28 +44,26 @@ for data_type in DATA_TYPES:
         "plots": f"{data_type}/plots"
     }
 
-print(DIRS)
-
 # Rule to create data type-specific directories
 rule create_data_type_directories:
 	output:
-		expand("{data_type}/fastq", data_type=DATA_TYPES),
-		expand("{data_type}/mapped", data_type=DATA_TYPES),
-		expand("{data_type}/tracks", data_type=DATA_TYPES),
-		expand("{data_type}/reports", data_type=DATA_TYPES),
-		expand("{data_type}/logs", data_type=DATA_TYPES),
-		expand("{data_type}/chkpts", data_type=DATA_TYPES),
-		expand("{data_type}/plots", data_type=DATA_TYPES)
+		expand("{data_type_fold}/fastq", data_type_fold=DATA_TYPES),
+		expand("{data_type_fold}/mapped", data_type_fold=DATA_TYPES),
+		expand("{data_type_fold}/tracks", data_type_fold=DATA_TYPES),
+		expand("{data_type_fold}/reports", data_type_fold=DATA_TYPES),
+		expand("{data_type_fold}/logs", data_type_fold=DATA_TYPES),
+		expand("{data_type_fold}/chkpts", data_type_fold=DATA_TYPES),
+		expand("{data_type_fold}/plots", data_type_fold=DATA_TYPES)
 	shell:
 		"""
-		for data_type in {data_types}; do
-			mkdir -p ${data_type}/fastq
-			mkdir -p ${data_type}/mapped
-			mkdir -p ${data_type}/tracks
-			mkdir -p ${data_type}/reports
-			mkdir -p ${data_type}/logs
-			mkdir -p ${data_type}/chkpts
-			mkdir -p ${data_type}/plots
+		for data_type_fold in {data_types}; do
+			mkdir -p ${data_type_fold}/fastq
+			mkdir -p ${data_type_fold}/mapped
+			mkdir -p ${data_type_fold}/tracks
+			mkdir -p ${data_type_fold}/reports
+			mkdir -p ${data_type_fold}/logs
+			mkdir -p ${data_type_fold}/chkpts
+			mkdir -p ${data_type_fold}/plots
 		done
 		""".format(data_types=" ".join(DATA_TYPES))
 
