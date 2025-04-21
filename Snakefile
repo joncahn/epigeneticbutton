@@ -32,65 +32,26 @@ DIRS = {
     }
 }
 
-# Create output directories
-for data_type in DATA_TYPES:
-    DIRS[data_type] = {
-        "fastq": f"{data_type}/fastq",
-        "mapped": f"{data_type}/mapped",
-        "tracks": f"{data_type}/tracks",
-        "reports": f"{data_type}/reports",
-        "logs": f"{data_type}/logs",
-        "chkpts": f"{data_type}/chkpts",
-        "plots": f"{data_type}/plots"
-    }
+# Function to create directories
+def create_directories(data_types, dirs):
+    for data_type in data_types:
+        os.makedirs(f"{data_type}/fastq", exist_ok=True)
+        os.makedirs(f"{data_type}/mapped", exist_ok=True)
+        os.makedirs(f"{data_type}/tracks", exist_ok=True)
+        os.makedirs(f"{data_type}/reports", exist_ok=True)
+        os.makedirs(f"{data_type}/logs", exist_ok=True)
+        os.makedirs(f"{data_type}/chkpts", exist_ok=True)
+        os.makedirs(f"{data_type}/plots", exist_ok=True)
+    
+    for key, value in dirs.items():
+        if isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                os.makedirs(sub_value, exist_ok=True)
+        else:
+            os.makedirs(value, exist_ok=True)
 
-# Rule to create data type-specific directories
-rule create_data_type_directories:
-	output:
-		expand("{data_type_fold}/fastq", data_type_fold=DATA_TYPES),
-		expand("{data_type_fold}/mapped", data_type_fold=DATA_TYPES),
-		expand("{data_type_fold}/tracks", data_type_fold=DATA_TYPES),
-		expand("{data_type_fold}/reports", data_type_fold=DATA_TYPES),
-		expand("{data_type_fold}/logs", data_type_fold=DATA_TYPES),
-		expand("{data_type_fold}/chkpts", data_type_fold=DATA_TYPES),
-		expand("{data_type_fold}/plots", data_type_fold=DATA_TYPES)
-	shell:
-		"""
-		for data_type_fold in {data_types}; do
-			mkdir -p ${data_type_fold}/fastq
-			mkdir -p ${data_type_fold}/mapped
-			mkdir -p ${data_type_fold}/tracks
-			mkdir -p ${data_type_fold}/reports
-			mkdir -p ${data_type_fold}/logs
-			mkdir -p ${data_type_fold}/chkpts
-			mkdir -p ${data_type_fold}/plots
-		done
-		""".format(data_types=" ".join(DATA_TYPES))
-
-# Create all directories
-rule create_directories:
-    output:
-        directory("chkpts"),
-        directory("combined/peaks"),
-        directory("combined/DEG"),
-        directory("combined/TSS"),
-        directory("combined/reports"),
-        directory("combined/matrix"),
-        directory("combined/plots"),
-        directory("combined/chkpts"),
-        directory("combined/logs")
-    shell:
-        """
-        mkdir -p chkpts
-        mkdir -p combined/peaks
-        mkdir -p combined/DEG
-        mkdir -p combined/TSS
-        mkdir -p combined/reports
-        mkdir -p combined/matrix
-        mkdir -p combined/plots
-        mkdir -p combined/chkpts
-        mkdir -p combined/logs
-        """
+# Call the function to create directories
+create_directories(DATA_TYPES, DIRS)
 
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
