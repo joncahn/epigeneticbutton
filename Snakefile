@@ -60,7 +60,7 @@ create_directories(DATA_TYPES, DIRS)
 # Rule all to specify final target
 rule all:
 	input:
-		chkpts/combined_analysis.done
+		"chkpts/combined_analysis.done"
 
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
