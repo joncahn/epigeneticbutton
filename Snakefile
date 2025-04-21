@@ -11,6 +11,10 @@ samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
                      names=["data_type", "line", "tissue", "sample", "replicate", 
                            "seq_id", "fastq_path", "paired", "ref_genome"])
 
+# Add print statements to debug
+print(samples.head())
+print(samples.columns)
+
 # Define reference genomes
 REF_GENOMES = set(samples["ref_genome"].unique())
 
