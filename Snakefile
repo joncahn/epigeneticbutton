@@ -11,15 +11,13 @@ samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
                      names=["data_type", "line", "tissue", "sample", "replicate", 
                            "seq_id", "fastq_path", "paired", "ref_genome"])
 
-# Add print statements to debug
-print(samples.head())
-print(samples.columns)
-
 # Define reference genomes
 REF_GENOMES = set(samples["ref_genome"].unique())
 
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
+
+print(DATA_TYPES)
 
 # Define output directories
 DIRS = {
@@ -48,6 +46,7 @@ for data_type in DATA_TYPES:
         "plots": f"{data_type}/plots"
     }
 
+print(DIRS)
 
 # Rule to create data type-specific directories
 rule create_data_type_directories:
