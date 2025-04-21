@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from snakemake.utils import min_version
+
 min_version("6.0")
 
 # Configuration
@@ -8,8 +9,8 @@ configfile: "config.yaml"
 
 # Define sample metadata
 samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
-                     names=["data_type", "line", "tissue", "sample", "replicate", 
-                           "seq_id", "fastq_path", "paired", "ref_genome"])
+                      names=["data_type", "line", "tissue", "sample", "replicate", 
+                             "seq_id", "fastq_path", "paired", "ref_genome"])
 
 # Define reference genomes
 REF_GENOMES = set(samples["ref_genome"].unique())
@@ -34,21 +35,21 @@ DIRS = {
 
 # Function to create directories
 def create_directories(data_types, dirs):
-    for data_type in data_types:
-        os.makedirs(f"{data_type}/fastq", exist_ok=True)
-        os.makedirs(f"{data_type}/mapped", exist_ok=True)
-        os.makedirs(f"{data_type}/tracks", exist_ok=True)
-        os.makedirs(f"{data_type}/reports", exist_ok=True)
-        os.makedirs(f"{data_type}/logs", exist_ok=True)
-        os.makedirs(f"{data_type}/chkpts", exist_ok=True)
-        os.makedirs(f"{data_type}/plots", exist_ok=True)
-    
-    for key, value in dirs.items():
-        if isinstance(value, dict):
-            for sub_key, sub_value in value.items():
-                os.makedirs(sub_value, exist_ok=True)
-        else:
-            os.makedirs(value, exist_ok=True)
+    for data_type in data_types:
+        os.makedirs(f"{data_type}/fastq", exist_ok=True)
+        os.makedirs(f"{data_type}/mapped", exist_ok=True)
+        os.makedirs(f"{data_type}/tracks", exist_ok=True)
+        os.makedirs(f"{data_type}/reports", exist_ok=True)
+        os.makedirs(f"{data_type}/logs", exist_ok=True)
+        os.makedirs(f"{data_type}/chkpts", exist_ok=True)
+        os.makedirs(f"{data_type}/plots", exist_ok=True)
+    
+    for key, value in dirs.items():
+        if isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                os.makedirs(sub_value, exist_ok=True)
+        else:
+            os.makedirs(value, exist_ok=True)
 
 # Call the function to create directories
 create_directories(DATA_TYPES, DIRS)
