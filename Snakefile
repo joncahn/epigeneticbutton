@@ -62,6 +62,10 @@ def create_directories(data_types, dirs):
 # Call the function to create directories
 create_directories(DATA_TYPES, DIRS)
 
+print("datatype_to_samples:", datatype_to_samples)
+print("samples_to_replicates:", samples_to_replicates)
+
+
 # Rule all to specify final target
 rule all:
 	input:
@@ -117,8 +121,8 @@ rule analyze_sample:
     input:
         ref_chkpt = lambda wildcards: [ 
             f"chkpts/sample_{wildcards.data_type}_{sample}_{replicate}.done"
-            for sample in datatype_to_samples[wildcards.data_type]
-            for replicate in samples_to_replicates[sample]
+            for sample in datatype_to_samples.get(wildcards.data_type, [])
+            for replicate in samples_to_replicates.get(sample, [])
         ]
     output:
         chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
