@@ -12,15 +12,16 @@ samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
                       names=["data_type", "line", "tissue", "sample", "replicate", 
                              "seq_id", "fastq_path", "paired", "ref_genome"])
 
-# Create dictionaries
-datatype_to_samples = samples.groupby("data_type")["sample"].unique().to_dict()
-samples_to_replicates = samples.groupby("sample")["replicate"].unique().to_dict()
-
 # Define reference genomes
 REF_GENOMES = set(samples["ref_genome"].unique())
 
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
+
+# Create dictionaries
+refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
+datatype_to_samples = samples.groupby("data_type")["sample"].unique().to_dict()
+samples_to_replicates = samples.groupby("sample")["replicate"].unique().to_dict()
 
 # Define label for the analysis
 analysis_name = config["analysis_name"]
@@ -91,7 +92,7 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
+        ref_chkpt = expand("chkpts/ref_{ref_genome}_{data_type}.done", ref_genome = REF_GENOMES, data_type = lambda wildcards: refgenome_to_datatype[wildcards.ref_genome])
     output:
         chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     params:
@@ -114,7 +115,7 @@ rule process_sample:
 # Rule to perform ChIP specific analysis
 rule analyze_sample:
     input:
-        ref_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", data_type=DATA_TYPES, sample=lambda wildcards: datatype_to_samples[wildcards.data_type], replicate=lambda wildcards: samples_to_replicates[wildcards.sample])
+        ref_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", data_type=DATA_TYPES, sample = lambda wildcards: datatype_to_samples[wildcards.data_type], replicate = lambda wildcards: samples_to_replicates[wildcards.sample])
     output:
         chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
