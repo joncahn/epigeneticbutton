@@ -146,7 +146,7 @@ rule analyze_sample:
     output:
         chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
-        scripts_dir = config["scripts_dir"]
+        scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{config['analysis_name']}_analysis_samplefile.txt"
     log:
         "logs/analysis_{data_type}_{analysis_name}.log"
