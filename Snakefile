@@ -133,7 +133,9 @@ rule analyze_sample:
             for replicate in samples_to_replicates.get(sample, [])
         ]
     output:
-        chkpt = f"chkpts/analysis_{wildcards.data_type}_{analysis_name}.done"
+        chkpt = lambda wildcards: [ 
+            f"chkpts/analysis_{wildcards.data_type}_{analysis_name}.done"
+        ]
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
