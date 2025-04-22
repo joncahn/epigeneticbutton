@@ -26,17 +26,6 @@ samples_to_replicates = samples.groupby("sample")["replicate"].unique().to_dict(
 # Define label for the analysis
 analysis_name = config["analysis_name"]
 
-# Create the analysis sample file
-
-import pandas as pd
-import os
-
-# Configuration (assuming config is a dictionary with the necessary entries)
-config = {
-    "sample_file": "path/to/sample_file.txt",
-    "ref_path": "path/to/reference/genomes"
-}
-
 # Load the sample metadata and perform all operations in a single chain
 analysis_samples = (
     samples
