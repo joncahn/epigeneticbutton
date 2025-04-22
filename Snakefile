@@ -83,7 +83,7 @@ rule all:
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
+        refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
     output:
         chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
     params:
