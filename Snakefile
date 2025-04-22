@@ -114,7 +114,7 @@ rule process_sample:
 # Rule to perform ChIP specific analysis
 rule analyze_sample:
     input:
-        ref_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", data_type=DATA_TYPES, sample=datatype_to_samples[wildcards.data_type], replicate=samples_to_replicates[wildcards.sample])
+        ref_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", data_type=DATA_TYPES, sample=lambda wildcards: datatype_to_samples[wildcards.data_type], replicate=lambda wildcards: samples_to_replicates[wildcards.sample])
     output:
         chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
