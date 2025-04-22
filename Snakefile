@@ -36,7 +36,7 @@ analysis_samples = (
 )
 
 # Save the result to 'analysis_samplefile.txt'
-analysis_samples.to_csv("{analysis_name}_analysis_samplefile.txt", sep="\t", index=False)
+analysis_samples.to_csv(f"{analysis_name}_analysis_samplefile.txt", sep="\t", index=False)
 
 # Define output directories
 DIRS = {
@@ -136,7 +136,7 @@ rule analyze_sample:
         chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
-        analysis_samplefile = "{analysis_name}_analysis_samplefile.txt"
+        analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
         "logs/analysis_{data_type}_{analysis_name}.log"
     conda:
