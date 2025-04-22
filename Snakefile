@@ -112,15 +112,15 @@ rule process_sample:
         """
 
 # Rule to perform ChIP specific analysis
-rule analyze_ChIP:
+rule analyze_sample:
     input:
-        ref_chkpt = expand("chkpts/sample_ChIP_{sample}_{replicate}.done", sample=datatype_to_samples[ChIP].
+        ref_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", data_type=DATA_TYPES, sample=datatype_to_samples[wildcards.data_type], replicate=samples_to_replicates[wildcards.sample])
     output:
-        chkpt = "chkpts/analysis_ChIP_{analysis_name}.done"
+        chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/analysis_ChIP_{analysis_name}.log"
+        "logs/analysis_{data_type}_{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -134,97 +134,97 @@ rule analyze_ChIP:
         touch {output.chkpt}
         """
 
-# Rule to perform ChIP specific analysis
-rule analyze_ChIP:
-    input:
-        ref_chkpt = "chkpts/sample_ChIP_{sample}_{replicate}.done"
-    output:
-        chkpt = "chkpts/analysis_ChIP_{analysis_name}.done"
-    params:
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/analysis_ChIP_{analysis_name}.log"
-    conda:
-        "envs/{data_type}_analysis.yaml"
-    shell:
-        """
-        # Call the appropriate analysis script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
-        touch {output.chkpt}
-        """
+# # Rule to perform ChIP specific analysis
+# rule analyze_ChIP:
+    # input:
+        # ref_chkpt = "chkpts/sample_ChIP_{sample}_{replicate}.done"
+    # output:
+        # chkpt = "chkpts/analysis_ChIP_{analysis_name}.done"
+    # params:
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/analysis_ChIP_{analysis_name}.log"
+    # conda:
+        # "envs/{data_type}_analysis.yaml"
+    # shell:
+        # """
+        # # Call the appropriate analysis script based on data type
+        # {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+            # -f {input.sample_file} \
+            # -p {config["ref_path"]} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.data_type} > {log} 2>&1
+        # touch {output.chkpt}
+        # """
 		
-# Rule to perform RNA specific analysis
-rule analyze_RNA:
-    input:
-        ref_chkpt = "chkpts/sample_RNA_{sample}_{replicate}.done"
-    output:
-        chkpt = "chkpts/analysis_RNA_{analysis_name}.done"
-    params:
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/analysis_RNA_{analysis_name}.log"
-    conda:
-        "envs/{data_type}_analysis.yaml"
-    shell:
-        """
-        # Call the appropriate analysis script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
-        touch {output.chkpt}
-        """
+# # Rule to perform RNA specific analysis
+# rule analyze_RNA:
+    # input:
+        # ref_chkpt = "chkpts/sample_RNA_{sample}_{replicate}.done"
+    # output:
+        # chkpt = "chkpts/analysis_RNA_{analysis_name}.done"
+    # params:
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/analysis_RNA_{analysis_name}.log"
+    # conda:
+        # "envs/{data_type}_analysis.yaml"
+    # shell:
+        # """
+        # # Call the appropriate analysis script based on data type
+        # {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+            # -f {input.sample_file} \
+            # -p {config["ref_path"]} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.data_type} > {log} 2>&1
+        # touch {output.chkpt}
+        # """
 		
-# Rule to perform TF specific analysis
-rule analyze_TF:
-    input:
-        ref_chkpt = "chkpts/sample_TF_{sample}_{replicate}.done"
-    output:
-        chkpt = "chkpts/analysis_TF_{analysis_name}.done"
-    params:
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/analysis_TF_{analysis_name}.log"
-    conda:
-        "envs/{data_type}_analysis.yaml"
-    shell:
-        """
-        # Call the appropriate analysis script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
-        touch {output.chkpt}
-        """
+# # Rule to perform TF specific analysis
+# rule analyze_TF:
+    # input:
+        # ref_chkpt = "chkpts/sample_TF_{sample}_{replicate}.done"
+    # output:
+        # chkpt = "chkpts/analysis_TF_{analysis_name}.done"
+    # params:
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/analysis_TF_{analysis_name}.log"
+    # conda:
+        # "envs/{data_type}_analysis.yaml"
+    # shell:
+        # """
+        # # Call the appropriate analysis script based on data type
+        # {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+            # -f {input.sample_file} \
+            # -p {config["ref_path"]} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.data_type} > {log} 2>&1
+        # touch {output.chkpt}
+        # """
 
-# Rule to perform mC specific analysis
-rule analyze_mC:
-    input:
-        ref_chkpt = "chkpts/sample_mC_{sample}_{replicate}.done"
-    output:
-        chkpt = "chkpts/analysis_mC_{analysis_name}.done"
-    params:
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/analysis_mC_{analysis_name}.log"
-    conda:
-        "envs/{data_type}_analysis.yaml"
-    shell:
-        """
-        # Call the appropriate analysis script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
-        touch {output.chkpt}
-        """
+# # Rule to perform mC specific analysis
+# rule analyze_mC:
+    # input:
+        # ref_chkpt = "chkpts/sample_mC_{sample}_{replicate}.done"
+    # output:
+        # chkpt = "chkpts/analysis_mC_{analysis_name}.done"
+    # params:
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/analysis_mC_{analysis_name}.log"
+    # conda:
+        # "envs/{data_type}_analysis.yaml"
+    # shell:
+        # """
+        # # Call the appropriate analysis script based on data type
+        # {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+            # -f {input.sample_file} \
+            # -p {config["ref_path"]} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.data_type} > {log} 2>&1
+        # touch {output.chkpt}
+        # """
 
 		
 # Rule to perform combined analysis
