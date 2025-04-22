@@ -112,7 +112,7 @@ rule process_sample:
         touch {output.chkpt}
         """
 
-# Rule to perform ChIP specific analysis
+# Rule to perform data type specific analysis
 rule analyze_sample:
     input:
         ref_chkpt = lambda wildcards: [ 
@@ -235,7 +235,7 @@ rule analyze_sample:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        ref_chkpt = expand("chkpts/analysis_{data_type}_{analysis_label}.done", data_type=DATA_TYPES, analysis_label=analysis_name)
+        ref_chkpt = expand("chkpts/analysis_{data_type}_{analysis_name}.done", data_type=DATA_TYPES, analysis_name=analysis_name)
     output:
         chkpt = "chkpts/combined_analysis.done"
     params:
