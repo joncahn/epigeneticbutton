@@ -65,7 +65,6 @@ create_directories(DATA_TYPES, DIRS)
 print("datatype_to_samples:", datatype_to_samples)
 print("samples_to_replicates:", samples_to_replicates)
 
-
 # Rule all to specify final target
 rule all:
 	input:
@@ -116,32 +115,32 @@ rule process_sample:
         touch {output.chkpt}
         """
 
-# Rule to perform data type specific analysis
-rule analyze_sample:
-    input:
-        ref_chkpt = lambda wildcards: [ 
-            f"chkpts/sample_{wildcards.data_type}_{sample}_{replicate}.done"
-            for sample in datatype_to_samples.get(wildcards.data_type, [])
-            for replicate in samples_to_replicates.get(sample, [])
-        ]
-    output:
-        chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
-    params:
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/analysis_{data_type}_{analysis_name}.log"
-    conda:
-        "envs/{data_type}_analysis.yaml"
-    shell:
-        """
-        # Call the appropriate analysis script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
-        touch {output.chkpt}
-        """
+# # Rule to perform data type specific analysis
+# rule analyze_sample:
+    # input:
+        # ref_chkpt = lambda wildcards: [ 
+            # f"chkpts/sample_{wildcards.data_type}_{sample}_{replicate}.done"
+            # for sample in datatype_to_samples.get(wildcards.data_type, [])
+            # for replicate in samples_to_replicates.get(sample, [])
+        # ]
+    # output:
+        # chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
+    # params:
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/analysis_{data_type}_{analysis_name}.log"
+    # conda:
+        # "envs/{data_type}_analysis.yaml"
+    # shell:
+        # """
+        # # Call the appropriate analysis script based on data type
+        # {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+            # -f {input.sample_file} \
+            # -p {config["ref_path"]} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.data_type} > {log} 2>&1
+        # touch {output.chkpt}
+        # """
 
 # # Rule to perform ChIP specific analysis
 # rule analyze_ChIP:
