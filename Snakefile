@@ -203,7 +203,7 @@ rule analyze_mC:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        ref_chkpt = expand("chkpts/analysis_{data_type}_{analysis_name}.done", data_type=DATA_TYPES)
+        ref_chkpt = expand("chkpts/analysis_{data_type}_{analysis_name}.done", data_type=DATA_TYPES, analysis_name=analysis_name)
     output:
         chkpt = "chkpts/combined_analysis.done"
     params:
