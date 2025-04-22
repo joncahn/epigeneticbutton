@@ -110,7 +110,7 @@ rule process_sample:
 # Rule to perform ChIP specific analysis
 rule analyze_ChIP:
     input:
-        ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
+        ref_chkpt = "chkpts/sample_ChIP_{sample}_{replicate}.done"
     output:
         chkpt = "chkpts/analysis_ChIP_{analysis_name}.done"
     params:
@@ -133,7 +133,7 @@ rule analyze_ChIP:
 # Rule to perform RNA specific analysis
 rule analyze_RNA:
     input:
-        ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
+        ref_chkpt = "chkpts/sample_RNA_{sample}_{replicate}.done"
     output:
         chkpt = "chkpts/analysis_RNA_{analysis_name}.done"
     params:
@@ -156,7 +156,7 @@ rule analyze_RNA:
 # Rule to perform TF specific analysis
 rule analyze_TF:
     input:
-        ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
+        ref_chkpt = "chkpts/sample_TF_{sample}_{replicate}.done"
     output:
         chkpt = "chkpts/analysis_TF_{analysis_name}.done"
     params:
@@ -179,7 +179,7 @@ rule analyze_TF:
 # Rule to perform mC specific analysis
 rule analyze_mC:
     input:
-        ref_chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
+        ref_chkpt = "chkpts/sample_mC_{sample}_{replicate}.done"
     output:
         chkpt = "chkpts/analysis_mC_{analysis_name}.done"
     params:
