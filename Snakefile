@@ -12,6 +12,10 @@ samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
                       names=["data_type", "line", "tissue", "sample", "replicate", 
                              "seq_id", "fastq_path", "paired", "ref_genome"])
 
+# Create dictionaries
+datatype_to_samples = samples.groupby("data_type")["sample"].unique().to_dict()
+samples_to_replicates = samples.groupby("sample")["replicate"].unique().to_dict()
+
 # Define reference genomes
 REF_GENOMES = set(samples["ref_genome"].unique())
 
@@ -104,6 +108,29 @@ rule process_sample:
             -r {wildcards.replicate} \
             -d {wildcards.data_type} \
             -g {wildcards.ref_genome} > {log} 2>&1
+        touch {output.chkpt}
+        """
+
+# Rule to perform ChIP specific analysis
+rule analyze_ChIP:
+    input:
+        ref_chkpt = expand("chkpts/sample_ChIP_{sample}_{replicate}.done", sample=datatype_to_samples[ChIP].
+    output:
+        chkpt = "chkpts/analysis_ChIP_{analysis_name}.done"
+    params:
+        scripts_dir = config["scripts_dir"]
+    log:
+        "logs/analysis_ChIP_{analysis_name}.log"
+    conda:
+        "envs/{data_type}_analysis.yaml"
+    shell:
+        """
+        # Call the appropriate analysis script based on data type
+        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+            -f {input.sample_file} \
+            -p {config["ref_path"]} \
+            -r {wildcards.ref_genome} \
+            -d {wildcards.data_type} > {log} 2>&1
         touch {output.chkpt}
         """
 
