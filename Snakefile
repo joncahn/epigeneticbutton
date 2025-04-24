@@ -124,14 +124,14 @@ rule process_sample:
 # Rule to perform data type specific analysis
 rule analyze_sample:
     input:
-    process_chkpt = lambda wildcards: expand(
-        "chkpts/sample_{data_type}_{sample}_{replicate}.done",
-        data_type = [wildcards.data_type],
-        sample = datatype_to_samples[wildcards.data_type],
-        replicate = lambda wildcards: sum(
-            (samples_to_replicates[sample] for sample in datatype_to_samples[wildcards.data_type]), []
+        process_chkpt = lambda wildcards: expand(
+            "chkpts/sample_{data_type}_{sample}_{replicate}.done",
+            data_type = [wildcards.data_type],
+            sample = datatype_to_samples[wildcards.data_type],
+            replicate = lambda wildcards: sum(
+                (samples_to_replicates[sample] for sample in datatype_to_samples[wildcards.data_type]), []
+            )
         )
-    )
     output:
         chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
