@@ -70,16 +70,16 @@ conda install -c bioconda snakemake
 
 ### Running the Pipeline
 
-To run the pipeline locally:
+1. To run the pipeline:
 ```bash
-snakemake --cores <N> --configfile config.yaml
+snakemake --use-conda --cores <N>
 ```
 
-To run the pipeline on a HPC using qsub:
+2. To run the pipeline on a HPC using qsub:
 ```bash
 qsub -V -cwd -pe threads 20 -l m_mem_free=8G -l tmp_free=16G -o pipeline.log -j y -N epigeneticbutton <<-'EOF'
 #!/bin/bash
-snakemake --use-conda --cores 20 --configfile config.yaml
+snakemake --use-conda --conda-frontend mamba --cores 20
 EOF
 ```
 
@@ -90,6 +90,13 @@ This qsub command:
 - Outputs logs to pipeline.log
 - Uses the conda environment
 - Runs snakemake with 20 cores
+
+3. Optional: for increased speed the first time using the pipeline, consider using mamba and/or prebuilding the environments:
+```bash
+conda install mamba -n base -c conda-forge # to install mamba, if not already
+snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 20
+```
+
 
 ### Output Structure
 
