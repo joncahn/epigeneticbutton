@@ -105,7 +105,7 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = expand("chkpts/ref_{ref_genome}_{data_type}.done", 
+        ref_chkpt = expand(f"chkpts/ref_{ref_genome}_{data_type}.done", 
             ref_genome = REF_GENOMES, 
             data_type = lambda wildcards: refgenome_to_datatype[wildcards.ref_genome])
     output:
@@ -130,7 +130,7 @@ rule process_sample:
 # Rule to perform data type specific analysis
 rule analyze_sample:
     input:
-        process_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", 
+        process_chkpt = expand(f"chkpts/sample_{data_type}_{sample}_{replicate}.done", 
             data_type = DATA_TYPES, 
             sample = lambda wildcards: datatype_to_samples.get(wildcards.data_type), 
             replicate = lambda wildcards: samples_to_replicates.get(wildcards.sample))
