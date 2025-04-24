@@ -128,9 +128,15 @@ rule analyze_sample:
             "chkpts/sample__{data_type}__{sample}__{replicate}.done",
             data_type = [wildcards.data_type],
             sample = datatype_to_samples[wildcards.data_type],
-            replicate = lambda wildcards: sum(
-                (samples_to_replicates[sample] for sample in datatype_to_samples[wildcards.data_type]), []
-            )
+            replicate = [
+                rep 
+                for sample in datatype_to_samples[wildcards.data_type]
+                for rep in samples_to_replicates[sample]
+            ],
+            ref_genome = [
+                samples[samples["sample"] == sample]["ref_genome"].iloc[0]
+                for sample in datatype_to_samples[wildcards.data_type]
+            ]
         )
     output:
         chkpt = "chkpts/analysis__{data_type}__{analysis_name}.done"
