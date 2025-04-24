@@ -103,11 +103,11 @@ rule process_sample:
     input:
         ref_chkpt = "chkpts/ref__{ref_genome}__{data_type}.done"
     output:
-        chkpt = "chkpts/sample__{data_type}__{sample}__{replicate}.done"
+        chkpt = "chkpts/sample__{data_type}__{sample}__{replicate}__{ref_genome}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/process__{data_type}__{sample}__{replicate}.log"
+        "logs/process__{data_type}__{sample}__{replicate}__{ref_genome}.log"
     conda:
         "envs/{data_type}_sample.yaml"
     shell:
