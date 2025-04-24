@@ -78,7 +78,7 @@ create_directories(DATA_TYPES, DIRS)
 # Rule all to specify final target
 rule all:
 	input:
-		"chkpts/combined_analysis.done"
+		"chkpts/combined_analysis_{analysis_name}.done"
 
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
@@ -134,14 +134,14 @@ rule analyze_sample:
             for replicate in samples_to_replicates.get(sample, [])
         ]
     output:
-        chkpt = f"chkpts/analysis_{wildcards.data_type}_{analysis_name}.done"
+        chkpt = f"chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
-        f"logs/analysis_{wildcards.data_type}_{analysis_name}.log"
+        f"logs/analysis_{data_type}_{analysis_name}.log"
     conda:
-        f"envs/{wildcards.data_type}_analysis.yaml"
+        f"envs/{data_type}_analysis.yaml"
     shell:
         """
         # Call the appropriate analysis script based on data type
