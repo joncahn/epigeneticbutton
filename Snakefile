@@ -134,14 +134,14 @@ rule analyze_sample:
             for replicate in samples_to_replicates.get(sample, [])
         ]
     output:
-        chkpt = f"chkpts/analysis_{data_type}_{analysis_name}.done"
+        chkpt = f"chkpts/analysis_{wildcards.data_type}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
-        f"logs/analysis_{data_type}_{analysis_name}.log"
+        f"logs/analysis_{wildcards.data_type}_{analysis_name}.log"
     conda:
-        "envs/{data_type}_analysis.yaml"
+        f"envs/{wildcards.data_type}_analysis.yaml"
     shell:
         """
         # Call the appropriate analysis script based on data type
