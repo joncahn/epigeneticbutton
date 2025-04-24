@@ -36,7 +36,7 @@ analysis_samples = (
 )
 
 # Save the result to 'analysis_samplefile.txt'
-analysis_samples.to_csv(f"{analysis_name}_analysis_samplefile.txt", sep="\t", index=False)
+analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
 
 # Define output directories
 DIRS = {
@@ -73,19 +73,19 @@ create_directories(DATA_TYPES, DIRS)
 # Rule all to specify final target
 rule all:
 	input:
-		f"chkpts/combined_analysis_{analysis_name}.done"
+		f"chkpts/combined_analysis__{analysis_name}.done"
 
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
     input:
         refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
     output:
-        chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
+        chkpt = "chkpts/ref__{ref_genome}__{data_type}.done"
     params:
         ref_path = config["ref_path"],
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/prepare_ref_{ref_genome}_{data_type}.log"
+        "logs/prepare_ref__{ref_genome}__{data_type}.log"
     conda:
         "envs/reference.yaml"
     shell:
@@ -101,13 +101,13 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
+        ref_chkpt = "chkpts/ref__{ref_genome}__{data_type}.done"
     output:
-        chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
+        chkpt = "chkpts/sample__{data_type}__{sample}__{replicate}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/process_{data_type}_{sample}_{replicate}.log"
+        "logs/process__{data_type}__{sample}__{replicate}.log"
     conda:
         "envs/{data_type}_sample.yaml"
     shell:
@@ -125,7 +125,7 @@ rule process_sample:
 rule analyze_sample:
     input:
         process_chkpt = lambda wildcards: expand(
-            "chkpts/sample_{data_type}_{sample}_{replicate}.done",
+            "chkpts/sample__{data_type}__{sample}__{replicate}.done",
             data_type = [wildcards.data_type],
             sample = datatype_to_samples[wildcards.data_type],
             replicate = lambda wildcards: sum(
@@ -133,12 +133,12 @@ rule analyze_sample:
             )
         )
     output:
-        chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
+        chkpt = "chkpts/analysis__{data_type}__{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
-        analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
+        analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
     log:
-        "logs/analysis_{data_type}_{analysis_name}.log"
+        "logs/analysis__{data_type}__{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -152,17 +152,17 @@ rule analyze_sample:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        analysis_chkpt = expand("chkpts/analysis_{data_type}_{analysis_name}.done", 
+        analysis_chkpt = expand("chkpts/analysis__{data_type}__{analysis_name}.done", 
             data_type = DATA_TYPES, 
             analysis_name = analysis_name)
     output:
-        chkpt = f"chkpts/combined_analysis_{analysis_name}.done"
+        chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
         ref_path = config["ref_path"],
-        analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
+        analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
     log:
-        f"logs/combined_analysis_{analysis_name}.log"
+        f"logs/combined_analysis__{analysis_name}.log"
     conda:
         "envs/combined.yaml"
     shell:
