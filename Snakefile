@@ -82,7 +82,7 @@ rule prepare_reference:
     output:
         chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
     params:
-        ref_path = config["ref_path"]
+        ref_path = config["ref_path"],
         scripts_dir = config["scripts_dir"]
     log:
         "logs/prepare_ref_{ref_genome}_{data_type}.log"
@@ -158,8 +158,8 @@ rule combined_analysis:
     output:
         chkpt = f"chkpts/combined_analysis_{analysis_name}.done"
     params:
-        scripts_dir = config["scripts_dir"]
-        ref_path = config["ref_path"]
+        scripts_dir = config["scripts_dir"],
+        ref_path = config["ref_path"],
         analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
         f"logs/combined_analysis_{analysis_name}.log"
