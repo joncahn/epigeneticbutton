@@ -125,7 +125,7 @@ rule process_sample:
 rule analyze_sample:
     input:
         process_chkpt = lambda wildcards: expand(
-            "chkpts/sample__{data_type}__{sample}__{replicate}.done",
+            "chkpts/sample__{data_type}__{sample}__{replicate}__{ref_genome}.done",
             data_type = [wildcards.data_type],
             sample = datatype_to_samples[wildcards.data_type],
             replicate = [
