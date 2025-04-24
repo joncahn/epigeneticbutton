@@ -35,8 +35,8 @@ analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", i
 
 # Create dictionaries
 refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
+samples_to_replicates = samples.groupby("sample")["replicate"].unique().to_dict()
 datatype_to_samples = analysis_samples.groupby("data_type")["sample"].unique().to_dict()
-samples_to_replicates = analysis_samples.groupby("sample")["replicate"].unique().to_dict()
 
 # Define output directories
 DIRS = {
