@@ -94,9 +94,18 @@ This qsub command:
 3. Optional: for increased speed the first time using the pipeline, consider using mamba and/or prebuilding the environments:
 ```bash
 conda install mamba -n base -c conda-forge # to install mamba, if not already
-snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 20
+snakemake --use-conda --conda-frontend mamba --cores 20
 ```
 
+You can also prebuild the environments:
+```bash
+snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 1
+```
+
+It is also recommended to set strict conda channel priorities:
+```bash
+conda config --set channel_priority strict
+```
 
 ### Output Structure
 
