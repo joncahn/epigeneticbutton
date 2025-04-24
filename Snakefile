@@ -105,7 +105,9 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = expand("chkpts/ref_{ref_genome}_{data_type}.done", ref_genome = REF_GENOMES, data_type = lambda wildcards: refgenome_to_datatype[wildcards.ref_genome])
+        ref_chkpt = expand("chkpts/ref_{ref_genome}_{data_type}.done", 
+            ref_genome = REF_GENOMES, 
+            data_type = lambda wildcards: refgenome_to_datatype[wildcards.ref_genome])
     output:
         chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     params:
@@ -128,11 +130,10 @@ rule process_sample:
 # Rule to perform data type specific analysis
 rule analyze_sample:
     input:
-        process_chkpt = lambda wildcards: [ 
-            f"chkpts/sample_{wildcards.data_type}_{sample}_{replicate}.done"
-            for sample in datatype_to_samples.get(wildcards.data_type, [])
-            for replicate in samples_to_replicates.get(sample, [])
-        ]
+        process_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", 
+            data_type = DATA_TYPES, 
+            sample = lambda wildcards: datatype_to_samples.get(wildcards.data_type), 
+            replicate = lambda wildcards: samples_to_replicates.get(wildcards.sample))
     output:
         chkpt = f"chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
@@ -153,7 +154,9 @@ rule analyze_sample:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        analysis_chkpt = expand(f"chkpts/analysis_{data_type}_{analysis_name}.done", data_type = DATA_TYPES, analysis_name = analysis_name)
+        analysis_chkpt = expand(f"chkpts/analysis_{data_type}_{analysis_name}.done", 
+            data_type = DATA_TYPES, 
+            analysis_name = analysis_name)
     output:
         chkpt = f"chkpts/combined_analysis_{analysis_name}.done"
     params:
