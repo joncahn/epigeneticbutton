@@ -139,7 +139,7 @@ rule analyze_sample:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
-        f"logs/analysis_{analysis_name}.log"
+        f"logs/analysis_{data_type}_{analysis_name}.log"
     conda:
         "envs/{data_type}_analysis.yaml"
     shell:
@@ -153,13 +153,13 @@ rule analyze_sample:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        analysis_chkpt = f"chkpts/analysis_{analysis_name}.done"
+        analysis_chkpt = expand(f"chkpts/analysis_{data_type}_{analysis_name}.done", data_type = DATA_TYPES, analysis_name = analysis_name)
     output:
-        chkpt = "chkpts/combined_analysis.done"
+        chkpt = f"chkpts/combined_analysis_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/combined_analysis.log"
+        f"logs/combined_analysis_{analysis_name}.log"
     conda:
         "envs/combined.yaml"
     shell:
