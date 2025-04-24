@@ -91,14 +91,9 @@ This qsub command:
 - Uses the conda environment
 - Runs snakemake with 20 cores
 
-3. Optional: for increased speed the first time using the pipeline, consider using mamba and/or prebuilding the environments:
+3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:
 ```bash
 conda install mamba -n base -c conda-forge # to install mamba, if not already
-snakemake --use-conda --conda-frontend mamba --cores 20
-```
-
-You can also prebuild the environments:
-```bash
 snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 1
 ```
 
