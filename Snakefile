@@ -57,17 +57,12 @@ DIRS = {
 # Function to create directories
 def create_directories(data_types, dirs):
     for data_type in data_types:
-        os.makedirs(f"{data_type}/fastq", exist_ok=True)
-        os.makedirs(f"{data_type}/mapped", exist_ok=True)
-        os.makedirs(f"{data_type}/tracks", exist_ok=True)
-        os.makedirs(f"{data_type}/reports", exist_ok=True)
-        os.makedirs(f"{data_type}/logs", exist_ok=True)
-        os.makedirs(f"{data_type}/chkpts", exist_ok=True)
-        os.makedirs(f"{data_type}/plots", exist_ok=True)
+        for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
+            os.makedirs(f"{data_type}/{d}", exist_ok=True)
     
     for key, value in dirs.items():
         if isinstance(value, dict):
-            for sub_key, sub_value in value.items():
+            for sub_value in value.values():
                 os.makedirs(sub_value, exist_ok=True)
         else:
             os.makedirs(value, exist_ok=True)
@@ -78,7 +73,7 @@ create_directories(DATA_TYPES, DIRS)
 # Rule all to specify final target
 rule all:
 	input:
-		"chkpts/combined_analysis_{analysis_name}.done"
+		f"chkpts/combined_analysis_{analysis_name}.done"
 
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
@@ -88,6 +83,7 @@ rule prepare_reference:
         chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
     params:
         ref_path = config["ref_path"]
+        scripts_dir = config["scripts_dir"]
     log:
         "logs/prepare_ref_{ref_genome}_{data_type}.log"
     conda:
@@ -95,7 +91,7 @@ rule prepare_reference:
     shell:
         """
         # Call the original environment preparation script
-        {config["scripts_dir"]}/MaizeCode_check_environment.sh \
+        {params.scripts_dir}/MaizeCode_check_environment.sh \
             -p {params.ref_path} \
             -r {wildcards.ref_genome} \
             -d {wildcards.data_type} > {log} 2>&1
@@ -105,9 +101,7 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = expand("chkpts/ref_{ref_genome}_{data_type}.done", 
-            ref_genome = REF_GENOMES, 
-            data_type = lambda wildcards: refgenome_to_datatype[wildcards.ref_genome])
+        ref_chkpt = "chkpts/ref_{ref_genome}_{data_type}.done"
     output:
         chkpt = "chkpts/sample_{data_type}_{sample}_{replicate}.done"
     params:
@@ -130,19 +124,23 @@ rule process_sample:
 # Rule to perform data type specific analysis
 rule analyze_sample:
     input:
-        process_chkpt = expand("chkpts/sample_{data_type}_{sample}_{replicate}.done", 
-            data_type = DATA_TYPES, 
-            sample = lambda wildcards: datatype_to_samples.get(wildcards.data_type), 
-            replicate = lambda wildcards: samples_to_replicates.get(wildcards.sample))
+    process_chkpt = lambda wildcards: expand(
+        "chkpts/sample_{data_type}_{sample}_{replicate}.done",
+        data_type = [wildcards.data_type],
+        sample = datatype_to_samples[wildcards.data_type],
+        replicate = lambda wildcards: sum(
+            (samples_to_replicates[sample] for sample in datatype_to_samples[wildcards.data_type]), []
+        )
+    )
     output:
-        chkpt = f"chkpts/analysis_{data_type}_{analysis_name}.done"
+        chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
-        f"logs/analysis_{data_type}_{analysis_name}.log"
+        "logs/analysis_{data_type}_{analysis_name}.log"
     conda:
-        f"envs/{data_type}_analysis.yaml"
+        "envs/{data_type}_analysis.yaml"
     shell:
         """
         # Call the appropriate analysis script based on data type
@@ -161,6 +159,8 @@ rule combined_analysis:
         chkpt = f"chkpts/combined_analysis_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"]
+        ref_path = config["ref_path"]
+        analysis_samplefile = f"{analysis_name}_analysis_samplefile.txt"
     log:
         f"logs/combined_analysis_{analysis_name}.log"
     conda:
@@ -169,8 +169,8 @@ rule combined_analysis:
         """
         # Call the combined analysis script
         {params.scripts_dir}/MaizeCode_analysis.sh \
-            -f {input.sample_file} \
-            -p {config["ref_path"]} > {log} 2>&1
+            -f {params.analysis_samplefile} \
+            -p {params.ref_path} > {log} 2>&1
         touch {output.chkpt}
         """ 
         
