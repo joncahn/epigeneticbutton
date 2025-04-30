@@ -175,6 +175,7 @@ rule analyze_sample:
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
+        env = lambda wildcards: datatype_to_env[wildcards.data_type]
     log:
         "logs/analysis__{data_type}__{analysis_name}.log"
     conda:
@@ -182,7 +183,7 @@ rule analyze_sample:
     shell:
         """
         # Call the appropriate analysis script based on data type
-        qsub {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+        qsub {params.scripts_dir}/MaizeCode_{params.env}_analysis.sh \
             -f {params.analysis_samplefile} > {log} 2>&1
         touch {output.chkpt}
         """
