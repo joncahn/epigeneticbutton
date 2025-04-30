@@ -126,7 +126,7 @@ rule prepare_reference:
         qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
             -p {params.ref_path} \
             -r {wildcards.ref_genome} \
-            -d {wildcards.data_type} > {log} 2>&1
+            -d {wildcards.env} > {log} 2>&1
         touch {output.chkpt}
         """
 
