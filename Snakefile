@@ -91,7 +91,7 @@ rule prepare_reference:
     shell:
         """
         # Call the original environment preparation script
-        {params.scripts_dir}/MaizeCode_check_environment.sh \
+        qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
             -p {params.ref_path} \
             -r {wildcards.ref_genome} \
             -d {wildcards.data_type} > {log} 2>&1
@@ -113,7 +113,7 @@ rule process_sample:
     shell:
         """
         # Call the appropriate sample processing script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_sample.sh \
+        qsub {params.scripts_dir}/MaizeCode_{wildcards.data_type}_sample.sh \
             -s {wildcards.sample} \
             -r {wildcards.replicate} \
             -d {wildcards.data_type} \
@@ -150,7 +150,7 @@ rule analyze_sample:
     shell:
         """
         # Call the appropriate analysis script based on data type
-        {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
+        qsub {params.scripts_dir}/MaizeCode_{wildcards.data_type}_analysis.sh \
             -f {params.analysis_samplefile} > {log} 2>&1
         touch {output.chkpt}
         """
@@ -174,7 +174,7 @@ rule combined_analysis:
     shell:
         """
         # Call the combined analysis script
-        {params.scripts_dir}/MaizeCode_analysis.sh \
+        qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
             -p {params.ref_path} > {log} 2>&1
         touch {output.chkpt}
