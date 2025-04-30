@@ -171,7 +171,7 @@ rule analyze_sample:
             ]
         )
     output:
-        chkpt = "chkpts/analysis_{data_type}_{analysis_name}.done"
+        chkpt = "chkpts/analysis__{data_type}__{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt",
