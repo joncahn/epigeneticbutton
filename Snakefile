@@ -178,7 +178,7 @@ rule analyze_sample:
     log:
         "logs/analysis__{data_type}__{analysis_name}.log"
     conda:
-        "envs/{data_type}_analysis.yaml"
+        lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     shell:
         """
         # Call the appropriate analysis script based on data type
