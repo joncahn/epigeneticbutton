@@ -42,7 +42,7 @@ def get_env(data_type):
 
 # Map data types to environments
 datatype_to_env = {dt: get_env(dt) for dt in DATA_TYPES}
-UNIQUE_ENVS = list(set(data_type_to_env.values()))
+UNIQUE_ENVS = list(set(datatype_to_env.values()))
 
 # 🔥 Check for unknown envs and exit if any
 unknowns = [dt for dt, env in datatype_to_env.items() if env == "unknown"]
