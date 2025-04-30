@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import fnmatch
+import sys
 from snakemake.utils import min_version
 
 min_version("6.0")
@@ -20,6 +22,36 @@ DATA_TYPES = set(samples["data_type"].unique())
 
 # Define label for the analysis
 analysis_name = config["analysis_name"]
+
+# Define patterns and envs
+env_patterns = [
+    ("ChIP*", "ChIP"),
+    ("RNAseq", "RNA"),
+    ("RAMPAGE", "RNA"),
+    ("shRNA", "shRNA"),
+    ("mC", "mC"),
+    ("TF_*", "TF"),
+]
+
+# Function to determine environment
+def get_env(data_type):
+    for pattern, env in env_patterns:
+        if fnmatch.fnmatch(data_type, pattern):
+            return env
+    return "unknown"
+
+# Map data types to environments
+datatype_to_env = {dt: get_env(dt) for dt in DATA_TYPES}
+UNIQUE_ENVS = list(set(data_type_to_env.values()))
+
+# 🔥 Check for unknown envs and exit if any
+unknowns = [dt for dt, env in datatype_to_env.items() if env == "unknown"]
+if unknowns:
+    print("Type of data unknown for the following data types:")
+    for dt in unknowns:
+        print(f"  - {dt}")
+    print("\nPlease check your sample sheet or update the env_patterns.")
+    sys.exit(1)
 
 # Load the sample metadata and perform all operations in a single chain
 analysis_samples = (
@@ -55,10 +87,10 @@ DIRS = {
 }
 
 # Function to create directories
-def create_directories(data_types, dirs):
-    for data_type in data_types:
+def create_directories(unique_envs, dirs):
+    for env in unique_envs:
         for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
-            os.makedirs(f"{data_type}/{d}", exist_ok=True)
+            os.makedirs(f"{env}/{d}", exist_ok=True)
     
     for key, value in dirs.items():
         if isinstance(value, dict):
@@ -68,7 +100,7 @@ def create_directories(data_types, dirs):
             os.makedirs(value, exist_ok=True)
 
 # Call the function to create directories
-create_directories(DATA_TYPES, DIRS)
+create_directories(UNIQUE_ENVS, DIRS)
 
 # Rule all to specify final target
 rule all:
