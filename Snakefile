@@ -33,7 +33,7 @@ def get_sample_info(wildcards, field):
 
 # Generate all sample output files required
 all_sample_outputs = expand(
-    "chkpts/sample__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done",
+    "chkpts/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done",
     zip,
     data_type = samples["data_type"],
     line = samples["line"],
@@ -164,7 +164,7 @@ rule process_sample:
     input:
         ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}__{datatype_to_env[get_sample_info(wildcards, 'data_type')]}.done"
     output:
-        chkpt = "chkpts/sample__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done"
+        chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done"
     params:
         scripts_dir = config["scripts_dir"],
         ref_dir = lambda wildcards: os.path.join(config["ref_path"], get_sample_info(wildcards, 'ref_genome')),
