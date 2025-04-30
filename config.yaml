@@ -10,6 +10,9 @@ ref_path: "path/to/reference/genomes"
 # Path to the scripts directory
 scripts_dir: "scripts"
 
+# Path to the scripts directory
+mapping_option: "default"
+
 # Mapping parameters
 mapping:
   default:
