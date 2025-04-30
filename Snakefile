@@ -174,7 +174,7 @@ rule analyze_sample:
         chkpt = lambda wildcards: f"chkpts/analysis_{datatype_to_env[wildcards.data_type]}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
-        analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
+        analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt",
         env = lambda wildcards: datatype_to_env[wildcards.data_type]
     log:
         "logs/analysis__{data_type}__{analysis_name}.log"
