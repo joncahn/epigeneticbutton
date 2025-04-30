@@ -112,12 +112,12 @@ rule prepare_reference:
     input:
         refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
     output:
-        chkpt = "chkpts/ref__{ref_genome}__{data_type}.done"
+        chkpt = "chkpts/ref__{ref_genome}__{env}.done"
     params:
         ref_path = config["ref_path"],
         scripts_dir = config["scripts_dir"]
     log:
-        "logs/prepare_ref__{ref_genome}__{data_type}.log"
+        "logs/prepare_ref__{ref_genome}__{env}.log"
     conda:
         "envs/reference.yaml"
     shell:
@@ -133,7 +133,7 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = "chkpts/ref__{ref_genome}__{data_type}.done"
+        ref_chkpt = "chkpts/ref__{ref_genome}__{env}.done"
     output:
         chkpt = "chkpts/sample__{data_type}__{sample}__{replicate}__{ref_genome}.done"
     params:
@@ -141,11 +141,11 @@ rule process_sample:
     log:
         "logs/process__{data_type}__{sample}__{replicate}__{ref_genome}.log"
     conda:
-        "envs/{data_type}_sample.yaml"
+        "envs/{env}_sample.yaml"
     shell:
         """
         # Call the appropriate sample processing script based on data type
-        qsub {params.scripts_dir}/MaizeCode_{wildcards.data_type}_sample.sh \
+        qsub {params.scripts_dir}/MaizeCode_{wildcards.env}_sample.sh \
             -s {wildcards.sample} \
             -r {wildcards.replicate} \
             -d {wildcards.data_type} \
