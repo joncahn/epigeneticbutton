@@ -171,7 +171,7 @@ rule analyze_sample:
             ]
         )
     output:
-        chkpt = "chkpts/analysis__{data_type}__{analysis_name}.done"
+        chkpt = lambda wildcards: f"chkpts/analysis_{datatype_to_env[wildcards.data_type]}_{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
@@ -192,7 +192,7 @@ rule analyze_sample:
 rule combined_analysis:
     input:
         analysis_chkpt = expand("chkpts/analysis__{data_type}__{analysis_name}.done", 
-            data_type = DATA_TYPES, 
+            data_type = UNIQUE_ENVS, 
             analysis_name = analysis_name)
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
