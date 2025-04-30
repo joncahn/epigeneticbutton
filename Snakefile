@@ -133,7 +133,7 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = lambda wildcards: f"chkpts/ref__{wildcards.ref_genome}__{data_type_to_env[wildcards.data_type]}.done"
+        ref_chkpt = lambda wildcards: f"chkpts/ref__{wildcards.ref_genome}__{datatype_to_env[wildcards.data_type]}.done"
     output:
         chkpt = "chkpts/sample__{data_type}__{sample}__{replicate}__{ref_genome}.done"
     params:
@@ -141,10 +141,10 @@ rule process_sample:
     log:
         "logs/process__{data_type}__{sample}__{replicate}__{ref_genome}.log"
     conda:
-        lambda wildcards: f"envs/{data_type_to_env[wildcards.data_type]}_sample.yaml"
+        lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     shell:
         """
-        qsub {params.scripts_dir}/MaizeCode_{data_type_to_env[wildcards.data_type]}_sample.sh \
+        qsub {params.scripts_dir}/MaizeCode_{datatype_to_env[wildcards.data_type]}_sample.sh \
             -s {wildcards.sample} \
             -r {wildcards.replicate} \
             -d {wildcards.data_type} \
