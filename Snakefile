@@ -45,6 +45,8 @@ all_sample_outputs = expand(
     ref_genome = samples["ref_genome"]
 )
 
+print(sample_info_map, file=sys.stderr)
+
 # Define reference genomes
 REF_GENOMES = set(samples["ref_genome"].unique())
 
