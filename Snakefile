@@ -20,8 +20,7 @@ sample_info_map = {
         "seq_id": row.seq_id,
         "fastq_path": row.fastq_path,
         "paired": row.paired,
-        "ref_genome": row.ref_genome,
-        "data_type": row.data_type,
+        "ref_genome": row.ref_genome
     }
     for _, row in samples.iterrows()
 }
