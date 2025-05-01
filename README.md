@@ -74,7 +74,7 @@ conda install -c bioconda snakemake
 
 1. To run the pipeline:
 ```bash
-snakemake --use-conda --cores <N>
+snakemake --use-conda --conda-frontend mamba --cores 4
 ```
 
 2. To run the pipeline on a HPC using qsub:
@@ -96,6 +96,8 @@ This qsub command:
 3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:
 ```bash
 conda install mamba -n base -c conda-forge # to install mamba, if not already
+```
+```bash
 snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 1
 ```
 
