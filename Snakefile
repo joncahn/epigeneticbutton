@@ -16,7 +16,7 @@ samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
 
 # Create a dictionary to store the information for each sample
 sample_info_map = {
-    (row.line, row.tissue, row.sample, row.replicate): {
+    (row.data_type, row.line, row.tissue, row.sample, row.replicate): {
         "seq_id": row.seq_id,
         "fastq_path": row.fastq_path,
         "paired": row.paired,
@@ -28,7 +28,7 @@ sample_info_map = {
 
 # Function to access this information later on
 def get_sample_info(wildcards, field):
-    key = (wildcards.line, wildcards.tissue, wildcards.sample, wildcards.replicate)
+    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample, wildcards.replicate)
     return sample_info_map[key][field]
 
 # Generate all sample output files required
@@ -164,7 +164,7 @@ rule prepare_reference:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}__{datatype_to_env[get_sample_info(wildcards, 'data_type')]}.done"
+        ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}__{datatype_to_env[wildcards.data_type]}.done"
     output:
         chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done"
     params:
@@ -181,7 +181,7 @@ rule process_sample:
     log:
         "logs/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.log"
     conda:
-        lambda wildcards: f"envs/{datatype_to_env[get_sample_info(wildcards, 'data_type')]}_sample.yaml"
+        lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     shell:
         """
         qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
@@ -198,32 +198,6 @@ rule process_sample:
             -a {params.mapping_option} > {log} 2>&1
         touch {output.chkpt}
         """
-
-# # Rule to perform data type specific analysis
-# rule analyze_sample:
-    # input:
-        # process_chkpt = lambda wildcards: [
-            # f"chkpts/sample__{wildcards.data_type}__{sample}__{rep}__{samples[samples['sample'] == sample]['ref_genome'].iloc[0]}.done"
-            # for sample in datatype_to_samples[wildcards.data_type]
-            # for rep in samples_to_replicates[sample]
-        # ]
-    # output:
-        # chkpt = "chkpts/analysis__{data_type}__{analysis_name}.done"
-    # params:
-        # scripts_dir = config["scripts_dir"],
-        # analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt",
-        # env = lambda wildcards: datatype_to_env[wildcards.data_type]
-    # log:
-        # "logs/analysis__{data_type}__{analysis_name}.log"
-    # conda:
-        # lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
-    # shell:
-        # """
-        # # Call the appropriate analysis script based on data type
-        # qsub {params.scripts_dir}/MaizeCode_{params.env}_analysis.sh \
-            # -f {params.analysis_samplefile} > {log} 2>&1
-        # touch {output.chkpt}
-        # """
 
 # Rule to perform combined analysis
 rule combined_analysis:
