@@ -25,8 +25,6 @@ sample_info_map = {
     for _, row in samples.iterrows()
 }
 
-print(sample_info_map, file=sys.stderr)
-
 # Function to access this information later on
 def get_sample_info(wildcards, field):
     key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate)
