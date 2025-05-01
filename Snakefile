@@ -181,7 +181,8 @@ rule process_sample:
         lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     shell:
         """
-        qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
+        cd {params.env}/
+	qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
             -x {wildcards.sample_type} \
             -d {params.ref_dir} \
             -l {params.line} \
