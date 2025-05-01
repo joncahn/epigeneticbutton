@@ -11,16 +11,16 @@ configfile: "config.yaml"
 
 # Define sample metadata
 samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
-                      names=["data_type", "line", "tissue", "sample", "replicate", 
+                      names=["data_type", "line", "tissue", "sample_type", "replicate", 
                              "seq_id", "fastq_path", "paired", "ref_genome"])
 
 # Create a dictionary to store the information for each sample
 sample_info_map = {
-    (row.data_type, row.line, row.tissue, row.sample, row.replicate): {
-        "seq_id": row.seq_id,
-        "fastq_path": row.fastq_path,
-        "paired": row.paired,
-        "ref_genome": row.ref_genome
+    (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["replicate"]): {
+        "seq_id": row["seq_id"],
+        "fastq_path": row["fastq_path"],
+        "paired": row["paired"],
+        "ref_genome": row["ref_genome"]
     }
     for _, row in samples.iterrows()
 }
@@ -29,17 +29,17 @@ print(sample_info_map, file=sys.stderr)
 
 # Function to access this information later on
 def get_sample_info(wildcards, field):
-    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample, wildcards.replicate)
+    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate)
     return sample_info_map[key][field]
 
 # Generate all sample output files required
 all_sample_outputs = expand(
-    "chkpts/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done",
+    "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
     zip,
     data_type = samples["data_type"],
     line = samples["line"],
     tissue = samples["tissue"],
-    sample = samples["sample"],
+    sample_type = samples["sample_type"],
     replicate = samples["replicate"],
     ref_genome = samples["ref_genome"]
 )
@@ -88,9 +88,9 @@ print(all_sample_outputs, file=sys.stderr)
 # # Load the sample metadata and perform all operations in a single chain
 # analysis_samples = (
     # samples
-    # .query("sample != 'Input'") # filter Input samples
+    # .query("sample_type != 'Input'") # filter Input samples
     # .assign(ref_dir=lambda df: df.apply(lambda row: os.path.join(config["ref_path"], row["ref_genome"]), axis=1)) # create a column with the path to reference genome
-    # [["data_type", "line", "tissue", "sample", "paired", "ref_dir"]] # select the necessary columns
+    # [["data_type", "line", "tissue", "sample_type", "paired", "ref_dir"]] # select the necessary columns
     # .drop_duplicates() # removes replicates
 # )
 
@@ -99,8 +99,8 @@ print(all_sample_outputs, file=sys.stderr)
 
 # # Create dictionaries
 # refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
-# samples_to_replicates = samples.groupby("sample")["replicate"].unique().to_dict()
-# datatype_to_samples = analysis_samples.groupby("data_type")["sample"].unique().to_dict()
+# samples_to_replicates = samples.groupby("sample_type")["replicate"].unique().to_dict()
+# datatype_to_samples = analysis_samples.groupby("data_type")["sample_type"].unique().to_dict()
 
 # # Define output directories
 # DIRS = {
@@ -167,7 +167,7 @@ print(all_sample_outputs, file=sys.stderr)
     # input:
         # ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}__{datatype_to_env[wildcards.data_type]}.done"
     # output:
-        # chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.done"
+        # chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     # params:
         # scripts_dir = config["scripts_dir"],
         # ref_dir = lambda wildcards: os.path.join(config["ref_path"], get_sample_info(wildcards, 'ref_genome')),
@@ -180,13 +180,13 @@ print(all_sample_outputs, file=sys.stderr)
         # paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
         # mapping_option = config["mapping_option"]
     # log:
-        # "logs/process__{data_type}__{line}__{tissue}__{sample}__{replicate}__{ref_genome}.log"
+        # "logs/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     # conda:
         # lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     # shell:
         # """
         # qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
-            # -x {wildcards.sample} \
+            # -x {wildcards.sample_type} \
             # -d {params.ref_dir} \
             # -l {params.line} \
             # -t {params.tissue} \
