@@ -167,7 +167,7 @@ rule process_sample:
     params:
         scripts_dir = config["scripts_dir"],
         ref_dir = lambda wildcards: os.path.join(config["ref_path"], get_sample_info(wildcards, 'ref_genome')),
-        env = lambda wildcards: datatype_to_env[get_sample_info(wildcards, 'data_type')],
+        env = lambda wildcards: datatype_to_env[wildcards.data_type],
         line = lambda wildcards: wildcards.line,
         tissue = lambda wildcards: wildcards.tissue,
         replicate = lambda wildcards: wildcards.replicate,
