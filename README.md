@@ -100,10 +100,18 @@ conda install mamba -n base -c conda-forge # to install mamba, if not already
 ```bash
 snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 1
 ```
-
 It is also recommended to set strict conda channel priorities:
 ```bash
 conda config --set channel_priority strict
+```
+
+4. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
+```bash
+snakemake --dag | dot -Tpng > dag.png
+```
+or to force all steps to be performed:
+```bash
+ snakemake --dag --forceall | dot -Tpng > dag.png
 ```
 
 ### Output Structure
