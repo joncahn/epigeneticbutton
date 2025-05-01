@@ -39,6 +39,8 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 1. Clone the repository:
 ```bash
 git clone https://github.com/joncahn/epigeneticbutton.git
+```
+```bash
 cd epigeneticbutton
 ```
 
@@ -72,7 +74,7 @@ conda install -c bioconda snakemake
 
 1. To run the pipeline:
 ```bash
-snakemake --use-conda --cores <N>
+snakemake --use-conda --conda-frontend mamba --cores 4
 ```
 
 2. To run the pipeline on a HPC using qsub:
@@ -94,12 +96,22 @@ This qsub command:
 3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:
 ```bash
 conda install mamba -n base -c conda-forge # to install mamba, if not already
+```
+```bash
 snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 1
 ```
-
 It is also recommended to set strict conda channel priorities:
 ```bash
 conda config --set channel_priority strict
+```
+
+4. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
+```bash
+snakemake --dag | dot -Tpng > dag.png
+```
+or to force all steps to be performed:
+```bash
+ snakemake --dag --forceall | dot -Tpng > dag.png
 ```
 
 ### Output Structure
