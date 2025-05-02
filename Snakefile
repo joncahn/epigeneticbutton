@@ -200,10 +200,10 @@ rule process_sample:
             -f {params.fastq_path} \
             -p {params.paired} \
             -s "download" \
-            -a {params.mapping_option} &
+            -a {params.mapping_option} | tee {log} &
         pids+=("$!")
-        wait ${pids[*]}
         cd ..
+        wait ${pids[*]}
         touch {output.chkpt}
         """
 
@@ -243,7 +243,7 @@ rule combined_analysis:
         pids=()
         sh {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -r {input.region_file} &
+            -r {input.region_file} | tee {log} &
         pids+=("$!")
         wait ${pids[*]}
         touch {output.chkpt}
