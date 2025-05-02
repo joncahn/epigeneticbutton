@@ -188,7 +188,7 @@ rule process_sample:
     shell:
         """
         cd {params.env}/
-        JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
+        JOB_ID=$(qsub ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
             -x {wildcards.sample_type} \
             -d {params.ref_dir} \
             -l {params.line} \
@@ -202,7 +202,8 @@ rule process_sample:
             -a {params.mapping_option} | tee {log})
         while qstat -j "$JOB_ID" > /dev/null 2>&1; do
             sleep 10
-        done   
+        done
+        cd ..
         touch {output.chkpt}
         """
 
@@ -239,9 +240,12 @@ rule combined_analysis:
     shell:
         """
         # Call the combined analysis script
-        qsub {params.scripts_dir}/MaizeCode_analysis.sh \
+        JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -r {input.region_file} > {log} 2>&1
+            -r {input.region_file} | tess {log})
+        while qstat -j "$JOB_ID" > /dev/null 2>&1; do
+            sleep 10
+        done
         touch {output.chkpt}
         """ 
         
