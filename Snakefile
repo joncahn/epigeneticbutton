@@ -242,7 +242,7 @@ rule combined_analysis:
         # Call the combined analysis script
         JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -r {input.region_file} | tess {log})
+            -r {input.region_file} | tee {log})
         while qstat -j "$JOB_ID" > /dev/null 2>&1; do
             sleep 10
         done
