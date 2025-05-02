@@ -84,10 +84,12 @@ if unknowns:
 # Create dictionaries
 refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
 refgenome_to_env = {}
-for ref, dtype in refgenome_to_datatype.items():
-    env = datatype_to_env.get(dtype)
-    if env:
-        refgenome_to_env[ref] = env
+for ref, dtypes in refgenome_to_datatype.items():
+    envs = {datatype_to_env.get[dt] for dt in dtypes if dt in datatype_to_env}
+    if envs:
+        refgenome_to_env[ref] = list(envs)
+
+print(refgenome_to_env)
 
 # Load the sample metadata and perform all operations in a single chain
 analysis_samples = (
