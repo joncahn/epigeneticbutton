@@ -154,13 +154,13 @@ rule prepare_reference:
     shell:
         """
         # Call the original environment preparation script
-        JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
+        pids=()
+        sh {params.scripts_dir}/MaizeCode_check_environment.sh \
             -p {params.ref_path} \
             -r {wildcards.ref_genome} \
-            -d {wildcards.env} | tee {log})
-        while qstat -j "$JOB_ID" > /dev/null 2>&1; do
-            sleep 10
-        done            
+            -d {wildcards.env} | tee {log} &
+		pids+=("$!")
+        wait ${pids[*]}            
         touch {output.chkpt}
         """
 
@@ -187,8 +187,9 @@ rule process_sample:
         lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     shell:
         """
+        pids=()
         cd {params.env}/
-        JOB_ID=$(qsub ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
+        sh ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
             -x {wildcards.sample_type} \
             -d {params.ref_dir} \
             -l {params.line} \
@@ -199,10 +200,9 @@ rule process_sample:
             -f {params.fastq_path} \
             -p {params.paired} \
             -s "download" \
-            -a {params.mapping_option} | tee {log})
-        while qstat -j "$JOB_ID" > /dev/null 2>&1; do
-            sleep 10
-        done
+            -a {params.mapping_option} &
+        pids+=("$!")
+        wait ${pids[*]}
         cd ..
         touch {output.chkpt}
         """
@@ -240,12 +240,12 @@ rule combined_analysis:
     shell:
         """
         # Call the combined analysis script
-        JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_analysis.sh \
+        pids=()
+        sh {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -r {input.region_file} | tee {log})
-        while qstat -j "$JOB_ID" > /dev/null 2>&1; do
-            sleep 10
-        done
+            -r {input.region_file} &
+        pids+=("$!")
+        wait ${pids[*]}
         touch {output.chkpt}
         """ 
         
