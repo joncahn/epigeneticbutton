@@ -85,7 +85,7 @@ if unknowns:
 refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
 refgenome_to_env = {}
 for ref, dtypes in refgenome_to_datatype.items():
-    envs = {datatype_to_env.get[dt] for dt in dtypes if dt in datatype_to_env}
+    envs = {datatype_to_env.get(dt) for dt in dtypes if dt in datatype_to_env}
     if envs:
         refgenome_to_env[ref] = list(envs)
 
