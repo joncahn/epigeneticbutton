@@ -81,6 +81,14 @@ if unknowns:
     print("\nPlease check your sample sheet or update the env_patterns.")
     sys.exit(1)
 
+# Create dictionaries
+refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
+refgenome_to_env = {}
+for ref, dtype in refgenome_to_datatype.items():
+    env = datatype_to_env.get(dtype)
+    if env:
+        refgenome_to_env[ref] = env
+
 # Load the sample metadata and perform all operations in a single chain
 analysis_samples = (
     samples
@@ -92,11 +100,6 @@ analysis_samples = (
 
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
-
-# Create dictionaries
-refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
-samples_to_replicates = samples.groupby("sample_type")["replicate"].unique().to_dict()
-datatype_to_samples = analysis_samples.groupby("data_type")["sample_type"].unique().to_dict()
 
 # Define output directories
 DIRS = {
@@ -197,6 +200,21 @@ rule process_sample:
         touch {output.chkpt}
         """
 
+# Rule to prepare the file containing the path to regions bed files to use for analysis
+rule prepare_region_file:
+    input:
+        ref_chkpt="chkpts/ref__{ref_genome}__{env}.done"
+    output:
+        region_file="all_genes.txt"
+    run:
+        with open(output.region_file, "w") as outfile:
+            for ref in REF_GENOMES:
+                env = refgenome_to_env.get(ref)
+                for e in envs:
+                    path = f"{e}/tracks/{ref}_all_genes.bed"
+                    if os.path.isfile(path) and os.path.getsize(path) > 0:
+                        outfile.write(f"{path}\n")        
+
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
@@ -205,7 +223,6 @@ rule combined_analysis:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
     params:
         scripts_dir = config["scripts_dir"],
-        ref_path = config["ref_path"],
         analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
     log:
         f"logs/combined_analysis__{analysis_name}.log"
@@ -216,7 +233,7 @@ rule combined_analysis:
         # Call the combined analysis script
         qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -p {params.ref_path} > {log} 2>&1
+            -p {params.region_file} > {log} 2>&1
         touch {output.chkpt}
         """ 
         
