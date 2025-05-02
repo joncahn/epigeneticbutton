@@ -210,10 +210,9 @@ rule prepare_region_file:
         region_file="all_genes.txt"
     run:
         with open(output.region_file, "w") as outfile:
-            for ref in REF_GENOMES:
-                env = refgenome_to_env.get(ref)
-                for e in envs:
-                    path = f"{e}/tracks/{ref}_all_genes.bed"
+            for ref, envs in refgenome_to_env.items():
+                for env in envs:
+                    path = f"{env}/tracks/{ref}_all_genes.bed"
                     if os.path.isfile(path) and os.path.getsize(path) > 0:
                         outfile.write(f"{path}\n")        
 
