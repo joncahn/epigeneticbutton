@@ -156,10 +156,13 @@ rule prepare_reference:
     shell:
         """
         # Call the original environment preparation script
-        qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
+        JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
             -p {params.ref_path} \
             -r {wildcards.ref_genome} \
-            -d {wildcards.env} > {log} 2>&1
+            -d {wildcards.env} | tee {log})
+        while qstat -j "$JOB_ID" > /dev/null 2>&1; do
+            sleep 10
+        done            
         touch {output.chkpt}
         """
 
@@ -187,7 +190,7 @@ rule process_sample:
     shell:
         """
         cd {params.env}/
-	qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
+        JOB_ID=$(qsub {params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
             -x {wildcards.sample_type} \
             -d {params.ref_dir} \
             -l {params.line} \
@@ -198,23 +201,28 @@ rule process_sample:
             -f {params.fastq_path} \
             -p {params.paired} \
             -s "download" \
-            -a {params.mapping_option} > {log} 2>&1
+            -a {params.mapping_option} | tee {log})
+        while qstat -j "$JOB_ID" > /dev/null 2>&1; do
+            sleep 10
+        done   
         touch {output.chkpt}
         """
 
 # Rule to prepare the file containing the path to regions bed files to use for analysis
 rule prepare_region_file:
     input:
-        ref_chkpt="chkpts/ref__{ref_genome}__{env}.done"
+        [
+            f"{env}/tracks/{ref}_all_genes.bed"
+            for ref, envs in refgenome_to_env.items()
+            for env in envs
+        ]
     output:
         region_file="all_genes.txt"
     run:
         with open(output.region_file, "w") as outfile:
-            for ref, envs in refgenome_to_env.items():
-                for env in envs:
-                    path = f"{env}/tracks/{ref}_all_genes.bed"
-                    if os.path.isfile(path) and os.path.getsize(path) > 0:
-                        outfile.write(f"{path}\n")        
+            for path in input:
+                if os.path.isfile(path) and os.path.getsize(path) > 0:
+                    outfile.write(f"{path}\n")        
 
 # Rule to perform combined analysis
 rule combined_analysis:
