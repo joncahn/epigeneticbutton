@@ -225,7 +225,7 @@ rule prepare_region_file:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        sample_chkpt = all_sample_outputs
+        sample_chkpt = all_sample_outputs,
         region_file="all_genes.txt"
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
