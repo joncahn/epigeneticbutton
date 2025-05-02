@@ -226,6 +226,7 @@ rule prepare_region_file:
 rule combined_analysis:
     input:
         sample_chkpt = all_sample_outputs
+        region_file="all_genes.txt"
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
     params:
@@ -240,7 +241,7 @@ rule combined_analysis:
         # Call the combined analysis script
         qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -p {params.region_file} > {log} 2>&1
+            -r {input.region_file} > {log} 2>&1
         touch {output.chkpt}
         """ 
         
