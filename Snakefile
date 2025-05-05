@@ -157,13 +157,10 @@ rule prepare_reference:
     shell:
         """
         # Call the original environment preparation script
-        pids=()
-        sh {params.scripts_dir}/MaizeCode_check_environment.sh \
+        qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
             -p {params.ref_path} \
             -r {wildcards.ref_genome} \
-            -d {wildcards.env} | tee {log} &
-		pids+=("$!")
-        wait ${pids[*]}            
+            -d {wildcards.env} | tee {log}      
         touch {output.chkpt}
         """
 
@@ -190,9 +187,8 @@ rule process_sample:
         lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
     shell:
         """
-        pids=()
         cd {params.env}/
-        sh ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
+        qsub ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
             -x {wildcards.sample_type} \
             -d {params.ref_dir} \
             -l {params.line} \
@@ -203,10 +199,8 @@ rule process_sample:
             -f {params.fastq_path} \
             -p {params.paired} \
             -s "download" \
-            -a {params.mapping_option} | tee {log} &
-        pids+=("$!")
+            -a {params.mapping_option} | tee {log}
         cd ..
-        wait ${pids[*]}
         touch {output.chkpt}
         """
 
@@ -243,12 +237,9 @@ rule combined_analysis:
     shell:
         """
         # Call the combined analysis script
-        pids=()
-        sh {params.scripts_dir}/MaizeCode_analysis.sh \
+        qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
-            -r {input.region_file} | tee {log} &
-        pids+=("$!")
-        wait ${pids[*]}
+            -r {input.region_file} | tee {log}
         touch {output.chkpt}
         """ 
         
