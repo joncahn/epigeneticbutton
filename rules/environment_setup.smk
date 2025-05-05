@@ -37,7 +37,6 @@ rule check_fasta:
     threads: workflow.cores
     shell:
         """
-        {{
         # Search for fasta file
         ref_dir={params.ref_dir}
         if [ -s ${ref_dir}/*.fa.gz ]; then
@@ -64,7 +63,6 @@ rule check_fasta:
             printf "\nNo fasta file found in reference directory:\n ${ref_dir}\n"
             exit 1
         fi
-        }} &> {log}
         """
         
 rule check_gff:
@@ -79,7 +77,6 @@ rule check_gff:
     threads: workflow.cores
     shell:
         """
-        {{
         ref_dir={params.ref_dir}
         if [ -s ${ref_dir}/*.gff*.gz ]; then
             gff_file=$(ls ${ref_dir}/*gff*.gz)
@@ -95,7 +92,6 @@ rule check_gff:
             printf "\nNo gff annotation file found in reference directory:\n ${ref_dir}\n"
             exit 1
         fi
-        }} &> {log}
         """
 
 rule check_gtf:
@@ -109,13 +105,12 @@ rule check_gtf:
         CONDA_ENV
     threads: workflow.cores
     shell:
-        r"""
-        {{
+        """
         ref_dir={params.ref_dir}
         if [ -s ${ref_dir}/*.gtf.gz ]; then
             gtf_file=$(ls ${ref_dir}/*gtf.gz)
             gtf_filename=${gtf_file##*/}
-            printf "\nGzipped GTF annotation file found in ${ref_dir}:\n ${gtf_filename}\n" 
+            printf "\nGzipped GTF annotation file found in ${ref_dir}:\n ${gtf_filename}\n"
             pigz -p {threads} -dc ${gtf_file} > {output.gtf}	
         elif [ -s ${ref_dir}/*.gtf ]; then
             gtf_file=$(ls ${ref_dir}/*.gtf)
@@ -126,7 +121,6 @@ rule check_gtf:
             printf "\nNo GTF annotation file found in reference directory:\n ${ref_dir}\n"
             exit 1
         fi
-        }} &> {log}
         """
         
 rule check_chrom_sizes:
@@ -140,12 +134,10 @@ rule check_chrom_sizes:
     conda:
         CONDA_ENV
     shell:
-        r"""
-        {{
-        printf "\nMaking chrom.sizes file for {ref}\n" 
+        """
+        printf "\nMaking chrom.sizes file for {ref}\n"
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom.sizes}
-        }} &> {log}
         """
 
 rule prep_region_file:
@@ -160,11 +152,9 @@ rule prep_region_file:
     conda:
         CONDA_ENV
     shell:
-        r"""
-        {{
+        """
         printf "\nMaking a bed file with gene coordinates from {ref}\n"
         awk -v OFS="\t" '$3=="gene" {print $1,$4-1,$5,$9,".",$7}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {print $1,$4-1,$5,$9,".",$7}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
-        }} &> {log}
         """
         
