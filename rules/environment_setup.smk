@@ -38,29 +38,28 @@ rule check_fasta:
     shell:
         """
         # Search for fasta file
-        ref_dir={params.ref_dir}
-        if [ -s ${ref_dir}/*.fa.gz ]; then
-            fa_file=$(ls ${ref_dir}/*.fa.gz)
-            fa_filename=${fa_file##*/}
-            printf "\nGzipped fasta file found in ${ref_dir}:\n ${fa_filename}\n"
-            pigz -p {threads} -dc ${fa_file} > {output.fasta}
-        elif [ -s ${ref_dir}/*.fa ]; then
-            fa_file=$(ls ${ref_dir}/*.fa)
-            fa_filename=${fa_file##*/}
-            printf "\nUnzipped fasta file found in ${ref_dir}:\n ${fa_filename}\n"
-            cp ${fa_file} {output.fasta}
-        elif [ -s ${ref_dir}/*.fasta.gz ]; then
-            fa_file=$(ls ${ref_dir}/*.fasta.gz)
-            fa_filename=${fa_file##*/}
-            printf "\nGzipped fasta file found in ${ref_dir}:\n ${fa_filename}\n"
-            pigz -p {threads} -dc ${fa_file} > {output.fasta}
-        elif [ -s ${ref_dir}/*.fasta ]; then
-            fa_file=$(ls ${ref_dir}/*.fasta)
-            fa_filename=${fa_file##*/}
-            printf "\nUnzipped fasta file found in ${ref_dir}:\n ${fa_filename}\n"
-            cp ${fa_file} {output.fasta}
+        if [ -s {params.ref_dir}/*.fa.gz ]; then
+            fa_file=$(ls ${params.ref_dir}/*.fa.gz)
+            fa_filename=${{fa_file##*/}}
+            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
+        elif [ -s {params.ref_dir}/*.fa ]; then
+            fa_file=$(ls {params.ref_dir}/*.fa)
+            fa_filename=${{fa_file##*/}}
+            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            cp ${{fa_file}} {output.fasta}
+        elif [ -s {params.ref_dir}/*.fasta.gz ]; then
+            fa_file=$(ls {params.ref_dir}/*.fasta.gz)
+            fa_filename=${{fa_file##*/}}
+            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
+        elif [ -s {params.ref_dir}/*.fasta ]; then
+            fa_file=$(ls {params.ref_dir}/*.fasta)
+            fa_filename=${{fa_file##*/}}
+            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            cp ${{fa_file}} {output.fasta}
         else
-            printf "\nNo fasta file found in reference directory:\n ${ref_dir}\n"
+            printf "\nNo fasta file found in reference directory:\n {params.ref_dir}\n"
             exit 1
         fi
         """
@@ -77,19 +76,18 @@ rule check_gff:
     threads: workflow.cores
     shell:
         """
-        ref_dir={params.ref_dir}
-        if [ -s ${ref_dir}/*.gff*.gz ]; then
-            gff_file=$(ls ${ref_dir}/*gff*.gz)
-            gff_filename=${gff_file##*/}
-            printf "\nGzipped GFF annotation file found in ${ref_dir}:\n ${gff_filename}\n"
-            pigz -p {threads} -dc ${gff_file} > {output.gff}	
-        elif [ -s ${ref_dir}/*.gff* ]; then
-            gff_file=$(ls ${ref_dir}/*.gff*)
-            gff_filename=${gff_file##*/}
-            printf "\nUnzipped GFF annotation file found in ${ref_dir}:\n ${gff_filename}\n"
-            cp ${gff_file} {output.gff}
+        if [ -s {params.ref_dir}/*.gff*.gz ]; then
+            gff_file=$(ls {params.ref_dir}/*gff*.gz)
+            gff_filename=${{gff_file##*/}}
+            printf "\nGzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n"
+            pigz -p {threads} -dc ${{gff_file}} > {output.gff}	
+        elif [ -s {params.ref_dir}/*.gff* ]; then
+            gff_file=$(ls {params.ref_dir}/*.gff*)
+            gff_filename=${{gff_file##*/}}
+            printf "\nUnzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n"
+            cp ${{gff_file}} {output.gff}
         else
-            printf "\nNo gff annotation file found in reference directory:\n ${ref_dir}\n"
+            printf "\nNo gff annotation file found in reference directory:\n {params.ref_dir}\n"
             exit 1
         fi
         """
