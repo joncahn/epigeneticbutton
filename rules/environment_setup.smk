@@ -150,7 +150,7 @@ rule prep_region_file:
     shell:
         """
         printf "\nMaking a bed file with gene coordinates from {ref}\n"
-        awk -v OFS="\t" '$3=="gene" {print $1,$4-1,$5,$9,".",$7}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
-        awk -v OFS="\t" '$3~"gene" {print $1,$4-1,$5,$9,".",$7}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
+        awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
+        awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         """
         
