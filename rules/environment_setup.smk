@@ -1,4 +1,10 @@
-# Rule to prepare reference genome for each data type
+# function to access logs more easily
+def return_log(ref, step):
+    return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref}.log")
+
+CONDA_ENV=os.path.join(REPO_FOLDER,"envs/reference.yaml")
+
+# Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
         fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa"),
@@ -6,10 +12,10 @@ rule prepare_reference:
         gtf = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf"),
         chrom_sizes = os.path.join(REF_PATH, "{ref}","chrom.sizes"),
         region_files = ["combined/tracks/{ref}_protein_coding_genes.bed", "combined/tracks/{ref}_all_genes.bed"],
-        logs = ["logs/tmp_fasta_{ref}.log", "logs/tmp_gff_{ref}.log", "logs/tmp_gtf_{ref}.log", "logs/tmp_chrom_size_{ref}.log", "logs/tmp_region_file_{ref}.log"]
+        logs = [ret_log("{ref}", "fasta"), ret_log("{ref}", "gff"), ret_log("{ref}", "gtf"), ret_log("{ref}", "chrom_sizes"), ret_log("{ref}", "region_file")]
     output:
         chkpt = "chkpts/ref__{ref}.done",
-        log = "logs/prepare_ref__{ref}.log"
+        log = os.path.join(REPO_FOLDER,"logs",f"ref_prep__{ref}.log")
     shell:
         """
         cat {input.logs} > {output.log}
@@ -25,9 +31,9 @@ rule check_fasta:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
-        "logs/tmp_fasta_{ref}.log"    
+        return_log("{ref}", "fasta")
     conda:
-        "envs/reference.yaml"
+        CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -67,9 +73,9 @@ rule check_gff:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
-        "logs/tmp_gff_{ref}.log"
+        return_log("{ref}", "gff")
     conda:
-        "envs/reference.yaml"
+        CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -98,9 +104,9 @@ rule check_gtf:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
-        "logs/tmp_gtf_{ref}.log"
+        return_log("{ref}", "gtf")
     conda:
-        "envs/reference.yaml"
+        CONDA_ENV
     threads: workflow.cores
     shell:
         r"""
@@ -130,9 +136,9 @@ rule check_chrom_sizes:
         fasta_index = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa.fai"),
         chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes")
     log:
-        "logs/tmp_chrom_size_{ref}.log"
+        return_log("{ref}", "chrom_sizes")
     conda:
-        "envs/reference.yaml"
+        CONDA_ENV
     shell:
         r"""
         {{
@@ -150,9 +156,9 @@ rule prep_region_file:
         region_file1 = "combined/tracks/{ref}_protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref}_all_genes.bed"
     log:
-        "logs/tmp_region_file_{ref}.log"
+        return_log("{ref}", "region_file")
     conda:
-        "envs/reference.yaml"
+        CONDA_ENV
     shell:
         r"""
         {{

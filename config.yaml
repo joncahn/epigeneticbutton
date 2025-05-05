@@ -1,3 +1,6 @@
+# Path to the directory in which 
+repo_folder: "path/to/epigeneticbutton/repo"
+
 # Name of analysis
 analysis_name: "test_snakemake"
 
@@ -6,9 +9,6 @@ sample_file: "samples.tsv"
 
 # Path to the directory containing reference genomes
 ref_path: "path/to/reference/genomes"
-
-# Path to the scripts directory
-scripts_dir: "scripts"
 
 # Path to the scripts directory
 mapping_option: "default"
