@@ -8,8 +8,8 @@ rule prepare_reference:
         region_files = ["combined/tracks/${ref}_protein_coding_genes.bed", "combined/tracks/${ref}_all_genes.bed"],
         logs = ["logs/tmp_fasta_{ref}.log", "logs/tmp_gff_{ref}.log", "logs/tmp_gtf_{ref}.log", "logs/tmp_chrom_size_{ref}.log", "logs/tmp_region_file_{ref}.log"]
     output:
-        chkpt = "chkpts/ref__{ref_genome}__{env}.done",
-        log = "logs/prepare_ref__{ref_genome}__{env}.log"
+        chkpt = "chkpts/ref__{ref}__{env}.done",
+        log = "logs/prepare_ref__{ref}__{env}.log"
     shell:
         """
         cat {input.logs} > {output.log}
