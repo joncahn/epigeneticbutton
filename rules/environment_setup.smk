@@ -26,7 +26,6 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
-        touch = "chkpts/genome_prep_{ref}.done",
         fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa")
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
