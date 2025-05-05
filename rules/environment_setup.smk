@@ -21,7 +21,7 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     output:
         fasta = "{ref_dir}/temp_{data_type}_{ref}.fa"
     log:
