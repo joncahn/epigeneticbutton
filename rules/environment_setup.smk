@@ -60,7 +60,7 @@ rule check_fasta:
         
 rule check_gff:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     output:
         gff = "{ref_dir}/temp_{data_type}_{ref}.gff"
     log:
@@ -88,7 +88,7 @@ rule check_gff:
 
 rule check_gtf:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     output:
         gtf = "{ref_dir}/temp_{data_type}_{ref}.gtf"
     log:
@@ -117,7 +117,7 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome),
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref),
         fasta = "{ref_dir}/temp_{data_type}_{ref}.fa"
     output:
         fasta_index = "{ref_dir}/temp_{data_type}_{ref}.fa.fai",
@@ -135,7 +135,7 @@ rule check_chrom_sizes:
 
 rule prep_region_file:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome),
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref),
         chrom_sizes = "{ref_dir}/chrom.sizes",
         gff = "{ref_dir}/temp_{data_type}_{ref}.gff"
     output:
