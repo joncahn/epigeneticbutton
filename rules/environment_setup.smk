@@ -108,14 +108,14 @@ rule check_gtf:
         """
         if [ -s {params.ref_dir}/*.gtf.gz ]; then
             gtf_file=$(ls {params.ref_dir}/*gtf.gz)
-            gtf_filename=${gtf_file##*/}
-            printf "\nGzipped GTF annotation file found in {params.ref_dir}:\n ${gtf_filename}\n"
-            pigz -p {threads} -dc ${gtf_file} > {output.gtf}	
+            gtf_filename=${{gtf_file##*/}}
+            printf "\nGzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n"
+            pigz -p {threads} -dc ${{gtf_file}} > {output.gtf}	
         elif [ -s {params.ref_dir}/*.gtf ]; then
             gtf_file=$(ls {params.ref_dir}/*.gtf)
-            gtf_filename=${gtf_file##*/}
-            printf "\nUnzipped GTF annotation file found in ${ref_dir}:\n ${gtf_filename}\n"
-            cp ${gtf_file} {output.gtf}
+            gtf_filename=${{gtf_file##*/}}
+            printf "\nUnzipped GTF annotation file found in ${ref_dir}:\n ${{gtf_filename}}\n"
+            cp ${{gtf_file}} {output.gtf}
         else
             printf "\nNo GTF annotation file found in reference directory:\n {params.ref_dir}\n"
             exit 1
