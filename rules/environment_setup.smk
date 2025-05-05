@@ -8,8 +8,8 @@ rule prepare_reference:
         region_files = ["combined/tracks/{ref}_protein_coding_genes.bed", "combined/tracks/{ref}_all_genes.bed"],
         logs = ["../logs/tmp_fasta_{ref}.log", "../logs/tmp_gff_{ref}.log", "../logs/tmp_gtf_{ref}.log", "../logs/tmp_chrom_size_{ref}.log", "../logs/tmp_region_file_{ref}.log"]
     output:
-        chkpt = "../chkpts/ref__{ref}__{env}.done",
-        log = "../logs/prepare_ref__{ref}__{env}.log"
+        chkpt = "chkpts/ref__{ref}.done",
+        log = "logs/prepare_ref__{ref}.log"
     shell:
         """
         cat {input.logs} > {output.log}
@@ -20,14 +20,14 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
-        touch = "../chkpts/genome_prep_{ref}.done",
+        touch = "chkpts/genome_prep_{ref}.done",
         fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa")
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
-        "../logs/tmp_fasta_{ref}.log"    
+        "logs/tmp_fasta_{ref}.log"    
     conda:
-        "../envs/reference.yaml"
+        "envs/reference.yaml"
     threads: workflow.cores
     shell:
         """
@@ -67,9 +67,9 @@ rule check_gff:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
-        "../logs/tmp_gff_{ref}.log"
+        "logs/tmp_gff_{ref}.log"
     conda:
-        "../envs/reference.yaml"
+        "envs/reference.yaml"
     threads: workflow.cores
     shell:
         """
@@ -98,9 +98,9 @@ rule check_gtf:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
-        "../logs/tmp_gtf_{ref}.log"
+        "logs/tmp_gtf_{ref}.log"
     conda:
-        "../envs/reference.yaml"
+        "envs/reference.yaml"
     threads: workflow.cores
     shell:
         r"""
@@ -130,9 +130,9 @@ rule check_chrom_sizes:
         fasta_index = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa.fai"),
         chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes")
     log:
-        "../logs/tmp_chrom_size_{ref}.log"
+        "logs/tmp_chrom_size_{ref}.log"
     conda:
-        "../envs/reference.yaml"
+        "envs/reference.yaml"
     shell:
         r"""
         {{
@@ -150,9 +150,9 @@ rule prep_region_file:
         region_file1 = "combined/tracks/{ref}_protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref}_all_genes.bed"
     log:
-        "../logs/tmp_region_file_{ref}.log"
+        "logs/tmp_region_file_{ref}.log"
     conda:
-        "../envs/reference.yaml"
+        "envs/reference.yaml"
     shell:
         r"""
         {{
