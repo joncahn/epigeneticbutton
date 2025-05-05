@@ -1,15 +1,15 @@
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
     input:
-        fasta = "{ref_dir}/temp_{data_type}_{ref}.fa"
-        gff = "{ref_dir}/temp_{data_type}_{ref}.gff"
-        gtf = "{ref_dir}/temp_{data_type}_{ref}.gtf"
-        chrom_sizes = "{ref_dir}/chrom.sizes"
-        region_files = ["${data_type}/tracks/${ref}_protein_coding_genes.bed", "${data_type}/tracks/${ref}_all_genes.bed"]
-        stat_file = "${data_type}/reports/summary_mapping_stats.txt"
+        fasta = "{ref_dir}/temp_{data_type}_{ref}.fa",
+        gff = "{ref_dir}/temp_{data_type}_{ref}.gff",
+        gtf = "{ref_dir}/temp_{data_type}_{ref}.gtf",
+        chrom_sizes = "{ref_dir}/chrom.sizes",
+        region_files = ["${data_type}/tracks/${ref}_protein_coding_genes.bed", "${data_type}/tracks/${ref}_all_genes.bed"],
+        stat_file = "${data_type}/reports/summary_mapping_stats.txt",
         logs = ["logs/tmp_fasta_{data_type}_{ref}.log", "logs/tmp_gff_{data_type}_{ref}.log", "logs/tmp_gtf_{data_type}_{ref}.log", "logs/tmp_chrom_size_{data_type}_{ref}.log", "logs/tmp_region_file_{data_type}_{ref}.log"]
     output:
-        chkpt = "chkpts/ref__{ref_genome}__{env}.done"
+        chkpt = "chkpts/ref__{ref_genome}__{env}.done",
         log = "logs/prepare_ref__{ref_genome}__{env}.log"
     shell:
         """
