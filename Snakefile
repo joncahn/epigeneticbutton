@@ -147,6 +147,7 @@ rule prepare_reference:
         refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
     output:
         chkpt = "chkpts/ref__{ref_genome}__{env}.done"
+        region_file = f"{env}/tracks/{ref}_all_genes.bed"
     params:
         ref_path = config["ref_path"],
         scripts_dir = config["scripts_dir"]
