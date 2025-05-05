@@ -19,7 +19,7 @@ rule prepare_reference:
     shell:
         """
         cat {input.logs} > {output.log}
-        # rm {input.logs}
+        rm {input.logs}
         touch {output.chkpt}
         """
 
@@ -40,25 +40,25 @@ rule check_fasta:
         if [ -s {params.ref_dir}/*.fa.gz ]; then
             fa_file=$(ls ${params.ref_dir}/*.fa.gz)
             fa_filename=${{fa_file##*/}}
-            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
             pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
         elif [ -s {params.ref_dir}/*.fa ]; then
             fa_file=$(ls {params.ref_dir}/*.fa)
             fa_filename=${{fa_file##*/}}
-            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
             cp ${{fa_file}} {output.fasta}
         elif [ -s {params.ref_dir}/*.fasta.gz ]; then
             fa_file=$(ls {params.ref_dir}/*.fasta.gz)
             fa_filename=${{fa_file##*/}}
-            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
             pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
         elif [ -s {params.ref_dir}/*.fasta ]; then
             fa_file=$(ls {params.ref_dir}/*.fasta)
             fa_filename=${{fa_file##*/}}
-            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n"
+            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
             cp ${{fa_file}} {output.fasta}
         else
-            printf "\nNo fasta file found in reference directory:\n {params.ref_dir}\n"
+            printf "\nNo fasta file found in reference directory:\n {params.ref_dir}\n" >> {log} 2>&1
             exit 1
         fi
         """
@@ -78,15 +78,15 @@ rule check_gff:
         if [ -s {params.ref_dir}/*.gff*.gz ]; then
             gff_file=$(ls {params.ref_dir}/*gff*.gz)
             gff_filename=${{gff_file##*/}}
-            printf "\nGzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n"
+            printf "\nGzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n" >> {log} 2>&1
             pigz -p {threads} -dc ${{gff_file}} > {output.gff}	
         elif [ -s {params.ref_dir}/*.gff* ]; then
             gff_file=$(ls {params.ref_dir}/*.gff*)
             gff_filename=${{gff_file##*/}}
-            printf "\nUnzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n"
+            printf "\nUnzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n" >> {log} 2>&1
             cp ${{gff_file}} {output.gff}
         else
-            printf "\nNo gff annotation file found in reference directory:\n {params.ref_dir}\n"
+            printf "\nNo gff annotation file found in reference directory:\n {params.ref_dir}\n" >> {log} 2>&1
             exit 1
         fi
         """
@@ -106,15 +106,15 @@ rule check_gtf:
         if [ -s {params.ref_dir}/*.gtf.gz ]; then
             gtf_file=$(ls {params.ref_dir}/*gtf.gz)
             gtf_filename=${{gtf_file##*/}}
-            printf "\nGzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n"
+            printf "\nGzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n" >> {log} 2>&1
             pigz -p {threads} -dc ${{gtf_file}} > {output.gtf}	
         elif [ -s {params.ref_dir}/*.gtf ]; then
             gtf_file=$(ls {params.ref_dir}/*.gtf)
             gtf_filename=${{gtf_file##*/}}
-            printf "\nUnzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n"
+            printf "\nUnzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n" >> {log} 2>&1
             cp ${{gtf_file}} {output.gtf}
         else
-            printf "\nNo GTF annotation file found in reference directory:\n {params.ref_dir}\n"
+            printf "\nNo GTF annotation file found in reference directory:\n {params.ref_dir}\n" >> {log} 2>&1
             exit 1
         fi
         """
@@ -131,7 +131,7 @@ rule check_chrom_sizes:
         CONDA_ENV
     shell:
         """
-        printf "\nMaking chrom.sizes file for {ref}\n"
+        printf "\nMaking chrom.sizes file for {ref}\n" >> {log} 2>&1
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
         """
@@ -149,7 +149,7 @@ rule prep_region_file:
         CONDA_ENV
     shell:
         """
-        printf "\nMaking a bed file with gene coordinates from {ref}\n"
+        printf "\nMaking a bed file with gene coordinates from {ref}\n" >> {log} 2>&1
         awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         """
