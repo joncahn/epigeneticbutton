@@ -141,29 +141,29 @@ rule all:
 	input:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
-# Rule to prepare reference genome for each data type
-rule prepare_reference:
-    input:
-        refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
-    output:
-        chkpt = "chkpts/ref__{ref_genome}__{env}.done",
-        region_file = f"{env}/tracks/{ref}_all_genes.bed"
-    params:
-        ref_path = config["ref_path"],
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/prepare_ref__{ref_genome}__{env}.log"
-    conda:
-        "envs/reference.yaml"
-    shell:
-        """
-        # Call the original environment preparation script
-        qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
-            -p {params.ref_path} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.env} | tee {log}      
-        touch {output.chkpt}
-        """
+# # Rule to prepare reference genome for each data type
+# rule prepare_reference:
+    # input:
+        # refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
+    # output:
+        # chkpt = "chkpts/ref__{ref_genome}__{env}.done",
+        # region_file = f"{env}/tracks/{ref}_all_genes.bed"
+    # params:
+        # ref_path = config["ref_path"],
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/prepare_ref__{ref_genome}__{env}.log"
+    # conda:
+        # "envs/reference.yaml"
+    # shell:
+        # """
+        # # Call the original environment preparation script
+        # qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
+            # -p {params.ref_path} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.env} | tee {log}      
+        # touch {output.chkpt}
+        # """
 
 # Rule to process samples based on data type
 rule process_sample:
@@ -205,21 +205,21 @@ rule process_sample:
         touch {output.chkpt}
         """
 
-# Rule to prepare the file containing the path to regions bed files to use for analysis
-rule prepare_region_file:
-    input:
-        [
-            f"{env}/tracks/{ref}_all_genes.bed"
-            for ref, envs in refgenome_to_env.items()
-            for env in envs
-        ]
-    output:
-        region_file="all_genes.txt"
-    run:
-        with open(output.region_file, "w") as outfile:
-            for path in input:
-                if os.path.isfile(path) and os.path.getsize(path) > 0:
-                    outfile.write(f"{path}\n")        
+# # Rule to prepare the file containing the path to regions bed files to use for analysis
+# rule prepare_region_file:
+    # input:
+        # [
+            # f"{env}/tracks/{ref}_all_genes.bed"
+            # for ref, envs in refgenome_to_env.items()
+            # for env in envs
+        # ]
+    # output:
+        # region_file="all_genes.txt"
+    # run:
+        # with open(output.region_file, "w") as outfile:
+            # for path in input:
+                # if os.path.isfile(path) and os.path.getsize(path) > 0:
+                    # outfile.write(f"{path}\n")        
 
 # Rule to perform combined analysis
 rule combined_analysis:
