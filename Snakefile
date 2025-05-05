@@ -168,7 +168,7 @@ rule all:
 # Rule to process samples based on data type
 rule process_sample:
     input:
-        ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}__{datatype_to_env[wildcards.data_type]}.done"
+        ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}.done"
     output:
         chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
