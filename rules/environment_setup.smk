@@ -19,7 +19,7 @@ rule prepare_reference:
     shell:
         """
         cat {input.logs} > {output.log}
-        rm {input.logs}
+        # rm {input.logs}
         touch {output.chkpt}
         """
 
