@@ -133,7 +133,7 @@ rule check_chrom_sizes:
         """
         printf "\nMaking chrom.sizes file for {ref}\n"
         samtools faidx {input.fasta}
-        cut -f1,2 {output.fasta_index} > {output.chrom.sizes}
+        cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
         """
 
 rule prep_region_file:
