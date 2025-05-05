@@ -5,7 +5,7 @@ rule prepare_reference:
         gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gff"),
         gtf = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf"),
         chrom_sizes = os.path.join(REF_PATH, "{ref}","chrom.sizes"),
-        region_files = ["combined/tracks/${ref}_protein_coding_genes.bed", "combined/tracks/${ref}_all_genes.bed"],
+        region_files = ["combined/tracks/{ref}_protein_coding_genes.bed", "combined/tracks/{ref}_all_genes.bed"],
         logs = ["logs/tmp_fasta_{ref}.log", "logs/tmp_gff_{ref}.log", "logs/tmp_gtf_{ref}.log", "logs/tmp_chrom_size_{ref}.log", "logs/tmp_region_file_{ref}.log"]
     output:
         chkpt = "chkpts/ref__{ref}__{env}.done",
