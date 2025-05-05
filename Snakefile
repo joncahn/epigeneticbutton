@@ -42,8 +42,9 @@ all_sample_outputs = expand(
     ref_genome = samples["ref_genome"]
 )
 
-# Define reference genomes
+# Define reference genomes and the path to them
 REF_GENOMES = set(samples["ref_genome"].unique())
+REF_PATH = config["ref_path"]
 
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
@@ -93,7 +94,7 @@ for ref, dtypes in refgenome_to_datatype.items():
 analysis_samples = (
     samples
     .query("sample_type != 'Input'") # filter Input samples
-    .assign(ref_dir=lambda df: df.apply(lambda row: os.path.join(config["ref_path"], row["ref_genome"]), axis=1)) # create a column with the path to reference genome
+    .assign(ref_dir=lambda df: df.apply(lambda row: os.path.join(REF_PATH, row["ref_genome"]), axis=1)) # create a column with the path to reference genome
     [["data_type", "line", "tissue", "sample_type", "paired", "ref_dir"]] # select the necessary columns
     .drop_duplicates() # removes replicates
 )
@@ -141,28 +142,28 @@ rule all:
 	input:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
-# Rule to prepare reference genome for each data type
-rule prepare_reference:
-    input:
-        refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
-    output:
-        chkpt = "chkpts/ref__{ref_genome}__{env}.done"
-    params:
-        ref_path = config["ref_path"],
-        scripts_dir = config["scripts_dir"]
-    log:
-        "logs/prepare_ref__{ref_genome}__{env}.log"
-    conda:
-        "envs/reference.yaml"
-    shell:
-        """
-        # Call the original environment preparation script
-        qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
-            -p {params.ref_path} \
-            -r {wildcards.ref_genome} \
-            -d {wildcards.env} | tee {log}      
-        touch {output.chkpt}
-        """
+# # Rule to prepare reference genome for each data type
+# rule prepare_reference:
+    # input:
+        # refs = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
+    # output:
+        # chkpt = "chkpts/ref__{ref_genome}__{env}.done"
+    # params:
+        # ref_path = config["ref_path"],
+        # scripts_dir = config["scripts_dir"]
+    # log:
+        # "logs/prepare_ref__{ref_genome}__{env}.log"
+    # conda:
+        # "envs/reference.yaml"
+    # shell:
+        # """
+        # # Call the original environment preparation script
+        # qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
+            # -p {params.ref_path} \
+            # -r {wildcards.ref_genome} \
+            # -d {wildcards.env} | tee {log}      
+        # touch {output.chkpt}
+        # """
 
 # Rule to process samples based on data type
 rule process_sample:
@@ -172,7 +173,7 @@ rule process_sample:
         chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
         scripts_dir = config["scripts_dir"],
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], get_sample_info(wildcards, 'ref_genome')),
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, get_sample_info(wildcards, 'ref_genome')),
         env = lambda wildcards: datatype_to_env[wildcards.data_type],
         line = lambda wildcards: wildcards.line,
         tissue = lambda wildcards: wildcards.tissue,

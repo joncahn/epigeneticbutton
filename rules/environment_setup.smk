@@ -1,13 +1,12 @@
 # Rule to prepare reference genome for each data type
 rule prepare_reference:
     input:
-        fasta = "{ref_dir}/temp_{data_type}_{ref}.fa",
-        gff = "{ref_dir}/temp_{data_type}_{ref}.gff",
-        gtf = "{ref_dir}/temp_{data_type}_{ref}.gtf",
-        chrom_sizes = "{ref_dir}/chrom.sizes",
-        region_files = ["${data_type}/tracks/${ref}_protein_coding_genes.bed", "${data_type}/tracks/${ref}_all_genes.bed"],
-        stat_file = "${data_type}/reports/summary_mapping_stats.txt",
-        logs = ["logs/tmp_fasta_{data_type}_{ref}.log", "logs/tmp_gff_{data_type}_{ref}.log", "logs/tmp_gtf_{data_type}_{ref}.log", "logs/tmp_chrom_size_{data_type}_{ref}.log", "logs/tmp_region_file_{data_type}_{ref}.log"]
+        fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa"),
+        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gff"),
+        gtf = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf"),
+        chrom_sizes = os.path.join(REF_PATH, "{ref}","chrom.sizes"),
+        region_files = ["combined/tracks/${ref}_protein_coding_genes.bed", "combined/tracks/${ref}_all_genes.bed"],
+        logs = ["logs/tmp_fasta_{ref}.log", "logs/tmp_gff_{ref}.log", "logs/tmp_gtf_{ref}.log", "logs/tmp_chrom_size_{ref}.log", "logs/tmp_region_file_{ref}.log"]
     output:
         chkpt = "chkpts/ref__{ref_genome}__{env}.done",
         log = "logs/prepare_ref__{ref_genome}__{env}.log"
@@ -21,9 +20,10 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
-        fasta = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.fa")
+        touch = "chkpts/genome_prep_{ref}.done"
+        fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa")
     params:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
         "logs/tmp_fasta_{ref}.log"    
     conda:
@@ -61,9 +61,9 @@ rule check_fasta:
         
 rule check_gff:
     output:
-        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.gff")
+        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gff")
     params:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
         "logs/tmp_gff_{ref}.log"
     conda:
@@ -90,9 +90,9 @@ rule check_gff:
 
 rule check_gtf:
     output:
-        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.gtf")
+        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf")
     params:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
         "logs/tmp_gtf_{ref}.log"
     conda:
@@ -119,10 +119,10 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        fasta = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.fa")
+        fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa")
     output:
-        fasta_index = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.fa.fai"),
-        chrom_sizes = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"chrom.sizes")
+        fasta_index = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa.fai"),
+        chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes")
     log:
         "logs/tmp_chrom_size_{ref}.log"
     conda:
@@ -136,8 +136,8 @@ rule check_chrom_sizes:
 
 rule prep_region_file:
     input:
-        chrom_sizes = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"chrom.sizes"),
-        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.gtf")
+        chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes"),
+        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf")
     output:
         region_file1 = "combined/tracks/{ref}_protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref}_all_genes.bed"
