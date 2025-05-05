@@ -133,8 +133,8 @@ def create_directories(unique_envs, dirs):
 # Call the function to create directories
 create_directories(UNIQUE_ENVS, DIRS)
 
-# # Include all rule files
-# include: "rules/environment_setup.smk"
+# Include all rule files
+include: "rules/environment_setup.smk"
 
 # Rule all to specify final target
 rule all:
