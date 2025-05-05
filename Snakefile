@@ -141,29 +141,28 @@ rule all:
 	input:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
-# # Rule to prepare reference genome for each data type
-# rule prepare_reference:
-    # input:
-        # refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
-    # output:
-        # chkpt = "chkpts/ref__{ref_genome}__{env}.done",
-        # region_file = f"{env}/tracks/{ref}_all_genes.bed"
-    # params:
-        # ref_path = config["ref_path"],
-        # scripts_dir = config["scripts_dir"]
-    # log:
-        # "logs/prepare_ref__{ref_genome}__{env}.log"
-    # conda:
-        # "envs/reference.yaml"
-    # shell:
-        # """
-        # # Call the original environment preparation script
-        # qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
-            # -p {params.ref_path} \
-            # -r {wildcards.ref_genome} \
-            # -d {wildcards.env} | tee {log}      
-        # touch {output.chkpt}
-        # """
+# Rule to prepare reference genome for each data type
+rule prepare_reference:
+    input:
+        refs = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome)
+    output:
+        chkpt = "chkpts/ref__{ref_genome}__{env}.done"
+    params:
+        ref_path = config["ref_path"],
+        scripts_dir = config["scripts_dir"]
+    log:
+        "logs/prepare_ref__{ref_genome}__{env}.log"
+    conda:
+        "envs/reference.yaml"
+    shell:
+        """
+        # Call the original environment preparation script
+        qsub {params.scripts_dir}/MaizeCode_check_environment.sh \
+            -p {params.ref_path} \
+            -r {wildcards.ref_genome} \
+            -d {wildcards.env} | tee {log}      
+        touch {output.chkpt}
+        """
 
 # Rule to process samples based on data type
 rule process_sample:
