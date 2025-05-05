@@ -227,7 +227,7 @@ rule combined_analysis:
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
     params:
-        region_file="all_genes.txt"
+        region_file="all_genes.txt",
         scripts_dir = config["scripts_dir"],
         analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
     log:
