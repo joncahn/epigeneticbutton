@@ -10,12 +10,12 @@ rule prepare_reference:
         fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa"),
         gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gff"),
         gtf = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf"),
-        chrom_sizes = os.path.join(REF_PATH, "{ref}","chrom.sizes"),
+        chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes"),
         region_files = ["combined/tracks/{ref}_protein_coding_genes.bed", "combined/tracks/{ref}_all_genes.bed"],
         logs = lambda wildcards: [ return_log(wildcards.ref, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
         chkpt = "chkpts/ref__{ref}.done",
-        log = os.path.join(REPO_FOLDER,"logs",f"ref_prep__{ref}.log")
+        log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref}.log")
     shell:
         """
         cat {input.logs} > {output.log}
