@@ -107,6 +107,7 @@ analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", i
 
 # Define output directories
 DIRS = {
+    "genomes": "genomes",
     "chkpts": "chkpts",
     "logs": "logs",
     "combined": {

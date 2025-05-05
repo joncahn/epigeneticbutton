@@ -7,10 +7,10 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/reference.yaml")
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa"),
-        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gff"),
-        gtf = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf"),
-        chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes"),
+        fasta = "genomes/{ref}/temp_{ref}.fa",
+        gff = "genomes/{ref}/temp_{ref}.gff",
+        gtf = "genomes/{ref}/temp_{ref}.gtf",
+        chrom_sizes = "genomes/{ref}/chrom.sizes",
         region_files = ["combined/tracks/{ref}_protein_coding_genes.bed", "combined/tracks/{ref}_all_genes.bed"],
         logs = lambda wildcards: [ return_log(wildcards.ref, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
@@ -26,7 +26,7 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
-        fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa")
+        fasta = "genomes/{ref}/temp_{ref}.fa"
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
@@ -65,7 +65,7 @@ rule check_fasta:
         
 rule check_gff:
     output:
-        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gff")
+        gff = "genomes/{ref}/temp_{ref}.gff"
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
@@ -93,7 +93,7 @@ rule check_gff:
 
 rule check_gtf:
     output:
-        gtf = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf")
+        gtf = "genomes/{ref}/temp_{ref}.gtf"
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
     log:
@@ -121,10 +121,10 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        fasta = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa")
+        fasta = "genomes/{ref}/temp_{ref}.fa"
     output:
-        fasta_index = os.path.join(REF_PATH, "{ref}", "temp_{ref}.fa.fai"),
-        chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes")
+        fasta_index = "genomes/{ref}/temp_{ref}.fa.fai",
+        chrom_sizes = "genomes/{ref}/chrom.sizes"
     log:
         return_log("{ref}", "chrom_sizes")
     conda:
@@ -138,8 +138,8 @@ rule check_chrom_sizes:
 
 rule prep_region_file:
     input:
-        chrom_sizes = os.path.join(REF_PATH, "{ref}", "chrom.sizes"),
-        gff = os.path.join(REF_PATH, "{ref}", "temp_{ref}.gtf")
+        chrom_sizes = "genomes/{ref}/chrom.sizes",
+        gff = "genomes/{ref}/temp_{ref}.gtf"
     output:
         region_file1 = "combined/tracks/{ref}_protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref}_all_genes.bed"
