@@ -20,20 +20,20 @@ rule prepare_reference:
 
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
-    input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     output:
-        fasta = "{ref_dir}/temp_{data_type}_{ref}.fa"
+        fasta = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.fa")
+    params:
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     log:
-        "logs/tmp_fasta_{data_type}_{ref}.log"
+        "logs/tmp_fasta_{ref}.log"    
     conda:
         "envs/reference.yaml"
     threads: workflow.cores
     shell:
         """
         # Search for fasta file
-        ref_dir={input.ref_dir}
-        if [ -s {input.ref_dir}/*.fa.gz ]; then
+        ref_dir={params.ref_dir}
+        if [ -s ${ref_dir}/*.fa.gz ]; then
             fa_file=$(ls ${ref_dir}/*.fa.gz)
             fa_filename=${fa_file##*/}
             printf "\nGzipped fasta file found in ${ref_dir}:\n ${fa_filename}\n"
@@ -60,18 +60,18 @@ rule check_fasta:
         """
         
 rule check_gff:
-    input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     output:
-        gff = "{ref_dir}/temp_{data_type}_{ref}.gff"
+        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.gff")
+    params:
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     log:
-        "logs/tmp_gff_{data_type}_{ref}.log"
+        "logs/tmp_gff_{ref}.log"
     conda:
         "envs/reference.yaml"
     threads: workflow.cores
     shell:
         """
-        ref_dir={input.ref_dir}
+        ref_dir={params.ref_dir}
         if [ -s ${ref_dir}/*.gff*.gz ]; then
             gff_file=$(ls ${ref_dir}/*gff*.gz)
             gff_filename=${gff_file##*/}
@@ -89,18 +89,18 @@ rule check_gff:
         """
 
 rule check_gtf:
-    input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     output:
-        gtf = "{ref_dir}/temp_{data_type}_{ref}.gtf"
+        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.gtf")
+    params:
+        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref)
     log:
-        "logs/tmp_gtf_{data_type}_{ref}.log"
+        "logs/tmp_gtf_{ref}.log"
     conda:
         "envs/reference.yaml"
     threads: workflow.cores
     shell:
         """
-        ref_dir={input.ref_dir}
+        ref_dir={params.ref_dir}
         if [ -s ${ref_dir}/*.gtf.gz ]; then
             gtf_file=$(ls ${ref_dir}/*gtf.gz)
             gtf_filename=${gtf_file##*/}
@@ -119,13 +119,12 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref),
-        fasta = "{ref_dir}/temp_{data_type}_{ref}.fa"
+        fasta = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.fa")
     output:
-        fasta_index = "{ref_dir}/temp_{data_type}_{ref}.fa.fai",
-        chrom_sizes = "{ref_dir}/chrom.sizes"
+        fasta_index = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.fa.fai"),
+        chrom_sizes = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"chrom.sizes")
     log:
-        "logs/tmp_chrom_size_{data_type}_{ref}.log"
+        "logs/tmp_chrom_size_{ref}.log"
     conda:
         "envs/reference.yaml"
     shell:
@@ -137,14 +136,13 @@ rule check_chrom_sizes:
 
 rule prep_region_file:
     input:
-        ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref),
-        chrom_sizes = "{ref_dir}/chrom.sizes",
-        gff = "{ref_dir}/temp_{data_type}_{ref}.gff"
+        chrom_sizes = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"chrom.sizes"),
+        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref, f"temp_{wildcards.ref}.gtf")
     output:
-        region_file1 = "${data_type}/tracks/${ref}_protein_coding_genes.bed",
-        region_file2 = "${data_type}/tracks/${ref}_all_genes.bed"
+        region_file1 = "combined/tracks/{ref}_protein_coding_genes.bed",
+        region_file2 = "combined/tracks/{ref}_all_genes.bed"
     log:
-        "logs/tmp_region_file_{data_type}_{ref}.log"
+        "logs/tmp_region_file_{ref}.log"
     conda:
         "envs/reference.yaml"
     shell:
@@ -153,14 +151,4 @@ rule prep_region_file:
         awk -v OFS="\t" '$3=="gene" {print $1,$4-1,$5,$9,".",$7}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {print $1,$4-1,$5,$9,".",$7}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         """
-
-rule prep_stat_file:
-    output:
-        stat_file = "${data_type}/reports/summary_mapping_stats.txt"
-    shell:
-        """
-        if [ ! -s {output.stat_file} ]; then
-            printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
-        fi
-        """
-    
+        

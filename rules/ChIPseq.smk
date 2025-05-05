@@ -1,10 +1,20 @@
+rule stat_file:
+    output:
+        stat_file = "{data_type}/reports/summary_mapping_stats.txt"
+    shell:
+        """
+        if [ ! -s {output.stat_file} ]; then
+            printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        fi
+        """
+
 rule make_ChIP_indices:
       input:
         ref_dir = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome),
-        chrom_sizes = "{ref_dir}/chrom.sizes",
-        gff = "{ref_dir}/temp_{data_type}_{ref}.gff"
+        chrom_sizes = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome, "chrom.sizes"),
+        gff = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome, f"temp_{wildcards.ref}.gff")
       output:
-        indices="{ref_dir}/*.bt2*"
+        indices = lambda wildcards: os.path.join(config["ref_path"], wildcards.ref_genome, f"temp_{wildcards.ref}*.bt2*")
       log:
         "logs/tmp_index_{data_type}_{ref}.log"
       threads: workflow.cores
