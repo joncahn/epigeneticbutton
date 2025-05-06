@@ -22,7 +22,7 @@ rule make_ChIP_indices:
       output:
         indices = "combined/genomes/{ref_genome}"
       log:
-        os.path.join(REPO_FOLDER,"logs",f"bowtie_index_{wildcards.ref_genome}.log")
+        os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
       threads: workflow.cores
       shell:
         """
