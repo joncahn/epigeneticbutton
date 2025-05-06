@@ -142,7 +142,7 @@ all_sample_outputs = expand(
     sample_type = samples["sample_type"],
     replicate = samples["replicate"],
     ref_genome = samples["ref_genome"],
-    env=get_env(sample["data_type"])
+    env=get_env(samples["data_type"])
 )
 
 # Include all rule files
