@@ -1,5 +1,5 @@
 # function to access logs more easily
-def return_log(line, tissue, sample_type, rep, ref, step):
+def return_log(line, tissue, sample_type, rep, ref_genome, step):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp_chip_{step}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
@@ -16,21 +16,21 @@ rule stat_file:
 
 rule make_ChIP_indices:
       input:
-        fasta = "genomes/{ref}/temp_{ref}.fa",
-        gff = "genomes/{ref}/temp_{ref}.gff",
-        chrom_sizes = "genomes/{ref}/chrom.sizes"
+        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
+        gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
       output:
-        indices = "combined/genomes/{ref}"
+        indices = "combined/genomes/{ref_genome}"
       log:
-        os.path.join(REPO_FOLDER,"logs",f"bowtie_index_{ref}.log")
+        os.path.join(REPO_FOLDER,"logs",f"bowtie_index_{ref_genome}.log")
       threads: workflow.cores
       shell:
         """
         ### There could be an issue between overlapping indices being built between ChIP and TF, to be resolved
         if ls {output.indices}/*.bt2* 1> /dev/null 2>&1; then
-            printf "\nBowtie2 index already exists for {wildcards.ref}\n" >> {log} 2>&1
+            printf "\nBowtie2 index already exists for {ref_genome}\n" >> {log} 2>&1
         else
-            printf "\nBuilding Bowtie2 index for {wildcards.ref}\n" >> {log} 2>&1
+            printf "\nBuilding Bowtie2 index for {ref_genome}\n" >> {log} 2>&1
             bowtie2-build --threads {threads} {input.fasta} {output.indices}
         fi
         """
