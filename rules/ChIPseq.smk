@@ -49,6 +49,7 @@ rule make_ChIP_indices:
 
 rule download_fastq_pe:
     output:
+        chkpt = "ChIP/chkpts/process__{sample_name}.done",
         fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
         fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
     params:
@@ -76,10 +77,12 @@ rule download_fastq_pe:
             cp {params.fastq_path}/*{params.seq_id}*R1*q.gz {output.fastq1}
             cp {params.fastq_path}/*{params.seq_id}*R2*q.gz {output.fastq2}
         fi
+        touch {output.touch}
         """
         
 rule download_fastq_se:
     output:
+        chkpt = "ChIP/chkpts/process__{sample_name}.done",
         fastq0 = "ChIP/fastq/{sample_name}.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info(wildcards, "seq_id"),
@@ -103,6 +106,7 @@ rule download_fastq_se:
             printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
             cp {params.fastq_path}/${params.seq_id}*q.gz {output.fastq0}
         fi
+        touch {output.touch}
         """
         
 # rule process_chip_sample:
