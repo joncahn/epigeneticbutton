@@ -53,7 +53,7 @@ rule download_fastq:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         seq_id = lambda wildcards: get_sample_info(wildcards, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info(wildcards, "fastq_path"),
-        paired = lambda wildcards: get_sample_info(wildcards, "paired")
+        paired = lambda wildcards: get_sample_info(wildcards, "paired"),
         sample_name = lambda wildcards: f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}"
     log:
         return_log("{line}", "{tissue}", "{sample_type}", "{rep}", "{ref}", "download_fastq")
