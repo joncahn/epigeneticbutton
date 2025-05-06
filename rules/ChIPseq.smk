@@ -8,8 +8,8 @@ def get_fastq_inputs(wildcards):
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
         return [
-            f"ChIP/fastq/{name}__R1.fastq.gz",
-            f"ChIP/fastq/{name}__R2.fastq.gz"
+            f"ChIP/fastq/{name}_R1.fastq.gz",
+            f"ChIP/fastq/{name}_R2.fastq.gz"
         ]
     else:
         return f"ChIP/fastq/{name}.fastq.gz"
@@ -47,10 +47,10 @@ rule make_ChIP_indices:
         fi
         """
 
-rule download_fastq_pe:
+rule get_fastq_pe:
     output:
-        fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
-        fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
+        fastq1 = "ChIP/fastq/{sample_name}_R1.fastq.gz",
+        fastq2 = "ChIP/fastq/{sample_name}_R2.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info(wildcards, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info(wildcards, "fastq_path"),
@@ -78,7 +78,7 @@ rule download_fastq_pe:
         fi
         """
         
-rule download_fastq_se:
+rule get_fastq_se:
     output:
         fastq0 = "ChIP/fastq/{sample_name}.fastq.gz"
     params:
