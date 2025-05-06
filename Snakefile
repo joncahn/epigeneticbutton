@@ -29,10 +29,24 @@ sample_info_map = {
 def sample_name(row):
     return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
 
+samples["sample_name"] = samples.apply(sample_name, axis=1)
+
 # Function to access this information later on
 def get_sample_info(wildcards, field):
     key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
     return sample_info_map[key][field]
+
+# Generate all sample output files required
+all_sample_outputs = expand(
+    "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
+    zip,
+    data_type = samples["data_type"],
+    line = samples["line"],
+    tissue = samples["tissue"],
+    sample_type = samples["sample_type"],
+    replicate = samples["replicate"],
+    ref_genome = samples["ref_genome"]
+)
 
 # Define reference genomes and the path to them
 REF_GENOMES = set(samples["ref_genome"].unique())
@@ -130,19 +144,6 @@ def create_directories(unique_envs, dirs):
 # Call the function to create directories
 create_directories(UNIQUE_ENVS, DIRS)
 
-# Generate all sample output files required
-all_sample_outputs = expand(
-    "{env}/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
-    zip,
-    data_type = samples["data_type"],
-    line = samples["line"],
-    tissue = samples["tissue"],
-    sample_type = samples["sample_type"],
-    replicate = samples["replicate"],
-    ref_genome = samples["ref_genome"],
-    env=get_env(samples["data_type"])
-)
-
 # Include all rule files
 include: "rules/environment_setup.smk"
 include: "rules/ChIPseq.smk"
@@ -211,7 +212,7 @@ rule process_rna_sample:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        sample_chkpt = all_sample_outputs,
+        expand("ChIP/chkpts/process__ChIP__{sample_name}.done", sample_name=samples.apply(sample_name, axis=1))
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
     params:
