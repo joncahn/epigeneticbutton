@@ -2,9 +2,6 @@
 def return_log(sample_name, step):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}.log")
 
-def sample_name(s):
-    return f"ChIP__{s['line']}__{s['tissue']}__{s['sample_type']}__{s['replicate']}__{s['ref_genome']}"
-
 def get_fastq_inputs(wildcards):
     s = {k: getattr(wildcards, k) for k in ["data_type", "line", "tissue", "sample_type", "replicate", "ref_genome"]}
     name = sample_name(s)
@@ -126,7 +123,7 @@ rule process_chip_sample:
         paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
         mapping_option = config["mapping_option"]
     log:
-        return_log("{sample_name}", "process")
+        return_log(sample_name(wildcards), "process")
     conda:
         CONDA_ENV
     shell:
