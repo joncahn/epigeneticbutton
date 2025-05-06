@@ -38,11 +38,12 @@ rule make_ChIP_indices:
 rule download_fastq:
     output:
         touch = "ChIP/chkpts/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.done",
-        lambda wildcards: [
-            fastq1 = f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R1.fastq.gz",
-            fastq2 = f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R2.fastq.gz"
-        ] if get_sample_info(wildcards, "paired") == "PE" else
-            fastq0 = f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.fastq.gz"
+        fastq = lambda wildcards: {
+            fastq1: f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R1.fastq.gz",
+            fastq2: f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R2.fastq.gz"
+        } if get_sample_info(wildcards, "paired") == "PE" else {
+            fastq0: f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.fastq.gz"
+        }
     params:
         data_type = lambda wildcards: wildcards.data_type,
         line = lambda wildcards: wildcards.line,
@@ -67,13 +68,13 @@ rule download_fastq:
                 fasterq-dump -e {threads} --outdir ChIP/fastq {params.seq_id}
                 printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files..."
                 pigz -p {threads} ChIP/fastq/{params.seq_id}_1.fastq
-                mv ChIP/fastq/{params.seq_id}_1.fastq.gz {output.fastq1}
+                mv ChIP/fastq/{params.seq_id}_1.fastq.gz {output.fastq.fastq1}
                 pigz -p {threads} ChIP/fastq/{params.seq_id}_2.fastq
-                mv ChIP/fastq/{params.seq_id}_2.fastq.gz {output.fastq2}
+                mv ChIP/fastq/{params.seq_id}_2.fastq.gz {output.fastq.fastq2}
             else
                 printf "\nCopying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
-                cp {params.fastq_path}/*{params.seq_id}*R1*q.gz {output.fastq1}
-                cp {params.fastq_path}/*{params.seq_id}*R2*q.gz {output.fastq2}
+                cp {params.fastq_path}/*{params.seq_id}*R1*q.gz {output.fastq.fastq1}
+                cp {params.fastq_path}/*{params.seq_id}*R2*q.gz {output.fastq.fastq2}
             fi
         else
             if [[ {params.fastq_path} == "SRA" ]]; then
@@ -81,10 +82,10 @@ rule download_fastq:
                 fasterq-dump -e {threads} --outdir ChIP/fastq {params.seq_id}
                 printf "\n {params.sample_name} ({params.seq_id}) downloaded\nRenaming files..." >> {log} 2>&1
                 pigz -p {threads} ChIP/fastq/{params.seq_id}.fastq
-                mv ChIP/fastq/{params.seq_id}.fastq.gz {output.fastq0}
+                mv ChIP/fastq/{params.seq_id}.fastq.gz {output.fastq.fastq0}
             else
                 printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
-                cp {params.fastq_path}/${params.seq_id}*q.gz {output.fastq0}
+                cp {params.fastq_path}/${params.seq_id}*q.gz {output.fastq.fastq0}
             fi
         fi
         touch {output.touch}
