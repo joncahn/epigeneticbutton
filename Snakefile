@@ -36,19 +36,6 @@ def get_sample_info(wildcards, field):
     key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
     return sample_info_map[key][field]
 
-# Generate all sample output files required
-all_sample_outputs = expand(
-    "{env}/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
-    zip,
-    data_type = samples["data_type"],
-    line = samples["line"],
-    tissue = samples["tissue"],
-    sample_type = samples["sample_type"],
-    replicate = samples["replicate"],
-    ref_genome = samples["ref_genome"],
-    env=get_env(sample["data_type"])
-)
-
 # Define reference genomes and the path to them
 REF_GENOMES = set(samples["ref_genome"].unique())
 REF_PATH = config["ref_path"]
@@ -144,6 +131,19 @@ def create_directories(unique_envs, dirs):
 
 # Call the function to create directories
 create_directories(UNIQUE_ENVS, DIRS)
+
+# Generate all sample output files required
+all_sample_outputs = expand(
+    "{env}/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
+    zip,
+    data_type = samples["data_type"],
+    line = samples["line"],
+    tissue = samples["tissue"],
+    sample_type = samples["sample_type"],
+    replicate = samples["replicate"],
+    ref_genome = samples["ref_genome"],
+    env=get_env(sample["data_type"])
+)
 
 # Include all rule files
 include: "rules/environment_setup.smk"
