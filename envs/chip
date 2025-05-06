@@ -1,4 +1,4 @@
-name: chip_sample
+name: chip
 channels:
   - conda-forge
   - bioconda
@@ -6,6 +6,10 @@ channels:
 dependencies:
   - python=3.8
   - bowtie2>=2.4
+  - sra-tools=2.10.9
   - samtools>=1.10
   - bedtools>=2.29
   - pigz>=2.3 
+  - deeptools=3.5.1
+  - macs2=2.2.7.1
+  - idr=2.0.4.2

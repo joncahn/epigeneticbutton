@@ -140,6 +140,7 @@ create_directories(UNIQUE_ENVS, DIRS)
 
 # Include all rule files
 include: "rules/environment_setup.smk"
+include: "rules/ChIPseq.smk"
 
 # Rule all to specify final target
 rule all:
@@ -147,11 +148,11 @@ rule all:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
 # Rule to process samples based on data type
-rule process_sample:
+rule process_rna_sample:
     input:
         ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}.done"
     output:
-        chkpt = "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+        chkpt = "chkpts/process__RNA__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
         scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
         ref_dir = lambda wildcards: os.path.join(REF_PATH, get_sample_info(wildcards, 'ref_genome')),

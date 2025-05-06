@@ -1,21 +1,21 @@
 # function to access logs more easily
-def return_log(ref, step):
-    return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref}.log")
+def return_log(ref_genome, step):
+    return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/reference.yaml")
 
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        fasta = "genomes/{ref}/temp_{ref}.fa",
-        gff = "genomes/{ref}/temp_{ref}.gff",
-        gtf = "genomes/{ref}/temp_{ref}.gtf",
-        chrom_sizes = "genomes/{ref}/chrom.sizes",
-        region_files = ["combined/tracks/{ref}_protein_coding_genes.bed", "combined/tracks/{ref}_all_genes.bed"],
-        logs = lambda wildcards: [ return_log(wildcards.ref, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
+        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
+        gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
+        gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
+        region_files = ["combined/tracks/{ref_genome}_protein_coding_genes.bed", "combined/tracks/{ref_genome}_all_genes.bed"],
+        logs = lambda wildcards: [ return_log(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
-        chkpt = "chkpts/ref__{ref}.done",
-        log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref}.log")
+        chkpt = "chkpts/ref__{ref_genome}.done",
+        log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
     shell:
         """
         cat {input.logs} > {output.log}
@@ -26,11 +26,11 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
-        fasta = "genomes/{ref}/temp_{ref}.fa"
+        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa"
     params:
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log("{ref}", "fasta")
+        return_log("{ref_genome}", "fasta")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -65,11 +65,11 @@ rule check_fasta:
         
 rule check_gff:
     output:
-        gff = "genomes/{ref}/temp_{ref}.gff"
+        gff = "genomes/{ref_genome}/temp_{ref_genome}.gff"
     params:
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log("{ref}", "gff")
+        return_log("{ref_genome}", "gff")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -93,11 +93,11 @@ rule check_gff:
 
 rule check_gtf:
     output:
-        gtf = "genomes/{ref}/temp_{ref}.gtf"
+        gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
     params:
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref)
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log("{ref}", "gtf")
+        return_log("{ref_genome}", "gtf")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -121,35 +121,35 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        fasta = "genomes/{ref}/temp_{ref}.fa"
+        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa"
     output:
-        fasta_index = "genomes/{ref}/temp_{ref}.fa.fai",
-        chrom_sizes = "genomes/{ref}/chrom.sizes"
+        fasta_index = "genomes/{ref_genome}/temp_{ref_genome}.fa.fai",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     log:
-        return_log("{ref}", "chrom_sizes")
+        return_log("{ref_genome}", "chrom_sizes")
     conda:
         CONDA_ENV
     shell:
         """
-        printf "\nMaking chrom.sizes file for {ref}\n" >> {log} 2>&1
+        printf "\nMaking chrom.sizes file for {ref_genome}\n" >> {log} 2>&1
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
         """
 
 rule prep_region_file:
     input:
-        chrom_sizes = "genomes/{ref}/chrom.sizes",
-        gff = "genomes/{ref}/temp_{ref}.gtf"
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
+        gff = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
     output:
-        region_file1 = "combined/tracks/{ref}_protein_coding_genes.bed",
-        region_file2 = "combined/tracks/{ref}_all_genes.bed"
+        region_file1 = "combined/tracks/{ref_genome}_protein_coding_genes.bed",
+        region_file2 = "combined/tracks/{ref_genome}_all_genes.bed"
     log:
-        return_log("{ref}", "region_file")
+        return_log("{ref_genome}", "region_file")
     conda:
         CONDA_ENV
     shell:
         """
-        printf "\nMaking a bed file with gene coordinates from {ref}\n" >> {log} 2>&1
+        printf "\nMaking a bed file with gene coordinates from {ref_genome}\n" >> {log} 2>&1
         awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         """

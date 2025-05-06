@@ -5,9 +5,6 @@ channels:
   - defaults
 dependencies:
   - python=3.8
-  - pigz=2.6
+  - pigz>=2.3
   - samtools=1.11
-  - bowtie2=2.4.2
-  - star=2.7.10b
-  - bismark=0.23.0
-  - bedtools=2.29.2 
+  - bedtools=2.29.2
