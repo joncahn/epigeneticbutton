@@ -26,7 +26,7 @@ sample_info_map = {
 
 # Function to create a unique name for each sample and add it as a column to the samples
 def sample_name(row):
-    return f"{row['data_type']}_{row['line']}_{row['tissue']}_{row['sample_type']}_{row['replicate']}_{row['ref_genome']}"
+    return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
 
 # Function to access this information later on
 def get_sample_info(wildcards, field):
@@ -35,7 +35,7 @@ def get_sample_info(wildcards, field):
 
 # Generate all sample output files required
 all_sample_outputs = expand(
-    "chkpts/process__{data_type}_{line}_{tissue}_{sample_type}_{replicate}_{ref_genome}.done",
+    "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
     zip,
     data_type = samples["data_type"],
     line = samples["line"],

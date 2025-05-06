@@ -12,7 +12,7 @@ def get_fastq_inputs(wildcards):
             f"ChIP/fastq/{name}__R2.fastq.gz"
         ]
     else:
-        return f"ChIP/fastq/{name}.fastq.gz"
+        return f"ChIP/fastq/{name}_R0.fastq.gz"
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -80,7 +80,7 @@ rule get_fastq_pe:
         
 rule get_fastq_se:
     output:
-        fastq0 = "ChIP/fastq/{sample_name}.fastq.gz"
+        fastq0 = "ChIP/fastq/{sample_name}_R0.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info(wildcards, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info(wildcards, "fastq_path"),
