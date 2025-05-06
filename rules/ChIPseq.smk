@@ -109,7 +109,7 @@ rule check_pair:
     input:
         lambda wildcards: get_fastq_inputs(wildcards)
     output:
-        chkpt = "ChIP/chkpts/process__{sample_name}.done",
+        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     shell:
         """
         touch {output.touch}
