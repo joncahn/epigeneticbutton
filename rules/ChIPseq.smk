@@ -1,6 +1,6 @@
 # function to access logs more easily
 def return_log(line, tissue, sample_type, rep, ref_genome, step):
-    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp_chip_{step}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
+    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp_chip_{step}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}.log")
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
