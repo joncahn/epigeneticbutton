@@ -6,7 +6,7 @@ def sample_name(s):
     return f"ChIP__{s['line']}__{s['tissue']}__{s['sample_type']}__{s['replicate']}__{s['ref_genome']}"
 
 def get_fastq_inputs(wildcards):
-    s = {k: getattr(wildcards, k) for k in ["line", "tissue", "sample_type", "replicate", "ref_genome"]}
+    s = {k: getattr(wildcards, k) for k in ["data_type", "line", "tissue", "sample_type", "replicate", "ref_genome"]}
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
@@ -116,11 +116,6 @@ rule process_chip_sample:
     params:
         scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome),
-        data_type = lambda wildcards: wildcards.data_type,
-        line = lambda wildcards: wildcards.line,
-        tissue = lambda wildcards: wildcards.tissue,
-        sample_type = lambda wildcards: wildcards.sample_type,
-        replicate = lambda wildcards: wildcards.replicate,
         seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
         fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
         paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
