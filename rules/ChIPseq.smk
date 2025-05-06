@@ -1,6 +1,21 @@
 # function to access logs more easily
-def return_log(line, tissue, sample_type, rep, ref_genome, step):
-    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp_chip_{step}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}.log")
+def return_log(sample_name, step):
+    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}.log")
+
+def sample_name(s):
+    return f"ChIP__{s['line']}__{s['tissue']}__{s['sample_type']}__{s['rep']}__{s['ref_genome']}"
+
+def get_fastq_inputs(wildcards):
+    s = {k: getattr(wildcards, k) for k in ["line", "tissue", "sample_type", "rep", "ref_genome"]}
+    name = sample_name(s)
+    paired = get_sample_info(wildcards, "paired")
+    if paired == "PE":
+        return [
+            f"ChIP/aligned/{name}__R1.fastq.gz",
+            f"ChIP/aligned/{name}__R2.fastq.gz"
+        ]
+    else:
+        return f"ChIP/aligned/{name}.fastq.gz"
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -35,70 +50,72 @@ rule make_ChIP_indices:
         fi
         """
 
-rule download_fastq:
+rule download_fastq_pe:
     output:
-        touch = "ChIP/chkpts/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.done",
-        fastq = lambda wildcards: {
-            fastq1: f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R1.fastq.gz",
-            fastq2: f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R2.fastq.gz"
-        } if get_sample_info(wildcards, "paired") == "PE" else {
-            fastq0: f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.fastq.gz"
-        }
+        fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
+        fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
     params:
-        data_type = lambda wildcards: wildcards.data_type,
-        line = lambda wildcards: wildcards.line,
-        tissue = lambda wildcards: wildcards.tissue,
-        sample_type = lambda wildcards: wildcards.sample_type,
-        replicate = lambda wildcards: wildcards.replicate,
-        ref_genome = lambda wildcards: wildcards.ref_genome,
         seq_id = lambda wildcards: get_sample_info(wildcards, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info(wildcards, "fastq_path"),
         paired = lambda wildcards: get_sample_info(wildcards, "paired"),
-        sample_name = lambda wildcards: f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}"
+        sample_name = lambda wildcards: wildcards.sample_name
     log:
-        return_log("{line}", "{tissue}", "{sample_type}", "{rep}", "{ref}", "download_fastq")
+        return_log("{sample_name}", "download_fastq")
     conda:
         CONDA_ENV
     threads: workflow.cores
     shell:
         """
-        if [[ {params.paired} == "PE" ]]; then
-            if [[ {params.fastq_path} == "SRA" ]]; then
-                printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
-                fasterq-dump -e {threads} --outdir ChIP/fastq {params.seq_id}
-                printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files..."
-                pigz -p {threads} ChIP/fastq/{params.seq_id}_1.fastq
-                mv ChIP/fastq/{params.seq_id}_1.fastq.gz {output.fastq.fastq1}
-                pigz -p {threads} ChIP/fastq/{params.seq_id}_2.fastq
-                mv ChIP/fastq/{params.seq_id}_2.fastq.gz {output.fastq.fastq2}
-            else
-                printf "\nCopying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
-                cp {params.fastq_path}/*{params.seq_id}*R1*q.gz {output.fastq.fastq1}
-                cp {params.fastq_path}/*{params.seq_id}*R2*q.gz {output.fastq.fastq2}
-            fi
+        if [[ {params.fastq_path} == "SRA" ]]; then
+            printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
+            fasterq-dump -e {threads} --outdir ChIP/fastq {params.seq_id}
+            printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files..."
+            pigz -p {threads} ChIP/fastq/{params.seq_id}_1.fastq
+            mv ChIP/fastq/{params.seq_id}_1.fastq.gz {output.fastq1}
+            pigz -p {threads} ChIP/fastq/{params.seq_id}_2.fastq
+            mv ChIP/fastq/{params.seq_id}_2.fastq.gz {output.fastq2}
         else
-            if [[ {params.fastq_path} == "SRA" ]]; then
-                printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
-                fasterq-dump -e {threads} --outdir ChIP/fastq {params.seq_id}
-                printf "\n {params.sample_name} ({params.seq_id}) downloaded\nRenaming files..." >> {log} 2>&1
-                pigz -p {threads} ChIP/fastq/{params.seq_id}.fastq
-                mv ChIP/fastq/{params.seq_id}.fastq.gz {output.fastq.fastq0}
-            else
-                printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
-                cp {params.fastq_path}/${params.seq_id}*q.gz {output.fastq.fastq0}
-            fi
+            printf "\nCopying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
+            cp {params.fastq_path}/*{params.seq_id}*R1*q.gz {output.fastq1}
+            cp {params.fastq_path}/*{params.seq_id}*R2*q.gz {output.fastq2}
         fi
-        touch {output.touch}
+        """
+        
+rule download_fastq_se:
+    output:
+        fastq0 = "ChIP/fastq/{sample_name}.fastq.gz"
+    params:
+        seq_id = lambda wildcards: get_sample_info(wildcards, "seq_id"),
+        fastq_path = lambda wildcards: get_sample_info(wildcards, "fastq_path"),
+        paired = lambda wildcards: get_sample_info(wildcards, "paired"),
+        sample_name = lambda wildcards: wildcards.sample_name
+    log:
+        return_log("{sample_name}", "download_fastq")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        if [[ {params.fastq_path} == "SRA" ]]; then
+            printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
+            fasterq-dump -e {threads} --outdir ChIP/fastq {params.seq_id}
+            printf "\n {params.sample_name} ({params.seq_id}) downloaded\nRenaming files..." >> {log} 2>&1
+            pigz -p {threads} ChIP/fastq/{params.seq_id}.fastq
+            mv ChIP/fastq/{params.seq_id}.fastq.gz {output.fastq0}
+        else
+            printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
+            cp {params.fastq_path}/${params.seq_id}*q.gz {output.fastq0}
+        fi
         """
         
 rule process_chip_sample:
     input:
-        touch = "ChIP/chkpts/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.done"
+        lambda wildcards: get_fastq_inputs(wildcards)
     output:
-        chkpt = "ChIP/chkpts/process__ChIP__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+        chkpt = "ChIP/chkpts/process__ChIP__{sample_name}.done"
     params:
         scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, get_sample_info(wildcards, 'ref_genome')),
+        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome),
         data_type = lambda wildcards: wildcards.data_type,
         line = lambda wildcards: wildcards.line,
         tissue = lambda wildcards: wildcards.tissue,
@@ -109,13 +126,13 @@ rule process_chip_sample:
         paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
         mapping_option = config["mapping_option"]
     log:
-        return_log("{line}", "{tissue}", "{sample_type}", "{rep}", "{ref}", "process")
+        return_log("{sample_name}", "process")
     conda:
         CONDA_ENV
     shell:
         """
         cd ChIP/
-        qsub ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
+        qsub ../{params.scripts_dir}/MaizeCode_ChIP_sample.sh \
             -x "ChIP" \
             -d {params.ref_dir} \
             -l {params.line} \

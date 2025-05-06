@@ -25,21 +25,28 @@ sample_info_map = {
     for _, row in samples.iterrows()
 }
 
+# Function to create a unique name for each sample and add it as a column to the samples
+def sample_name(row):
+    return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
+
+samples["sample_name"] = samples.apply(sample_name, axis=1)
+
 # Function to access this information later on
 def get_sample_info(wildcards, field):
-    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate)
+    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
     return sample_info_map[key][field]
 
 # Generate all sample output files required
 all_sample_outputs = expand(
-    "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
+    "{env}/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
     zip,
     data_type = samples["data_type"],
     line = samples["line"],
     tissue = samples["tissue"],
     sample_type = samples["sample_type"],
     replicate = samples["replicate"],
-    ref_genome = samples["ref_genome"]
+    ref_genome = samples["ref_genome"],
+    env=get_env(sample["data_type"])
 )
 
 # Define reference genomes and the path to them
