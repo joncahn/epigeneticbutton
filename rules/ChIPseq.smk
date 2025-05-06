@@ -122,8 +122,9 @@ rule process_chip_sample:
         fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
         paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
         mapping_option = config["mapping_option"]
+        log_path = lambda wildcards: return_log(f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}","process")
     log:
-        return_log(sample_name(wildcards), "process")
+        "{params.log_path}"
     conda:
         CONDA_ENV
     shell:
