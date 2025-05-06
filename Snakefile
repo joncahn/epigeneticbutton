@@ -33,6 +33,11 @@ def get_sample_info(wildcards, field):
     key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
     return sample_info_map[key][field]
 
+def get_sample_info_from_name(sample_name, field):
+    parts = sample_name.split("__")
+    key = tuple(parts)
+    return sample_info_map[key][field]
+
 # Generate all sample output files required
 all_sample_outputs = expand(
     "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
