@@ -52,9 +52,9 @@ rule get_fastq_pe:
         fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
         fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
     params:
-        seq_id = lambda wildcards: get_sample_info_from_name(wildcards, "seq_id"),
-        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards, "fastq_path"),
-        paired = lambda wildcards: get_sample_info_from_name(wildcards, "paired"),
+        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
+        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
+        paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "paired"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         return_log("{sample_name}", "download_fastq")
@@ -82,9 +82,9 @@ rule get_fastq_se:
     output:
         fastq0 = "ChIP/fastq/{sample_name}__R0.fastq.gz"
     params:
-        seq_id = lambda wildcards: get_sample_info_from_name(wildcards, "seq_id"),
-        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards, "fastq_path"),
-        paired = lambda wildcards: get_sample_info_from_name(wildcards, "paired"),
+        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
+        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
+        paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "paired"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         return_log("{sample_name}", "download_fastq")
