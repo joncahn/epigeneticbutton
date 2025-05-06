@@ -112,10 +112,15 @@ rule process_chip_sample:
     input:
         lambda wildcards: get_fastq_inputs(wildcards)
     output:
-        chkpt = "ChIP/chkpts/process__ChIP__{sample_name}.done"
+        chkpt = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
         scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome),
+        data_type = lambda wildcards: wildcards.data_type,
+        line = lambda wildcards: wildcards.line,
+        tissue = lambda wildcards: wildcards.tissue,
+        sample_type = lambda wildcards: wildcards.sample_type,
+        replicate = lambda wildcards: wildcards.replicate,
         seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
         fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
         paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
