@@ -16,7 +16,7 @@ samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
 
 # Create a dictionary to store the information for each sample
 sample_info_map = {
-    (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["replicate"],"ref_genome", row["ref_genome"]): {
+    (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["replicate"], row["ref_genome"]): {
         "seq_id": row["seq_id"],
         "fastq_path": row["fastq_path"],
         "paired": row["paired"]
