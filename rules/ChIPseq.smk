@@ -8,11 +8,11 @@ def get_fastq_inputs(wildcards):
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
         return [
-            f"ChIP/aligned/{name}__R1.fastq.gz",
-            f"ChIP/aligned/{name}__R2.fastq.gz"
+            f"ChIP/fastq/{name}__R1.fastq.gz",
+            f"ChIP/fastq/{name}__R2.fastq.gz"
         ]
     else:
-        return f"ChIP/aligned/{name}.fastq.gz"
+        return f"ChIP/fastq/{name}.fastq.gz"
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
