@@ -29,8 +29,16 @@ def sample_name(row):
     return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
 
 # Function to access this information later on
-def get_sample_info(wildcards, field):
-    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
+def get_sample_info(wildcards, field, data_type=None):
+    dt = data_type if data_type else wildcards.data_type
+    key = (
+        dt,
+        wildcards.line,
+        wildcards.tissue,
+        wildcards.sample_type,
+        wildcards.replicate,
+        wildcards.ref_genome
+    )
     return sample_info_map[key][field]
 
 def get_sample_info_from_name(sample_name, field):
