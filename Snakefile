@@ -29,8 +29,6 @@ sample_info_map = {
 def sample_name(row):
     return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
 
-samples["sample_name"] = samples.apply(sample_name, axis=1)
-
 # Function to access this information later on
 def get_sample_info(wildcards, field):
     key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
