@@ -105,43 +105,43 @@ rule download_fastq_se:
         fi
         """
         
-rule process_chip_sample:
-    input:
-        lambda wildcards: get_fastq_inputs(wildcards)
-    output:
-        chkpt = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    params:
-        scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome),
-        data_type = lambda wildcards: wildcards.data_type,
-        line = lambda wildcards: wildcards.line,
-        tissue = lambda wildcards: wildcards.tissue,
-        sample_type = lambda wildcards: wildcards.sample_type,
-        replicate = lambda wildcards: wildcards.replicate,
-        seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
-        fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
-        paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
-        mapping_option = config["mapping_option"],
-        log_path = lambda wildcards: return_log(f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}","process")
-    log:
-        "{params.log_path}"
-    conda:
-        CONDA_ENV
-    shell:
-        """
-        cd ChIP/
-        qsub ../{params.scripts_dir}/MaizeCode_ChIP_sample.sh \
-            -x "ChIP" \
-            -d {params.ref_dir} \
-            -l {params.line} \
-            -t {params.tissue} \
-            -m {params.data_type} \
-            -r {params.replicate} \
-            -i {params.seq_id} \
-            -f {params.fastq_path} \
-            -p {params.paired} \
-            -s "trim" \
-            -a {params.mapping_option} | tee {log}
-        cd ..
-        touch {output.chkpt}
-        """
+# rule process_chip_sample:
+    # input:
+        # lambda wildcards: get_fastq_inputs(wildcards)
+    # output:
+        # chkpt = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    # params:
+        # scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
+        # ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome),
+        # data_type = lambda wildcards: wildcards.data_type,
+        # line = lambda wildcards: wildcards.line,
+        # tissue = lambda wildcards: wildcards.tissue,
+        # sample_type = lambda wildcards: wildcards.sample_type,
+        # replicate = lambda wildcards: wildcards.replicate,
+        # seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
+        # fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
+        # paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
+        # mapping_option = config["mapping_option"],
+        # log_path = lambda wildcards: return_log(f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}","process")
+    # log:
+        # "{params.log_path}"
+    # conda:
+        # CONDA_ENV
+    # shell:
+        # """
+        # cd ChIP/
+        # qsub ../{params.scripts_dir}/MaizeCode_ChIP_sample.sh \
+            # -x "ChIP" \
+            # -d {params.ref_dir} \
+            # -l {params.line} \
+            # -t {params.tissue} \
+            # -m {params.data_type} \
+            # -r {params.replicate} \
+            # -i {params.seq_id} \
+            # -f {params.fastq_path} \
+            # -p {params.paired} \
+            # -s "trim" \
+            # -a {params.mapping_option} | tee {log}
+        # cd ..
+        # touch {output.chkpt}
+        # """
