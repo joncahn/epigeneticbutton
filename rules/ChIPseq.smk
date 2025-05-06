@@ -37,7 +37,7 @@ rule make_ChIP_indices:
 
 rule download_fastq:
     output:
-        touch = "ChIP/chkpts/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.done"
+        touch = "ChIP/chkpts/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}.done",
         lambda wildcards: [
             fastq1 = f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R1.fastq.gz",
             fastq2 = f"ChIP/fastq/ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.rep}__{wildcards.ref_genome}__R2.fastq.gz"
