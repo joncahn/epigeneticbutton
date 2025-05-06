@@ -121,7 +121,7 @@ rule process_chip_sample:
         seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
         fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
         paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
-        mapping_option = config["mapping_option"]
+        mapping_option = config["mapping_option"],
         log_path = lambda wildcards: return_log(f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}","process")
     log:
         "{params.log_path}"
