@@ -3,7 +3,7 @@ def return_log(sample_name, step):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}.log")
 
 def get_fastq_inputs(wildcards):
-    s = {k: getattr(wildcards, k) for k in ["data_type", "line", "tissue", "sample_type", "replicate", "ref_genome"]}
+    s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":

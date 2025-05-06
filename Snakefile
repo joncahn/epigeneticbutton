@@ -210,7 +210,7 @@ rule all:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        expand("ChIP/chkpts/process__ChIP__{sample_name}.done", sample_name=samples.apply(sample_name, axis=1))
+        expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples.apply(sample_name, axis=1))
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
     params:
