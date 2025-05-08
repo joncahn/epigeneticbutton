@@ -7,9 +7,9 @@ def get_inputs(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return f"ChIP/chkpts/process_pe__{name}.done"
+        return f"ChIP/reports/flagstatpe__{name}.txt"
     else:
-        return f"ChIP/chkpts/process_se__{name}.txt"
+        return f"ChIP/reports/flagstatse__{name}.txt"
         
 # def get_inputs(wildcards):
     # s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
@@ -298,8 +298,8 @@ rule make_statistics_file_pe:
     input:
         metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
-    output:
-        touch = "ChIP/chkpts/process_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    log:
+        pe
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -316,8 +316,8 @@ rule make_statistics_file_se:
     input:
         metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
-    output:
-        touch = "ChIP/chkpts/process_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    log:
+        se
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
