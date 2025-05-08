@@ -7,9 +7,9 @@ def get_inputs(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return f"ChIP/reports/flagstat__{name}.txt"
+        return f"ChIP/reports/flagstatpe__{name}.txt"
     else:
-        return f"ChIP/reports/flagstat__{name}.txt"
+        return f"ChIP/reports/flagstatse__{name}.txt"
         
 # def get_inputs(wildcards):
     # s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
@@ -231,17 +231,17 @@ rule bowtie2_map_se:
 		bowtie2 -p {threads} {params.mapping_params} --met-file {output.metrics} -x {input.indices} -U {input.fastq} -S {output.sam} |& tee {log}
         """
 
-rule filter_results:
+rule filter_results_pe:
     input:
         samfile = "ChIP/mapped/mapped__{sample_name}.sam"
     output:
         bamfile = "ChIP/mapped/{sample_name}.bam",
         metrics_dup = "ChIP/reports/markdup__{sample_name}.txt",
-        metrics_flag = "ChIP/reports/flagstat__{sample_name}.txt"
+        metrics_flag = "ChIP/reports/flagstatpe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         map_option = lambda wildcards: config['mapping_option'],
-        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
+        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
     log:
         return_log_chip("{sample_name}", "filter")
     conda:
@@ -251,7 +251,7 @@ rule filter_results:
         """
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} {filtering_params} -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
         rm -f {input.samfile}
         samtools fixmate -@ {threads} -m ChIP/mapped/temp1_{sample_name}.bam ChIP/mapped/temp2_{sample_name}.bam
         samtools sort -@ {threads} -o ChIP/mapped/temp3_{sample_name}.bam ChIP/mapped/temp2_{sample_name}.bam
@@ -260,7 +260,37 @@ rule filter_results:
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} {output.bamfile} > {output.metrics_flag}
         rm -f ChIP/mapped/temp*_{sample_name}.bam
-        """    
+        """
+
+rule filter_results_se:
+    input:
+        samfile = "ChIP/mapped/mapped__{sample_name}.sam"
+    output:
+        bamfile = "ChIP/mapped/{sample_name}.bam",
+        metrics_dup = "ChIP/reports/markdup__{sample_name}.txt",
+        metrics_flag = "ChIP/reports/flagstatse__{sample_name}.txt"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        map_option = lambda wildcards: config['mapping_option'],
+        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
+    log:
+        return_log_chip("{sample_name}", "filter")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
+        samtools --version
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
+        rm -f {input.samfile}
+        samtools sort -@ {threads} -o ChIP/mapped/temp2_{sample_name}.bam ChIP/mapped/temp1_{sample_name}.bam
+        samtools markdup -r -s -f {output.metrics_dup} -@ {threads} ChIP/mapped/temp2_{sample_name}.bam {output.bamfile}
+        samtools index -@ {threads} {output.bamfile}
+        printf "\nGetting some stats\n"
+        samtools flagstat -@ {threads} {output.bamfile} > {output.metrics_flag}
+        rm -f ChIP/mapped/temp*_{sample_name}.bam
+        """
         
 rule check_pair:
     input:
