@@ -7,9 +7,9 @@ def get_inputs(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return f"ChIP/reports/flagstatpe__{name}.txt"
+        return f"ChIP/chkpts/process_pe__{name}.done"
     else:
-        return f"ChIP/reports/flagstatse__{name}.txt"
+        return f"ChIP/chkpts/process_se__{name}.txt"
         
 # def get_inputs(wildcards):
     # s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
@@ -299,7 +299,7 @@ rule make_statistics_file_pe:
         metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
     output:
-        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+        touch = "ChIP/chkpts/process_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -317,28 +317,28 @@ rule make_statistics_file_se:
         metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
     output:
-        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+        touch = "ChIP/chkpts/process_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
+        tot=$(grep "Total reads processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
         filt=$(grep "reads" {input.metrics_map} | awk '{print $1}')
-        multi=$(grep "aligned concordantly >1 times" {input.metrics_map} | awk '{print $1}')
-        single=$(grep "aligned concordantly exactly 1 time" {input.metrics_map} | awk '{print $1}')
+        multi=$(grep "aligned >1 times" {input.metrics_map} | awk '{print $1}')
+        single=$(grep "aligned exactly 1 time" {input.metrics_map} | awk '{print $1}')
         allmap=$((multi+single))
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
         touch {output.touch}
         """
         
-# rule check_pair:
-    # input:
-        # lambda wildcards: get_inputs(wildcards)
-    # output:
-        # touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    # shell:
-        # """
-        # touch {output.touch}
-        # """
+rule check_pair:
+    input:
+        lambda wildcards: get_inputs(wildcards)
+    output:
+        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    shell:
+        """
+        touch {output.touch}
+        """
      
 # rule process_chip_sample:
     # input:
