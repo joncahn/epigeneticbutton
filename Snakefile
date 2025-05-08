@@ -30,7 +30,7 @@ def sample_name(row):
 
 # Function to access this information later on
 def get_sample_info(wildcards, field):
-    key = (wildcars.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
+    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
     return sample_info_map[key][field]
 
 def get_sample_info_from_name(sample_name, field):
