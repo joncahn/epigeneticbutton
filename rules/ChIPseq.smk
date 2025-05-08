@@ -156,7 +156,8 @@ rule process_fastq_se:
     threads: workflow.cores
     shell:
         """
-        #### printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
+        ### QC of the raw reads with FastQC
+        printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
         fastqc -o ChIP/reports/ {input.raw_fastq}
 		#### Trimming illumina adapters with Cutadapt
@@ -169,6 +170,55 @@ rule process_fastq_se:
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o ChIP/reports/ {output.fastq}
         """
+
+rule bowtie2_map_pe:
+    input:
+        fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
+        indices = "combined/genomes/{ref_genome}"
+    output:
+        samfile = "ChIP/mapped/mapped__{sample_name}.bam",
+        metrics = "ChIP/reports/bt2__{sample_name}.txt"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref = lambda wildcards: ref_genome,
+        map_option = lambda wildcards: config['mapping_option'],
+        mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_pe']    
+    log:
+        return_log_chip("{sample_name}", "mapping_on_{ref_genome}")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
+		bowtie2 --version
+		bowtie2 -p {threads} {params.mapping_params} --met-file {output.metrics} -x {input.indices} -1 {input.fastq1} -2 {input.fastq2} -S {output.sam} |& tee {log}
+        """    
+        
+rule bowtie2_map_se:
+    input:
+        fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
+        indices = "combined/genomes/{ref_genome}"
+    output:
+        samfile = "ChIP/mapped/mapped__{sample_name}.bam",
+        metrics = "ChIP/reports/bt2__{sample_name}.txt",
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref = lambda wildcards: ref_genome,
+        map_option = lambda wildcards: config['mapping_option'],
+        mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_se']    
+    log:
+        return_log_chip("{sample_name}", "mapping_on_{ref_genome}")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
+		bowtie2 --version
+		bowtie2 -p {threads} {params.mapping_params} --met-file {output.metrics} -x {input.indices} -U {input.fastq} -S {output.sam} |& tee {log}
+        """        
         
 rule check_pair:
     input:

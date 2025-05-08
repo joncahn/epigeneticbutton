@@ -20,21 +20,21 @@ mapping_option: "default"
 # Mapping parameters
 mapping:
   default:
-    threads: 8
-    memory: "16G"
-  colcen:
-    threads: 8
-    memory: "16G"
-    k: 100
-  colcenall:
-    threads: 8
-    memory: "16G"
-    k: 100
-    mapq: 10
+    map_pe: "--end-to-end --maxins 1500"
+    map_se: "--end-to-end"
+    filter: "-b -h -q 10 -F 256"
+  repeat:
+    map_pe: "--very-sensitive --no-mixed --no-discordant --k 100 --end-to-end"
+    map_se: "--very-sensitive --k 100 --end-to-end"
+    filter: "-b -h -q 10 -F 256"
+  repeatall:
+    map_pe: "--very-sensitive --no-mixed --no-discordant --k 100 --end-to-end"
+    map_se: "--very-sensitive --k 100 --end-to-end"
+    filter: "-b -h -F 256"
   all:
-    threads: 8
-    memory: "16G"
-    mapq: 10
+    map_pe: "--end-to-end --maxins 1500"
+    map_se: "--end-to-end "
+    filter: "-b -h -F 256"
 
 # Analysis parameters
 analysis:
