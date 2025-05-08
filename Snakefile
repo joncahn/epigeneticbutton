@@ -24,15 +24,28 @@ sample_info_map = {
     for _, row in samples.iterrows()
 }
 
-# Function to create a unique name for each sample and add it as a column to the samples
-def sample_name(row):
-    return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
+# Function to create a unique name for each sample based on the sample columns, and later based on wildcards
+def sample_name(d):
+    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
 
-# Function to access this information later on
+# Function to split the sample_name to recover its components
+def parse_sample_name(sample_name):
+    data_type, line, tissue, sample_type, rep, ref_genome = sample_name.split("__")
+    return {
+        "data_type": data_type,
+        "line": line,
+        "tissue": tissue,
+        "sample_type": sample_type,
+        "replicate": rep,
+        "ref_genome": ref_genome
+    }
+
+# Function to access extra information form the samplefile using wildcards
 def get_sample_info(wildcards, field):
     key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
     return sample_info_map[key][field]
 
+# Function to access extra information form the samplefile using the name
 def get_sample_info_from_name(sample_name, field):
     parts = sample_name.split("__")
     key = tuple(parts)
