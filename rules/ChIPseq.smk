@@ -178,7 +178,7 @@ rule bowtie2_map_pe:
         metrics = "ChIP/reports/bt2pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, 'ref_genome'),
+        ref = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: config['mapping_option'],
         mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_pe']    
     log:
@@ -196,13 +196,13 @@ rule bowtie2_map_pe:
 rule bowtie2_map_se:
     input:
         fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = lambda wildcards: f"combined/genomes/{get_sample_info_from_name(wildcards.sample_name, 'ref_genome')}"
+        indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}"
     output:
         samfile = "ChIP/mapped/mapped__{sample_name}.bam",
         metrics = "ChIP/reports/bt2se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, 'ref_genome'),
+        ref = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: config['mapping_option'],
         mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_se']    
     log:
