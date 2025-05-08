@@ -7,9 +7,9 @@ def get_inputs(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return f"ChIP/reports/bt2pe__{name}.txt"
+        return f"ChIP/reports/flagstat__{name}.txt"
     else:
-        return f"ChIP/reports/bt2se__{name}.txt"
+        return f"ChIP/reports/flagstat__{name}.txt"
         
 # def get_inputs(wildcards):
     # s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
@@ -251,7 +251,7 @@ rule filter_results:
         """
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} {params.filtering_params} -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
+        samtools view -@ {threads} {filtering_params} -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
         rm -f {input.samfile}
         samtools fixmate -@ {threads} -m ChIP/mapped/temp1_{sample_name}.bam ChIP/mapped/temp2_{sample_name}.bam
         samtools sort -@ {threads} -o ChIP/mapped/temp3_{sample_name}.bam ChIP/mapped/temp2_{sample_name}.bam
