@@ -272,7 +272,7 @@ rule filter_results_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         map_option = lambda wildcards: config['mapping_option'],
-        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
+        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
     log:
         return_log_chip("{sample_name}", "filter")
     conda:
