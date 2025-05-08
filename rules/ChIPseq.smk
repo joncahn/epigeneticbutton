@@ -7,12 +7,9 @@ def get_fastq_inputs(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return [
-            f"ChIP/fastq/trim__{name}__R1.fastq.gz",
-            f"ChIP/fastq/trim__{name}__R2.fastq.gz"
-        ]
+        return f"ChIP/reports/bt2pe__{name}.txt"
     else:
-        return f"ChIP/fastq/trim__{name}__R0.fastq.gz"
+        return f"ChIP/reports/bt2se__{name}.txt"
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -178,7 +175,7 @@ rule bowtie2_map_pe:
         indices = lambda wildcards: f"combined/genomes/{get_sample_info_from_name(wildcards.sample_name, 'ref_genome')}"
     output:
         samfile = "ChIP/mapped/mapped__{sample_name}.bam",
-        metrics = "ChIP/reports/bt2__{sample_name}.txt"
+        metrics = "ChIP/reports/bt2pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, 'ref_genome'),
@@ -199,17 +196,17 @@ rule bowtie2_map_pe:
 rule bowtie2_map_se:
     input:
         fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = "combined/genomes/{ref_genome}"
+        indices = lambda wildcards: f"combined/genomes/{get_sample_info_from_name(wildcards.sample_name, 'ref_genome')}"
     output:
         samfile = "ChIP/mapped/mapped__{sample_name}.bam",
-        metrics = "ChIP/reports/bt2__{sample_name}.txt",
+        metrics = "ChIP/reports/bt2se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref = lambda wildcards: ref_genome,
+        ref = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, 'ref_genome'),
         map_option = lambda wildcards: config['mapping_option'],
         mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_se']    
     log:
-        return_log_chip("{sample_name}", "mapping_on_{ref_genome}")
+        return_log_chip("{sample_name}", "mapping")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -222,7 +219,7 @@ rule bowtie2_map_se:
         
 rule check_pair:
     input:
-        lambda wildcards: get_fastq_inputs(wildcards)
+        lambda wildcards: get_inputs(wildcards)
     output:
         touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     shell:
