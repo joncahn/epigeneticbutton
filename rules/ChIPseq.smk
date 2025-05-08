@@ -175,17 +175,17 @@ rule bowtie2_map_pe:
     input:
         fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
-        indices = "combined/genomes/{ref_genome}"
+        indices = lambda wildcards: f"combined/genomes/{get_sample_info_from_name(wildcards.sample_name, 'ref_genome')}"
     output:
         samfile = "ChIP/mapped/mapped__{sample_name}.bam",
         metrics = "ChIP/reports/bt2__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref = lambda wildcards: ref_genome,
+        ref = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, 'ref_genome'),
         map_option = lambda wildcards: config['mapping_option'],
         mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_pe']    
     log:
-        return_log_chip("{sample_name}", "mapping_on_{ref_genome}")
+        return_log_chip("{sample_name}", "mapping")
     conda:
         CONDA_ENV
     threads: workflow.cores
