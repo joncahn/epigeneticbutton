@@ -122,7 +122,8 @@ rule process_fastq_pe:
         raw_fastq2 = "ChIP/fastq/raw__{sample_name}__R2.fastq.gz"
     output:
         fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz"
+        fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
+        metrics_trim = "ChIP/reports/trim_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
@@ -142,7 +143,7 @@ rule process_fastq_pe:
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
-		cutadapt -j {threads} {params.trimming_quality} -a {params.adapter1} -A {params.adapter2} -o {output.fastq1} -p {output.fastq2} {input.raw_fastq1} {input.raw_fastq2} |& tee {log}
+		cutadapt -j {threads} {params.trimming_quality} -a {params.adapter1} -A {params.adapter2} -o {output.fastq1} -p {output.fastq2} {input.raw_fastq1} {input.raw_fastq2} |& tee {output.metrics}
 		#### Removing untrimmed fastq
 		rm -f {input.raw_fastq1} {input.raw_fastq2}
 		#### FastQC on trimmed data
@@ -155,7 +156,8 @@ rule process_fastq_se:
     input:
         raw_fastq = "ChIP/fastq/raw__{sample_name}__R0.fastq.gz"
     output:
-        fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz"
+        fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
+        metrics_trim = "ChIP/reports/trim_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
@@ -174,7 +176,7 @@ rule process_fastq_se:
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
-		cutadapt -j {threads} {params.trimming_quality} -a {params.adapter1} -o {output.fastq} {input.raw_fastq} |& tee {log}
+		cutadapt -j {threads} {params.trimming_quality} -a {params.adapter1} -o {output.fastq} {input.raw_fastq} |& tee {output.metrics}
 		#### Removing untrimmed fastq
 		rm -f {input.raw_fastq}
 		#### FastQC on trimmed data
@@ -204,7 +206,7 @@ rule bowtie2_map_pe:
         """
         printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} --met-file {output.metrics} -x {input.indices} -1 {input.fastq1} -2 {input.fastq2} -S {output.sam} |& tee {log}
+		bowtie2 -p {threads} {params.mapping_params} --met-file {log} -x {input.indices} -1 {input.fastq1} -2 {input.fastq2} -S {output.sam} |& tee {output.metrics}
         """    
         
 rule bowtie2_map_se:
@@ -213,7 +215,7 @@ rule bowtie2_map_se:
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}"
     output:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam",
-        metrics = "ChIP/reports/bt2se__{sample_name}.txt"
+        metrics = "ChIP/reports/bt2_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -228,7 +230,7 @@ rule bowtie2_map_se:
         """
         printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} --met-file {output.metrics} -x {input.indices} -U {input.fastq} -S {output.sam} |& tee {log}
+		bowtie2 -p {threads} {params.mapping_params} --met-file {log} -x {input.indices} -U {input.fastq} -S {output.sam} |& tee {output.metrics}
         """
 
 rule filter_results_pe:
@@ -291,16 +293,52 @@ rule filter_results_se:
         samtools flagstat -@ {threads} {output.bamfile} > {output.metrics_flag}
         rm -f ChIP/mapped/temp*_{sample_name}.bam
         """
-        
-rule check_pair:
+
+rule make_statistics_file_pe:
     input:
-        lambda wildcards: get_inputs(wildcards)
+        metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
     output:
         touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     shell:
         """
+        printf "\nMaking mapping statistics summary\n"
+        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
+        filt=$(grep "reads" {input.metrics_map} | awk '{print $1}')
+        multi=$(grep "aligned concordantly >1 times" {input.metrics_map} | awk '{print $1}')
+        single=$(grep "aligned concordantly exactly 1 time" {input.metrics_map} | awk '{print $1}')
+        allmap=$((multi+single))
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
         touch {output.touch}
         """
+
+rule make_statistics_file_se:
+    input:
+        metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
+    output:
+        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    shell:
+        """
+        printf "\nMaking mapping statistics summary\n"
+        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
+        filt=$(grep "reads" {input.metrics_map} | awk '{print $1}')
+        multi=$(grep "aligned concordantly >1 times" {input.metrics_map} | awk '{print $1}')
+        single=$(grep "aligned concordantly exactly 1 time" {input.metrics_map} | awk '{print $1}')
+        allmap=$((multi+single))
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
+        touch {output.touch}
+        """
+        
+# rule check_pair:
+    # input:
+        # lambda wildcards: get_inputs(wildcards)
+    # output:
+        # touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    # shell:
+        # """
+        # touch {output.touch}
+        # """
      
 # rule process_chip_sample:
     # input:
