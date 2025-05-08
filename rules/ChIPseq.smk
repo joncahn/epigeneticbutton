@@ -51,8 +51,8 @@ rule make_ChIP_indices:
 
 rule get_fastq_pe:
     output:
-        fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
-        fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
+        fastq1 = "ChIP/fastq/raw__{sample_name}__R1.fastq.gz",
+        fastq2 = "ChIP/fastq/raw__{sample_name}__R2.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
@@ -81,7 +81,7 @@ rule get_fastq_pe:
         
 rule get_fastq_se:
     output:
-        fastq0 = "ChIP/fastq/{sample_name}__R0.fastq.gz"
+        fastq0 = "ChIP/fastq/raw__{sample_name}__R0.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
@@ -107,8 +107,8 @@ rule get_fastq_se:
 
 rule process_fastq_pe:
     input:
-        raw_fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
-        raw_fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
+        raw_fastq1 = "ChIP/fastq/raw__{sample_name}__R1.fastq.gz",
+        raw_fastq2 = "ChIP/fastq/raw__{sample_name}__R2.fastq.gz"
     output:
         fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz"
@@ -142,7 +142,7 @@ rule process_fastq_pe:
         
 rule process_fastq_se:
     input:
-        raw_fastq = "ChIP/fastq/{sample_name}__R0.fastq.gz"
+        raw_fastq = "ChIP/fastq/raw__{sample_name}__R0.fastq.gz"
     output:
         fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz"
     params:
