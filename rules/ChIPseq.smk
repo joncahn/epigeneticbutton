@@ -188,7 +188,7 @@ rule bowtie2_map_pe:
         fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}"
     output:
-        samfile = "ChIP/mapped/mapped__{sample_name}.sam",
+        samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam",
         metrics = "ChIP/reports/bt2pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -212,7 +212,7 @@ rule bowtie2_map_se:
         fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}"
     output:
-        samfile = "ChIP/mapped/mapped__{sample_name}.sam",
+        samfile = "ChIP/mapped/mapped_se__{sample_name}.sam",
         metrics = "ChIP/reports/bt2se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -233,10 +233,10 @@ rule bowtie2_map_se:
 
 rule filter_results_pe:
     input:
-        samfile = "ChIP/mapped/mapped__{sample_name}.sam"
+        samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
     output:
         bamfile = "ChIP/mapped/{sample_name}.bam",
-        metrics_dup = "ChIP/reports/markdup__{sample_name}.txt",
+        metrics_dup = "ChIP/reports/markduppe__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstatpe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -264,10 +264,10 @@ rule filter_results_pe:
 
 rule filter_results_se:
     input:
-        samfile = "ChIP/mapped/mapped__{sample_name}.sam"
+        samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
     output:
         bamfile = "ChIP/mapped/{sample_name}.bam",
-        metrics_dup = "ChIP/reports/markdup__{sample_name}.txt",
+        metrics_dup = "ChIP/reports/markdupse__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstatse__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
