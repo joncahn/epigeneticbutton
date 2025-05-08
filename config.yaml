@@ -1,4 +1,4 @@
-# Path to the directory in which 
+# Path to the working directory where the repository was cloned
 repo_folder: "path/to/epigeneticbutton/repo"
 
 # Name of analysis
@@ -10,7 +10,11 @@ sample_file: "samples.tsv"
 # Path to the directory containing reference genomes
 ref_path: "path/to/reference/genomes"
 
-# Path to the scripts directory
+# Read quality parameters: 
+# default of quality>10 and minimum read length 20nt
+trimming_quality: "-q 10 -m 20"
+
+# Mapping option default
 mapping_option: "default"
 
 # Mapping parameters

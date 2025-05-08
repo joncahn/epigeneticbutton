@@ -8,11 +8,11 @@ def get_fastq_inputs(wildcards):
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
         return [
-            f"ChIP/fastq/{name}__R1.fastq.gz",
-            f"ChIP/fastq/{name}__R2.fastq.gz"
+            f"ChIP/fastq/trim__{name}__R1.fastq.gz",
+            f"ChIP/fastq/trim__{name}__R2.fastq.gz"
         ]
     else:
-        return f"ChIP/fastq/{name}__R0.fastq.gz"
+        return f"ChIP/fastq/trim__{name}__R0.fastq.gz"
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -27,16 +27,18 @@ rule stat_file:
         """
 
 rule make_ChIP_indices:
-      input:
+    input:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
         gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
-      output:
+    output:
         indices = "combined/genomes/{ref_genome}"
-      log:
+    log:
         os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
-      threads: workflow.cores
-      shell:
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
         """
         ### There could be an issue between overlapping indices being built between ChIP and TF, to be resolved
         if ls {output.indices}/*.bt2* 1> /dev/null 2>&1; then
@@ -54,7 +56,6 @@ rule get_fastq_pe:
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
-        paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "paired"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         return_log("{sample_name}", "download_fastq")
@@ -84,7 +85,6 @@ rule get_fastq_se:
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
-        paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "paired"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         return_log("{sample_name}", "download_fastq")
@@ -105,6 +105,71 @@ rule get_fastq_se:
         fi
         """
 
+rule process_fastq_pe:
+    input:
+        raw_fastq1 = "ChIP/fastq/{sample_name}__R1.fastq.gz",
+        raw_fastq2 = "ChIP/fastq/{sample_name}__R2.fastq.gz"
+    output:
+        fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
+        adapter2 = "AGATCGGAAGAGCGTCGTGTAGGGA",
+        trimming_quality = config['trimming_quality']
+    log:
+        return_log("{sample_name}", "trimming")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        #### printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
+        fastqc --version
+        fastqc -o ChIP/reports/ {input.raw_fastq1}
+        fastqc -o ChIP/reports/ {input.raw_fastq2}	
+		#### Trimming illumina adapters with Cutadapt
+		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
+		cutadapt --version
+		cutadapt -j {threads} {params.trimming_quality} -a {params.adapter1} -A {params.adapter2} -o {output.fastq1} -p {output.fastq2} {input.raw_fastq1} {input.raw_fastq2} |& tee {log}
+		#### Removing untrimmed fastq
+		rm -f {input.raw_fastq1} {input.raw_fastq2}
+		#### FastQC on trimmed data
+		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
+		fastqc -o ChIP/reports/ {output.fastq1}
+		fastqc -o ChIP/reports/ {output.fastq2}
+        """
+        
+rule process_fastq_se:
+    input:
+        raw_fastq = "ChIP/fastq/{sample_name}__R0.fastq.gz"
+    output:
+        fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
+        trimming_quality = config['trimming_quality']
+    log:
+        return_log("{sample_name}", "trimming")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        #### printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
+        fastqc --version
+        fastqc -o ChIP/reports/ {input.raw_fastq}
+		#### Trimming illumina adapters with Cutadapt
+		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
+		cutadapt --version
+		cutadapt -j {threads} {params.trimming_quality} -a {params.adapter1} -o {output.fastq} {input.raw_fastq} |& tee {log}
+		#### Removing untrimmed fastq
+		rm -f {input.raw_fastq}
+		#### FastQC on trimmed data
+		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
+		fastqc -o ChIP/reports/ {output.fastq}
+        """
+        
 rule check_pair:
     input:
         lambda wildcards: get_fastq_inputs(wildcards)
