@@ -1,5 +1,5 @@
 # function to access logs more easily
-def return_log(sample_name, step):
+def return_log_chip(sample_name, step):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}.log")
 
 def get_fastq_inputs(wildcards):
@@ -58,7 +58,7 @@ rule get_fastq_pe:
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
-        return_log("{sample_name}", "download_fastq")
+        return_log_chip("{sample_name}", "download_fastq")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -87,7 +87,7 @@ rule get_fastq_se:
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
-        return_log("{sample_name}", "download_fastq")
+        return_log_chip("{sample_name}", "download_fastq")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -118,7 +118,7 @@ rule process_fastq_pe:
         adapter2 = "AGATCGGAAGAGCGTCGTGTAGGGA",
         trimming_quality = config['trimming_quality']
     log:
-        return_log("{sample_name}", "trimming")
+        return_log_chip("{sample_name}", "trimming")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -150,7 +150,7 @@ rule process_fastq_se:
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
         trimming_quality = config['trimming_quality']
     log:
-        return_log("{sample_name}", "trimming")
+        return_log_chip("{sample_name}", "trimming")
     conda:
         CONDA_ENV
     threads: workflow.cores

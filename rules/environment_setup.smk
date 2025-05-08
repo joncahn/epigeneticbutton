@@ -1,5 +1,5 @@
 # function to access logs more easily
-def return_log(ref_genome, step):
+def return_log_env(ref_genome, step):
     return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
 
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/reference.yaml")
@@ -12,7 +12,7 @@ rule prepare_reference:
         gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
         region_files = ["combined/tracks/{ref_genome}_protein_coding_genes.bed", "combined/tracks/{ref_genome}_all_genes.bed"],
-        logs = lambda wildcards: [ return_log(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
+        logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
         chkpt = "chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
@@ -30,7 +30,7 @@ rule check_fasta:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log("{ref_genome}", "fasta")
+        return_log_env("{ref_genome}", "fasta")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -69,7 +69,7 @@ rule check_gff:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log("{ref_genome}", "gff")
+        return_log_env("{ref_genome}", "gff")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -97,7 +97,7 @@ rule check_gtf:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log("{ref_genome}", "gtf")
+        return_log_env("{ref_genome}", "gtf")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -126,7 +126,7 @@ rule check_chrom_sizes:
         fasta_index = "genomes/{ref_genome}/temp_{ref_genome}.fa.fai",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     log:
-        return_log("{ref_genome}", "chrom_sizes")
+        return_log_env("{ref_genome}", "chrom_sizes")
     conda:
         CONDA_ENV
     shell:
@@ -144,7 +144,7 @@ rule prep_region_file:
         region_file1 = "combined/tracks/{ref_genome}_protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref_genome}_all_genes.bed"
     log:
-        return_log("{ref_genome}", "region_file")
+        return_log_env("{ref_genome}", "region_file")
     conda:
         CONDA_ENV
     shell:
