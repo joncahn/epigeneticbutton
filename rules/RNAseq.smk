@@ -47,7 +47,7 @@ rule STAR_map_pe:
     input:
         fastq1 = "RNA/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
-        indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         prefix = "RNA/mapped/map_pe__{sample_name}_",
         touch = "RNA/chkpts/temp_pe__{sample_name}.done"
@@ -70,7 +70,7 @@ rule STAR_map_pe:
 rule STAR_map_se:
     input:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         prefix = "RNA/mapped/map_se__{sample_name}_",
         touch = "RNA/chkpts/temp_se__{sample_name}.done"
