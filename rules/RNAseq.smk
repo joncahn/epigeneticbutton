@@ -7,9 +7,9 @@ def get_inputs_rna(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return f"RNA/logs/tmp_rna__{name}__mapping__PE.log"
+        return f"RNA/chkpts/temp_pe__{name}.done"
     else:
-        return f"RNA/logs/tmp_rna__{name}__mapping__SE.log"
+        return f"RNA/chkpts/temp_se__{name}.done"
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/RNA_sample.yaml")
 
@@ -49,7 +49,8 @@ rule STAR_map_pe:
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        prefix = "RNA/mapped/map_pe__{sample_name}_"
+        prefix = "RNA/mapped/map_pe__{sample_name}_",
+        touch = "RNA/chkpts/temp_pe__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -63,6 +64,7 @@ rule STAR_map_pe:
         printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir {input.indices} --readFilesIn {input.fastq1} {input.fastq2} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix {output.prefix} --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        touch {output.touch}
         """    
 
 rule STAR_map_se:
@@ -70,7 +72,8 @@ rule STAR_map_se:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        prefix = "RNA/mapped/map_se__{sample_name}_"
+        prefix = "RNA/mapped/map_se__{sample_name}_",
+        touch = "RNA/chkpts/temp_se__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']    
@@ -84,6 +87,7 @@ rule STAR_map_se:
         printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir {input.indices} --readFilesIn {input.fastq0} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix {output.prefix} --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        touch {output.touch}
         """
         
 rule check_pair_rna:
