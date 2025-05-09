@@ -4,15 +4,15 @@ def return_log_sample(data_type, sample_name, step, paired):
     
 rule get_fastq_pe:
     output:
-        fastq1 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/raw__{wildcards.sample_name}__R1.fastq.gz",
-        fastq2 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/raw__{wildcards.sample_name}__R2.fastq.gz"
+        fastq1 = "{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
+        fastq2 = "{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['data_type']
+        data_type = lambda wildcards: wildcards.data_type
     log:
-        lambda wildcards: return_log_sample(parse_sample_name(wildcards.sample_name)["data_type"],"{sample_name}", "downloading", "PE")
+        return_log_sample("{data_type}","{sample_name}", "downloading", "PE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -35,14 +35,14 @@ rule get_fastq_pe:
         
 rule get_fastq_se:
     output:
-        fastq0 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz"
+        fastq0 = "{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['data_type']
+        data_type = lambda wildcards: wildcards.data_type
     log:
-        lambda wildcards: return_log_sample(parse_sample_name(wildcards.sample_name)["data_type"],"{sample_name}", "downloading", "SE")
+        return_log_sample("{data_type}","{sample_name}", "downloading", "SE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -62,20 +62,20 @@ rule get_fastq_se:
 
 rule process_fastq_pe:
     input:
-        raw_fastq1 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/raw__{wildcards.sample_name}__R1.fastq.gz",
-        raw_fastq2 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/raw__{wildcards.sample_name}__R2.fastq.gz"
+        raw_fastq1 = "{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
+        raw_fastq2 = "{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
     output:
-        fastq1 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
-        fastq2 = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz",
-        metrics_trim = lambda wildcards: f"{parse_sample_name(wildcards.sample_name)['data_type']}/reports/trim_pe__{wildcards.sample_name}.txt"
+        fastq1 = "{data_type}/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "{data_type}/fastq/trim__{sample_name}__R2.fastq.gz",
+        metrics_trim = "{data_type}/reports/trim_pe__{wildcards.sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['data_type'],
+        data_type = lambda wildcards: wildcards.data_type,
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
         adapter2 = "AGATCGGAAGAGCGTCGTGTAGGGA",
         trimming_quality = config['trimming_quality']
     log:
-        lambda wildcards: return_log_sample(parse_sample_name(wildcards.sample_name)["data_type"],"{sample_name}", "trimming", "PE")
+        return_log_sample("{data_type}","{sample_name}", "trimming", "PE")
     conda:
         CONDA_ENV
     threads: workflow.cores
