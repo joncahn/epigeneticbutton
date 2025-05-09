@@ -15,7 +15,7 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
 rule stat_file_chip:
     output:
-        stat_file = "ChIP/reports/summary_mapping_stats_{analysis_name}.txt"
+        stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt"
     shell:
         """
         if [ ! -s {output.stat_file} ]; then
@@ -153,7 +153,7 @@ rule filter_chip_se:
 
 rule make_chip_stats_pe:
     input:
-        stat_file = "ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
+        stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_chip(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
@@ -174,7 +174,7 @@ rule make_chip_stats_pe:
 
 rule make_chip_stats_se:
     input:
-        stat_file = "ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
+        stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_chip(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
