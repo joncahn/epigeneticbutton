@@ -66,7 +66,7 @@ rule get_fastq_se:
             mv "{params.data_type}/fastq/{params.seq_id}.fastq.gz" "{output.fastq0}"
         else
             printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
-            cp "{params.fastq_path}/{params.seq_id}*q.gz" "{output.fastq0}"
+            cp "{params.fastq_path}"/"{params.seq_id}"*q.gz "{output.fastq0}"
         fi
         }}
         """
