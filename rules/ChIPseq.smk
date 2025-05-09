@@ -57,8 +57,8 @@ rule bowtie2_map_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        map_option = lambda wildcards: config['mapping_option'],
-        mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_pe']    
+        map_option = lambda wildcards: config['chip_mapping_option'],
+        mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_pe']    
     log:
         return_log_chip("{sample_name}", "mapping", "PE")
     conda:
@@ -81,8 +81,8 @@ rule bowtie2_map_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        map_option = lambda wildcards: config['mapping_option'],
-        mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_se']    
+        map_option = lambda wildcards: config['chip_mapping_option'],
+        mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
         return_log_chip("{sample_name}", "mapping", "SE")
     conda:
@@ -95,7 +95,7 @@ rule bowtie2_map_se:
 		bowtie2 -p {threads} {params.mapping_params} --met-file {log} -x {input.indices} -U {input.fastq} -S {output.sam} |& tee {output.metrics}
         """
 
-rule filter_results_pe:
+rule filter_chip_pe:
     input:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
     output:
@@ -104,8 +104,8 @@ rule filter_results_pe:
         metrics_flag = "ChIP/reports/flagstatpe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        map_option = lambda wildcards: config['mapping_option'],
-        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
+        map_option = lambda wildcards: config['chip_mapping_option'],
+        filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
         return_log_chip("{sample_name}", "filtering", "PE")
     conda:
@@ -126,7 +126,7 @@ rule filter_results_pe:
         rm -f ChIP/mapped/temp*_{sample_name}.bam
         """
 
-rule filter_results_se:
+rule filter_chip_se:
     input:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
     output:
@@ -135,8 +135,8 @@ rule filter_results_se:
         metrics_flag = "ChIP/reports/flagstatse__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        map_option = lambda wildcards: config['mapping_option'],
-        filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
+        map_option = lambda wildcards: config['chip_mapping_option'],
+        filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
         return_log_chip("{sample_name}", "filtering", "SE")
     conda:
@@ -156,7 +156,7 @@ rule filter_results_se:
         rm -f ChIP/mapped/temp*_{sample_name}.bam
         """
 
-rule make_statistics_file_pe:
+rule make_chip_stats_pe:
     input:
         stat_file = "ChIP/reports/summary_mapping_stats.txt",
         metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
@@ -172,12 +172,12 @@ rule make_statistics_file_pe:
         multi=$(grep "aligned concordantly >1 times" {input.metrics_map} | awk '{print $1}')
         single=$(grep "aligned concordantly exactly 1 time" {input.metrics_map} | awk '{print $1}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
         cat {input.logs} > {output.log}
         rm -f {input.logs}
         """
 
-rule make_statistics_file_se:
+rule make_chip_stats_se:
     input:
         stat_file = "ChIP/reports/summary_mapping_stats.txt",
         metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
@@ -193,7 +193,7 @@ rule make_statistics_file_se:
         multi=$(grep "aligned >1 times" {input.metrics_map} | awk '{print $1}')
         single=$(grep "aligned exactly 1 time" {input.metrics_map} | awk '{print $1}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
         cat {input.logs} > {output.log}
         rm -f {input.logs}
         """
@@ -207,44 +207,4 @@ rule check_pair_chip:
         """
         touch {output.touch}
         """
-     
-# rule process_chip_sample:
-    # input:
-        # lambda wildcards: get_fastq_inputs(wildcards)
-    # output:
-        # chkpt = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    # params:
-        # scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
-        # ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome),
-        # data_type = lambda wildcards: wildcards.data_type,
-        # line = lambda wildcards: wildcards.line,
-        # tissue = lambda wildcards: wildcards.tissue,
-        # sample_type = lambda wildcards: wildcards.sample_type,
-        # replicate = lambda wildcards: wildcards.replicate,
-        # seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
-        # fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
-        # paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
-        # mapping_option = config["mapping_option"],
-        # log_path = lambda wildcards: return_log(f"ChIP__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}","process")
-    # log:
-        # "{params.log_path}"
-    # conda:
-        # CONDA_ENV
-    # shell:
-        # """
-        # cd ChIP/
-        # qsub ../{params.scripts_dir}/MaizeCode_ChIP_sample.sh \
-            # -x "ChIP" \
-            # -d {params.ref_dir} \
-            # -l {params.line} \
-            # -t {params.tissue} \
-            # -m {params.data_type} \
-            # -r {params.replicate} \
-            # -i {params.seq_id} \
-            # -f {params.fastq_path} \
-            # -p {params.paired} \
-            # -s "trim" \
-            # -a {params.mapping_option} | tee {log}
-        # cd ..
-        # touch {output.chkpt}
-        # """
+    

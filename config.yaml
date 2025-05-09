@@ -15,10 +15,10 @@ ref_path: "path/to/reference/genomes"
 trimming_quality: "-q 10 -m 20"
 
 # Mapping option default
-mapping_option: "default"
+chip_mapping_option: "default"
 
-# Mapping parameters
-mapping:
+# ChIP-seq parameters
+chip_mapping:
   default:
     map_pe: "--end-to-end --maxins 1500"
     map_se: "--end-to-end"
@@ -35,6 +35,15 @@ mapping:
     map_pe: "--end-to-end --maxins 1500"
     map_se: "--end-to-end "
     filter: "-b -h -F 256"
+
+# RNA parameters
+rna_bedgraph:
+  RNA:
+    param_bg: "--outWigType bedGraph"
+    strandedness: "reverse"
+  RAMPAGE:
+    param_bg: "--outWigType bedGraph read1_5p"
+    strandedness: "forward"
 
 # Analysis parameters
 analysis:

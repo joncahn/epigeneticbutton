@@ -245,7 +245,7 @@ rule combined_analysis:
     shell:
         """
         # Call the combined analysis script
-        qsub {params.scripts_dir}/MaizeCode_analysis.sh \
+        # qsub {params.scripts_dir}/MaizeCode_analysis.sh \
             -f {params.analysis_samplefile} \
             -r {params.region_file} | tee {log}
         touch {output.chkpt}

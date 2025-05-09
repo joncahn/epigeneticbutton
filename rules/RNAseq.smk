@@ -7,9 +7,9 @@ def get_inputs_rna(wildcards):
     name = sample_name(s)
     paired = get_sample_info(wildcards, "paired")
     if paired == "PE":
-        return f"RNA/chkpts/temp_pe__{name}.done"
+        return f"RNA/logs/process_pe_sample__{name}.log"
     else:
-        return f"RNA/chkpts/temp_se__{name}.done"
+        return f"RNA/logs/process_se_sample__{name}.log"
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/RNA_sample.yaml")
 
@@ -90,55 +90,143 @@ rule STAR_map_se:
         touch {output.touch}
         """
         
-# rule STAR_map_pe:
-    # input:
-        # fastq1 = "RNA/fastq/trim__{sample_name}__R1.fastq.gz",
-        # fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
-        # indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
-    # output:
-        # prefix = "RNA/mapped/map_pe__{sample_name}_",
-        # touch = "RNA/chkpts/temp_pe__{sample_name}.done"
-    # params:
-        # sample_name = lambda wildcards: wildcards.sample_name,
-        # ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
-    # log:
-        # return_log_rna("{sample_name}", "mapping", "PE")
-    # conda:
-        # CONDA_ENV
-    # threads: workflow.cores
-    # shell:
-        # """
-        # STAR --runMode inputAlignmentsFromBAM --inputBAMfile mapped/map_${name}_Aligned.sortedByCoord.out.bam --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix mapped/mrkdup_${name}_
-        # #### Indexing bam file
-        # printf "\nIndexing bam file\n"
-        # samtools index -@ ${threads} mapped/mrkdup_${name}_Processed.out.bam
-        # #### Getting stats from bam file
-        # printf "\nGetting some stats\n"
-        # samtools flagstat -@ ${threads} mapped/mrkdup_${name}_Processed.out.bam > reports/flagstat_${name}.txt
-        # ### Making BedGraph files
-        # printf "\nMaking bedGraph files\n"
-        # STAR --runMode inputAlignmentsFromBAM --inputBAMfile mapped/mrkdup_${name}_Processed.out.bam --outWigStrand Stranded ${param_bg} --outFileNamePrefix tracks/bg_${name}_
-        # ### Converting to bigwig files
-        # printf "\nConverting bedGraphs to bigWigs\n"
-        # bedSort tracks/bg_${name}_Signal.UniqueMultiple.str1.out.bg tracks/${name}_Signal.sorted.UniqueMultiple.str1.out.bg
-        # bedSort tracks/bg_${name}_Signal.Unique.str1.out.bg tracks/${name}_Signal.sorted.Unique.str1.out.bg
-        # bedSort tracks/bg_${name}_Signal.UniqueMultiple.str2.out.bg tracks/${name}_Signal.sorted.UniqueMultiple.str2.out.bg
-        # bedSort tracks/bg_${name}_Signal.Unique.str2.out.bg tracks/${name}_Signal.sorted.Unique.str2.out.bg
-        # if [[ ${strandedness} == "forward" ]]; then
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_plus.bw
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_plus.bw
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_minus.bw
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_minus.bw
-        # elif [[ ${strandedness} == "reverse" ]]; then
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_minus.bw
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_minus.bw
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_plus.bw
-            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_plus.bw
-        # else
-            # printf "\nStrandedness of data unknown! Tracks could not be created\n"
-            # exit 1
-        # fi	
-        # """
+rule filter_rna_pe:
+    input:
+        prefix = "RNA/mapped/map_pe__{sample_name}"
+    output:
+        bw_plus = "RNA/tracks/{sample_name}_plus.bw",
+        bw_minus = "RNA/tracks/{sample_name}_minus.bw",
+        metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt",
+        metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
+        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
+    log:
+        return_log_rna("{sample_name}", "filtering", "PE")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        ### Marking duplicates
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile {input.prefix}_Aligned.sortedByCoord.out.bam --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix RNA/mapped/mrkdup_{sample_name}_
+        #### Indexing bam file
+        printf "\nIndexing bam file\n"
+        samtools index -@ {threads} RNA/mapped/mrkdup_{sample_name}_Processed.out.bam
+        #### Getting stats from bam file
+        printf "\nGetting some stats\n"
+        samtools flagstat -@ {threads} RNA/mapped/mrkdup_{sample_name}_Processed.out.bam > {output.metrics_flag}
+        ### Making BedGraph files
+        printf "\nMaking bedGraph files\n"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile RNA/mapped/mrkdup_{sample_name}_Processed.out.bam --outWigStrand Stranded {params.param_bg} --outFileNamePrefix RNA/tracks/bg_{sample_name}_
+        ### Converting to bigwig files
+        printf "\nConverting bedGraphs to bigWigs\n"
+        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg
+        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg
+        if [[ {params.strandedness} == "forward" ]]; then
+            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
+            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
+        elif [[ {params.strandedness} == "reverse" ]]; then
+            bedGraphToBigWig RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
+            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
+        fi	
+        mv {input.prefix}Log.final.out {output.metrics_map}
+        ### Cleaning up
+        rm -f RNA/tracks/*{sample_name}_Signal*
+        rm -f RNA/mapped/*{sample_name}Log*
+        rm -f RNA/tracks/*{sample_name}Log*
+        """
+
+rule filter_rna_se:
+    input:
+        prefix = "RNA/mapped/map_se__{sample_name}"
+    output:
+        bw_plus = "RNA/tracks/{sample_name}_plus.bw",
+        bw_minus = "RNA/tracks/{sample_name}_minus.bw",
+        metrics_flag = "RNA/reports/flagstat_se_{sample_name}.txt",
+        metrics_map = "RNA/reports/star_se__{sample_name}.txt"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
+        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
+    log:
+        return_log_rna("{sample_name}", "filtering", "SE")
+    conda:
+        CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        #### Indexing bam file
+        printf "\nIndexing bam file\n"
+        samtools index -@ {threads} {input.prefix}_Aligned.sortedByCoord.out.bam
+        #### Getting stats from bam file
+        printf "\nGetting some stats\n"
+        samtools flagstat -@ {threads} {input.prefix}_Aligned.sortedByCoord.out.bam > {output.metrics_flag}
+        ### Making BedGraph files
+        printf "\nMaking bedGraph files\n"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile {input.prefix}_Aligned.sortedByCoord.out.bam --outWigStrand Stranded {params.param_bg} --outFileNamePrefix RNA/tracks/bg_{sample_name}_
+        ### Converting to bigwig files
+        printf "\nConverting bedGraphs to bigWigs\n"
+        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg
+        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg
+        if [[ {params.strandedness} == "forward" ]]; then
+            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
+            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
+        elif [[ {params.strandedness} == "reverse" ]]; then
+            bedGraphToBigWig RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
+            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
+        fi	
+        mv {input.prefix}_Log.final.out {output.metrics_map}
+        ### Cleaning up
+        rm -f RNA/tracks/*{sample_name}_Signal*
+        rm -f RNA/mapped/*{sample_name}Log*
+        rm -f RNA/tracks/*{sample_name}Log*
+        """        
+
+rule make_rna_stats_pe:
+    input:
+        stat_file = "RNA/reports/summary_mapping_stats.txt",
+        metrics_trim = "RNA/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        metrics_map = "RNA/reports/star_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+    output:
+        log = "RNA/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
+    shell:
+        """
+        printf "\nMaking mapping statistics summary\n"
+        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
+        filt=$(grep "Number of input reads" {input.metrics_map} | awk '{print $NF}')
+        multi=$(grep "Number of reads mapped to multiple loci" {input.metrics_map} | awk '{print $NF}')
+        single=$(grep "Uniquely mapped reads number" {input.metrics_map} | awk '{print $NF}')
+        allmap=$((multi+single))
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
+        cat {input.logs} > {output.log}
+        rm -f {input.logs}
+        """
+        
+rule make_rna_stats_se:
+    input:
+        stat_file = "RNA/reports/summary_mapping_stats.txt",
+        metrics_trim = "RNA/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        metrics_map = "RNA/reports/star_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+    output:
+        log = "RNA/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
+    shell:
+        """
+        printf "\nMaking mapping statistics summary\n"
+        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
+        filt=$(grep "Number of input reads" {input.metrics_map} | awk '{print $NF}')
+        multi=$(grep "Number of reads mapped to multiple loci" {input.metrics_map} | awk '{print $NF}')
+        single=$(grep "Uniquely mapped reads number" {input.metrics_map} | awk '{print $NF}')
+        allmap=$((multi+single))
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
+        cat {input.logs} > {output.log}
+        rm -f {input.logs}
+        """
         
 rule check_pair_rna:
     input:
