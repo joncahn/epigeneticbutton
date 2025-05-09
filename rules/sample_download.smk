@@ -18,7 +18,7 @@ rule get_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        if [[ {params.fastq_path} == "SRA" ]]; then
+        if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
             fasterq-dump -e {threads} --outdir {params.data_type}/fastq {params.seq_id}
             printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files..."
@@ -48,7 +48,7 @@ rule get_fastq_se:
     threads: workflow.cores
     shell:
         """
-        if [[ {params.fastq_path} == "SRA" ]]; then
+        if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
             fasterq-dump -e {threads} --outdir {params.data_type}/fastq {params.seq_id}
             printf "\n {params.sample_name} ({params.seq_id}) downloaded\nRenaming files..." >> {log} 2>&1
