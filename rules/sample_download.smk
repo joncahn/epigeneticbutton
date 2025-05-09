@@ -93,7 +93,7 @@ rule process_fastq_pe:
         printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
         fastqc -o "{params.data_type}/reports/" "{input.raw_fastq1}"
-        fastqc -o "{params.data_type}/reports/" {input.raw_fastq2}"
+        fastqc -o "{params.data_type}/reports/" "{input.raw_fastq2}"
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
