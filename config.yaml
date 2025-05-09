@@ -37,7 +37,7 @@ chip_mapping:
     filter: "-b -h -F 256"
 
 # RNA parameters
-rna_bedgraph:
+rna_tracks:
   RNA:
     param_bg: "--outWigType bedGraph"
     strandedness: "reverse"
