@@ -90,6 +90,56 @@ rule STAR_map_se:
         touch {output.touch}
         """
         
+# rule STAR_map_pe:
+    # input:
+        # fastq1 = "RNA/fastq/trim__{sample_name}__R1.fastq.gz",
+        # fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
+        # indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
+    # output:
+        # prefix = "RNA/mapped/map_pe__{sample_name}_",
+        # touch = "RNA/chkpts/temp_pe__{sample_name}.done"
+    # params:
+        # sample_name = lambda wildcards: wildcards.sample_name,
+        # ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+    # log:
+        # return_log_rna("{sample_name}", "mapping", "PE")
+    # conda:
+        # CONDA_ENV
+    # threads: workflow.cores
+    # shell:
+        # """
+        # STAR --runMode inputAlignmentsFromBAM --inputBAMfile mapped/map_${name}_Aligned.sortedByCoord.out.bam --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix mapped/mrkdup_${name}_
+        # #### Indexing bam file
+        # printf "\nIndexing bam file\n"
+        # samtools index -@ ${threads} mapped/mrkdup_${name}_Processed.out.bam
+        # #### Getting stats from bam file
+        # printf "\nGetting some stats\n"
+        # samtools flagstat -@ ${threads} mapped/mrkdup_${name}_Processed.out.bam > reports/flagstat_${name}.txt
+        # ### Making BedGraph files
+        # printf "\nMaking bedGraph files\n"
+        # STAR --runMode inputAlignmentsFromBAM --inputBAMfile mapped/mrkdup_${name}_Processed.out.bam --outWigStrand Stranded ${param_bg} --outFileNamePrefix tracks/bg_${name}_
+        # ### Converting to bigwig files
+        # printf "\nConverting bedGraphs to bigWigs\n"
+        # bedSort tracks/bg_${name}_Signal.UniqueMultiple.str1.out.bg tracks/${name}_Signal.sorted.UniqueMultiple.str1.out.bg
+        # bedSort tracks/bg_${name}_Signal.Unique.str1.out.bg tracks/${name}_Signal.sorted.Unique.str1.out.bg
+        # bedSort tracks/bg_${name}_Signal.UniqueMultiple.str2.out.bg tracks/${name}_Signal.sorted.UniqueMultiple.str2.out.bg
+        # bedSort tracks/bg_${name}_Signal.Unique.str2.out.bg tracks/${name}_Signal.sorted.Unique.str2.out.bg
+        # if [[ ${strandedness} == "forward" ]]; then
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_plus.bw
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_plus.bw
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_minus.bw
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_minus.bw
+        # elif [[ ${strandedness} == "reverse" ]]; then
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_minus.bw
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str1.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_minus.bw
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.UniqueMultiple.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_plus.bw
+            # bedGraphToBigWig tracks/${name}_Signal.sorted.Unique.str2.out.bg ${ref_dir}/chrom.sizes tracks/${name}_unique_plus.bw
+        # else
+            # printf "\nStrandedness of data unknown! Tracks could not be created\n"
+            # exit 1
+        # fi	
+        # """
+        
 rule check_pair_rna:
     input:
         lambda wildcards: get_inputs_rna(wildcards)
