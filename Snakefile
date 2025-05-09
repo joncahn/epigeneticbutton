@@ -230,7 +230,7 @@ rule all:
 rule combined_analysis:
     input:
         expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1)),
-        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNA"].apply(sample_name, axis=1)),
+        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1)),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES)
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
