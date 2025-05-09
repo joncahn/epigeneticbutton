@@ -18,22 +18,27 @@ rule get_fastq_pe:
     conda:
         CONDA_ENV
     threads: workflow.cores
-    shell:
-        """
-        if [[ "{params.fastq_path}" == "SRA" ]]; then
-            printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
-            fasterq-dump -e {threads} --outdir {params.data_type}/fastq {params.seq_id}
-            printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files..."
-            pigz -p {threads} {params.data_type}/fastq/{params.seq_id}_1.fastq
-            mv {params.data_type}/fastq/{params.seq_id}_1.fastq.gz {output.fastq1}
-            pigz -p {threads} {params.data_type}/fastq/{params.seq_id}_2.fastq
-            mv {params.data_type}/fastq/{params.seq_id}_2.fastq.gz {output.fastq2}
-        else
-            printf "\nCopying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
-            cp {params.fastq_path}/*{params.seq_id}*R1*q.gz {output.fastq1}
-            cp {params.fastq_path}/*{params.seq_id}*R2*q.gz {output.fastq2}
-        fi
-        """
+    run:
+        from pathlib import Path
+        import shutil, subprocess
+
+        lf = open(log[0], "a")
+
+        if params.fastq_path == "SRA":
+            lf.write(f"\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n")
+            subprocess.run(["fasterq-dump", "-e", str(threads), "--outdir", f"{params.data_type}/fastq", params.seq_id], check=True, stdout=lf, stderr=lf)
+            for r in [1, 2]:
+                subprocess.run(["pigz", "-p", str(threads), f"{params.data_type}/fastq/{params.seq_id}_{r}.fastq"],check=True, stdout=lf, stderr=lf)
+                shutil.move(f"{params.data_type}/fastq/{params.seq_id}_{r}.fastq.gz",output[f"fastq{r}"])
+        else:
+            lf.write(f"\nCopying PE fastq for {params.sample_name} from {params.fastq_path}\n")
+            for r in [1, 2]:
+                matches = list(Path(params.fastq_path).glob(f"*{params.seq_id}*R{r}*q.gz"))
+                if not matches:
+                    raise FileNotFoundError(f"Missing R{r} FASTQ for {params.seq_id}")
+                shutil.copy(matches[0], output[f"fastq{r}"])
+        lf.close()
+
         
 rule get_fastq_se:
     output:
