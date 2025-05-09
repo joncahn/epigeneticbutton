@@ -18,26 +18,27 @@ rule get_fastq_pe:
     conda:
         CONDA_ENV
     threads: workflow.cores
-    run:
-        from pathlib import Path
-        import shutil, subprocess
+    shell:
+        """
+        {{
+        exec > >(tee -a "{log}") 2>&1
 
-        lf = open(log[0], "a")
-
-        if params.fastq_path == "SRA":
-            lf.write(f"\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n")
-            subprocess.run(["fasterq-dump", "-e", str(threads), "--outdir", f"{params.data_type}/fastq", params.seq_id], check=True, stdout=lf, stderr=lf)
-            for r in [1, 2]:
-                subprocess.run(["pigz", "-p", str(threads), f"{params.data_type}/fastq/{params.seq_id}_{r}.fastq"],check=True, stdout=lf, stderr=lf)
-                shutil.move(f"{params.data_type}/fastq/{params.seq_id}_{r}.fastq.gz",output[f"fastq{r}"])
-        else:
-            lf.write(f"\nCopying PE fastq for {params.sample_name} from {params.fastq_path}\n")
-            for r in [1, 2]:
-                matches = list(Path(params.fastq_path).glob(f"*{params.seq_id}*R{r}*q.gz"))
-                if not matches:
-                    raise FileNotFoundError(f"Missing R{r} FASTQ for {params.seq_id}")
-                shutil.copy(matches[0], output[f"fastq{r}"])
-        lf.close()
+        if [[ "{params.fastq_path}" == "SRA" ]]; then
+            echo "Using fasterq-dump for {params.sample_name} ({params.seq_id})"
+            fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
+            echo "{params.sample_name} ({params.seq_id}) downloaded"
+            echo "Gzipping and renaming files..."
+            pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_1.fastq"
+            mv "{params.data_type}/fastq/{params.seq_id}_1.fastq.gz" "{output.fastq1}"
+            pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_2.fastq"
+            mv "{params.data_type}/fastq/{params.seq_id}_2.fastq.gz" "{output.fastq2}"
+        else
+            echo "Copying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})"
+            cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
+            cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
+        fi
+        }}
+        """
 
         
 rule get_fastq_se:
