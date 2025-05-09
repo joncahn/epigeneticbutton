@@ -20,7 +20,7 @@ rule get_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
             fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
@@ -34,7 +34,7 @@ rule get_fastq_pe:
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
         fi
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
         
@@ -53,7 +53,7 @@ rule get_fastq_se:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
             fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
@@ -64,7 +64,7 @@ rule get_fastq_se:
             printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/"{params.seq_id}"*q.gz "{output.fastq0}"
         fi
-        } 2>&1 | tee -a "{log}"        
+        }} 2>&1 | tee -a "{log}"        
         """
 
 rule process_fastq_pe:
@@ -88,7 +88,7 @@ rule process_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         #### QC of the raw reads with FastQC
         printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
@@ -104,7 +104,7 @@ rule process_fastq_pe:
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq1}"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq2}"
-        } 2>&1 | tee -a "{log}"        
+        }} 2>&1 | tee -a "{log}"        
         """
         
 rule process_fastq_se:
@@ -125,7 +125,7 @@ rule process_fastq_se:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         ### QC of the raw reads with FastQC
         printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
@@ -139,5 +139,5 @@ rule process_fastq_se:
 		#### FastQC on trimmed data
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq}"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
