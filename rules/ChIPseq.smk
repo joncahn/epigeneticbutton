@@ -286,7 +286,7 @@ rule make_statistics_file_pe:
         metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_env(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = os.path.join(REPO_FOLDER,"ChIP","logs",f"process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
+        log = os.path.join(REPO_FOLDER,"ChIP","logs","process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -306,7 +306,7 @@ rule make_statistics_file_se:
         metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_env(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = os.path.join(REPO_FOLDER,"ChIP","logs",f"process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
+        log = os.path.join(REPO_FOLDER,"ChIP","logs","process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
