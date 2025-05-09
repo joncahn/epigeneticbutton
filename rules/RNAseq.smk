@@ -67,7 +67,7 @@ rule STAR_map_pe:
 
 rule STAR_map_se:
     input:
-        fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz"
+        fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         prefix = "RNA/mapped/map_se__{sample_name}_"
