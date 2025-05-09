@@ -151,7 +151,7 @@ def create_directories(unique_envs, dirs):
     
     for key, value in dirs.items():
         if isinstance(value, dict):
-            for sub_value in value.values():
+            for sub_key, sub_value in value.items():
                 os.makedirs(sub_value, exist_ok=True)
         else:
             os.makedirs(value, exist_ok=True)
