@@ -20,8 +20,7 @@ rule get_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        exec > >(tee -a "{log}") 2>&1
-
+        {
         if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
             fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
@@ -35,6 +34,7 @@ rule get_fastq_pe:
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
         fi
+        } 2>&1 | tee -a "{log}"
         """
 
         
@@ -53,8 +53,7 @@ rule get_fastq_se:
     threads: workflow.cores
     shell:
         """
-        exec > >(tee -a "{log}") 2>&1
-
+        {
         if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
             fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
@@ -65,6 +64,7 @@ rule get_fastq_se:
             printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/"{params.seq_id}"*q.gz "{output.fastq0}"
         fi
+        } 2>&1 | tee -a "{log}"        
         """
 
 rule process_fastq_pe:
@@ -88,8 +88,7 @@ rule process_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        exec > >(tee -a "{log}") 2>&1
-        
+        {
         #### printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
         fastqc -o "{params.data_type}/reports/" "{input.raw_fastq1}"
@@ -97,13 +96,14 @@ rule process_fastq_pe:
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
-		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" |& tee "{output.metrics}"
+		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" 2>&1 | tee "{output.metrics}"
 		#### Removing untrimmed fastq
 		rm -f "{input.raw_fastq1}" "{input.raw_fastq2}"
 		#### FastQC on trimmed data
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq1}"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq2}"
+        } 2>&1 | tee -a "{log}"        
         """
         
 rule process_fastq_se:
@@ -124,8 +124,7 @@ rule process_fastq_se:
     threads: workflow.cores
     shell:
         """
-        exec > >(tee -a "{log}") 2>&1
-        
+        {
         ### QC of the raw reads with FastQC
         printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
@@ -133,10 +132,11 @@ rule process_fastq_se:
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
-		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" |& tee "{output.metrics}"
+		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" 2>&1 | tee "{output.metrics}"
 		#### Removing untrimmed fastq
 		rm -f "{input.raw_fastq}"
 		#### FastQC on trimmed data
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq}"
+        } 2>&1 | tee -a "{log}"
         """
