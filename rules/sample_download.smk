@@ -24,16 +24,15 @@ rule get_fastq_pe:
         exec > >(tee -a "{log}") 2>&1
 
         if [[ "{params.fastq_path}" == "SRA" ]]; then
-            echo "Using fasterq-dump for {params.sample_name} ({params.seq_id})"
+            printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
             fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
-            echo "{params.sample_name} ({params.seq_id}) downloaded"
-            echo "Gzipping and renaming files..."
+            printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
             pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_1.fastq"
             mv "{params.data_type}/fastq/{params.seq_id}_1.fastq.gz" "{output.fastq1}"
             pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_2.fastq"
             mv "{params.data_type}/fastq/{params.seq_id}_2.fastq.gz" "{output.fastq2}"
         else
-            echo "Copying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})"
+            printf "Copying PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
         fi
@@ -56,16 +55,20 @@ rule get_fastq_se:
     threads: workflow.cores
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+
         if [[ "{params.fastq_path}" == "SRA" ]]; then
-            printf "\nUsing fasterq-dump for {params.sample_name} ({params.seq_id})\n" >> {log} 2>&1
-            fasterq-dump -e {threads} --outdir {params.data_type}/fastq {params.seq_id}
-            printf "\n {params.sample_name} ({params.seq_id}) downloaded\nRenaming files..." >> {log} 2>&1
-            pigz -p {threads} {params.data_type}/fastq/{params.seq_id}.fastq
-            mv {params.data_type}/fastq/{params.seq_id}.fastq.gz {output.fastq0}
+            printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
+            fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
+            printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
+            pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}.fastq"
+            mv "{params.data_type}/fastq/{params.seq_id}.fastq.gz" "{output.fastq0}"
         else
-            printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n" >> {log} 2>&1
-            cp {params.fastq_path}/${params.seq_id}*q.gz {output.fastq0}
+            printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
+            cp "{params.fastq_path}/{params.seq_id}*q.gz" "{output.fastq0}"
         fi
+        }}
         """
 
 rule process_fastq_pe:
