@@ -37,10 +37,10 @@ rule make_bt2_indices:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nBuilding Bowtie2 index for {ref_genome}\n"
         bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule bowtie2_map_pe:
@@ -63,11 +63,11 @@ rule bowtie2_map_pe:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
 		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """    
         
 rule bowtie2_map_se:
@@ -89,11 +89,11 @@ rule bowtie2_map_se:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
 		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -U "{input.fastq}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_chip_pe:
@@ -114,7 +114,7 @@ rule filter_chip_pe:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
         samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{sample_name}.bam" "{input.samfile}"
@@ -126,7 +126,7 @@ rule filter_chip_pe:
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
         rm -f ChIP/mapped/temp*"_{sample_name}.bam"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_chip_se:
@@ -147,7 +147,7 @@ rule filter_chip_se:
     threads: workflow.cores
     shell:
         """
-        {        
+        {{
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
         samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{sample_name}.bam" "{input.samfile}"
@@ -158,7 +158,7 @@ rule filter_chip_se:
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
         rm -f ChIP/mapped/temp*"_{sample_name}.bam"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule make_chip_stats_pe:
@@ -171,7 +171,7 @@ rule make_chip_stats_pe:
         log = "ChIP/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
-        {
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
@@ -181,7 +181,7 @@ rule make_chip_stats_pe:
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule make_chip_stats_se:
@@ -194,7 +194,7 @@ rule make_chip_stats_se:
         log = "ChIP/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
-        {
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
@@ -204,7 +204,7 @@ rule make_chip_stats_se:
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_pair_chip:
