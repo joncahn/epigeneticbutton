@@ -15,7 +15,7 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 
 rule stat_file_rna:
     output:
-        stat_file = "RNA/reports/summary_mapping_stats.txt"
+        stat_file = "RNA/reports/summary_mapping_stats_{analysis_name}.txt"
     shell:
         """
         if [ ! -s {output.stat_file} ]; then
@@ -189,7 +189,7 @@ rule filter_rna_se:
 
 rule make_rna_stats_pe:
     input:
-        stat_file = "RNA/reports/summary_mapping_stats.txt",
+        stat_file = "RNA/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "RNA/reports/star_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_rna(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
@@ -210,7 +210,7 @@ rule make_rna_stats_pe:
         
 rule make_rna_stats_se:
     input:
-        stat_file = "RNA/reports/summary_mapping_stats.txt",
+        stat_file = "RNA/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "RNA/reports/star_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_rna(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
