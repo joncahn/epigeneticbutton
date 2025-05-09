@@ -1,6 +1,6 @@
 # function to access logs more easily
 def return_log_rna(sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp_rna__{sample_name}__{step}__{paired}.log")    
+    return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")    
 
 def get_inputs_rna(wildcards):
     s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
