@@ -1,30 +1,16 @@
 # function to access logs more easily
-def return_log_chip(sample_name, step):
-    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}.log")
+def return_log_chip(sample_name, step, paired):
+    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
-def get_inputs(wildcards):
-    s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
-    name = sample_name(s)
-    paired = get_sample_info(wildcards, "paired")
-    if paired == "PE":
-        return f"ChIP/reports/flagstatpe__{name}.txt"
-    else:
-        return f"ChIP/reports/flagstatse__{name}.txt"
-        
 # def get_inputs(wildcards):
     # s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
     # name = sample_name(s)
     # paired = get_sample_info(wildcards, "paired")
-    # if data_type = "ChIP":
-        # if paired == "PE":
-            # return f"ChIP/reports/bt2pe__{name}.txt"
-        # else:
-            # return f"ChIP/reports/bt2se__{name}.txt"
-    # elif data_type == "RNA":
-        # return f""
+    # if paired == "PE":
+        # return f"ChIP/reports/flagstatpe__{name}.txt"
+    # else:
+        # return f"ChIP/reports/flagstatse__{name}.txt"
         
-        
-
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
 rule stat_file:
@@ -69,7 +55,7 @@ rule get_fastq_pe:
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
-        return_log_chip("{sample_name}", "download_fastq")
+        return_log_chip("{sample_name}", "downloading", "PE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -98,7 +84,7 @@ rule get_fastq_se:
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name
     log:
-        return_log_chip("{sample_name}", "download_fastq")
+        return_log_chip("{sample_name}", "downloading", "SE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -130,7 +116,7 @@ rule process_fastq_pe:
         adapter2 = "AGATCGGAAGAGCGTCGTGTAGGGA",
         trimming_quality = config['trimming_quality']
     log:
-        return_log_chip("{sample_name}", "trimming")
+        return_log_chip("{sample_name}", "trimming", "PE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -163,7 +149,7 @@ rule process_fastq_se:
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
         trimming_quality = config['trimming_quality']
     log:
-        return_log_chip("{sample_name}", "trimming")
+        return_log_chip("{sample_name}", "trimming", "SE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -198,7 +184,7 @@ rule bowtie2_map_pe:
         map_option = lambda wildcards: config['mapping_option'],
         mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_pe']    
     log:
-        return_log_chip("{sample_name}", "mapping")
+        return_log_chip("{sample_name}", "mapping", "PE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -222,7 +208,7 @@ rule bowtie2_map_se:
         map_option = lambda wildcards: config['mapping_option'],
         mapping_params = lambda wildcards: config['mapping'][config['mapping_option']]['map_se']    
     log:
-        return_log_chip("{sample_name}", "mapping")
+        return_log_chip("{sample_name}", "mapping", "SE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -245,7 +231,7 @@ rule filter_results_pe:
         map_option = lambda wildcards: config['mapping_option'],
         filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
     log:
-        return_log_chip("{sample_name}", "filter")
+        return_log_chip("{sample_name}", "filtering", "PE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -276,7 +262,7 @@ rule filter_results_se:
         map_option = lambda wildcards: config['mapping_option'],
         filtering_params = lambda wildcards: config['mapping'][config['mapping_option']]['filter']    
     log:
-        return_log_chip("{sample_name}", "filter")
+        return_log_chip("{sample_name}", "filtering", "SE")
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -297,9 +283,10 @@ rule filter_results_se:
 rule make_statistics_file_pe:
     input:
         metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
-    log:
-        pe
+        metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        logs = lambda wildcards: [ return_log_env(sample_name(wildcards), step, get_sample_info(wildcards, 'paired') for step in ["downloading", "trimming", "mapping", "filtering"] ]
+    output:
+        log = os.path.join(REPO_FOLDER,"ChIP","logs",f"process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -309,15 +296,17 @@ rule make_statistics_file_pe:
         single=$(grep "aligned concordantly exactly 1 time" {input.metrics_map} | awk '{print $1}')
         allmap=$((multi+single))
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
-        touch {output.touch}
+        cat {input.logs} > {output.log}
+        rm -f {input.logs}
         """
 
 rule make_statistics_file_se:
     input:
         metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt"
-    log:
-        se
+        metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
+        logs = lambda wildcards: [ return_log_env(sample_name(wildcards), step, get_sample_info(wildcards, 'paired') for step in ["downloading", "trimming", "mapping", "filtering"] ]
+    output:
+        log = os.path.join(REPO_FOLDER,"ChIP","logs",f"process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -327,18 +316,19 @@ rule make_statistics_file_se:
         single=$(grep "aligned exactly 1 time" {input.metrics_map} | awk '{print $1}')
         allmap=$((multi+single))
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> ChIP/reports/summary_mapping_stats.txt
-        touch {output.touch}
+        cat {input.logs} > {output.log}
+        rm -f {input.logs}
         """
         
-rule check_pair:
-    input:
-        lambda wildcards: get_inputs(wildcards)
-    output:
-        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    shell:
-        """
-        touch {output.touch}
-        """
+# rule check_pair:
+    # input:
+        # lambda wildcards: get_inputs(wildcards)
+    # output:
+        # touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    # shell:
+        # """
+        # touch {output.touch}
+        # """
      
 # rule process_chip_sample:
     # input:
