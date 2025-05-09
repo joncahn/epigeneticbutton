@@ -11,7 +11,7 @@ def get_inputs_rna(wildcards):
     else:
         return f"RNA/logs/process_se_sample__{name}.log"
         
-CONDA_ENV=os.path.join(REPO_FOLDER,"envs/RNA_sample.yaml")
+CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 
 rule stat_file_rna:
     output:

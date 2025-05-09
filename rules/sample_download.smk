@@ -1,6 +1,8 @@
 # function to access logs more easily
 def return_log_sample(data_type, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,f"{data_type}","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+
+CONDA_ENV=os.path.join(REPO_FOLDER,"envs/download.yaml")
     
 rule get_fastq_pe:
     output:
