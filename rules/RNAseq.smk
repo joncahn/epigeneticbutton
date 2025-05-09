@@ -34,13 +34,11 @@ rule make_RNA_indices:
     threads: workflow.cores
     shell:
         """
-        if [ ! -d {output.indices} ]; then
-            printf "\nBuilding STAR index directory for {ref_genome}\n"
-            mkdir {output.indices}
-            STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir {output.indices} --genomeFastaFiles {input.fasta} --sjdbGTFfile {input.gtf}
-        else
-            printf "\nSTAR index already exists for {ref_genome}\n"
-        fi
+        {
+        printf "\nBuilding STAR index directory for {ref_genome}\n"
+        mkdir "{output.indices}"
+        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}"
+        } 2>&1 | tee -a "{log}"
         """
 
 rule STAR_map_pe:
@@ -61,10 +59,12 @@ rule STAR_map_pe:
     threads: workflow.cores
     shell:
         """
+        {
         printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
         STAR --version
-        STAR --runMode alignReads --genomeDir {input.indices} --readFilesIn {input.fastq1} {input.fastq2} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix {output.prefix} --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
-        touch {output.touch}
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq1}" "{input.fastq2}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        touch "{output.touch}"
+        } 2>&1 | tee -a "{log}"
         """    
 
 rule STAR_map_se:
@@ -84,10 +84,12 @@ rule STAR_map_se:
     threads: workflow.cores
     shell:
         """
+        {
         printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
         STAR --version
-        STAR --runMode alignReads --genomeDir {input.indices} --readFilesIn {input.fastq0} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix {output.prefix} --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch {output.touch}
+        } 2>&1 | tee -a "{log}"
         """
         
 rule filter_rna_pe:
@@ -110,33 +112,36 @@ rule filter_rna_pe:
     threads: workflow.cores
     shell:
         """
+        {
         ### Marking duplicates
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix RNA/mapped/mrkdup_{sample_name}_
+        printf "\nMarking duplicates\n"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{sample_name}_"
         #### Indexing bam file
         printf "\nIndexing bam file\n"
-        samtools index -@ {threads} RNA/mapped/mrkdup_{sample_name}_Processed.out.bam
+        samtools index -@ {threads} "RNA/mapped/mrkdup_{sample_name}_Processed.out.bam"
         #### Getting stats from bam file
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} RNA/mapped/mrkdup_{sample_name}_Processed.out.bam > {output.metrics_flag}
+        samtools flagstat -@ {threads} "RNA/mapped/mrkdup_{sample_name}_Processed.out.bam" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile RNA/mapped/mrkdup_{sample_name}_Processed.out.bam --outWigStrand Stranded {params.param_bg} --outFileNamePrefix RNA/tracks/bg_{sample_name}_
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/mrkdup_{sample_name}_Processed.out.bam" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
-        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg
-        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg
-        if [[ {params.strandedness} == "forward" ]]; then
-            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
-            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
-        elif [[ {params.strandedness} == "reverse" ]]; then
-            bedGraphToBigWig RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
-            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
+        bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
+        bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg"
+        if [[ "{params.strandedness}" == "forward" ]]; then
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+        elif [[ "{params.strandedness}" == "reverse" ]]; then
+            bedGraphToBigWig "RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
         fi	
-        mv RNA/mapped/map_pe__{sample_name}_Log.final.out {output.metrics_map}
+        mv "RNA/mapped/map_pe__{sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
-        rm -f RNA/tracks/*{sample_name}_Signal*
-        rm -f RNA/mapped/*{sample_name}Log*
-        rm -f RNA/tracks/*{sample_name}Log*
+        rm -f RNA/tracks/*"{sample_name}_Signal"*
+        rm -f RNA/mapped/*"{sample_name}Log"*
+        rm -f RNA/tracks/*"{sample_name}Log"*
+        } 2>&1 | tee -a "{log}"
         """
 
 rule filter_rna_se:
@@ -160,31 +165,33 @@ rule filter_rna_se:
     threads: workflow.cores
     shell:
         """
+        {
         #### Indexing bam file
         printf "\nIndexing bam file\n"
-        samtools index -@ {threads} RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam
+        samtools index -@ {threads} "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam"
         #### Getting stats from bam file
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam > {output.metrics_flag}
+        samtools flagstat -@ {threads} "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam --outWigStrand Stranded {params.param_bg} --outFileNamePrefix RNA/tracks/bg_{sample_name}_
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
-        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg
-        bedSort RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg
-        if [[ {params.strandedness} == "forward" ]]; then
-            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
-            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
-        elif [[ {params.strandedness} == "reverse" ]]; then
-            bedGraphToBigWig RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_minus}
-            bedGraphToBigWig RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg genomes/{params.ref_genome}/chrom.sizes {output.bw_plus}
+        bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
+        bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg"
+        if [[ "{params.strandedness}" == "forward" ]]; then
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+        elif [[ "{params.strandedness}" == "reverse" ]]; then
+            bedGraphToBigWig "RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
         fi	
-        mv RNA/mapped/map_se__{sample_name}_Log.final.out {output.metrics_map}
+        mv "RNA/mapped/map_se__{sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
-        rm -f RNA/tracks/*{sample_name}_Signal*
-        rm -f RNA/mapped/*{sample_name}Log*
-        rm -f RNA/tracks/*{sample_name}Log*
+        rm -f RNA/tracks/*"{sample_name}_Signal"*
+        rm -f RNA/mapped/*"{sample_name}Log"*
+        rm -f RNA/tracks/*"{sample_name}Log"*
+        } 2>&1 | tee -a "{log}"
         """        
 
 rule make_rna_stats_pe:
@@ -197,15 +204,17 @@ rule make_rna_stats_pe:
         log = "RNA/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
+        {
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
-        filt=$(grep "Number of input reads" {input.metrics_map} | awk '{print $NF}')
-        multi=$(grep "Number of reads mapped to multiple loci" {input.metrics_map} | awk '{print $NF}')
-        single=$(grep "Uniquely mapped reads number" {input.metrics_map} | awk '{print $NF}')
+        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
-        cat {input.logs} > {output.log}
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        cat {input.logs} > "{output.log}"
         rm -f {input.logs}
+        } 2>&1 | tee -a "{log}"
         """
         
 rule make_rna_stats_se:
@@ -218,15 +227,17 @@ rule make_rna_stats_se:
         log = "RNA/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
+        {
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
-        filt=$(grep "Number of input reads" {input.metrics_map} | awk '{print $NF}')
-        multi=$(grep "Number of reads mapped to multiple loci" {input.metrics_map} | awk '{print $NF}')
-        single=$(grep "Uniquely mapped reads number" {input.metrics_map} | awk '{print $NF}')
+        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
-        cat {input.logs} > {output.log}
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        cat {input.logs} > "{output.log}"
         rm -f {input.logs}
+        } 2>&1 | tee -a "{log}"
         """
         
 rule check_pair_rna:
