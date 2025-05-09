@@ -102,7 +102,7 @@ rule process_fastq_pe:
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
-		cutadapt -j {threads} "{params.trimming_quality}" -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" |& tee "{output.metrics}"
+		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" |& tee "{output.metrics}"
 		#### Removing untrimmed fastq
 		rm -f "{input.raw_fastq1}" "{input.raw_fastq2}"
 		#### FastQC on trimmed data
@@ -140,7 +140,7 @@ rule process_fastq_se:
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
-		cutadapt -j {threads} "{params.trimming_quality}" -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" |& tee "{output.metrics}"
+		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" |& tee "{output.metrics}"
 		#### Removing untrimmed fastq
 		rm -f "{input.raw_fastq}"
 		#### FastQC on trimmed data

@@ -37,8 +37,12 @@ rule make_bt2_indices:
     threads: workflow.cores
     shell:
         """
-        printf "\nBuilding Bowtie2 index for {ref_genome}\n" >> {log} 2>&1
-        bowtie2-build --threads {threads} {input.fasta} {output.indices}
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
+        printf "\nBuilding Bowtie2 index for {ref_genome}\n"
+        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}"
+        }}
         """
 
 rule bowtie2_map_pe:
@@ -61,9 +65,13 @@ rule bowtie2_map_pe:
     threads: workflow.cores
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} --met-file {log} -x {input.indices} -1 {input.fastq1} -2 {input.fastq2} -S {output.sam} |& tee {output.metrics}
+		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" |& tee {output.metrics}
+        }}
         """    
         
 rule bowtie2_map_se:
@@ -85,9 +93,13 @@ rule bowtie2_map_se:
     threads: workflow.cores
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
         printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} --met-file {log} -x {input.indices} -U {input.fastq} -S {output.sam} |& tee {output.metrics}
+		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -U "{input.fastq}" -S "{output.sam}" |& tee {output.metrics}
+        }}
         """
 
 rule filter_chip_pe:
