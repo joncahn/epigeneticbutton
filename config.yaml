@@ -38,7 +38,7 @@ chip_mapping:
 
 # RNA parameters
 rna_tracks:
-  RNA:
+  RNAseq:
     param_bg: "--outWigType bedGraph"
     strandedness: "reverse"
   RAMPAGE:
