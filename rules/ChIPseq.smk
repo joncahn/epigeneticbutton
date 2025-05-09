@@ -120,17 +120,21 @@ rule filter_chip_pe:
     threads: workflow.cores
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
-        rm -f {input.samfile}
-        samtools fixmate -@ {threads} -m ChIP/mapped/temp1_{sample_name}.bam ChIP/mapped/temp2_{sample_name}.bam
-        samtools sort -@ {threads} -o ChIP/mapped/temp3_{sample_name}.bam ChIP/mapped/temp2_{sample_name}.bam
-        samtools markdup -r -s -f {output.metrics_dup} -@ {threads} ChIP/mapped/temp3_{sample_name}.bam {output.bamfile}
-        samtools index -@ {threads} {output.bamfile}
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{sample_name}.bam" "{input.samfile}"
+        rm -f "{input.samfile}"
+        samtools fixmate -@ {threads} -m "ChIP/mapped/temp1_{sample_name}.bam" "ChIP/mapped/temp2_{sample_name}.bam"
+        samtools sort -@ {threads} -o "ChIP/mapped/temp3_{sample_name}.bam" "ChIP/mapped/temp2_{sample_name}.bam"
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp3_{sample_name}.bam" "{output.bamfile}"
+        samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} {output.bamfile} > {output.metrics_flag}
-        rm -f ChIP/mapped/temp*_{sample_name}.bam
+        samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
+        rm -f ChIP/mapped/temp*"_{sample_name}.bam"
+        }}
         """
 
 rule filter_chip_se:
@@ -151,16 +155,20 @@ rule filter_chip_se:
     threads: workflow.cores
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o ChIP/mapped/temp1_{sample_name}.bam {input.samfile}
-        rm -f {input.samfile}
-        samtools sort -@ {threads} -o ChIP/mapped/temp2_{sample_name}.bam ChIP/mapped/temp1_{sample_name}.bam
-        samtools markdup -r -s -f {output.metrics_dup} -@ {threads} ChIP/mapped/temp2_{sample_name}.bam {output.bamfile}
-        samtools index -@ {threads} {output.bamfile}
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{sample_name}.bam" "{input.samfile}"
+        rm -f "{input.samfile}"
+        samtools sort -@ {threads} -o "ChIP/mapped/temp2_{sample_name}.bam" "ChIP/mapped/temp1_{sample_name}.bam"
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp2_{sample_name}.bam" "{output.bamfile}"
+        samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} {output.bamfile} > {output.metrics_flag}
-        rm -f ChIP/mapped/temp*_{sample_name}.bam
+        samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
+        rm -f ChIP/mapped/temp*"_{sample_name}.bam"
+        }}
         """
 
 rule make_chip_stats_pe:
@@ -173,15 +181,19 @@ rule make_chip_stats_pe:
         log = "ChIP/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
+        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{print $NF}' | sed 's/,//g')
         filt=$(grep "reads" {input.metrics_map} | awk '{print $1}')
-        multi=$(grep "aligned concordantly >1 times" {input.metrics_map} | awk '{print $1}')
-        single=$(grep "aligned concordantly exactly 1 time" {input.metrics_map} | awk '{print $1}')
+        multi=$(grep "aligned concordantly >1 times" :{input.metrics_map}" | awk '{print $1}')
+        single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{print $1}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
-        cat {input.logs} > {output.log}
-        rm -f {input.logs}
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> "{input.stat_file}"
+        cat "{input.logs}" > "{output.log}"
+        rm -f "{input.logs}"
+        }}
         """
 
 rule make_chip_stats_se:
@@ -194,15 +206,19 @@ rule make_chip_stats_se:
         log = "ChIP/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
+        {{
+        exec > >(tee -a "{log}") 2>&1
+        
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total reads processed:" {input.metrics_trim} | awk '{print $NF}' | sed 's/,//g')
-        filt=$(grep "reads" {input.metrics_map} | awk '{print $1}')
-        multi=$(grep "aligned >1 times" {input.metrics_map} | awk '{print $1}')
-        single=$(grep "aligned exactly 1 time" {input.metrics_map} | awk '{print $1}')
+        tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{print $NF}' | sed 's/,//g')
+        filt=$(grep "reads" "{input.metrics_map}" | awk '{print $1}')
+        multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{print $1}')
+        single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{print $1}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> {input.stat_file}
-        cat {input.logs} > {output.log}
-        rm -f {input.logs}
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> "{input.stat_file}"
+        cat "{input.logs}" > "{output.log}"
+        rm -f "{input.logs}"
+        }}
         """
         
 rule check_pair_chip:

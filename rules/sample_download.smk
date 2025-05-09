@@ -20,7 +20,6 @@ rule get_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        {{
         exec > >(tee -a "{log}") 2>&1
 
         if [[ "{params.fastq_path}" == "SRA" ]]; then
@@ -36,7 +35,6 @@ rule get_fastq_pe:
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
         fi
-        }}
         """
 
         
@@ -55,7 +53,6 @@ rule get_fastq_se:
     threads: workflow.cores
     shell:
         """
-        {{
         exec > >(tee -a "{log}") 2>&1
 
         if [[ "{params.fastq_path}" == "SRA" ]]; then
@@ -68,7 +65,6 @@ rule get_fastq_se:
             printf "\nCopying SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/"{params.seq_id}"*q.gz "{output.fastq0}"
         fi
-        }}
         """
 
 rule process_fastq_pe:
@@ -78,7 +74,7 @@ rule process_fastq_pe:
     output:
         fastq1 = "{data_type}/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "{data_type}/fastq/trim__{sample_name}__R2.fastq.gz",
-        metrics_trim = "{data_type}/reports/trim_pe__{sample_name}.txt"
+        metrics = "{data_type}/reports/trim_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
@@ -92,7 +88,6 @@ rule process_fastq_pe:
     threads: workflow.cores
     shell:
         """
-        {{
         exec > >(tee -a "{log}") 2>&1
         
         #### printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
@@ -109,7 +104,6 @@ rule process_fastq_pe:
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq1}"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq2}"
-        }}
         """
         
 rule process_fastq_se:
@@ -117,7 +111,7 @@ rule process_fastq_se:
         raw_fastq = "{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
     output:
         fastq = "{data_type}/fastq/trim__{sample_name}__R0.fastq.gz",
-        metrics_trim = "{data_type}/reports/trim_se__{sample_name}.txt"
+        metrics = "{data_type}/reports/trim_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
@@ -130,7 +124,6 @@ rule process_fastq_se:
     threads: workflow.cores
     shell:
         """
-        {{
         exec > >(tee -a "{log}") 2>&1
         
         ### QC of the raw reads with FastQC
@@ -146,5 +139,4 @@ rule process_fastq_se:
 		#### FastQC on trimmed data
 		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
 		fastqc -o "{params.data_type}/reports/" "{output.fastq}"
-        }}
         """
