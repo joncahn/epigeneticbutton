@@ -89,7 +89,8 @@ rule process_fastq_pe:
     shell:
         """
         {
-        #### printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
+        #### FastQC on raw data
+        printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
         fastqc --version
         fastqc -o "{params.data_type}/reports/" "{input.raw_fastq1}"
         fastqc -o "{params.data_type}/reports/" {input.raw_fastq2}"
