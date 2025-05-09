@@ -173,14 +173,14 @@ rule make_chip_stats_pe:
         """
         {
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{print $NF}' | sed 's/,//g')
-        filt=$(grep "reads" {input.metrics_map} | awk '{print $1}')
-        multi=$(grep "aligned concordantly >1 times" :{input.metrics_map}" | awk '{print $1}')
-        single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{print $1}')
+        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
+        multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
+        single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> "{input.stat_file}"
-        cat "{input.logs}" > "{output.log}"
-        rm -f "{input.logs}"
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        cat {input.logs} > "{output.log}"
+        rm -f {input.logs}
         } 2>&1 | tee -a "{log}"
         """
 
@@ -196,14 +196,14 @@ rule make_chip_stats_se:
         """
         {
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{print $NF}' | sed 's/,//g')
-        filt=$(grep "reads" "{input.metrics_map}" | awk '{print $1}')
-        multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{print $1}')
-        single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{print $1}')
+        tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
+        multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
+        single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}' >> "{input.stat_file}"
-        cat "{input.logs}" > "{output.log}"
-        rm -f "{input.logs}"
+        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        cat {input.logs} > "{output.log}"
+        rm -f {input.logs}
         } 2>&1 | tee -a "{log}"
         """
         
