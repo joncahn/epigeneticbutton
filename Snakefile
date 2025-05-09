@@ -161,7 +161,9 @@ create_directories(UNIQUE_ENVS, DIRS)
 
 # Include all rule files
 include: "rules/environment_setup.smk"
+include: "rules/sample_download.smk"
 include: "rules/ChIPseq.smk"
+include: "rules/RNAseq.smk"
 
 # Rule all to specify final target
 rule all:
@@ -228,6 +230,7 @@ rule all:
 rule combined_analysis:
     input:
         expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1)),
+        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNA"].apply(sample_name, axis=1)),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES)
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
