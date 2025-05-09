@@ -34,11 +34,11 @@ rule make_RNA_indices:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nBuilding STAR index directory for {ref_genome}\n"
         mkdir "{output.indices}"
         STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule STAR_map_pe:
@@ -59,12 +59,12 @@ rule STAR_map_pe:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq1}" "{input.fastq2}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch "{output.touch}"
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """    
 
 rule STAR_map_se:
@@ -84,12 +84,12 @@ rule STAR_map_se:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch {output.touch}
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule filter_rna_pe:
@@ -112,7 +112,7 @@ rule filter_rna_pe:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         ### Marking duplicates
         printf "\nMarking duplicates\n"
         STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{sample_name}_"
@@ -141,7 +141,7 @@ rule filter_rna_pe:
         rm -f RNA/tracks/*"{sample_name}_Signal"*
         rm -f RNA/mapped/*"{sample_name}Log"*
         rm -f RNA/tracks/*"{sample_name}Log"*
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_rna_se:
@@ -165,7 +165,7 @@ rule filter_rna_se:
     threads: workflow.cores
     shell:
         """
-        {
+        {{
         #### Indexing bam file
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam"
@@ -191,7 +191,7 @@ rule filter_rna_se:
         rm -f RNA/tracks/*"{sample_name}_Signal"*
         rm -f RNA/mapped/*"{sample_name}Log"*
         rm -f RNA/tracks/*"{sample_name}Log"*
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """        
 
 rule make_rna_stats_pe:
@@ -204,7 +204,7 @@ rule make_rna_stats_pe:
         log = "RNA/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
-        {
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -214,7 +214,7 @@ rule make_rna_stats_pe:
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule make_rna_stats_se:
@@ -227,7 +227,7 @@ rule make_rna_stats_se:
         log = "RNA/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
-        {
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -237,7 +237,7 @@ rule make_rna_stats_se:
         awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        } 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_pair_rna:
