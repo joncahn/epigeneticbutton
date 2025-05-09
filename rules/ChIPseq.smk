@@ -177,7 +177,7 @@ rule bowtie2_map_pe:
         indices = lambda wildcards: f"combined/genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}"
     output:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam",
-        metrics = "ChIP/reports/bt2pe__{sample_name}.txt"
+        metrics = "ChIP/reports/bt2_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
