@@ -28,7 +28,7 @@ rule make_RNA_indices:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
         gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
     output:
-        indices = "combined/genomes/{ref_genome}/STAR_index"
+        indices = "genomes/{ref_genome}/STAR_index"
     log:
         os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
     threads: workflow.cores

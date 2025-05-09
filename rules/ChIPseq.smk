@@ -29,7 +29,7 @@ rule make_ChIP_indices:
         gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        indices = "combined/genomes/{ref_genome}"
+        indices = "genomes/{ref_genome}"
     log:
         os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
     conda:
