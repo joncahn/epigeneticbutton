@@ -2,14 +2,14 @@
 def return_log_chip(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
-# def get_inputs(wildcards):
-    # s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
-    # name = sample_name(s)
-    # paired = get_sample_info(wildcards, "paired")
-    # if paired == "PE":
-        # return f"ChIP/reports/flagstatpe__{name}.txt"
-    # else:
-        # return f"ChIP/reports/flagstatse__{name}.txt"
+def get_inputs(wildcards):
+    s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
+    name = sample_name(s)
+    paired = get_sample_info(wildcards, "paired")
+    if paired == "PE":
+        return f"ChIP/logs/process_pe_sample__{name}.log"
+    else:
+        return f"ChIP/logs/process_se_sample__{name}.log"
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -286,7 +286,7 @@ rule make_statistics_file_pe:
         metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_env(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = os.path.join(REPO_FOLDER,"ChIP","logs","process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
+        log = "ChIP/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -306,7 +306,7 @@ rule make_statistics_file_se:
         metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         logs = lambda wildcards: [ return_log_env(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = os.path.join(REPO_FOLDER,"ChIP","logs","process_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log")
+        log = "ChIP/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -320,15 +320,15 @@ rule make_statistics_file_se:
         rm -f {input.logs}
         """
         
-# rule check_pair:
-    # input:
-        # lambda wildcards: get_inputs(wildcards)
-    # output:
-        # touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    # shell:
-        # """
-        # touch {output.touch}
-        # """
+rule check_pair:
+    input:
+        lambda wildcards: get_inputs(wildcards)
+    output:
+        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    shell:
+        """
+        touch {output.touch}
+        """
      
 # rule process_chip_sample:
     # input:
