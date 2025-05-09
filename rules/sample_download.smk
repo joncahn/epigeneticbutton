@@ -67,7 +67,7 @@ rule process_fastq_pe:
     output:
         fastq1 = "{data_type}/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "{data_type}/fastq/trim__{sample_name}__R2.fastq.gz",
-        metrics_trim = "{data_type}/reports/trim_pe__{wildcards.sample_name}.txt"
+        metrics_trim = "{data_type}/reports/trim_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
@@ -105,11 +105,11 @@ rule process_fastq_se:
         metrics_trim = "{data_type}/reports/trim_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['data_type'],
+        data_type = lambda wildcards: wildcards.data_type,
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
         trimming_quality = config['trimming_quality']
     log:
-        lambda wildcards: return_log_sample(parse_sample_name(wildcards.sample_name)["data_type"],"{sample_name}", "trimming", "SE")
+        return_log_sample("{data_type}","{sample_name}", "trimming", "SE")
     conda:
         CONDA_ENV
     threads: workflow.cores
