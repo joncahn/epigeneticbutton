@@ -30,7 +30,7 @@ rule make_RNA_indices:
     output:
         indices = "combined/genomes/{ref_genome}/STAR_index"
     log:
-        os.path.join(REPO_FOLDER,"logs",f"STAR_index_{ref_genome}.log")
+        os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
     threads: workflow.cores
     shell:
         """
