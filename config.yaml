@@ -1,5 +1,6 @@
 # Path to the working directory where the repository was cloned
-repo_folder: "path/to/epigeneticbutton/repo"
+repo_folder: /grid/martienssen/home/jcahn/nlsas/projects/epibutton
+repo_folder_rule: "path/to/epigeneticbutton/repo"
 
 # Name of analysis
 analysis_name: "test_snakemake"
@@ -8,7 +9,8 @@ analysis_name: "test_snakemake"
 sample_file: "samples.tsv"
 
 # Path to the directory containing reference genomes
-ref_path: "path/to/reference/genomes"
+ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
+ref_path_rule: "path/to/reference/genomes"
 
 # Read quality parameters: 
 # default of quality>10 and minimum read length 20nt
