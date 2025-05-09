@@ -13,7 +13,7 @@ def get_inputs_rna(wildcards):
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/RNA_sample.yaml")
 
-rule stat_file:
+rule stat_file_rna:
     output:
         stat_file = "RNA/reports/summary_mapping_stats.txt"
     shell:

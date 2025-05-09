@@ -13,7 +13,7 @@ def get_inputs_chip(wildcards):
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
-rule stat_file:
+rule stat_file_chip:
     output:
         stat_file = "ChIP/reports/summary_mapping_stats.txt"
     shell:
