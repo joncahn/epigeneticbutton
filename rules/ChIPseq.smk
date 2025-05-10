@@ -29,7 +29,7 @@ rule make_bt2_indices:
         gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        indices = directory("genomes/{ref_genome}/bt2_index")
+        indices = ["genomes/{ref_genome}/bt2_index.1.bt2", "genomes/{ref_genome}/bt2_index.rev.1.bt2"]
     log:
         os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
     conda:
@@ -39,7 +39,8 @@ rule make_bt2_indices:
         """
         {{
         printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
-        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}"
+        mkdir genomes/{wildcards.ref_genome}/bt2_index
+        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}/bt2_index"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -66,7 +67,7 @@ rule bowtie2_map_pe:
         {{
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
+		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
         """    
         
