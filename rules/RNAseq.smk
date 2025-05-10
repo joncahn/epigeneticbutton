@@ -213,7 +213,6 @@ rule make_rna_stats_pe:
         log = "RNA/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
-        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -223,7 +222,6 @@ rule make_rna_stats_pe:
         awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.replicate} -v g={wildcards.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        }} 2>&1 | tee -a "{log}"
         """
         
 rule make_rna_stats_se:
@@ -236,7 +234,6 @@ rule make_rna_stats_se:
         log = "RNA/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
         """
-        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -246,7 +243,6 @@ rule make_rna_stats_se:
         awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.replicate} -v g={wildcards.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_pair_rna:
