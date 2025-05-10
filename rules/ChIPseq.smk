@@ -29,7 +29,7 @@ rule make_bt2_indices:
         gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        indices = ["genomes/{ref_genome}/bt2_index.1.bt2", "genomes/{ref_genome}/bt2_index.rev.1.bt2"]
+        indices = ["genomes/{ref_genome}/bt2_index/{ref_genome}.1.bt2", "genomes/{ref_genome}/bt2_index/{ref_genome}.rev.1.bt2"]
     log:
         os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
     conda:
@@ -40,7 +40,7 @@ rule make_bt2_indices:
         {{
         printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
         mkdir genomes/{wildcards.ref_genome}/bt2_index
-        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}/bt2_index"
+        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}/bt2_index/{wildcards.ref_genome}"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -67,7 +67,7 @@ rule bowtie2_map_pe:
         {{
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
+		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
         """    
         
@@ -80,7 +80,7 @@ rule bowtie2_map_se:
         metrics = "ChIP/reports/bt2_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
@@ -91,9 +91,9 @@ rule bowtie2_map_se:
     shell:
         """
         {{
-        printf "\nMaping {params.sample_name} to {params.ref} with {params.map_option} parameters with bowtie2 version:\n"
+        printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -U "{input.fastq}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
+		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -U "{input.fastq}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
         """
 
