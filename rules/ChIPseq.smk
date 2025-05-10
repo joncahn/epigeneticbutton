@@ -38,7 +38,7 @@ rule make_bt2_indices:
     shell:
         """
         {{
-        printf "\nBuilding Bowtie2 index for {ref_genome}\n"
+        printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
         bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}"
         }} 2>&1 | tee -a "{log}"
         """

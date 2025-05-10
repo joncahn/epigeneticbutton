@@ -35,7 +35,7 @@ rule make_RNA_indices:
     shell:
         """
         {{
-        printf "\nBuilding STAR index directory for {ref_genome}\n"
+        printf "\nBuilding STAR index directory for {wildcards.ref_genome}\n"
         mkdir "{output.indices}"
         STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}"
         }} 2>&1 | tee -a "{log}"
