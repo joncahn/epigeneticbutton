@@ -6,8 +6,8 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/download.yaml")
     
 rule get_fastq_pe:
     output:
-        fastq1 = "{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
-        fastq2 = "{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
+        fastq1 = temp("{data_type}/fastq/raw__{sample_name}__R1.fastq.gz"),
+        fastq2 = temp("{data_type}/fastq/raw__{sample_name}__R2.fastq.gz")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
@@ -40,7 +40,7 @@ rule get_fastq_pe:
         
 rule get_fastq_se:
     output:
-        fastq0 = "{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
+        fastq0 = temp("{data_type}/fastq/raw__{sample_name}__R0.fastq.gz")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
