@@ -125,13 +125,15 @@ rule check_chrom_sizes:
     output:
         fasta_index = "genomes/{ref_genome}/temp_{ref_genome}.fa.fai",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+    params:
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         return_log_env("{ref_genome}", "chrom_sizes")
     conda:
         CONDA_ENV
     shell:
         """
-        printf "\nMaking chrom.sizes file for {ref_genome}\n" >> {log} 2>&1
+        printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
         """
@@ -143,13 +145,15 @@ rule prep_region_file:
     output:
         region_file1 = "combined/tracks/{ref_genome}_protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref_genome}_all_genes.bed"
+    params:
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         return_log_env("{ref_genome}", "region_file")
     conda:
         CONDA_ENV
     shell:
         """
-        printf "\nMaking a bed file with gene coordinates from {ref_genome}\n" >> {log} 2>&1
+        printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
         awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         """
