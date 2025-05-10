@@ -47,7 +47,7 @@ rule bowtie2_map_pe:
     input:
         fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index/{parse_sample_name(wildcards.sample_name)['ref_genome']}"
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
     output:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam",
         metrics = "ChIP/reports/bt2_pe__{sample_name}.txt"
