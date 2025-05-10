@@ -48,7 +48,7 @@ rule bowtie2_map_pe:
     input:
         fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index/{parse_sample_name(wildcards.sample_name)['ref_genome']}.1.bt2"
     output:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam",
         metrics = "ChIP/reports/bt2_pe__{sample_name}.txt"
@@ -67,14 +67,14 @@ rule bowtie2_map_pe:
         {{
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
+		bowtie2 -p {threads} {params.mapping_params} -x "genomes/{params.ref_genome}/bt2/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
         """    
         
 rule bowtie2_map_se:
     input:
         fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index/{parse_sample_name(wildcards.sample_name)['ref_genome']}.1.bt2"
     output:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam",
         metrics = "ChIP/reports/bt2_se__{sample_name}.txt"
@@ -93,7 +93,7 @@ rule bowtie2_map_se:
         {{
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -U "{input.fastq}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
+		bowtie2 -p {threads} {params.mapping_params} -x "genomes/{params.ref_genome}/bt2/{params.ref_genome}" -U "{input.fastq}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
         """
 
