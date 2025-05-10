@@ -31,7 +31,8 @@ def sample_name(d):
 # Function to split the sample_name to recover its components
 def parse_sample_name(sample_name):
     data_type, line, tissue, sample_type, rep, ref_genome = sample_name.split("__")
-    return {
+
+    parsed = {
         "data_type": data_type,
         "line": line,
         "tissue": tissue,
@@ -39,6 +40,22 @@ def parse_sample_name(sample_name):
         "replicate": rep,
         "ref_genome": ref_genome
     }
+
+    # Check if data_type is something like "ChIP_A"
+    if data_type.startswith("ChIP_"):
+        chip_parts = data_type.split("_", 1)
+        if len(chip_parts) == 2:
+            parsed["data_type_chip"] = chip_parts[0]  # "ChIP"
+            parsed["chip_group"] = chip_parts[1]   # e.g., "A"
+    
+    if data_type.startswith("TF_"):
+        tf_parts = data_type.split("_", 1)
+        if len(tf_parts) == 2:
+            parsed["data_type_main"] = tf_parts[0]  # "TF"
+            parsed["tf_name"] = tf_parts[1]   # e.g., "TB1"
+
+    return parsed
+
 
 # Function to access extra information form the samplefile using wildcards
 def get_sample_info(wildcards, field):
