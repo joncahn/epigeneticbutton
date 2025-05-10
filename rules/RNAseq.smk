@@ -220,7 +220,7 @@ rule make_rna_stats_pe:
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.rep} -v g={wildcards.ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.replicate} -v g={wildcards.ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         }} 2>&1 | tee -a "{log}"
@@ -243,7 +243,7 @@ rule make_rna_stats_se:
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.rep} -v g={wildcards.ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.replicate} -v g={wildcards.ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         }} 2>&1 | tee -a "{log}"
