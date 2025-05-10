@@ -137,7 +137,7 @@ rule filter_rna_pe:
             bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
             bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
         elif [[ "{params.strandedness}" == "reverse" ]]; then
-            bedGraphToBigWig "RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
             bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
         fi	
         mv "RNA/mapped/map_pe__{sample_name}_Log.final.out" "{output.metrics_map}"
@@ -187,7 +187,7 @@ rule filter_rna_se:
             bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
             bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
         elif [[ "{params.strandedness}" == "reverse" ]]; then
-            bedGraphToBigWig "RNA/tracks/{smaple_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
             bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
         fi	
         mv "RNA/mapped/map_se__{sample_name}_Log.final.out" "{output.metrics_map}"
