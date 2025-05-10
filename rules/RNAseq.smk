@@ -99,7 +99,8 @@ rule STAR_map_se:
 rule filter_rna_pe:
     input:
         bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam",
-        touch = "RNA/chkpts/temp_pe__{sample_name}.done"
+        touch = "RNA/chkpts/temp_pe__{sample_name}.done",
+        chrom.sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         bw_plus = "RNA/tracks/{sample_name}_plus.bw",
         bw_minus = "RNA/tracks/{sample_name}_minus.bw",
@@ -134,11 +135,11 @@ rule filter_rna_pe:
         bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
         bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg"
         if [[ "{params.strandedness}" == "forward" ]]; then
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
         elif [[ "{params.strandedness}" == "reverse" ]]; then
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
         fi	
         mv "RNA/mapped/map_pe__{sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
@@ -152,7 +153,8 @@ rule filter_rna_pe:
 rule filter_rna_se:
     input:
         bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam",
-        touch = "RNA/chkpts/temp_se__{sample_name}.done"
+        touch = "RNA/chkpts/temp_se__{sample_name}.done",
+        chrom.sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         bw_plus = "RNA/tracks/{sample_name}_plus.bw",
         bw_minus = "RNA/tracks/{sample_name}_minus.bw",
@@ -184,11 +186,11 @@ rule filter_rna_se:
         bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
         bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str2.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg"
         if [[ "{params.strandedness}" == "forward" ]]; then
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
         elif [[ "{params.strandedness}" == "reverse" ]]; then
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_minus}"
-            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "genomes/{params.ref_genome}/chrom.sizes" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
         fi	
         mv "RNA/mapped/map_se__{sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
