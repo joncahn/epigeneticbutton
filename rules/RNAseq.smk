@@ -28,7 +28,7 @@ rule make_RNA_indices:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
         gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
     output:
-        indices = "genomes/{ref_genome}/STAR_index"
+        indices = directory("genomes/{ref_genome}/STAR_index")
     params:
         star_index = config['star_index']
     log:
