@@ -174,7 +174,6 @@ rule all:
 # Rule all to specify final target
 rule map_only:
 	input:
-		input:
         expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1)),
         expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1))
 
