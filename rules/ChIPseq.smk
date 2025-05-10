@@ -66,7 +66,7 @@ rule bowtie2_map_pe:
         {{
         printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
+		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.sam}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
         """    
         
