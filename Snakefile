@@ -24,10 +24,6 @@ sample_info_map = {
     for _, row in samples.iterrows()
 }
 
-# Function to create a unique name for each sample based on the sample columns, and later based on wildcards
-def sample_name(d):
-    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
-
 # Function to split the sample_name to recover its components
 def parse_sample_name(sample_name):
     data_type, line, tissue, sample_type, rep, ref_genome = sample_name.split("__")
@@ -56,6 +52,9 @@ def parse_sample_name(sample_name):
 
     return parsed
 
+# Function to create a unique name for each sample based on the sample columns, and later based on wildcards
+def sample_name(d):
+    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
 
 # Function to access extra information form the samplefile using wildcards
 def get_sample_info(wildcards, field):
