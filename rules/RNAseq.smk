@@ -54,7 +54,7 @@ rule STAR_map_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: "RNA/mapped/map_pe__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"RNA/mapped/map_pe__{wildcards.sample_name}_"
     log:
         return_log_rna("{sample_name}", "mapping", "PE")
     conda:
@@ -80,7 +80,7 @@ rule STAR_map_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: "RNA/mapped/map_se__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"RNA/mapped/map_se__{wildcards.sample_name}_"
     log:
         return_log_rna("{sample_name}", "mapping", "SE")
     conda:
