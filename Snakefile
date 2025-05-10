@@ -170,61 +170,13 @@ rule all:
 	input:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
-# # Rule to process samples based on data type
-# rule process_rna_sample:
-    # input:
-        # ref_chkpt = lambda wildcards: f"chkpts/ref__{get_sample_info(wildcards, 'ref_genome')}.done"
-    # output:
-        # chkpt = "chkpts/process__RNA__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    # params:
-        # scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
-        # ref_dir = lambda wildcards: os.path.join(REF_PATH, get_sample_info(wildcards, 'ref_genome')),
-        # env = lambda wildcards: datatype_to_env[wildcards.data_type],
-        # line = lambda wildcards: wildcards.line,
-        # tissue = lambda wildcards: wildcards.tissue,
-        # replicate = lambda wildcards: wildcards.replicate,
-        # seq_id = lambda wildcards: get_sample_info(wildcards, 'seq_id'),
-        # fastq_path = lambda wildcards: get_sample_info(wildcards, 'fastq_path'),
-        # paired = lambda wildcards: get_sample_info(wildcards, 'paired'),
-        # mapping_option = config["mapping_option"]
-    # log:
-        # "logs/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
-    # conda:
-        # lambda wildcards: f"envs/{datatype_to_env[wildcards.data_type]}_sample.yaml"
-    # shell:
-        # """
-        # cd {params.env}/
-        # qsub ../{params.scripts_dir}/MaizeCode_{params.env}_sample.sh \
-            # -x {wildcards.sample_type} \
-            # -d {params.ref_dir} \
-            # -l {params.line} \
-            # -t {params.tissue} \
-            # -m {wildcards.data_type} \
-            # -r {params.replicate} \
-            # -i {params.seq_id} \
-            # -f {params.fastq_path} \
-            # -p {params.paired} \
-            # -s "download" \
-            # -a {params.mapping_option} | tee {log}
-        # cd ..
-        # touch {output.chkpt}
-        # """
 
-# # Rule to prepare the file containing the path to regions bed files to use for analysis
-# rule prepare_region_file:
-    # input:
-        # [
-            # f"{env}/tracks/{ref}_all_genes.bed"
-            # for ref, envs in refgenome_to_env.items()
-            # for env in envs
-        # ]
-    # output:
-        # region_file="all_genes.txt"
-    # run:
-        # with open(output.region_file, "w") as outfile:
-            # for path in input:
-                # if os.path.isfile(path) and os.path.getsize(path) > 0:
-                    # outfile.write(f"{path}\n")        
+# Rule all to specify final target
+rule map_only:
+	input:
+		input:
+        expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1)),
+        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1))
 
 # Rule to perform combined analysis
 rule combined_analysis:
