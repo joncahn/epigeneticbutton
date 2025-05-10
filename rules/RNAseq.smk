@@ -29,6 +29,8 @@ rule make_RNA_indices:
         gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
     output:
         indices = "genomes/{ref_genome}/STAR_index"
+    params:
+        star_index = config['star_index']
     log:
         os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
     threads: workflow.cores
@@ -37,7 +39,7 @@ rule make_RNA_indices:
         {{
         printf "\nBuilding STAR index directory for {wildcards.ref_genome}\n"
         mkdir "{output.indices}"
-        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}"
+        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}" {params.star_index}
         }} 2>&1 | tee -a "{log}"
         """
 
