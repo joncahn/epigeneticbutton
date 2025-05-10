@@ -106,6 +106,7 @@ rule filter_rna_pe:
         metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
     params:
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
@@ -158,6 +159,7 @@ rule filter_rna_se:
         metrics_flag = "RNA/reports/flagstat_se_{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt"
     params:
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
