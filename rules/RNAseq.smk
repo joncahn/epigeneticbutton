@@ -62,7 +62,7 @@ rule STAR_map_pe:
     shell:
         """
         {{
-        printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq1}" "{input.fastq2}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch "{output.touch}"
@@ -87,7 +87,7 @@ rule STAR_map_se:
     shell:
         """
         {{
-        printf "\nMapping {sample_name} to {ref_genome} with STAR version:\n"
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch {output.touch}
@@ -140,6 +140,7 @@ rule filter_rna_pe:
         fi	
         mv "RNA/mapped/map_pe__{sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
+        printf "\nCleaning up\n"
         rm -f RNA/tracks/*"{sample_name}_Signal"*
         rm -f RNA/mapped/*"{sample_name}Log"*
         rm -f RNA/tracks/*"{sample_name}Log"*
@@ -190,6 +191,7 @@ rule filter_rna_se:
         fi	
         mv "RNA/mapped/map_se__{sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
+        printf "\nCleaning up\n"
         rm -f RNA/tracks/*"{sample_name}_Signal"*
         rm -f RNA/mapped/*"{sample_name}Log"*
         rm -f RNA/tracks/*"{sample_name}Log"*
