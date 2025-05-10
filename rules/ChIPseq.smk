@@ -179,7 +179,7 @@ rule make_chip_stats_pe:
         multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={line} -v t={tissue} -v m={sample_type} -v r={rep} -v g={ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.rep} -v g={wildcards.ref_genome} -v a=${tot} -v b=${filt} -v c=${allmap} -v d=${single} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         }} 2>&1 | tee -a "{log}"
