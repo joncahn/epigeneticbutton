@@ -49,11 +49,12 @@ rule STAR_map_pe:
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        prefix = "RNA/mapped/map_pe__{sample_name}_",
+        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam",
         touch = "RNA/chkpts/temp_pe__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        prefix = lambda wildcards: "RNA/mapped/map_pe__{wildcards.sample_name}_"
     log:
         return_log_rna("{sample_name}", "mapping", "PE")
     conda:
@@ -64,7 +65,7 @@ rule STAR_map_pe:
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
-        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq1}" "{input.fastq2}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq1}" "{input.fastq2}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch "{output.touch}"
         }} 2>&1 | tee -a "{log}"
         """    
@@ -74,11 +75,12 @@ rule STAR_map_se:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        prefix = "RNA/mapped/map_se__{sample_name}_",
+        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam",
         touch = "RNA/chkpts/temp_se__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']    
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        prefix = lambda wildcards: "RNA/mapped/map_se__{wildcards.sample_name}_"
     log:
         return_log_rna("{sample_name}", "mapping", "SE")
     conda:
@@ -89,13 +91,14 @@ rule STAR_map_se:
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
-        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{output.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM SortedByCoordinate --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
         
 rule filter_rna_pe:
     input:
+        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam",
         touch = "RNA/chkpts/temp_pe__{sample_name}.done"
     output:
         bw_plus = "RNA/tracks/{sample_name}_plus.bw",
@@ -103,8 +106,6 @@ rule filter_rna_pe:
         metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
     params:
-        sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
@@ -117,7 +118,7 @@ rule filter_rna_pe:
         {{
         ### Marking duplicates
         printf "\nMarking duplicates\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{sample_name}_"
         #### Indexing bam file
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "RNA/mapped/mrkdup_{sample_name}_Processed.out.bam"
@@ -149,6 +150,7 @@ rule filter_rna_pe:
 
 rule filter_rna_se:
     input:
+        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam",
         touch = "RNA/chkpts/temp_se__{sample_name}.done"
     output:
         bw_plus = "RNA/tracks/{sample_name}_plus.bw",
@@ -156,9 +158,6 @@ rule filter_rna_se:
         metrics_flag = "RNA/reports/flagstat_se_{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt"
     params:
-        sample_name = lambda wildcards: wildcards.sample_name,
-        prefix = "RNA/mapped/map_se__{sample_name}",
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
@@ -171,13 +170,13 @@ rule filter_rna_se:
         {{
         #### Indexing bam file
         printf "\nIndexing bam file\n"
-        samtools index -@ {threads} "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam"
+        samtools index -@ {threads} "{input.bamfile}"
         #### Getting stats from bam file
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam" > "{output.metrics_flag}"
+        samtools flagstat -@ {threads} "{input.bamfile}" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         bedSort "RNA/tracks/bg_{sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
