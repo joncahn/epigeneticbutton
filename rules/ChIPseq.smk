@@ -13,7 +13,7 @@ def get_inputs_chip(wildcards):
         
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sample_name = wildcards.sample_name
-    paired = get_sample_info_from_name(sample_name)["paired"]    
+    paired = get_sample_info_from_name(sample_name,'paired')    
     if paired == "PE":
         return getattr(rules[f"{rulename}_pe"].output, outputfile).format(sample_name=sample_name)
     else:
