@@ -247,7 +247,7 @@ rule check_pair_chip:
         
 rule merging_replicates:
     input:
-        bamfiles = lambda wildcards: expand("ChIP/mapped/mapped__{sample_name}.bam", sample_name = analysis_to_replicates.get(analysis_samplename, []))
+        bamfiles = lambda wildcards: expand("ChIP/mapped/mapped__{sample_name}.bam", sample_name = analysis_to_replicates.get(wildcards.analysis_samplename, []))
     output:
         mergefile = "ChIP/mapped/merged__{analysis_samplename}.bam"
     params:
