@@ -213,7 +213,7 @@ rule make_chip_stats_se:
 
 rule map_dispatch:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards.sample_name, "filter_chip", "bamfile")
+        lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         "ChIP/mapped/{sample_name}.bam"
     shell:
@@ -234,11 +234,11 @@ rule make_coverage_chip:
         """
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
-            
+
 rule merging replicates:
     input:
-        bamfiles = expand("ChIP/mapped/{sample_name}.bam", 
-            sample_name = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
+        bamfiles = lambda wildcards: expand("ChIP/mapped/{sample_name}.bam", 
+            sample_name = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
     output:
         mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam",
         touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
