@@ -12,13 +12,13 @@ def get_inputs_chip(wildcards):
         return f"ChIP/logs/process_se_sample__{name}.log"
         
 def assign_mapping_paired(wildcards, rulename, outputfile):
-    sample_name = sample_name(wildcards)
+    sname = sample_name(wildcards)
     paired = get_sample_info(wildcards,'paired')
     if paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     else:
         rule_obj = getattr(rules, f"{rulename}_pe")
-    return getattr(rule_obj.output, outputfile).format(sample_name=sample_name)
+    return getattr(rule_obj.output, outputfile).format(sample_name=sname)
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
