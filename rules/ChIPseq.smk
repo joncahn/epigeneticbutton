@@ -235,13 +235,22 @@ rule make_coverage_chip:
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
 
+rule check_pair_chip:
+    input:
+        expand("ChIP/mapped/{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
+    output:
+        touch = "ChIP/chkpts/process__{sample_name}.done"
+    shell:
+        """
+        touch {output.touch}
+        """
+        
 rule merging_replicates:
     input:
         bamfiles = lambda wildcards: expand("ChIP/mapped/{sample_name}.bam", 
             sample_name = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
     output:
-        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam",
-        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
+        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_analysis(wildcards)
     log:
@@ -258,15 +267,3 @@ rule merging_replicates:
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
-
-
-        
-# rule check_pair_chip:
-    # input:
-        # lambda wildcards: assign_mapping_paired(wildcards, "make_chip_stats", "log")
-    # output:
-        # touch = "ChIP/chkpts/process__{sample_name}.done"
-    # shell:
-        # """
-        # touch {output.touch}
-        # """
