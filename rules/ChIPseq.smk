@@ -219,7 +219,7 @@ rule map_dispatch:
         touch = "ChIP/chkpts/process__{sample_name}.done"
     shell:
         """
-        mv {input} {output}
+        mv {input} {output.bam}
         touch {output.touch} 
         """
     
@@ -249,7 +249,8 @@ rule make_coverage_chip:
         
 rule merging_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{sample_name}.bam" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ]
+        bwfiles = lambda wildcards: [ f"ChIP/tracks/coverage__{sample_name}.bw" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ],
+        bamfiles = lambda wildcards: [ f"ChIP/tracks/final__{sample_name}.bam" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ]
     output:
         mergefile = "ChIP/mapped/merged__{analysis_samplename}.bam"
     params:
