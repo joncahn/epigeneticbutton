@@ -222,7 +222,7 @@ rule make_coverage_chip:
         """
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
-        
+            
 rule merging replicates:
     input:
         bamfiles = expand("ChIP/mapped/{sample_name}.bam", 
