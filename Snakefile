@@ -212,7 +212,7 @@ rule coverage_chip:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        expand("ChIP/mapped/merged__{analysis_sample_name}.bam", sample_name_analysis=analysis_samples[analysis_samples["data_type"] == "ChIP"].apply(sample_name_analysis, axis=1)),
+        expand("ChIP/mapped/merged__{analysis_sample_name}.bam", analysis_sample_name=analysis_samples[analysis_samples["data_type"] == "ChIP"].apply(sample_name_analysis, axis=1)),
         expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1)),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES)
     output:
