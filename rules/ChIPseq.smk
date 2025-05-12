@@ -249,14 +249,13 @@ rule make_coverage_chip:
         
 rule merging_replicates:
     input:
-        bwfiles = lambda wildcards: [ f"ChIP/tracks/coverage__{sample_name}.bw" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ],
-        bamfiles = lambda wildcards: [ f"ChIP/tracks/final__{sample_name}.bam" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ]
+        bamfiles = lambda wildcards: [ f"ChIP/tracks/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" for replicate in analysis_to_replicates.get(wildcards, []) ]
     output:
-        mergefile = "ChIP/mapped/merged__{analysis_samplename}.bam"
+        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
     params:
-        sname = lambda wildcards: wildcards.analysis_samplename
+        sname = lambda wildcards: sample_name_analysis(wildcards)
     log:
-        temp(return_log_chip("{analysis_samplename}", "merging", "merged"))
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:

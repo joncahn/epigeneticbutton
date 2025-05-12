@@ -144,7 +144,7 @@ def sample_name_analysis(d):
 samples = samples.assign(sample_name=samples.apply(sample_name, axis=1))
 analysis_to_replicates = (
     samples
-    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["sample_name"]
+    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
     .apply(list)
     .to_dict()
 )
