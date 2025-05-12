@@ -138,7 +138,7 @@ analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", i
 
 # Function to create the unique name for each sample from analysis file
 def sample_name_analysis(d):
-    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}"
+    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # To later lookup analysis samples to replicates
 samples = samples.assign(sample_name=samples.apply(sample_name, axis=1))
