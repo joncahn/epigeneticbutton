@@ -15,8 +15,7 @@ rule get_fastq_pe:
         data_type = lambda wildcards: wildcards.data_type
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -48,8 +47,7 @@ rule get_fastq_se:
         data_type = lambda wildcards: wildcards.data_type
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -83,8 +81,7 @@ rule process_fastq_pe:
         trimming_quality = config['trimming_quality']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -120,8 +117,7 @@ rule process_fastq_se:
         trimming_quality = config['trimming_quality']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "SE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """

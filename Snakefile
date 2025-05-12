@@ -129,13 +129,25 @@ for ref, dtypes in refgenome_to_datatype.items():
 analysis_samples = (
     samples
     .query("sample_type != 'Input'") # filter Input samples
-    .assign(ref_dir=lambda df: df.apply(lambda row: os.path.join(REF_PATH, row["ref_genome"]), axis=1)) # create a column with the path to reference genome
-    [["data_type", "line", "tissue", "sample_type", "paired", "ref_dir"]] # select the necessary columns
+    [["data_type", "line", "tissue", "sample_type", "paired", "ref_genome"]] # select the necessary columns
     .drop_duplicates() # removes replicates
 )
 
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
+
+# Function to create the unique name for each sample from analysis file
+def sample_name_analysis(d):
+    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}"
+
+# To later lookup analysis samples to replicates
+samples = samples.assign(sample_name=samples.apply(sample_name, axis=1))
+analysis_to_replicates = (
+    samples
+    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["sample_name"]
+    .apply(list)
+    .to_dict()
+)
 
 # Define output directories
 DIRS = {

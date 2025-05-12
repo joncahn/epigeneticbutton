@@ -32,8 +32,7 @@ rule make_bt2_indices:
         indices = directory("genomes/{ref_genome}/bt2_index")
     log:
         os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -59,8 +58,7 @@ rule bowtie2_map_pe:
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_pe']    
     log:
         temp(return_log_chip("{sample_name}", "mapping", "PE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -85,8 +83,7 @@ rule bowtie2_map_se:
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
         temp(return_log_chip("{sample_name}", "mapping", "SE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -110,8 +107,7 @@ rule filter_chip_pe:
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
         temp(return_log_chip("{sample_name}", "filtering", "PE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -143,8 +139,7 @@ rule filter_chip_se:
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
         temp(return_log_chip("{sample_name}", "filtering", "SE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -220,11 +215,33 @@ rule make_coverage_chip:
     output:
         bigwigcov = "ChIP/tracks/coverage_{sample_name}.bw"
     params:
-        binsize = 1
-    conda:
-        CONDA_ENV
-    threads: workflow.cores    
+        binsize = 1 # For 1 bp resolution. Update for coarser definition
+    conda: CONDA_ENV
+    threads: workflow.cores
     shell:
         """
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
+        """
+        
+rule merging replicates:
+    input:
+        bamfiles = expand("ChIP/mapped/{sample_name}.bam", 
+            sample_name = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+    output:
+        mergefile = "ChIP/mapped/merged_{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
+    params:
+        sample_name = "{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}"
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nMerging replicates of {params.sample_name}\n"
+		samtools merge -@ {threads} ChIP/mapped/temp_{params.sample_name}.bam {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sample_name}.bam
+		rm -f ChIP/mapped/temp_{params.sample_name}.bam
+		samtools index -@ {threads} {output.mergefile}
+        }} 2>&1 | tee -a "{log}"
         """

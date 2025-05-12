@@ -33,6 +33,7 @@ rule make_RNA_indices:
         star_index = config['star_index']
     log:
         os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -57,8 +58,7 @@ rule STAR_map_pe:
         prefix = lambda wildcards: f"RNA/mapped/map_pe__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mapping", "PE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -83,8 +83,7 @@ rule STAR_map_se:
         prefix = lambda wildcards: f"RNA/mapped/map_se__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mapping", "SE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -113,8 +112,7 @@ rule filter_rna_pe:
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
         temp(return_log_rna("{sample_name}", "filtering", "PE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -168,8 +166,7 @@ rule filter_rna_se:
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
         temp(return_log_rna("{sample_name}", "filtering", "SE"))
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """

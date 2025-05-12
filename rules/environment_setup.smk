@@ -31,8 +31,7 @@ rule check_fasta:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
         return_log_env("{ref_genome}", "fasta")
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -70,8 +69,7 @@ rule check_gff:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
         return_log_env("{ref_genome}", "gff")
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -98,8 +96,7 @@ rule check_gtf:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
         return_log_env("{ref_genome}", "gtf")
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     threads: workflow.cores
     shell:
         """
@@ -129,8 +126,7 @@ rule check_chrom_sizes:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         return_log_env("{ref_genome}", "chrom_sizes")
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     shell:
         """
         printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
@@ -149,8 +145,7 @@ rule prep_region_file:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         return_log_env("{ref_genome}", "region_file")
-    conda:
-        CONDA_ENV
+    conda: CONDA_ENV
     shell:
         """
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
