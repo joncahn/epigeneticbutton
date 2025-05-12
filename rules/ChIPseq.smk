@@ -215,7 +215,7 @@ rule map_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
-        "ChIP/mapped/{sample_name}.bam"
+        "ChIP/mapped/mapped__{sample_name}.bam"
     shell:
         """
         mv {input} {output}
@@ -223,7 +223,7 @@ rule map_dispatch:
     
 rule make_coverage_chip:
     input: 
-        bamfile = "ChIP/mapped/{sample_name}.bam"
+        bamfile = "ChIP/mapped/mapped__{sample_name}.bam"
     output:
         bigwigcov = "ChIP/tracks/coverage__{sample_name}.bw"
     params:
@@ -247,14 +247,13 @@ rule check_pair_chip:
         
 rule merging_replicates:
     input:
-        bamfiles = lambda wildcards: expand("ChIP/mapped/{sample_name}.bam", 
-            sample_name = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
+        bamfiles = lambda wildcards: expand("ChIP/mapped/mapped__{sample_name}.bam", sample_name = analysis_to_replicates.get(analysis_samplename, []))
     output:
-        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
+        mergefile = "ChIP/mapped/merged__{analysis_samplename}.bam"
     params:
-        sname = lambda wildcards: sample_name_analysis(wildcards)
+        sname = lambda wildcards: wildcards.analysis_samplename
     log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
+        temp(return_log_chip("{analysis_samplename}", "merging", "merged"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
