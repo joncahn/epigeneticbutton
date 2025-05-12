@@ -56,7 +56,7 @@ rule STAR_map_pe:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"RNA/mapped/map_pe__{wildcards.sample_name}_"
     log:
-        return_log_rna("{sample_name}", "mapping", "PE")
+        temp(return_log_rna("{sample_name}", "mapping", "PE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -82,7 +82,7 @@ rule STAR_map_se:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"RNA/mapped/map_se__{wildcards.sample_name}_"
     log:
-        return_log_rna("{sample_name}", "mapping", "SE")
+        temp(return_log_rna("{sample_name}", "mapping", "SE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -112,7 +112,7 @@ rule filter_rna_pe:
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
-        return_log_rna("{sample_name}", "filtering", "PE")
+        temp(return_log_rna("{sample_name}", "filtering", "PE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -167,7 +167,7 @@ rule filter_rna_se:
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
-        return_log_rna("{sample_name}", "filtering", "SE")
+        temp(return_log_rna("{sample_name}", "filtering", "SE"))
     conda:
         CONDA_ENV
     threads: workflow.cores

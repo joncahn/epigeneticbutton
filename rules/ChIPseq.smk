@@ -58,7 +58,7 @@ rule bowtie2_map_pe:
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_pe']    
     log:
-        return_log_chip("{sample_name}", "mapping", "PE")
+        temp(return_log_chip("{sample_name}", "mapping", "PE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -84,7 +84,7 @@ rule bowtie2_map_se:
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
-        return_log_chip("{sample_name}", "mapping", "SE")
+        temp(return_log_chip("{sample_name}", "mapping", "SE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -109,7 +109,7 @@ rule filter_chip_pe:
         map_option = lambda wildcards: config['chip_mapping_option'],
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
-        return_log_chip("{sample_name}", "filtering", "PE")
+        temp(return_log_chip("{sample_name}", "filtering", "PE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
@@ -142,7 +142,7 @@ rule filter_chip_se:
         map_option = lambda wildcards: config['chip_mapping_option'],
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
-        return_log_chip("{sample_name}", "filtering", "SE")
+        temp(return_log_chip("{sample_name}", "filtering", "SE"))
     conda:
         CONDA_ENV
     threads: workflow.cores
