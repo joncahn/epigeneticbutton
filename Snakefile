@@ -37,13 +37,14 @@ def parse_sample_name(sample_name):
         "ref_genome": ref_genome
     }
 
-    # Check if data_type is something like "ChIP_A"
+    # To match IP and Input samples if needed
     if data_type.startswith("ChIP_"):
         chip_parts = data_type.split("_", 1)
         if len(chip_parts) == 2:
             parsed["data_type_chip"] = chip_parts[0]  # "ChIP"
             parsed["chip_group"] = chip_parts[1]   # e.g., "A"
     
+    # To extract TF name from data_type
     if data_type.startswith("TF_"):
         tf_parts = data_type.split("_", 1)
         if len(tf_parts) == 2:
@@ -186,15 +187,11 @@ rule all:
 	input:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
-# Rule all to specify final target
-# rule map_only:
-	# input:
-        # expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1)),
-        # expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1))
-    # shell:
-        # """
-        # printf "Mapping only rule selected\n"
-        # """
+# Rule to specify final target if only mapping is required
+rule map_only:
+	input:
+        expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1).tolist(),
+        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1).tolist())
 
 # Rule to perform combined analysis
 rule combined_analysis:
