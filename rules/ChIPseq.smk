@@ -215,7 +215,7 @@ rule make_coverage_chip:
     output:
         bigwigcov = "ChIP/tracks/coverage_{sample_name}.bw"
     params:
-        binsize = 1 # For 1 bp resolution. Update for coarser definition
+        binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV
     threads: workflow.cores
     shell:

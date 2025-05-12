@@ -143,6 +143,10 @@ epigeneticbutton/
 - `colcenall`: Centromere mapping with relaxed MAPQ
 - `all`: Relaxed mapping parameters
 
+###  Intermediate Target Rules
+- `map_only`: Only performs the mapping of all samples and returns bam files, metrics and QC files
+- `coverage_chip`: Create bigwig files of coverage. the binsize is by default 1bp (can be updated in config (chip_tracks: binsize: 1)
+
 ### Analysis Parameters
 - `mark_of_interest`: Default histone mark (e.g., H3K27ac)
 - `perform_analysis`: Enable/disable complete analysis

@@ -38,6 +38,10 @@ chip_mapping:
     map_se: "--end-to-end "
     filter: "-b -h -F 256"
 
+# RNA parameters
+chip_tracks:
+  binsize: 1
+
 # For Arabidopsis, use 12; For maize, the default of 14 is best
 star_index: --genomeSAindexNbases 12
 
