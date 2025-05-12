@@ -98,7 +98,7 @@ rule filter_chip_pe:
     input:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
     output:
-        bamfile = "ChIP/mapped/mapped_pe__{sample_name}.bam",
+        bamfile = temp("ChIP/mapped/mapped_pe__{sample_name}.bam"),
         metrics_dup = "ChIP/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_pe__{sample_name}.txt"
     params:
@@ -130,7 +130,7 @@ rule filter_chip_se:
     input:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
     output:
-        bamfile = "ChIP/mapped/mapped_se__{sample_name}.bam",
+        bamfile = temp("ChIP/mapped/mapped_se__{sample_name}.bam"),
         metrics_dup = "ChIP/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_se__{sample_name}.txt"
     params:
@@ -215,7 +215,13 @@ rule map_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
-        "ChIP/mapped/final__{sample_name}.bam"
+        bam = "ChIP/mapped/final__{sample_name}.bam",
+        touch = "ChIP/chkpts/process__{sample_name}.done"
+    shell:
+        """
+        mv {input} {output}
+        touch {output.touch} 
+        """
     
 rule make_coverage_chip:
     input: 
@@ -231,15 +237,15 @@ rule make_coverage_chip:
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
 
-rule check_pair_chip:
-    input:
-        expand("ChIP/mapped/final__{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
-    output:
-        touch = "ChIP/chkpts/process__{sample_name}.done"
-    shell:
-        """
-        touch {output.touch}
-        """
+# rule check_pair_chip:
+    # input:
+        # expand("ChIP/mapped/final__{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
+    # output:
+        # touch = "ChIP/chkpts/process__{sample_name}.done"
+    # shell:
+        # """
+        # touch {output.touch}
+        # """
         
 rule merging_replicates:
     input:
