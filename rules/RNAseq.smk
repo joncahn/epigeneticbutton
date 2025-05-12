@@ -144,10 +144,10 @@ rule filter_rna_pe:
         fi	
         mv "RNA/mapped/map_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         ### Cleaning up
-        printf "\nCleaning up\n"
+        printf "\nCleaning up\n" ## Could add an option to clean all log output (e.g. Log.out, Log.progress.out, SJ.out.tab) or not.
         rm -f RNA/tracks/*"{params.sample_name}_Signal"*
-        rm -f RNA/mapped/*"{params.sample_name}Log"*
-        rm -f RNA/tracks/*"{params.sample_name}Log"*
+        rm -f RNA/mapped/*"{params.sample_name}_Log"*
+        rm -f RNA/tracks/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -198,8 +198,8 @@ rule filter_rna_se:
         ### Cleaning up
         printf "\nCleaning up\n"
         rm -f RNA/tracks/*"{params.sample_name}_Signal"*
-        rm -f RNA/mapped/*"{params.sample_namparams.sample_name}Log"*
-        rm -f RNA/tracks/*"{params.sample_name}Log"*
+        rm -f RNA/mapped/*"{params.sample_namparams.sample_name}_Log"*
+        rm -f RNA/tracks/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """        
 
