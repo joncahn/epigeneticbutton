@@ -234,3 +234,8 @@ rule combined_analysis:
         touch {output.chkpt}
         """ 
         
+import pprint
+
+print("\n--- analysis_to_replicates ---")
+pprint.pprint(analysis_to_replicates)
+print("--- end ---\n")
