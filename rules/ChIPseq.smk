@@ -175,11 +175,11 @@ rule make_chip_stats_pe:
     output:
         log = "ChIP/logs/process_pe_sample__{sample_name}.log"
     params:
-        line = lambda wildcards: parse_sample_name(wildcards.sample_name, 'line'),
-        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name, 'tissue'),
-        sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name, 'sample_type'),
-        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name, 'replicate'),
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name, 'ref_genome')
+        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
+        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -202,11 +202,11 @@ rule make_chip_stats_se:
     output:
         log = "ChIP/logs/process_se_sample__{sample_name}.log"
     params:
-        line = lambda wildcards: parse_sample_name(wildcards.sample_name, 'line'),
-        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name, 'tissue'),
-        sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name, 'sample_type'),
-        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name, 'replicate'),
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name, 'ref_genome')
+        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
+        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
