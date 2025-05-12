@@ -15,9 +15,10 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     sample_name = wildcards.sample_name
     paired = get_sample_info_from_name(sample_name,'paired')    
     if paired == "PE":
-        return getattr(rules[f"{rulename}_pe"].output, outputfile).format(sample_name=sample_name)
+        rule_obj = getattr(rules, f"{rulename}_pe")
     else:
-        return getattr(rules[f"{rulename}_se"].output, outputfile).format(sample_name=sample_name)
+        rule_obj = getattr(rules, f"{rulename}_pe")
+    return getattr(rule_obj.output, outputfile).format(sample_name=sample_name)
 
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
