@@ -243,7 +243,7 @@ rule merging replicates:
         mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam",
         touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
     params:
-        sample_name = lambda wildcards: sample_name_analysis(wildcards)
+        sname = lambda wildcards: sample_name_analysis(wildcards)
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
     conda: CONDA_ENV
@@ -251,10 +251,10 @@ rule merging replicates:
     shell:
         """
         {{
-        printf "\nMerging replicates of {params.sample_name}\n"
-		samtools merge -@ {threads} ChIP/mapped/temp_{params.sample_name}.bam {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sample_name}.bam
-		rm -f ChIP/mapped/temp_{params.sample_name}.bam
+        printf "\nMerging replicates of {params.sname}\n"
+		samtools merge -@ {threads} ChIP/mapped/temp_{params.sname}.bam {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
+		rm -f ChIP/mapped/temp_{params.sname}.bam
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
