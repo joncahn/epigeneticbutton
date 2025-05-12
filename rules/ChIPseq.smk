@@ -222,9 +222,9 @@ rule make_chip_stats_se:
         
 rule check_pair_chip:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards, "make_chip_stats", "log")
+        lambda wildcards: assign_mapping_paired(wildcards.sample_name, "make_chip_stats", "log")
     output:
-        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+        touch = "ChIP/chkpts/process__{sample_name}.done"
     shell:
         """
         touch {output.touch}
@@ -232,7 +232,7 @@ rule check_pair_chip:
 
 rule map_dispatch:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards, "mapping", "bamfile")
+        lambda wildcards: assign_mapping_paired(wildcards.sample_name, "mapping", "bamfile")
     output:
         "ChIP/mapped/{sample_name}.bam"
     
