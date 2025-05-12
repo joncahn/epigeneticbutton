@@ -78,16 +78,7 @@ def parse_sample_name(sample_name):
 
 # Function to create a unique name for each sample based on the sample columns, and later based on wildcards
 def sample_name(d):
-    parts = [
-        d["data_type"],
-        d["line"],
-        d["tissue"],
-        d["sample_type"],
-    ]
-    if "replicate" in d and d["replicate"]:
-        parts.append(d["replicate"])
-    parts.append(d["ref_genome"])
-    return "__".join(parts)
+    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
 
 # Function to access extra information form the samplefile using wildcards
 def get_sample_info(wildcards, field):
