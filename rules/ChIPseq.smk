@@ -235,7 +235,7 @@ rule make_coverage_chip:
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
 
-rule merging replicates:
+rule merging_replicates:
     input:
         bamfiles = lambda wildcards: expand("ChIP/mapped/{sample_name}.bam", 
             sample_name = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
@@ -258,6 +258,8 @@ rule merging replicates:
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
+
+
         
 # rule check_pair_chip:
     # input:

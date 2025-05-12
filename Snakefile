@@ -233,9 +233,3 @@ rule combined_analysis:
             -r {params.region_file} | tee {log}
         touch {output.chkpt}
         """ 
-        
-import pprint
-
-print("\n--- analysis_to_replicates ---")
-pprint.pprint(analysis_to_replicates)
-print("--- end ---\n")
