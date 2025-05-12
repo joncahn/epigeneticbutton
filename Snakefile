@@ -68,6 +68,14 @@ def get_sample_info_from_name(sample_name, field):
     key = tuple(parts)
     return sample_info_map[key][field]
 
+# Function to extract all samples of each data_type base don sample name
+def get_sample_names_by_data_type(data_type):
+    return [
+        sample_name
+        for sample_name in samples["sample_name"]
+        if parse_sample_name(sample_name)["data_type"] == data_type
+    ]
+
 # Generate all sample output files required
 all_sample_outputs = expand(
     "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
@@ -189,9 +197,10 @@ rule all:
 
 # Rule to specify final target if only mapping is required
 rule map_only:
-	input:
-        expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1)),
-        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1))
+    input:
+        expand("{data_type}/chkpts/process__{sample_name}.done",
+               data_type=lambda wildcards: parse_sample_name(wildcards.sample_name)["data_type"],
+               sample_name=samples["sample_name"])
 
 # Rule to perform combined analysis
 rule combined_analysis:
