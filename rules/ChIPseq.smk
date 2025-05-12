@@ -12,7 +12,7 @@ def get_inputs_chip(wildcards):
         return f"ChIP/logs/process_se_sample__{name}.log"
         
 def assign_mapping_paired(wildcards, rulename, outputfile):
-    sname = sample_name(wildcards)
+    sname = wildcards.sample_name
     paired = get_sample_info_from_name(sname,'paired')
     if paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
@@ -169,11 +169,17 @@ rule filter_chip_se:
 rule make_chip_stats_pe:
     input:
         stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
-        metrics_trim = "ChIP/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        metrics_map = "ChIP/reports/bt2_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        logs = lambda wildcards: [ return_log_chip(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        metrics_trim = "ChIP/reports/trim_pe__{sample_name}.txt",
+        metrics_map = "ChIP/reports/bt2_pe__{sample_name}.txt",
+        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = "ChIP/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
+        log = "ChIP/logs/process_pe_sample__{sample_name}.log"
+    params:
+        line = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'line'),
+        tissue = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'tissue'),
+        sample_type = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'sample_type'),
+        replicate = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'replicate'),
+        ref_genome = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'ref_genome')
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -182,7 +188,7 @@ rule make_chip_stats_pe:
         multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.replicate} -v g={wildcards.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
@@ -190,11 +196,17 @@ rule make_chip_stats_pe:
 rule make_chip_stats_se:
     input:
         stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
-        metrics_trim = "ChIP/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        metrics_map = "ChIP/reports/bt2_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        logs = lambda wildcards: [ return_log_chip(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        metrics_trim = "ChIP/reports/trim_se__{sample_name}.txt",
+        metrics_map = "ChIP/reports/bt2_se__{sample_name}.txt",
+        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_form_name(wildcards.sample_name, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = "ChIP/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
+        log = "ChIP/logs/process_se_sample__{sample_name}.log"
+    params:
+        line = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'line'),
+        tissue = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'tissue'),
+        sample_type = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'sample_type'),
+        replicate = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'replicate'),
+        ref_genome = lambda wildcards: get_info_from_name({wildcards.sample_name}, 'ref_genome')
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -203,7 +215,7 @@ rule make_chip_stats_se:
         multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={wildcards.line} -v t={wildcards.tissue} -v m={wildcards.sample_type} -v r={wildcards.replicate} -v g={wildcards.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
