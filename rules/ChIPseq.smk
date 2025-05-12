@@ -214,3 +214,17 @@ rule check_pair_chip:
         touch {output.touch}
         """
     
+rule make_coverage_chip:
+    input: 
+        bamfile = "ChIP/mapped/{sample_name}.bam"
+    output:
+        bigwigcov = "ChIP/tracks/coverage_{sample_name}.bw"
+    params:
+        binsize = 1
+    conda:
+        CONDA_ENV
+    threads: workflow.cores    
+    shell:
+        """
+        bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
+        """
