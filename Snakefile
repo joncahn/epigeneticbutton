@@ -188,10 +188,10 @@ rule all:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
 # Rule to specify final target if only mapping is required
-rule map_only:
-	input:
-        expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1).tolist(),
-        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1).tolist())
+# rule map_only:
+	# input:
+        # expand("ChIP/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "ChIP"].apply(sample_name, axis=1).tolist(),
+        # expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1).tolist())
 
 # Rule to perform combined analysis
 rule combined_analysis:
