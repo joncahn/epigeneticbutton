@@ -205,7 +205,7 @@ rule map_only:
 rule coverage_chip:
     input: 
         [
-            f"ChIP/tracks/ChIP/tracks/coverage_{sample_name}.bw"
+            f"ChIP/tracks/coverage_{sample_name}.bw"
             for sample_name in get_sample_names_by_data_type(samples, "ChIP")
         ]
 
