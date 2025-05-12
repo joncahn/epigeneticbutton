@@ -213,7 +213,7 @@ rule make_chip_stats_se:
 
 rule map_dispatch:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
+        lambda wildcards: assign_mapping_paired(wildcards.sample_name, "filter_chip", "bamfile")
     output:
         "ChIP/mapped/{sample_name}.bam"
     shell:
