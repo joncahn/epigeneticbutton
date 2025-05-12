@@ -98,7 +98,7 @@ rule filter_chip_pe:
     input:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
     output:
-        bamfile = temp("ChIP/mapped/mapped_pe__{sample_name}.bam"),
+        bamfile = "ChIP/mapped/mapped_pe__{sample_name}.bam",
         metrics_dup = "ChIP/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_pe__{sample_name}.txt"
     params:
@@ -130,7 +130,7 @@ rule filter_chip_se:
     input:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
     output:
-        bamfile = temp("ChIP/mapped/mapped_se__{sample_name}.bam"),
+        bamfile = "ChIP/mapped/mapped_se__{sample_name}.bam",
         metrics_dup = "ChIP/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_se__{sample_name}.txt"
     params:
@@ -216,10 +216,6 @@ rule map_dispatch:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         "ChIP/mapped/final__{sample_name}.bam"
-    shell:
-        """
-        mv {input} {output}
-        """
     
 rule make_coverage_chip:
     input: 
