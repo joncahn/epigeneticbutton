@@ -249,7 +249,7 @@ rule make_coverage_chip:
         
 rule merging_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"ChIP/tracks/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" for replicate in analysis_to_replicates.get(wildcards, []) ]
+        bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" for replicate in analysis_to_replicates.get(wildcards, []) ]
     output:
         mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
     params:
