@@ -215,7 +215,7 @@ rule map_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
-        "ChIP/mapped/mapped__{sample_name}.bam"
+        "ChIP/mapped/final__{sample_name}.bam"
     shell:
         """
         mv {input} {output}
@@ -223,7 +223,7 @@ rule map_dispatch:
     
 rule make_coverage_chip:
     input: 
-        bamfile = "ChIP/mapped/mapped__{sample_name}.bam"
+        bamfile = "ChIP/mapped/final__{sample_name}.bam"
     output:
         bigwigcov = "ChIP/tracks/coverage__{sample_name}.bw"
     params:
@@ -237,7 +237,7 @@ rule make_coverage_chip:
 
 rule check_pair_chip:
     input:
-        expand("ChIP/mapped/mapped__{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
+        expand("ChIP/mapped/final__{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
     output:
         touch = "ChIP/chkpts/process__{sample_name}.done"
     shell:
@@ -247,7 +247,7 @@ rule check_pair_chip:
         
 rule merging_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"ChIP/mapped/mapped__{sample_name}.bam" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ]
+        bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{sample_name}.bam" for sample_name in analysis_to_replicates.get(wildcards.analysis_samplename, []) ]
     output:
         mergefile = "ChIP/mapped/merged__{analysis_samplename}.bam"
     params:
