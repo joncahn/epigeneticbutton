@@ -223,7 +223,7 @@ rule check_pair_chip:
 
 rule map_dispatch:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards, "bowtie2_map", "bamfile")
+        lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         "ChIP/mapped/{sample_name}.bam"
     
