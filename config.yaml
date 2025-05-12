@@ -38,7 +38,6 @@ chip_mapping:
     map_se: "--end-to-end "
     filter: "-b -h -F 256"
 
-# RNA parameters
 chip_tracks:
   binsize: 1
 
