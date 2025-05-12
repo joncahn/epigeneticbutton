@@ -24,6 +24,29 @@ sample_info_map = {
     for _, row in samples.iterrows()
 }
 
+# Define reference genomes and the path to them
+REF_GENOMES = set(samples["ref_genome"].unique())
+REF_PATH = config["ref_path"]
+
+# Define data types
+DATA_TYPES = set(samples["data_type"].unique())
+
+# Define the folde rin which the snakemake pipeline has been cloned
+REPO_FOLDER = config["repo_folder"]
+
+# Define label for the analysis
+analysis_name = config["analysis_name"]
+
+# Define patterns and envs
+env_patterns = [
+    ("ChIP*", "ChIP"),
+    ("RNAseq", "RNA"),
+    ("RAMPAGE", "RNA"),
+    ("shRNA", "shRNA"),
+    ("mC", "mC"),
+    ("TF_*", "TF"),
+]
+
 # Function to split the sample_name to recover its components
 def parse_sample_name(sample_name):
     data_type, line, tissue, sample_type, rep, ref_genome = sample_name.split("__")
@@ -69,47 +92,10 @@ def get_sample_info_from_name(sample_name, field):
     return sample_info_map[key][field]
 
 # Function to extract all samples of each data_type base don sample name
-def get_sample_names_by_data_type(data_type):
-    return [
-        sample_name
-        for sample_name in samples["sample_name"]
-        if parse_sample_name(sample_name)["data_type"] == data_type
-    ]
-
-# Generate all sample output files required
-all_sample_outputs = expand(
-    "chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done",
-    zip,
-    data_type = samples["data_type"],
-    line = samples["line"],
-    tissue = samples["tissue"],
-    sample_type = samples["sample_type"],
-    replicate = samples["replicate"],
-    ref_genome = samples["ref_genome"]
-)
-
-# Define reference genomes and the path to them
-REF_GENOMES = set(samples["ref_genome"].unique())
-REF_PATH = config["ref_path"]
-
-# Define data types
-DATA_TYPES = set(samples["data_type"].unique())
-
-# Define the folde rin which the snakemake pipeline has been cloned
-REPO_FOLDER = config["repo_folder"]
-
-# Define label for the analysis
-analysis_name = config["analysis_name"]
-
-# Define patterns and envs
-env_patterns = [
-    ("ChIP*", "ChIP"),
-    ("RNAseq", "RNA"),
-    ("RAMPAGE", "RNA"),
-    ("shRNA", "shRNA"),
-    ("mC", "mC"),
-    ("TF_*", "TF"),
-]
+def get_sample_names_by_data_type(samples, data_type):
+    subset = samples.loc[samples["data_type"] == data_type, :]
+    sample_names = subset.apply(sample_name, axis=1).tolist()
+    return sample_names
 
 # Function to determine environment
 def get_env(data_type):
@@ -198,9 +184,11 @@ rule all:
 # Rule to specify final target if only mapping is required
 rule map_only:
     input:
-        expand("{data_type}/chkpts/process__{sample_name}.done",
-               data_type=lambda wildcards: parse_sample_name(wildcards.sample_name)["data_type"],
-               sample_name=samples["sample_name"])
+        [
+            f"{data_type}/chkpts/process__{sample_name}.done"
+            for data_type in DATA_TYPES
+            for sample_name in get_sample_names_by_data_type(samples, data_type)
+        ]
 
 # Rule to perform combined analysis
 rule combined_analysis:
