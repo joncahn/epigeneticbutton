@@ -209,7 +209,7 @@ rule check_pair_chip:
         touch {output.touch}
         """
     
-rule coverage_chip:
+rule make_coverage_chip:
     input: 
         bamfile = "ChIP/mapped/{sample_name}.bam"
     output:
