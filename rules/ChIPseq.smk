@@ -237,7 +237,7 @@ rule make_coverage_chip:
 
 rule check_pair_chip:
     input:
-        expand("ChIP/mapped/{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
+        expand("ChIP/mapped/mapped__{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
     output:
         touch = "ChIP/chkpts/process__{sample_name}.done"
     shell:
