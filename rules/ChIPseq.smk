@@ -2,22 +2,13 @@
 def return_log_chip(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
-def get_inputs_chip(wildcards):
-    s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
-    name = sample_name(s)
-    paired = get_sample_info(wildcards, "paired")
-    if paired == "PE":
-        return f"ChIP/logs/process_pe_sample__{name}.log"
-    else:
-        return f"ChIP/logs/process_se_sample__{name}.log"
-        
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
     paired = get_sample_info_from_name(sname,'paired')
     if paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     else:
-        rule_obj = getattr(rules, f"{rulename}_pe")
+        rule_obj = getattr(rules, f"{rulename}_se")
     return getattr(rule_obj.output, outputfile).format(sample_name=sname)
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
@@ -107,7 +98,7 @@ rule filter_chip_pe:
     input:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
     output:
-        bamfile = "ChIP/mapped/{sample_name}.bam",
+        bamfile = "ChIP/mapped/mapped_pe__{sample_name}.bam",
         metrics_dup = "ChIP/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_pe__{sample_name}.txt"
     params:
@@ -139,7 +130,7 @@ rule filter_chip_se:
     input:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
     output:
-        bamfile = "ChIP/mapped/{sample_name}.bam",
+        bamfile = "ChIP/mapped/mapped_se__{sample_name}.bam",
         metrics_dup = "ChIP/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_se__{sample_name}.txt"
     params:
