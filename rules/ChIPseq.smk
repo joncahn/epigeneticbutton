@@ -98,7 +98,7 @@ rule filter_chip_pe:
     input:
         samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
     output:
-        bamfile = "ChIP/mapped/mapped_pe__{sample_name}.bam",
+        bamfile = temp("ChIP/mapped/mapped_pe__{sample_name}.bam"),
         metrics_dup = "ChIP/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_pe__{sample_name}.txt"
     params:
@@ -130,7 +130,7 @@ rule filter_chip_se:
     input:
         samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
     output:
-        bamfile = "ChIP/mapped/mapped_se__{sample_name}.bam",
+        bamfile = temp("ChIP/mapped/mapped_se__{sample_name}.bam"),
         metrics_dup = "ChIP/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "ChIP/reports/flagstat_se__{sample_name}.txt"
     params:
@@ -210,28 +210,22 @@ rule make_chip_stats_se:
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
-        
-rule check_pair_chip:
-    input:
-        lambda wildcards: assign_mapping_paired(wildcards, "make_chip_stats", "log")
-    output:
-        touch = "ChIP/chkpts/process__{sample_name}.done"
-    shell:
-        """
-        touch {output.touch}
-        """
 
 rule map_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         "ChIP/mapped/{sample_name}.bam"
+    shell:
+        """
+        mv {input} {output}
+        """
     
 rule make_coverage_chip:
     input: 
         bamfile = "ChIP/mapped/{sample_name}.bam"
     output:
-        bigwigcov = "ChIP/tracks/coverage_{sample_name}.bw"
+        bigwigcov = "ChIP/tracks/coverage__{sample_name}.bw"
     params:
         binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV
@@ -246,9 +240,10 @@ rule merging replicates:
         bamfiles = expand("ChIP/mapped/{sample_name}.bam", 
             sample_name = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
     output:
-        mergefile = "ChIP/mapped/merged_{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
+        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam",
+        touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
     params:
-        sample_name = "{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}"
+        sample_name = lambda wildcards: sample_name(wildcards)
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
     conda: CONDA_ENV
@@ -263,3 +258,13 @@ rule merging replicates:
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
+        
+# rule check_pair_chip:
+    # input:
+        # lambda wildcards: assign_mapping_paired(wildcards, "make_chip_stats", "log")
+    # output:
+        # touch = "ChIP/chkpts/process__{sample_name}.done"
+    # shell:
+        # """
+        # touch {output.touch}
+        # """
