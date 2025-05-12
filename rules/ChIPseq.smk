@@ -189,7 +189,7 @@ rule make_chip_stats_se:
         stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_se__{sample_name}.txt",
         metrics_map = "ChIP/reports/bt2_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_form_name(wildcards.sample_name, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "ChIP/logs/process_se_sample__{sample_name}.log"
     params:
