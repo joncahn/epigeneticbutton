@@ -11,6 +11,15 @@ def get_inputs_chip(wildcards):
     else:
         return f"ChIP/logs/process_se_sample__{name}.log"
         
+def assign_mapping_paired(wildcards, rulename, outputfile):
+    sample_name = wildcards.sample_name
+    paired = get_sample_info_from_name(sample_name)["paired"]    
+    if paired == "PE":
+        return getattr(rules[f"{rulename}_pe"].output, outputfile).format(sample_name=sample_name)
+    else:
+        return getattr(rules[f"{rulename}_se"].output, outputfile).format(sample_name=sample_name)
+
+        
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
 rule stat_file_chip:
@@ -201,13 +210,19 @@ rule make_chip_stats_se:
         
 rule check_pair_chip:
     input:
-        lambda wildcards: get_inputs_chip(wildcards)
+        lambda wildcards: assign_mapping_paired(wildcards, "make_chip_stats", "log")
     output:
         touch = "ChIP/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     shell:
         """
         touch {output.touch}
         """
+
+rule map_dispatch:
+    input:
+        lambda wildcards: assign_mapping_paired(wildcards, "mapping", "bamfile")
+    output:
+        "ChIP/mapped/{sample_name}.bam"
     
 rule make_coverage_chip:
     input: 
