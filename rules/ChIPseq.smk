@@ -285,7 +285,7 @@ rule make_bigwig_chip:
         {{
         printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         bamCompare -b1 {ipfile} -b2 {inputfile} -o {output.bigwigfile} -p {threads} --binSize {params.binsize} {params.params}
-        }} 2>&1 | tee -a {log}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule calling_peaks_macs2_pe:
