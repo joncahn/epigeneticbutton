@@ -3,6 +3,7 @@ import numpy as np
 import os
 import fnmatch
 import sys
+import re
 from snakemake.utils import min_version
 
 min_version("6.0")
@@ -111,7 +112,7 @@ def get_sample_info_from_name(sample_name, field):
     return sample_info_map[key][field]
 
 # Function to extract all samples of each data_type based on sample name
-def get_sample_names_by_data_type(samples, data_type):
+def get_sample_names_by_data_type(data_type):
     sample_names = samples.loc[samples['env'] == data_type, "sample_name"].tolist()
     return sample_names
 
@@ -154,7 +155,7 @@ analysis_to_replicates = (
 )
 
 # To assign all ChiP IP to their inputs
-chip_input_to_replicates = (
+chip_samples_to_replicates = (
     analysis_samples
     .groupby(["data_type", "line", "tissue", "ref_genome"])["sample_type"]
     .apply(list)
@@ -183,6 +184,8 @@ def create_directories(unique_envs, dirs):
     for env in unique_envs:
         for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
             os.makedirs(f"{env}/{d}", exist_ok=True)
+        if env in ["ChIP", "TF"]:
+            os.makedirs(f"{env}/peaks", exist_ok=True)
     
     for key, value in dirs.items():
         if isinstance(value, dict):
@@ -211,21 +214,21 @@ rule map_only:
         [
             f"{datatype_to_env[data_type]}/chkpts/process__{sample_name}.done"
             for data_type in DATA_TYPES
-            for sample_name in get_sample_names_by_data_type(samples, data_type)
+            for sample_name in get_sample_names_by_data_type(data_type)
         ]
 
 rule coverage_chip:
     input: 
         [
             f"ChIP/tracks/coverage__{sample_name}.bw"
-            for sample_name in get_sample_names_by_data_type(samples, "ChIP")
+            for sample_name in get_sample_names_by_data_type("ChIP")
         ]
 
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        expand("ChIP/chkpts/analyzed__{analysis_sample_name}.done", analysis_sample_name=analysis_samples[analysis_samples["data_type"] == "ChIP"].apply(sample_name_analysis, axis=1)),
-        expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1)),
+        expand("ChIP/chkpts/ChIP_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
+        expand("RNA/chkpts/RNA_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES)
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"

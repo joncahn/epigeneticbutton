@@ -11,6 +11,33 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
         rule_obj = getattr(rules, f"{rulename}_se")
     return getattr(rule_obj.output, outputfile).format(sample_name=sname)
         
+def get_peaktype(sample_type, peaktype_config):
+    for pattern, peaktype in peaktype_config.items():
+        if re.search(pattern, sample_type):
+            return peaktype
+    raise ValueError(f"No peaktype found for sample_type '{sample_type}'")
+
+def define_final_output(env, ref_genome):
+    peak_files = []
+    filtered_rep_samples = samples[ (samples['env'] == env) & (samples['ref_genome'] == ref_genome) & (samples['sample_type'] != "Input") ]
+    
+    for _, row in filtered_rep_samples.iterrows():
+        peaktype = get_peaktype(row.sample_type, config['chip_callpeaks']['peaktype'])
+        sname = sample_name({row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.replicate}__{row.ref_genome})
+        paired = get_sample_info_from_name(sname,'paired')
+        if paired == "PE":
+            peak_files.append(f"ChIP/peaks/peaks_pe__{sname}.{peaktype}Peak")
+        else 
+            peak_files.append(f"ChIP/peaks/peaks_se__{sname}.{peaktype}Peak")
+        
+        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.ref_genome)]) >= 2:
+            if paired == "PE":
+                peak_files.append(f"ChIP/peaks/peaks_pe__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
+            else
+                peak_files.append(f"ChIP/peaks/peaks_se__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
+   
+    return peak_files 
+        
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
 rule stat_file_chip:
@@ -237,6 +264,78 @@ rule make_coverage_chip:
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
 
+rule make_bigwig_chip:
+    input: 
+        ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
+        inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
+    output:
+        bigwigcov = "ChIP/tracks/FC__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
+    params:
+        name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        binsize = config['chip_tracks']['binsize'],
+        params = config['chip_tracks']['params']
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "bigwig", get_sample_info_from_name(sample_name(wildcards), 'paired')))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        bamCompare -b1 ${namefiletype} -b2 ${inputfiletype} -o tracks/${name}_${filetype}.bw -p {threads} --binSize {params.binsize} {params.params}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule calling_peaks_macs2_pe:
+    input:
+        ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
+        inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
+    output:
+        peakfile = lambda wildcards: f"ChIP/peaks/peaks_pe__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.{get_peaktype({wildcards.sample_type}, chip_callpeaks['peaktype'])}Peak"
+    params:
+        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, chip_callpeaks["peaktype"]),
+        params = config["chip_callpeaks"]['params'],
+        genomesize = config["chip_callpeaks"]['genomesize']
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "peak_calling", "PE"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        macs2 --version
+        macs2 callpeak -t ${ipfile} -c {inputfile} -f BAMPE -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule calling_peaks_macs2_se:
+    input:
+        ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
+        inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
+    output:
+        peakfile = lambda wildcards: f"ChIP/peaks/peaks_se_{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.{get_peaktype({wildcards.sample_type}, chip_callpeaks['peaktype'])}Peak"
+    params:
+        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, chip_callpeaks["peaktype"]),
+        params = config["chip_callpeaks"]['params'],
+        genomesize = config["chip_callpeaks"]['genomesize']
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "peak_calling", "SE"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        macs2 --version
+        macs2 callpeak -t ${ipfile} -c {inputfile} -f BAM -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
+        }} 2>&1 | tee -a "{log}"
+        """
+        
 rule merging_inputs:
     input:
         bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{replicate}__{wildcards.ref_genome}.bam" 
@@ -265,7 +364,7 @@ rule merging_replicates:
         bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
-        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
+        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_analysis(wildcards)
     log:
@@ -282,23 +381,13 @@ rule merging_replicates:
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
-        
-rule calling_peaks:
+
+rule ChIP_all:
     input:
-        ipfile = lambda wildcards: [ f"ChIP/mapped/merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{sample_type}__{wildcards.ref_genome}.bam"
-                                        for sample_type in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ],
-        inputfile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__Input__{ref_genome}.bam"
-    output:
-        touch = "ChIP/chkpts/analyzed__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
-    params:
-        sname = lambda wildcards: sample_name_analysis(wildcards)
-    log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "peak_calling", "merged"))
-    conda: CONDA_ENV
-    threads: workflow.cores
-    shell:
+        lambda wildcards: [ define_final_output("ChIP", {wildcards.ref_genome}) ]
+     output:
+        touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
+     shell:
         """
-        {{
         touch {output.touch}
-        }} 2>&1 | tee -a "{log}"
         """

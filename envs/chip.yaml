@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - python=3.8
+  - pyyaml>=5.1
   - bowtie2>=2.4
   - samtools>=1.10
   - bedtools>=2.29

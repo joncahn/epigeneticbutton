@@ -251,3 +251,13 @@ rule check_pair_rna:
         """
         touch {output.touch}
         """
+
+rule all_rna:
+    input:
+        expand("RNA/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done")
+    output:
+        touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
+    shell:
+        """
+        touch {output.touch}
+        """
