@@ -192,7 +192,7 @@ rule all:
 rule map_only:
     input:
         [
-            f"{datatype_to_env(data_type)}/chkpts/process__{sample_name}.done"
+            f"{datatype_to_env[data_type]}/chkpts/process__{sample_name}.done"
             for data_type in DATA_TYPES
             for sample_name in get_sample_names_by_data_type(samples, data_type)
         ]
