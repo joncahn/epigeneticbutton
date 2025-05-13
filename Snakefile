@@ -9,17 +9,49 @@ min_version("6.0")
 # Configuration
 configfile: "config.yaml"
 
+# Define patterns and envs
+env_patterns = [
+    ("ChIP*", "ChIP"),
+    ("RNAseq", "RNA"),
+    ("RAMPAGE", "RNA"),
+    ("shRNA", "shRNA"),
+    ("mC", "mC"),
+    ("TF_*", "TF"),
+]
+
 # Define sample metadata
 samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
                       names=["data_type", "line", "tissue", "sample_type", "replicate", 
                              "seq_id", "fastq_path", "paired", "ref_genome"])
+
+# Create an "env" column based on the string patterns in data_type
+conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]
+choices = [env for _, env in env_patterns]
+samples["env"] = np.select(conditions, choices, default="unknown")
+    
+# Check for unknown envs and exit if any
+unknowns = samples.loc[samples["env"] == "unknown", "data_type"].unique()
+if len(unknowns) > 0:
+    print("Type of data unknown for the following data types:")
+    for dt in unknowns:
+        print(f"  - {dt}")
+    print("\nPlease check your sample file or update the env_patterns.")
+    sys.exit(1)
+
+# Create sample_name column
+def create_sample_name(row):
+    return f"{row["data_type"]}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
+
+samples["sample_name"] = samples.apply(create_sample_name, axis=1)
 
 # Create a dictionary to store the information for each sample
 sample_info_map = {
     (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["replicate"], row["ref_genome"]): {
         "seq_id": row["seq_id"],
         "fastq_path": row["fastq_path"],
-        "paired": row["paired"]
+        "paired": row["paired"],
+        "env": row["env"],
+        "sample_name": row["sample_name"]
     }
     for _, row in samples.iterrows()
 }
@@ -37,20 +69,9 @@ REPO_FOLDER = config["repo_folder"]
 # Define label for the analysis
 analysis_name = config["analysis_name"]
 
-# Define patterns and envs
-env_patterns = [
-    ("ChIP*", "ChIP"),
-    ("RNAseq", "RNA"),
-    ("RAMPAGE", "RNA"),
-    ("shRNA", "shRNA"),
-    ("mC", "mC"),
-    ("TF_*", "TF"),
-]
-
 # Function to split the sample_name to recover its components
 def parse_sample_name(sample_name):
     data_type, line, tissue, sample_type, rep, ref_genome = sample_name.split("__")
-
     parsed = {
         "data_type": data_type,
         "line": line,
@@ -58,20 +79,17 @@ def parse_sample_name(sample_name):
         "sample_type": sample_type,
         "replicate": rep,
         "ref_genome": ref_genome
-    }
-
-    # To match IP and Input samples if needed
+    }    
+    
+    # To extract ChIP Input group from data_type
     if data_type.startswith("ChIP_"):
         chip_parts = data_type.split("_", 1)
         if len(chip_parts) == 2:
-            parsed["data_type_chip"] = chip_parts[0]  # "ChIP"
-            parsed["chip_group"] = chip_parts[1]   # e.g., "A"
-    
+            parsed["group_label"] = chip_parts[1]   # e.g., "A"
     # To extract TF name from data_type
     if data_type.startswith("TF_"):
         tf_parts = data_type.split("_", 1)
         if len(tf_parts) == 2:
-            parsed["data_type_main"] = tf_parts[0]  # "TF"
             parsed["tf_name"] = tf_parts[1]   # e.g., "TB1"
 
     return parsed
@@ -91,39 +109,16 @@ def get_sample_info_from_name(sample_name, field):
     key = tuple(parts)
     return sample_info_map[key][field]
 
-# Function to extract all samples of each data_type base don sample name
+# Function to extract all samples of each data_type based on sample name
 def get_sample_names_by_data_type(samples, data_type):
-    subset = samples.loc[samples["data_type"] == data_type, :]
-    sample_names = subset.apply(sample_name, axis=1).tolist()
+    sample_names = samples.loc[samples['env'] == data_type, "sample_name"].tolist()
     return sample_names
 
-# Function to determine environment
-def get_env(data_type):
-    for pattern, env in env_patterns:
-        if fnmatch.fnmatch(data_type, pattern):
-            return env
-    return "unknown"
-
 # Map data types to environments
-datatype_to_env = {dt: get_env(dt) for dt in DATA_TYPES}
-UNIQUE_ENVS = list(set(datatype_to_env.values()))
+datatype_to_env = dict(zip(samples["data_type"], samples["env"]))
 
-# Check for unknown envs and exit if any
-unknowns = [dt for dt, env in datatype_to_env.items() if env == "unknown"]
-if unknowns:
-    print("Type of data unknown for the following data types:")
-    for dt in unknowns:
-        print(f"  - {dt}")
-    print("\nPlease check your sample sheet or update the env_patterns.")
-    sys.exit(1)
-
-# Create dictionaries
-refgenome_to_datatype = samples.groupby("ref_genome")["data_type"].unique().to_dict()
-refgenome_to_env = {}
-for ref, dtypes in refgenome_to_datatype.items():
-    envs = {datatype_to_env.get(dt) for dt in dtypes if dt in datatype_to_env}
-    if envs:
-        refgenome_to_env[ref] = list(envs)
+# Get unique list of environments
+UNIQUE_ENVS = samples["env"].unique().tolist()
 
 # Load the sample metadata and perform all operations in a single chain
 analysis_samples = (
@@ -141,7 +136,6 @@ def sample_name_analysis(d):
     return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # To later lookup analysis samples to replicates
-samples = samples.assign(sample_name=samples.apply(sample_name, axis=1))
 analysis_to_replicates = (
     samples
     .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
@@ -197,7 +191,7 @@ rule all:
 rule map_only:
     input:
         [
-            f"{get_env(data_type)}/chkpts/process__{sample_name}.done"
+            f"{datatype_to_env(data_type)}/chkpts/process__{sample_name}.done"
             for data_type in DATA_TYPES
             for sample_name in get_sample_names_by_data_type(samples, data_type)
         ]
@@ -227,9 +221,5 @@ rule combined_analysis:
         "envs/combined.yaml"
     shell:
         """
-        # Call the combined analysis script
-        # qsub {params.scripts_dir}/MaizeCode_analysis.sh \
-            -f {params.analysis_samplefile} \
-            -r {params.region_file} | tee {log}
         touch {output.chkpt}
         """ 

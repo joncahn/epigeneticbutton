@@ -269,3 +269,26 @@ rule merging_replicates:
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
+
+rule merging_replicates:
+    input:
+        bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
+                                      for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
+    output:
+        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bam"
+    params:
+        sname = lambda wildcards: sample_name_analysis(wildcards)
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nMerging replicates of {params.sname}\n"
+		samtools merge -@ {threads} ChIP/mapped/temp_{params.sname}.bam {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
+		rm -f ChIP/mapped/temp_{params.sname}.bam
+		samtools index -@ {threads} {output.mergefile}
+        }} 2>&1 | tee -a "{log}"
+        """
