@@ -26,15 +26,15 @@ def define_final_output(env, ref_genome):
         sname = sample_name(row)
         paired = get_sample_info_from_name(sname,'paired')
         if paired == "PE":
-            peak_files.append(f"ChIP/peaks/peaks_pe__{sname}.{peaktype}Peak")
+            peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak")
         else:
-            peak_files.append(f"ChIP/peaks/peaks_se__{sname}.{peaktype}Peak")
+            peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}.{peaktype}Peak")
         
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             if paired == "PE":
-                peak_files.append(f"ChIP/peaks/peaks_pe__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
+                peak_files.append(f"ChIP/peaks/peaks_pe__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
             else:
-                peak_files.append(f"ChIP/peaks/peaks_se__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
+                peak_files.append(f"ChIP/peaks/peaks_se__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
    
     return peak_files
         
