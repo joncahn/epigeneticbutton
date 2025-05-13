@@ -30,7 +30,7 @@ def define_final_output(env, ref_genome):
         else:
             peak_files.append(f"ChIP/peaks/peaks_se__{sname}.{peaktype}Peak")
         
-        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.ref_genome)]) >= 2:
+        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             if paired == "PE":
                 peak_files.append(f"ChIP/peaks/peaks_pe__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
             else:
