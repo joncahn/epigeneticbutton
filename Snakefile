@@ -34,11 +34,10 @@ samples["env"] = np.select(conditions, choices, default="unknown")
 # Check for unknown envs and exit if any
 unknowns = samples.loc[samples["env"] == "unknown", "data_type"].unique()
 if len(unknowns) > 0:
-    print("Type of data unknown for the following data types:")
-    for dt in unknowns:
-        print(f"  - {dt}")
-    print("\nPlease check your sample file or update the env_patterns.")
-    sys.exit(1)
+    unknown_list = "\n".join(f"  - {dt}" for dt in unknowns)
+    raise ValueError(f"Type of data unknown for the following data types:\n"
+                     f"{unknown_list}\n\n"
+                     "Please check your sample file or update the env_patterns.")
 
 # Create sample_name column
 def create_sample_name(row):
