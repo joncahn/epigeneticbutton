@@ -23,7 +23,8 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
             else paired == "SE":
                 rule_obj = getattr(rules, f"{rulename}_se")
     else:
-        raise KeyError(f"Sample '{sname}' does not have corresponding Input.")
+        print(f"\nSample '{sname}' does not have corresponding Input.")
+        sys.exit(1)
 
     return getattr(rule_obj.output, outputfile).format(sample_name=sname)
         
@@ -31,7 +32,8 @@ def get_peaktype(sample_type, peaktype_config):
     for pattern, peaktype in peaktype_config.items():
         if re.search(pattern, sample_type):
             return peaktype
-    raise ValueError(f"No peaktype found for sample_type '{sample_type}'")
+    print(f"\nNo peaktype found for sample_type '{sample_type}")
+    sys.exit(1)
 
 def define_final_output(env, ref_genome):
     peak_files = []

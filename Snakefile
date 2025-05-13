@@ -4,7 +4,6 @@ import os
 import fnmatch
 import sys
 import re
-import warnings
 from snakemake.utils import min_version
 
 min_version("6.0")
@@ -113,7 +112,8 @@ def get_sample_info_from_name(sname, field):
         if parse_sample_name(sname, 'sample_type') == "Input":
             return "Input_not_found"
         else:
-            raise KeyError(f"Sample '{sample_name}' not found in samples table.")
+            print(f"\nSample '{sample_name}' not found in samples table.")
+            sys.exit(1)
     else:
         return match[field].iloc[0]
 
