@@ -271,7 +271,8 @@ rule make_bigwig_chip:
     output:
         bigwigfile = "ChIP/tracks/FC__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
     params:
-        name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
         binsize = config['chip_tracks']['binsize'],
         params = config['chip_tracks']['params']
     log:
