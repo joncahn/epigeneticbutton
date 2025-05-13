@@ -269,7 +269,7 @@ rule make_bigwig_chip:
         ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
         inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
     output:
-        bigwigcov = "ChIP/tracks/FC__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
+        bigwigfile = "ChIP/tracks/FC__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
     params:
         name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         binsize = config['chip_tracks']['binsize'],
@@ -282,8 +282,8 @@ rule make_bigwig_chip:
         """
         {{
         printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
-        bamCompare -b1 ${namefiletype} -b2 ${inputfiletype} -o tracks/${name}_${filetype}.bw -p {threads} --binSize {params.binsize} {params.params}
-        }} 2>&1 | tee -a "{log}"
+        bamCompare -b1 {ipfile} -b2 {inputfile} -o {output.bigwigfile} -p {threads} --binSize {params.binsize} {params.params}
+        }} 2>&1 | tee -a {log}
         """
 
 rule calling_peaks_macs2_pe:
