@@ -276,7 +276,7 @@ rule make_bigwig_chip:
         binsize = config['chip_tracks']['binsize'],
         params = config['chip_tracks']['params']
     log:
-        lambda wildcards: temp((return_log_chip(f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}", "peak_calling", get_sample_info(wildcards, 'paired'))))
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_bigwig", "either"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
