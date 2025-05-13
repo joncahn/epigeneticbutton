@@ -109,7 +109,7 @@ def get_sample_info(wildcards, field):
 def get_sample_info_from_name(sname, field):
     match = samples.loc[samples["sample_name"] == sname]
     if match.empty:
-        if parse_sample_name(sname, 'sample_type') == "Input":
+        if parse_sample_name(sname)['sample_type'] == "Input":
             return "Input_not_found"
         else:
             print(f"\nSample '{sample_name}' not found in samples table.")
