@@ -23,7 +23,7 @@ def define_final_output(env, ref_genome):
     
     for _, row in filtered_rep_samples.iterrows():
         peaktype = get_peaktype(row.sample_type, config['chip_callpeaks']['peaktype'])
-        sname = sample_name({row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.replicate}__{row.ref_genome})
+        sname = sample_name(row)
         paired = get_sample_info_from_name(sname,'paired')
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__{sname}.{peaktype}Peak")
