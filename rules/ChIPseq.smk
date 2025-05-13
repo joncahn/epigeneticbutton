@@ -10,10 +10,10 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     elif paired == "SE":
         rule_obj = getattr(rules, f"{rulename}_se")
     elif paired == "Input not found":
-        tmp_dt = parse_sample_name('data_type')
-        tmp_line = parse_sample_name('line')
-        tmp_tis = parse_sample_name('tissue')
-        tmp_rg = parse_sample_name('ref_genome')
+        tmp_dt = parse_sample_name(sname)['data_type']
+        tmp_line = parse_sample_name(sname)['line']
+        tmp_tis = parse_sample_name(sname)['tissue']
+        tmp_rg = parse_sample_name(sname)['ref_genome']
         if len(chip_input_to_replicates[(tmp_dt, tmp_line, tmp_tis, tmp_rg)])>=1:
             tmp_rep = chip_input_to_replicates.get((tmp_dt, tmp_line, tmp_tis, tmp_rg), [0])
             sname = sample_name(tmp_dt, tmp_line, tmp_tis, "Input", tmp_rep, tmp_rg)
