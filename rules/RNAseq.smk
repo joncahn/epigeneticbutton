@@ -242,19 +242,9 @@ rule make_rna_stats_se:
         rm -f {input.logs}
         """
         
-rule check_pair_rna:
-    input:
-        lambda wildcards: get_inputs_rna(wildcards)
-    output:
-        touch = "RNA/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    shell:
-        """
-        touch {output.touch}
-        """
-
 rule all_rna:
     input:
-        expand("RNA/chkpts/process__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done")
+        lambda wildcards: assign_mapping_paired(wildcards, "make_rna_stats", "log")
     output:
         touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
     shell:
