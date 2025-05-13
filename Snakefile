@@ -40,7 +40,7 @@ if len(unknowns) > 0:
 
 # Create sample_name column
 def create_sample_name(row):
-    return f"{row["data_type"]}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
+    return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
 
 samples["sample_name"] = samples.apply(create_sample_name, axis=1)
 
