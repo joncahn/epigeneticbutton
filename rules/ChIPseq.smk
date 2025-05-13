@@ -385,9 +385,9 @@ rule merging_replicates:
 rule ChIP_all:
     input:
         lambda wildcards: [ define_final_output("ChIP", {wildcards.ref_genome}) ]
-     output:
+    output:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
-     shell:
+    shell:
         """
         touch {output.touch}
         """
