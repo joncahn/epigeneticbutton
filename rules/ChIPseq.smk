@@ -274,9 +274,10 @@ rule make_bigwig_chip:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
         binsize = config['chip_tracks']['binsize'],
-        params = config['chip_tracks']['params']
+        params = config['chip_tracks']['params'],
+        logfile = lambda wildcards: return_log_chip(f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}", "bigwig", get_sample_info_from_name(sample_name(wildcards), 'paired'))
     log:
-        temp(lambda wildcards: return_log_chip(f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}", "bigwig", get_sample_info_from_name(sample_name(wildcards), 'paired')))
+        temp("{params.logfile}")
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
