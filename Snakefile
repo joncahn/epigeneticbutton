@@ -111,8 +111,7 @@ def get_sample_info_from_name(sname, field):
         if parse_sample_name(sname)['sample_type'] == "Input":
             return "Input_not_found"
         else:
-            print(f"\nSample '{sample_name}' not found in samples table.")
-            sys.exit(1)
+            raise ValueError(f"\nSample '{sname}' not found in samples table.")
     else:
         return match[field].iloc[0]
 
