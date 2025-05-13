@@ -211,7 +211,7 @@ rule make_chip_stats_se:
         rm -f {input.logs}
         """
 
-rule map_dispatch:
+rule pe_or_se_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
