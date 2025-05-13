@@ -292,7 +292,7 @@ rule calling_peaks_macs2_pe:
         ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
         inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
     output:
-        peakfile = lambda wildcards: f"ChIP/peaks/peaks_pe__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+        peakfile = "ChIP/peaks/peaks_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.{peaktype}Peak"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
@@ -317,7 +317,7 @@ rule calling_peaks_macs2_se:
         ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
         inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
     output:
-        peakfile = lambda wildcards: f"ChIP/peaks/peaks_se_{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+        peakfile = "ChIP/peaks/peaks_se_{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.{peaktype}Peak"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
