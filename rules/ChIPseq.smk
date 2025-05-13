@@ -36,7 +36,7 @@ def define_final_output(env, ref_genome):
             else:
                 peak_files.append(f"ChIP/peaks/peaks_se__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
    
-    return peak_files 
+    return peak_files
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -385,7 +385,7 @@ rule merging_replicates:
 
 rule ChIP_all:
     input:
-        lambda wildcards: [ define_final_output("ChIP", {wildcards.ref_genome}) ]
+        lambda wildcards: define_final_output("ChIP", wildcards.ref_genome)
     output:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
     shell:
