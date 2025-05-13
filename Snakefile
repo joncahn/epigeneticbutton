@@ -125,8 +125,8 @@ UNIQUE_ENVS = samples["env"].unique().tolist()
 analysis_samples = (
     samples
     .query("sample_type != 'Input'") # filter Input samples
-    [["data_type", "line", "tissue", "sample_type", "paired", "ref_genome"]] # select the necessary columns
-    .drop_duplicates() # removes replicates
+    [["data_type", "line", "tissue", "sample_type", "ref_genome"]]
+    .drop_duplicates()
 )
 
 # Save the result to 'analysis_samplefile.txt'
@@ -136,10 +136,27 @@ analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", i
 def sample_name_analysis(d):
     return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
-# To later lookup analysis samples to replicates
+# To assign all replicates for each ChiP input
+chip_input_to_replicates = (
+    samples
+    .query("sample_type == 'Input'")
+    .groupby(["data_type", "line", "tissue", "ref_genome"])["replicate"]
+    .apply(list)
+    .to_dict()
+)
+
+# To assign all replicates to each analysis samples
 analysis_to_replicates = (
     samples
     .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
+    .apply(list)
+    .to_dict()
+)
+
+# To assign all ChiP IP to their inputs
+chip_input_to_replicates = (
+    analysis_samples
+    .groupby(["data_type", "line", "tissue", "ref_genome"])["sample_type"]
     .apply(list)
     .to_dict()
 )
@@ -207,7 +224,7 @@ rule coverage_chip:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        expand("ChIP/mapped/merged__{analysis_sample_name}.bam", analysis_sample_name=analysis_samples[analysis_samples["data_type"] == "ChIP"].apply(sample_name_analysis, axis=1)),
+        expand("ChIP/chkpts/analyzed__{analysis_sample_name}.bam", analysis_sample_name=analysis_samples[analysis_samples["data_type"] == "ChIP"].apply(sample_name_analysis, axis=1)),
         expand("RNA/chkpts/process__{sample_name}.done", sample_name=samples[samples["data_type"] == "RNAseq"].apply(sample_name, axis=1)),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES)
     output:

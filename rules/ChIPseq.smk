@@ -237,15 +237,28 @@ rule make_coverage_chip:
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
 
-# rule check_pair_chip:
-    # input:
-        # expand("ChIP/mapped/final__{sample_name}.bam", sample_name = get_sample_names_by_data_type(samples, "ChIP"))
-    # output:
-        # touch = "ChIP/chkpts/process__{sample_name}.done"
-    # shell:
-        # """
-        # touch {output.touch}
-        # """
+rule merging_inputs:
+    input:
+        bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{replicate}__{wildcards.ref_genome}.bam" 
+                                      for replicate in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ]
+    output:
+        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__Input__{ref_genome}.bam"
+    params:
+        sname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.ref_genome}"
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__Input__{ref_genome}", "merging", "merged"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nMerging replicates of {params.sname}\n"
+		samtools merge -@ {threads} ChIP/mapped/temp_{params.sname}.bam {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
+		rm -f ChIP/mapped/temp_{params.sname}.bam
+		samtools index -@ {threads} {output.mergefile}
+        }} 2>&1 | tee -a "{log}"
+        """
         
 rule merging_replicates:
     input:
@@ -267,5 +280,25 @@ rule merging_replicates:
 		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
 		rm -f ChIP/mapped/temp_{params.sname}.bam
 		samtools index -@ {threads} {output.mergefile}
+        }} 2>&1 | tee -a "{log}"
+        """
+        
+rule calling peaks:
+    input:
+        ipfile = lambda wildcards: [ f"ChIP/mapped/merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{sample_type}__{wildcards.ref_genome}.bam"
+                                        for sample_type in chip_input_to_replicates((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ]
+        inputfile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__Input__{ref_genome}.bam"
+    output:
+        touch = "ChIP/chkpts/analyzed__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
+    params:
+        sname = lambda wildcards: sample_name_analysis(wildcards)
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "peak_calling", "merged"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
