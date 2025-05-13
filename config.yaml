@@ -48,9 +48,9 @@ chip_tracks:
 chip_callpeaks:
   # To link the type of IP with the type of peaks. Can be updated with other marks. If creating regex patterns, make sure to escape "." with "\."
   peaktype:
-    "H3K4me1|H3K27me1|H3K27me2|H3K27me3|H3K9me1|H3K9me2|H3K9me3|H4K20me1|H4K20me2|H4K20me3|.*DDM1|H3\.3|H3\.1|MGH3|CenH3|PolIIS2P|H2AT120Ph|H2AKub|H3K36me3": "broad"
-    H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase: "narrow"
-    H3|H4: "broad"
+    'H3K4me1|H3K27me1|H3K27me2|H3K27me3|H3K9me1|H3K9me2|H3K9me3|H4K20me1|H4K20me2|H4K20me3|.*DDM1|H3\.3|H3\.1|MGH3|CenH3|PolIIS2P|H2AT120Ph|H2AKub|H3K36me3': "broad"
+    'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow"
+    'H3|H4': "broad"
   params: "--keep-dup 'all' --nomodel"
   # For Arabidopsis, use 1.3e8; For maize, 2.2e9
   genomesize: "--1.3.e8"
