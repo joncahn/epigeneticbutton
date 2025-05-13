@@ -27,13 +27,13 @@ def define_final_output(env, ref_genome):
         paired = get_sample_info_from_name(sname,'paired')
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__{sname}.{peaktype}Peak")
-        else 
+        else:
             peak_files.append(f"ChIP/peaks/peaks_se__{sname}.{peaktype}Peak")
         
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.ref_genome)]) >= 2:
             if paired == "PE":
                 peak_files.append(f"ChIP/peaks/peaks_pe__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
-            else
+            else:
                 peak_files.append(f"ChIP/peaks/peaks_se__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
    
     return peak_files 
