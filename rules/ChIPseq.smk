@@ -20,7 +20,7 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
             tmp_pair = get_sample_info_from_name(sname, 'paired')
             if paired == "PE":
                 rule_obj = getattr(rules, f"{rulename}_pe")
-            else paired == "SE":
+            elif paired == "SE":
                 rule_obj = getattr(rules, f"{rulename}_se")
     else:
         print(f"\nSample '{sname}' does not have corresponding Input.")
