@@ -300,7 +300,7 @@ rule calling_peaks_macs2_pe:
         params = config["chip_callpeaks"]['params'],
         genomesize = config["chip_callpeaks"]['genomesize']
     log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "peak_calling", "PE"))
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
@@ -325,7 +325,7 @@ rule calling_peaks_macs2_se:
         params = config["chip_callpeaks"]['params'],
         genomesize = config["chip_callpeaks"]['genomesize']
     log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "peak_calling", "SE"))
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
