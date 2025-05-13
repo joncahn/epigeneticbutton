@@ -4,7 +4,7 @@ def return_log_chip(sample_name, step, paired):
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
-    paired = samples.loc[samples["sample_name"] == sname, "paired"].iloc[0]
+    paired = get_sample_info_from_name(sname,'paired')
     if paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     else:
@@ -24,7 +24,7 @@ def define_final_output(env, ref_genome):
     for _, row in filtered_rep_samples.iterrows():
         peaktype = get_peaktype(row.sample_type, config['chip_callpeaks']['peaktype'])
         sname = sample_name(row)
-        paired = samples.loc[samples["sample_name"] == sname, "paired"].iloc[0]
+        paired = get_sample_info_from_name(sname,'paired')
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak")
         else:
