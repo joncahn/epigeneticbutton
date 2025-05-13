@@ -283,7 +283,7 @@ rule merging_replicates:
         }} 2>&1 | tee -a "{log}"
         """
         
-rule calling peaks:
+rule calling_peaks:
     input:
         ipfile = lambda wildcards: [ f"ChIP/mapped/merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{sample_type}__{wildcards.ref_genome}.bam"
                                         for sample_type in chip_input_to_replicates((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ],
