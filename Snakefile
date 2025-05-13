@@ -106,9 +106,15 @@ def get_sample_info(wildcards, field):
     return sample_info_map[key][field]
 
 # Function to access extra information form the samplefile using the name
-def get_sample_info_from_name(sample_name, field):
-    match = samples.loc[samples["sample_name"] == sample_name]    
-    return match[field].iloc[0]
+def get_sample_info_from_name(sname, field):
+    match = samples.loc[samples["sample_name"] == sname]
+    if match.empty:
+        if parse_sample_name(sname, 'sample_type') == "Input":
+            return "Input_not_found"
+        else:
+            raise KeyError(f"Sample '{sample_name}' not found in samples table.")
+    else:
+        return match[field].iloc[0]
 
 # Function to extract all samples of each data_type based on sample name
 def get_sample_names_by_data_type(data_type):
