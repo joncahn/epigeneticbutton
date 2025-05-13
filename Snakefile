@@ -4,6 +4,7 @@ import os
 import fnmatch
 import sys
 import re
+import warnings
 from snakemake.utils import min_version
 
 min_version("6.0")
