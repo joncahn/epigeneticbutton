@@ -44,10 +44,10 @@ def assign_peak_files_for_idr(wildcards):
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     replicates = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
     if paired == "PE":
-        return [ f"ChIP/peaks/peaks_pe__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+        return [ f"ChIP/peaks/peaks_pe__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
                 for replicate in replicates ]
     else:
-        return [ f"ChIP/peaks/peaks_se__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+        return [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
                 for replicate in replicates ]
 
 def input_peak_files_for_best_peaks(wildcards):
