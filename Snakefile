@@ -105,10 +105,10 @@ def get_sample_info(wildcards, field):
     return sample_info_map[key][field]
 
 # Function to access extra information form the samplefile using the name
-def get_sample_info_from_name(sname, field):
+def get_sample_info_from_name(sname, samples, field):
     match = samples.loc[samples["sample_name"] == sname]
     if match.empty:
-        raise ValueError(f"\nSample '{sname}' not found in samples table.")
+        raise ValueError(f"\nSample '{sname}' not found in {samples} table.")
     else:
         return match[field].iloc[0]
 
@@ -127,7 +127,7 @@ UNIQUE_ENVS = samples["env"].unique().tolist()
 analysis_samples = (
     samples
     .query("sample_type != 'Input'") # filter Input samples
-    [["data_type", "line", "tissue", "sample_type", "ref_genome"]]
+    [["data_type", "line", "tissue", "sample_type", "ref_genome", "paired"]]
     .drop_duplicates()
 )
 

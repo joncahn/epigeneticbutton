@@ -67,7 +67,8 @@ conda install -c bioconda snakemake
 2. Update `config.yaml` with your paths and parameters:
    - Reference genome path
    - Sample file path
-   - Analysis parameters
+   - Analysis parameters / options
+   - Species-specific parameters (e.g. gneome size)
    - Resource allocation
 
 ### Running the Pipeline
@@ -153,6 +154,21 @@ epigeneticbutton/
 - `perform_combined`: Enable/disable combined analysis
 - `perform_heatmaps`: Enable/disable heatmap generation
 - `perform_te_analysis`: Enable/disable TE analysis
+
+### Known potential issues
+
+1.Relationship between IP and Input 
+Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, the sample it is compared to must be called 'Input'. It must also be sequenced either paired-end or single-end but the same than the IPs.
+
+### Features under development
+- Finishing ChIP-seq and RNA-seq
+- Assignment of IP to Input based on suffix (e.g. ChIP_A)
+- TF ChIP-seq
+- RAMPAGE
+- small RNAseq
+- WGBS
+- Plotting
+- ATAC-seq
 
 ## Contributing
 
