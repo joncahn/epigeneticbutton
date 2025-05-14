@@ -40,24 +40,28 @@ def get_peaktype(sample_type, peaktype_config):
 
 def define_final_chip_output(ref_genome):
     peak_files = []
+    bigwig_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) & (samples['sample_type'] != "Input") ]
     
     for _, row in filtered_rep_samples.iterrows():
         peaktype = get_peaktype(row.sample_type, config["chip_callpeaks"]['peaktype'])
         sname = sample_name(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
+        
+        bigwig_files.append(f"ChIP/tracks/FC__{sname}.bw")
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak")
         else:
             peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}.{peaktype}Peak")
         
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
+            bigwig_files.append(f"ChIP/tracks/FC__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
             if paired == "PE":
                 peak_files.append(f"ChIP/peaks/peaks_pe__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
             else:
                 peak_files.append(f"ChIP/peaks/peaks_se__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
    
-    return peak_files
+    return peak_files + bigwig_files
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
