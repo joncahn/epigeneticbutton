@@ -406,7 +406,7 @@ rule merging_replicates:
 
 rule ChIP_all:
     input:
-        lambda wildcards: define_final_chip_output("ChIP", wildcards.ref_genome)
+        lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
     shell:
