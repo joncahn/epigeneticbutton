@@ -103,9 +103,9 @@ def sample_name(d, string):
         return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # Function to access extra information form the samplefile using wildcards
-def get_sample_info(wildcards, field):
-    key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
-    return sample_info_map[key][field]
+# def get_sample_info(wildcards, field):
+    # key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
+    # return sample_info_map[key][field]
 
 # Function to access extra information form the samplefile using the name
 def get_sample_info_from_name(sname, samples, field):

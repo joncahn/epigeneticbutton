@@ -208,9 +208,9 @@ rule filter_rna_se:
 rule make_rna_stats_pe:
     input:
         stat_file = f"RNA/reports/summary_mapping_stats_{analysis_name}.txt",
-        metrics_trim = "RNA/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        metrics_map = "RNA/reports/star_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards, 'sample'), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        metrics_trim = "RNA/reports/trim_pe__{sample_name}.txt",
+        metrics_map = "RNA/reports/star_pe__{sample_name}.txt",
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "RNA/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
@@ -229,11 +229,11 @@ rule make_rna_stats_pe:
 rule make_rna_stats_se:
     input:
         stat_file = f"RNA/reports/summary_mapping_stats_{analysis_name}.txt",
-        metrics_trim = "RNA/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        metrics_map = "RNA/reports/star_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards, 'sample'), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        metrics_trim = "RNA/reports/trim_se__{sample_name}.txt",
+        metrics_map = "RNA/reports/star_se__{sample_name}.txt",
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        log = "RNA/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
+        log = "RNA/logs/process_se_sample__{sample_name}.log"
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
