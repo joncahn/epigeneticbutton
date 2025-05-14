@@ -152,7 +152,7 @@ chip_input_to_replicates = (
 
 # To assign all replicates to each analysis samples
 analysis_to_replicates = (
-    samples
+    analysis_samples
     .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
     .apply(list)
     .to_dict()
