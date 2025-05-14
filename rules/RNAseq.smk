@@ -210,7 +210,7 @@ rule make_rna_stats_pe:
         stat_file = f"RNA/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "RNA/reports/star_pe__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards, 'sample'), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "RNA/logs/process_pe_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
@@ -231,7 +231,7 @@ rule make_rna_stats_se:
         stat_file = f"RNA/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
         metrics_map = "RNA/reports/star_se__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.txt",
-        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(sample_name(wildcards, 'sample'), step, get_sample_info(wildcards, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "RNA/logs/process_se_sample__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.log"
     shell:
