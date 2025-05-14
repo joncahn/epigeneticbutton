@@ -208,7 +208,7 @@ rule all:
 rule map_only:
     input:
         [
-            f"{env}/chkpts/process__{sample_name}.done"
+            f"{env}/chkpts/map__{sample_name}.done"
             for env in UNIQUE_ENVS
             for sample_name in get_sample_names_by_env(env, samples)
         ]

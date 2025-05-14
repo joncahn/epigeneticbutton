@@ -2,14 +2,19 @@
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")    
 
-def get_inputs_rna(wildcards):
-    s = {k: getattr(wildcards, k) for k in ["data_type","line", "tissue", "sample_type", "replicate", "ref_genome"]}
-    name = sample_name(s)
-    paired = get_sample_info(wildcards, "paired")
-    if paired == "PE":
-        return f"RNA/logs/process_pe_sample__{name}.log"
-    else:
-        return f"RNA/logs/process_se_sample__{name}.log"
+def define_final_rna_output(ref_genome):
+    final_files = []
+    filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ]
+    
+    for _, row in filtered_rep_samples.iterrows():
+        sname = sample_name(row, 'sample')
+        paired = get_sample_info_from_name(sname, samples, 'paired')
+        if paired == "PE":
+            final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
+        else:
+            final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
+        
+    return final_files
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 
@@ -241,13 +246,23 @@ rule make_rna_stats_se:
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
-        
-rule all_rna:
+
+rule dispatch_pair_map_only_rna:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "make_rna_stats", "log")
+    output:
+        touch = "RNA/chkpts/map__{sample_name}.done"
+    shell:
+        """
+        touch {output.touch}
+        """
+
+rule all_rna:
+    input:
+        lambda wildcards: define_final_rna_output(wildcards)
     output:
         touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
     shell:
         """
         touch {output.touch}
-        """
+        """        

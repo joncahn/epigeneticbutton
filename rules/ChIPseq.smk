@@ -38,9 +38,9 @@ def get_peaktype(sample_type, peaktype_config):
             return peaktype
     raise ValueError(f"\nNo peaktype found for sample_type '{sample_type}")
 
-def define_final_output(env, ref_genome):
+def define_final_chip_output(ref_genome):
     peak_files = []
-    filtered_rep_samples = samples[ (samples['env'] == env) & (samples['ref_genome'] == ref_genome) & (samples['sample_type'] != "Input") ]
+    filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) & (samples['sample_type'] != "Input") ]
     
     for _, row in filtered_rep_samples.iterrows():
         peaktype = get_peaktype(row.sample_type, config['chip_callpeaks']['peaktype'])
@@ -264,7 +264,7 @@ rule pe_or_se_dispatch:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         bam = "ChIP/mapped/final__{sample_name}.bam",
-        touch = "ChIP/chkpts/process__{sample_name}.done"
+        touch = "ChIP/chkpts/map__{sample_name}.done"
     shell:
         """
         mv {input} {output.bam}
@@ -406,7 +406,7 @@ rule merging_replicates:
 
 rule ChIP_all:
     input:
-        lambda wildcards: define_final_output("ChIP", wildcards.ref_genome)
+        lambda wildcards: define_final_chip_output("ChIP", wildcards.ref_genome)
     output:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
     shell:
