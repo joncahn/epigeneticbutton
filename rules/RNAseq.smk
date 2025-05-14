@@ -210,7 +210,7 @@ rule make_rna_stats_pe:
         stat_file = f"RNA/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "RNA/logs/process_pe_sample__{sample_name}.log"
     params:
