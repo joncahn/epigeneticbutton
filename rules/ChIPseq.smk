@@ -74,7 +74,6 @@ def input_peak_files_for_best_peaks(wildcards):
             result = { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
                      "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
                      "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
-    print("Returning input files:", result)
     return result
 
 def define_final_chip_output(ref_genome):
@@ -527,7 +526,7 @@ rule making_pseudo_replicates:
 
 rule best_peaks_pseudoreps_and_stats:
     input:
-        lambda wildcards: input_peak_files_for_best_peaks(wildcards)
+        peakfiles = input_peak_files_for_best_peaks
     output:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     params:
@@ -541,10 +540,10 @@ rule best_peaks_pseudoreps_and_stats:
     shell:
         """
         {{
-        printf "\nIntersecting merged peaks ({input.merged}), and both pseudo replicates to select the best peaks for {params.sname}\n"
-        awk -v OFS="\t" '{{print $1,$2,$3}}' {input.merged} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_merged.bed
-		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.pseudo1} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo1.bed
-		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.pseudo2} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo2.bed
+        printf "\nIntersecting merged peaks ({input.peakfiles.merged}), and both pseudo replicates to select the best peaks for {params.sname}\n"
+        awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles.merged} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_merged.bed
+		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles.pseudo1} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo1.bed
+		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles.pseudo2} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo2.bed
 		bedtools intersect -a ChIP/peaks/temp_{params.sname}_pseudo1.bed -b ChIP/peaks/temp_{params.sname}_pseudo2.bed > ChIP/peaks/temp_{params.sname}_pseudos.bed
 		bedtools intersect -a ChIP/peaks/temp_{params.sname}_merged.bed -b ChIP/peaks/temp_{params.sname}_pseudo1.bed -u > ChIP/peaks/temp_{params.sname}_selected.bed
 		bedtools intersect -a {input.merged} -b ChIP/peaks/temp_{params.sname}_selected.bed -u > ChIP/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak
