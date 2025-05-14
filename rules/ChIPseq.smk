@@ -22,7 +22,7 @@ def assign_chip_input(wildcards):
     alts = []
     for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
         alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
-        alts.append("alt_inputname")
+        alts.append(f"{alt_inputname}")
         if get_sample_info_from_name(alt_inputname, 'paired') == ippaired:
             return alt_inputname
 
