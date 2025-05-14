@@ -39,11 +39,15 @@ if len(unknowns) > 0:
                      f"{unknown_list}\n\n"
                      "Please check your sample file or update the env_patterns.")
 
-# Create sample_name column
-def create_sample_name(row):
-    return f"{row['data_type']}__{row['line']}__{row['tissue']}__{row['sample_type']}__{row['replicate']}__{row['ref_genome']}"
+# Function to create a unique name for each sample based on the sample columns, and later based on wildcards
+def sample_name(d, string):
+    if string == 'sample':
+        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
+    elif string == 'analysis':
+        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
-samples["sample_name"] = samples.apply(create_sample_name, axis=1)
+# Add a sample_name column to the sample file
+samples["sample_name"] = samples.apply(lambda row: sample_name(row, 'sample'), axis=1)
 
 # Create a dictionary to store the information for each sample
 sample_info_map = {
@@ -95,13 +99,6 @@ def parse_sample_name(sample_name):
 
     return parsed
 
-# Function to create a unique name for each sample based on the sample columns, and later based on wildcards
-def sample_name(d, string):
-    if string == 'sample':
-        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
-    elif string == 'analysis':
-        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
-
 # Function to access extra information form the samplefile using wildcards
 # def get_sample_info(wildcards, field):
     # key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
@@ -133,6 +130,8 @@ analysis_samples = (
     [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired"]]
     .drop_duplicates()
 )
+# Add a sample_name column to the analysis_sample file
+analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name(row, 'analysis'), axis=1)
 
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
