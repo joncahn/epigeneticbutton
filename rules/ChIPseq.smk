@@ -530,7 +530,7 @@ rule best_peaks_pseudoreps_and_stats:
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         chrom_sizes = lambda wildcards: "genomes/{wildcards.ref_genome}/chrom.sizes"
     log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "selecting_best_peaks", "merged"))
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", "merged"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
