@@ -137,20 +137,16 @@ analysis_samples = (
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
 
-# # Function to create the unique name for each sample from analysis file
-# def sample_name_analysis(d):
-    # return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
+# # To assign all replicates for each ChiP input
+# chip_input_to_replicates = (
+    # samples
+    # .query("sample_type == 'Input'")
+    # .groupby(["data_type", "line", "tissue", "ref_genome"])["replicate"]
+    # .apply(list)
+    # .to_dict()
+# )
 
-# To assign all replicates for each ChiP input
-chip_input_to_replicates = (
-    samples
-    .query("sample_type == 'Input'")
-    .groupby(["data_type", "line", "tissue", "ref_genome"])["replicate"]
-    .apply(list)
-    .to_dict()
-)
-
-# To assign all replicates to each analysis samples
+# To assign all replicates to each sample
 analysis_to_replicates = (
     samples
     .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]

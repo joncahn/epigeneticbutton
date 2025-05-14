@@ -44,6 +44,9 @@ chip_tracks:
   binsize: 1
   params: "--scaleFactorsMethod 'None' --normalizeUsing CPM --extendReads 300"
 
+# ChIP plots option: default = "all", returns all plots (fingerprints, reports). Replace with "none" if you don't want anything.
+QC_option: "all"
+
 # For peaks
 chip_callpeaks:
   # To link the type of IP with the type of peaks. Can be updated with other marks. If creating regex patterns, make sure to escape "." with "\."
@@ -54,7 +57,7 @@ chip_callpeaks:
   params: "--keep-dup 'all' --nomodel"
   # For Arabidopsis, use 1.3e8; For maize, 2.2e9
   genomesize: "--1.3.e8"
-
+  
 # For Arabidopsis, use 12; For maize, 14 (bowtie2 default) is best
 star_index: "--genomeSAindexNbases 12"
 

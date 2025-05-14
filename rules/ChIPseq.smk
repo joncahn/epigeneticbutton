@@ -22,7 +22,7 @@ def assign_chip_input(wildcards):
         ipname = sample_name(wildcards, 'sample')
         ippaired = get_sample_info_from_name(ipname, samples, 'paired')
         alts = []
-        for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
+        for rep in analysis_to_replicates_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, "Input", wildcards.ref_genome), []):
             alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
             alts.append(f"{alt_inputname}")
             if get_sample_info_from_name(alt_inputname, samples, 'paired') == ippaired:
@@ -38,30 +38,70 @@ def get_peaktype(sample_type, peaktype_config):
             return peaktype
     raise ValueError(f"\nNo peaktype found for sample_type '{sample_type}")
 
+def assign_peak_files_for_idr(wildcards):
+    peakfiles = []
+    sname = sample_name(wildcards, 'analysis')
+    paired = get_sample_info_from_name(sname, 'analysis', 'paired')
+    peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
+    replicates = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+    return [ f"ChIP/peaks/peaks_{paired}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+             for replicate in replicates ]
+
+def input_peak_files_for_best_peaks(wildcards):
+    peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]['peaktype'])
+    sname = sample_name(wildcards, 'analysis')
+    paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
+
+    if len(analysis_to_replicates[(wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome)]) >= 2:
+        if paired == "PE":
+            return { "merged": f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo1": f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo2": f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" }
+        else:
+            return { "merged": f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo1": f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo2": f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" }
+    else:
+        one_rep = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0]
+        if paired == "PE":
+            return { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
+        else:
+            return { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                     "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
+
 def define_final_chip_output(ref_genome):
+    qc_option = config["QC_option"]
     peak_files = []
     bigwig_files = []
+    qc_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) & (samples['sample_type'] != "Input") ]
-    
     for _, row in filtered_rep_samples.iterrows():
         peaktype = get_peaktype(row.sample_type, config["chip_callpeaks"]['peaktype'])
         sname = sample_name(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         
         bigwig_files.append(f"ChIP/tracks/FC__final__{sname}.bw")
+        qc_files.append(f"ChIP/plots/Fingerprint__final__{sname}.png")
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak")
         else:
             peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}.{peaktype}Peak")
-        
+            
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ]
+    for _, row in filtered_analysis_samples.iterrows():
+        spname = sample_name(row, 'analysis')
+        peak_files.append(f"ChIP/chkpts/selected_peaks__{spname}.bed")
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
+            qc_files.append(f"ChIP/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done")
             bigwig_files.append(f"ChIP/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
-            if paired == "PE":
-                peak_files.append(f"ChIP/peaks/peaks_pe__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
-            else:
-                peak_files.append(f"ChIP/peaks/peaks_se__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
-   
-    return peak_files + bigwig_files
+        
+    if qc_option == "all":
+        return peak_files + bigwig_files + qc_files
+    else:
+        return peak_files + bigwig_files
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
@@ -296,7 +336,7 @@ rule make_bigwig_chip:
     output:
         bigwigfile = "ChIP/tracks/FC__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
     params:
-        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
         binsize = config['chip_tracks']['binsize'],
         params = config['chip_tracks']['params']
@@ -307,8 +347,31 @@ rule make_bigwig_chip:
     shell:
         """
         {{
-        printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
-        bamCompare -b1 {ipfile} -b2 {inputfile} -o {output.bigwigfile} -p {threads} --binSize {params.binsize} {params.params}
+        printf "\nMaking bigwig files for {params.ipname} (vs {params.inputname}) with deeptools version:\n"
+        deeptools --version
+        bamCompare -b1 {input.ipfile} -b2 {input.inputfile} -o {output.bigwigfile} -p {threads} --binSize {params.binsize} {params.params}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_fingerprint_plot:
+    input: 
+        ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+        inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
+    output:
+        pngplot = "ChIP/plots/Fingerprint__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.png"
+    params:
+        ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{assign_chip_input(wildcards)}"
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_fingerprint_{file_type}", "either"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nPlotting fingerprint for {params.ipname} (vs {params.inputname}) with deeptools version:\n"
+        deeptools --version
+        plotFingerprint -b {input.ipfile} {input.inputfile} -o {output.pngplot} -p {threads} -l {params.ipname} {params.inputname}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -333,7 +396,7 @@ rule calling_peaks_macs2_pe:
         {{
         printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t ${ipfile} -c {inputfile} -f BAMPE -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -358,33 +421,58 @@ rule calling_peaks_macs2_se:
         {{
         printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t ${ipfile} -c {inputfile} -f BAM -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
         }} 2>&1 | tee -a "{log}"
         """
         
-# rule merging_inputs:
-    # input:
-        # bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{replicate}__{wildcards.ref_genome}.bam" 
-                                      # for replicate in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ]
-    # output:
-        # mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__Input__{ref_genome}.bam"
-    # params:
-        # sname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.ref_genome}"
-    # log:
-        # temp(return_log_chip("{data_type}__{line}__{tissue}__Input__{ref_genome}", "merging", "merged"))
-    # conda: CONDA_ENV
-    # threads: workflow.cores
-    # shell:
-        # """
-        # {{
-        # printf "\nMerging replicates of {params.sname}\n"
-		# samtools merge -@ {threads} ChIP/mapped/temp_{params.sname}.bam {input.bamfiles}
-		# samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
-		# rm -f ChIP/mapped/temp_{params.sname}.bam
-		# samtools index -@ {threads} {output.mergefile}
-        # }} 2>&1 | tee -a "{log}"
-        # """
-        
+rule IDR_analysis_replicates:
+    input:
+        peakfiles = assign_peak_files_for_idr(wildcards)
+    output:
+        touch = "ChIP/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
+    params:
+        sname = lambda wildcards: sample_name(wildcards, 'analysis'),
+        replicate_pairs = lambda wildcards: " ".join( [ f"{r1}:{r2}" for i, r1 in enumerate(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
+                                                       for r2 in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[i+1:] ] ),
+        nb_replicates = lambda wildcards: len(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
+        one_rep = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0]
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
+        paired = get_sample_info_from_name(sample_name(wildcards, 'analysis'), 'analysis', 'paired'),
+        data_type = lambda wildcars: wildcards.data_type,
+        line = lambda wildcards: wildcards.line,
+        tissue = lambda wildcards: wildcards.tissue,
+        sample_type = lambda wildcards: wildcards.sample_type,
+        ref_genome = lambda wildcards: wildcards.ref_genome
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", "reps"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nLooping over each unique pair of biological replicates for {params.sname} to perform IDR with:\n"
+        idr --version
+		if {params.paired} == "PE"; then
+            pre = "se"
+        else
+            pre = "pe"
+        fi
+        for pair in {params.replicate_pairs}
+        do
+            rep1=$(echo ${{pair}} | cut -d":" -f1)
+            rep2=$(echo ${{pair}} | cut -d":" -f2)
+            file1 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}.{params.peaktype}Peak"
+            file2 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep2}}__{params.ref_genome}.{params.peaktype}Peak"
+            outfile = "ChIP/peaks/idr_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}_vs_${{rep2}}__{params.ref_genome}.{params.peaktype}Peak"
+            printf "\nPerforming IDR for ${{rep1}} vs ${{rep2}}\n"
+            idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l ChIP/reports/idr_${name}.log --plot || true
+            ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
+            mv "${{outfile}}.png" ChIP/plots/
+        done
+        touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule merging_replicates:
     input:
         bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
@@ -407,6 +495,59 @@ rule merging_replicates:
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
+        
+rule making_pseudo_replicates:
+    input:
+        bamfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam"
+    output:
+        pseudo1 = temp("ChIP/mapped/pseudo1__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam"),
+        pseudo2 = temp("ChIP/mapped/pseudo2__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam")
+    params:
+        sname = lambda wildcards: sample_name(wildcards, 'analysis')
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "splitting", "pseudo"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nSplitting {params.sname} in two pseudo-replicates\n"
+        samtools view -b -h -s 1.5 -@ {threads} -U ChIP/mapped/temp_pseudo2_{params.sname}.bam -o ChIP/mapped/temp_pseudo1_{params.sname}.bam {input.bamfile}
+		samtools sort -@ {threads} -o {output.pseudo1} ChIP/mapped/temp_pseudo1_{params.sname}.bam
+		rm -f ChIP/mapped/temp_pseudo1_{params.sname}.bam
+		samtools sort -@ {threads} -o {output.pseudo2} ChIP/mapped/temp_pseudo2_{params.sname}.bam
+		rm -f ChIP/mapped/temp_pseudo2_{params.sname}.bam
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule best_peaks_pseudoreps_and_stats:
+    input:
+        inputfiles = input_peak_files_for_best_peaks(wildcards)
+    output:
+        bestpeak = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
+    params:
+        sname = lambda wildcards: sample_name(wildcards, 'analysis'),
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
+        chrom_sizes = lambda wildcards: "genomes/{wildcards.ref_genome}/chrom.sizes"
+    log:
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "selecting_best_peaks", "merged"))
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        {{
+        printf "\nIntersecting merged peaks ({input.merged}), and both pseudo replicates to select the best peaks for {params.sname}\n"
+        awk -v OFS="\t" '{{print $1,$2,$3}}' {input.merged} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_merged.bed
+		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.pseudo1} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo1.bed
+		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.pseudo2} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo2.bed
+		bedtools intersect -a ChIP/peaks/temp_{params.sname}_pseudo1.bed -b ChIP/peaks/temp_{params.sname}_pseudo2.bed > ChIP/peaks/temp_{params.sname}_pseudos.bed
+		bedtools intersect -a ChIP/peaks/temp_{params.sname}_merged.bed -b ChIP/peaks/temp_{params.sname}_pseudo1.bed -u > ChIP/peaks/temp_{params.sname}_selected.bed
+		bedtools intersect -a {input.merged} -b ChIP/peaks/temp_{params.sname}_selected.bed -u > ChIP/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak
+        printf "\nGetting best quality peaks peaks\n"
+        ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its summit.
+        sort -k1,1 -k2,2n -k5nr ChIP/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" '{{print $1";"$2";"$3,$4,$5,$6,$7,$8,$9,$10}}' | awk 'BEGIN {{a=0}} {{b=$1; if (b!=a) print $0; a=$1}}' | awk -F"[;\t]" -v OFS="\t" -v t={peaktype} '{{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}}' | bedtools sort -g {params.chrom_sizes} > {output.bestpeaks}
+        }} 2>&1 | tee -a "{log}"
+        """    
 
 rule ChIP_all:
     input:
