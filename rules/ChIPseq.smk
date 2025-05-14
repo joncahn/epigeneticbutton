@@ -96,7 +96,7 @@ def define_final_chip_output(ref_genome):
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name(row, 'analysis')
-        peak_files.append(f"ChIP/chkpts/selected_peaks__{spname}.bed")
+        peak_files.append(f"ChIP/peaks/selected_peaks__{spname}.bed")
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             qc_files.append(f"ChIP/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done")
             bigwig_files.append(f"ChIP/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
