@@ -25,7 +25,8 @@ def assign_chip_input(wildcards):
         alts.append(f"{alt_inputname}")
         if get_sample_info_from_name(alt_inputname, 'paired') == ippaired:
             return alt_inputname
-
+        else:
+            alts.append(f"{ippaired}")
     raise ValueError(f"\nSample '{ipname}' does not have corresponding Input among:\n{alts}")
                 
 def get_peaktype(sample_type, peaktype_config):
