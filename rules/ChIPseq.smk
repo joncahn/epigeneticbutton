@@ -4,7 +4,7 @@ def return_log_chip(sample_name, step, paired):
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
-    paired = get_sample_info_from_name(sname,'paired')
+    paired = get_sample_info_from_name(sname, samples, 'paired')
     if paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     elif paired == "SE":
@@ -210,7 +210,7 @@ rule make_chip_stats_pe:
         stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_pe__{sample_name}.txt",
         metrics_map = "ChIP/reports/bt2_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "ChIP/logs/process_pe_sample__{sample_name}.log"
     params:
@@ -237,7 +237,7 @@ rule make_chip_stats_se:
         stat_file = f"ChIP/reports/summary_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_se__{sample_name}.txt",
         metrics_map = "ChIP/reports/bt2_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
         log = "ChIP/logs/process_se_sample__{sample_name}.log"
     params:
