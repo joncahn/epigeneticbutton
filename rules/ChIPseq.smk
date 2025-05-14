@@ -527,7 +527,7 @@ rule making_pseudo_replicates:
 
 rule best_peaks_pseudoreps_and_stats:
     input:
-        input_peak_files_for_best_peaks(wildcards)
+        lambda wildcards: input_peak_files_for_best_peaks(wildcards)
     output:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     params:
