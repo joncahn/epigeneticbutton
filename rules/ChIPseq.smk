@@ -14,14 +14,14 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
 
 def assign_chip_input(wildcards):
     ipname = sample_name(wildcards)
-    ippaired = get_sample_info_from_name(ipname)['paired']
+    ippaired = get_sample_info_from_name(ipname, 'paired')
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
     if inputname in samples['sample_name']:
         return inputname
 
     for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
         alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
-        if get_sample_info_from_name(alt_inputname)['paired'] == ippaired:
+        if get_sample_info_from_name(alt_inputname, 'paired') == ippaired:
             return alt_inputname
 
     raise ValueError(f"\nSample '{ipname}' does not have corresponding Input.")
