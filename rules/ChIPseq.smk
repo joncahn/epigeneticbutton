@@ -48,7 +48,7 @@ def define_final_chip_output(ref_genome):
         sname = sample_name(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         
-        bigwig_files.append(f"ChIP/tracks/FC__{sname}.bw")
+        bigwig_files.append(f"ChIP/tracks/FC__final__{sname}.bw")
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak")
         else:
