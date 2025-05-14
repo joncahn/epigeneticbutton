@@ -317,7 +317,7 @@ rule calling_peaks_macs2_pe:
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
-        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, chip_callpeaks["peaktype"]),
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         params = config["chip_callpeaks"]['params'],
         genomesize = config["chip_callpeaks"]['genomesize']
     log:
@@ -342,7 +342,7 @@ rule calling_peaks_macs2_se:
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
-        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, chip_callpeaks["peaktype"]),
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         params = config["chip_callpeaks"]['params'],
         genomesize = config["chip_callpeaks"]['genomesize']
     log:
