@@ -41,7 +41,7 @@ def get_peaktype(sample_type, peaktype_config):
 def assign_peak_files_for_idr(wildcards):
     peakfiles = []
     sname = sample_name(wildcards, 'analysis')
-    paired = get_sample_info_from_name(sname, 'analysis', 'paired')
+    paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     replicates = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
     return [ f"ChIP/peaks/peaks_{paired}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"

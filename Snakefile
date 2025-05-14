@@ -137,15 +137,6 @@ analysis_samples = (
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
 
-# # To assign all replicates for each ChiP input
-# chip_input_to_replicates = (
-    # samples
-    # .query("sample_type == 'Input'")
-    # .groupby(["data_type", "line", "tissue", "ref_genome"])["replicate"]
-    # .apply(list)
-    # .to_dict()
-# )
-
 # To assign all replicates to each sample
 analysis_to_replicates = (
     samples
