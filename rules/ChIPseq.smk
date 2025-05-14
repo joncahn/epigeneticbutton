@@ -358,28 +358,28 @@ rule calling_peaks_macs2_se:
         }} 2>&1 | tee -a "{log}"
         """
         
-rule merging_inputs:
-    input:
-        bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{replicate}__{wildcards.ref_genome}.bam" 
-                                      for replicate in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ]
-    output:
-        mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__Input__{ref_genome}.bam"
-    params:
-        sname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.ref_genome}"
-    log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__Input__{ref_genome}", "merging", "merged"))
-    conda: CONDA_ENV
-    threads: workflow.cores
-    shell:
-        """
-        {{
-        printf "\nMerging replicates of {params.sname}\n"
-		samtools merge -@ {threads} ChIP/mapped/temp_{params.sname}.bam {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
-		rm -f ChIP/mapped/temp_{params.sname}.bam
-		samtools index -@ {threads} {output.mergefile}
-        }} 2>&1 | tee -a "{log}"
-        """
+# rule merging_inputs:
+    # input:
+        # bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{replicate}__{wildcards.ref_genome}.bam" 
+                                      # for replicate in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []) ]
+    # output:
+        # mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__Input__{ref_genome}.bam"
+    # params:
+        # sname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.ref_genome}"
+    # log:
+        # temp(return_log_chip("{data_type}__{line}__{tissue}__Input__{ref_genome}", "merging", "merged"))
+    # conda: CONDA_ENV
+    # threads: workflow.cores
+    # shell:
+        # """
+        # {{
+        # printf "\nMerging replicates of {params.sname}\n"
+		# samtools merge -@ {threads} ChIP/mapped/temp_{params.sname}.bam {input.bamfiles}
+		# samtools sort -@ {threads} -o {output.mergefile} ChIP/mapped/temp_{params.sname}.bam
+		# rm -f ChIP/mapped/temp_{params.sname}.bam
+		# samtools index -@ {threads} {output.mergefile}
+        # }} 2>&1 | tee -a "{log}"
+        # """
         
 rule merging_replicates:
     input:
