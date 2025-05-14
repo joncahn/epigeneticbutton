@@ -18,13 +18,15 @@ def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
     if inputname in samples['sample_name']:
         return inputname
-
+    
+    alts = []
     for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
         alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
+        alts.append("alt_inputname")
         if get_sample_info_from_name(alt_inputname, 'paired') == ippaired:
             return alt_inputname
 
-    raise ValueError(f"\nSample '{ipname}' does not have corresponding Input.")
+    raise ValueError(f"\nSample '{ipname}' does not have corresponding Input among:\n{alts}")
                 
 def get_peaktype(sample_type, peaktype_config):
     for pattern, peaktype in peaktype_config.items():
