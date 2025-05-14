@@ -427,7 +427,7 @@ rule calling_peaks_macs2_se:
         
 rule IDR_analysis_replicates:
     input:
-        peakfiles = assign_peak_files_for_idr(wildcards)
+        peakfiles = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
         touch = "ChIP/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
     params:
