@@ -249,7 +249,7 @@ rule make_rna_stats_se:
 
 rule dispatch_pair_map_only_rna:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards.sample_name, "make_rna_stats", "log")
+        lambda wildcards: assign_mapping_paired(wildcards, "make_rna_stats", "log")
     output:
         touch = "RNA/chkpts/map__{sample_name}.done"
     shell:
