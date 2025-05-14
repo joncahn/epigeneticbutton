@@ -55,7 +55,7 @@ def define_final_chip_output(ref_genome):
             peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}.{peaktype}Peak")
         
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            bigwig_files.append(f"ChIP/tracks/FC__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
+            bigwig_files.append(f"ChIP/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
             if paired == "PE":
                 peak_files.append(f"ChIP/peaks/peaks_pe__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.{peaktype}Peak")
             else:
@@ -294,14 +294,14 @@ rule make_bigwig_chip:
         ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
         inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
-        bigwigfile = "ChIP/tracks/FC__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
+        bigwigfile = "ChIP/tracks/FC__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
         binsize = config['chip_tracks']['binsize'],
         params = config['chip_tracks']['params']
     log:
-        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_bigwig", "either"))
+        temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_bigwig_{file_type}", "either"))
     conda: CONDA_ENV
     threads: workflow.cores
     shell:
