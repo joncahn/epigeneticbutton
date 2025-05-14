@@ -13,26 +13,24 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     return getattr(rule_obj.output, outputfile).format(sample_name=sname)
 
 def assign_chip_input(wildcards):
-    if wildcards.filetype in [merged, pseudo1, pseudo2]:
-        ipname = sample_name(wildcards, 'analysis')
-        ippaired = get_sample_info_from_name(ipname, analysis_samples, 'paired')
+    inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
+    if wildcards.filetype in ['merged', 'pseudo1', 'pseudo2']:
+        return inputname
+    elif inputname in samples['sample_name']:
+        return inputname
     else:
         ipname = sample_name(wildcards, 'sample')
         ippaired = get_sample_info_from_name(ipname, samples, 'paired')
-
-    inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
-    if inputname in samples['sample_name']:
-        return inputname
-    
-    alts = []
-    for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
-        alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
-        alts.append(f"{alt_inputname}")
-        if get_sample_info_from_name(alt_inputname, 'paired') == ippaired:
-            return alt_inputname
-        else:
-            alts.append(f"{ippaired}")
-    raise ValueError(f"\nSample '{ipname}' does not have corresponding Input among:\n{alts}")
+        alts = []
+        for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
+            alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
+            alts.append(f"{alt_inputname}")
+            if get_sample_info_from_name(alt_inputname, 'paired') == ippaired:
+                return alt_inputname
+            else:
+                alts.append(f"{ippaired}")
+        
+        raise ValueError(f"\nSample '{ipname}' does not have corresponding Input among:\n{alts}")
                 
 def get_peaktype(sample_type, peaktype_config):
     for pattern, peaktype in peaktype_config.items():
