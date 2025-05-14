@@ -43,7 +43,7 @@ def define_final_chip_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) & (samples['sample_type'] != "Input") ]
     
     for _, row in filtered_rep_samples.iterrows():
-        peaktype = get_peaktype(row.sample_type, config['chip_callpeaks']['peaktype'])
+        peaktype = get_peaktype(row.sample_type, config["chip_callpeaks"]['peaktype'])
         sname = sample_name(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
