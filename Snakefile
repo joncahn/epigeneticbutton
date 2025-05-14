@@ -117,7 +117,7 @@ def get_sample_info_from_name(sname, field):
         return match[field].iloc[0]
 
 # Function to extract all samples of each data_type based on sample name
-def get_sample_names_by_data_type(data_type):
+def get_sample_names_by_env(data_type):
     sample_names = samples.loc[samples['env'] == data_type, "sample_name"].tolist()
     return sample_names
 
@@ -217,16 +217,16 @@ rule all:
 rule map_only:
     input:
         [
-            f"{datatype_to_env[data_type]}/chkpts/process__{sample_name}.done"
-            for data_type in DATA_TYPES
-            for sample_name in get_sample_names_by_data_type(data_type)
+            f"{env}/chkpts/process__{sample_name}.done"
+            for env in UNIQUE_ENVS
+            for sample_name in get_sample_names_by_env(env)
         ]
 
 rule coverage_chip:
     input: 
         [
             f"ChIP/tracks/coverage__{sample_name}.bw"
-            for sample_name in get_sample_names_by_data_type("ChIP")
+            for sample_name in get_sample_names_by_env("ChIP")
         ]
 
 # Rule to perform combined analysis

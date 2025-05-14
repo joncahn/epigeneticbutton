@@ -9,24 +9,23 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
         rule_obj = getattr(rules, f"{rulename}_pe")
     elif paired == "SE":
         rule_obj = getattr(rules, f"{rulename}_se")
-    elif paired == "Input not found":
-        tmp_dt = parse_sample_name(sname)['data_type']
-        tmp_line = parse_sample_name(sname)['line']
-        tmp_tis = parse_sample_name(sname)['tissue']
-        tmp_rg = parse_sample_name(sname)['ref_genome']
-        if len(chip_input_to_replicates[(tmp_dt, tmp_line, tmp_tis, tmp_rg)])>=1:
-            tmp_rep = chip_input_to_replicates.get((tmp_dt, tmp_line, tmp_tis, tmp_rg), [0])
-            sname = sample_name(tmp_dt, tmp_line, tmp_tis, "Input", tmp_rep, tmp_rg)
-            tmp_pair = get_sample_info_from_name(sname, 'paired')
-            if paired == "PE":
-                rule_obj = getattr(rules, f"{rulename}_pe")
-            elif paired == "SE":
-                rule_obj = getattr(rules, f"{rulename}_se")
-    else:
-        raise ValueError(f"\nSample '{sname}' does not have corresponding Input.")
-
-    return getattr(rule_obj.output, outputfile).format(sample_name=sname)
         
+    return getattr(rule_obj.output, outputfile).format(sample_name=sname)
+
+def assign_chip_input(wildcards):
+    ipname = sample_name(wildcards)
+    ippaired = get_sample_info_from_name(ipname)['paired']
+    inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
+    if inputname in samples['sample_name']:
+        return inputname
+
+    for rep in chip_input_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.ref_genome), []):
+        alt_inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{rep}__{wildcards.ref_genome}"
+        if get_sample_info_from_name(alt_inputname)['paired'] == ippaired:
+            return alt_inputname
+
+    raise ValueError(f"\nSample '{ipname}' does not have corresponding Input.")
+                
 def get_peaktype(sample_type, peaktype_config):
     for pattern, peaktype in peaktype_config.items():
         if re.search(pattern, sample_type):
@@ -282,13 +281,13 @@ rule make_coverage_chip:
 
 rule make_bigwig_chip:
     input: 
-        ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
-        inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
+        ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+        inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         bigwigfile = "ChIP/tracks/FC__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
         binsize = config['chip_tracks']['binsize'],
         params = config['chip_tracks']['params']
     log:
@@ -305,13 +304,13 @@ rule make_bigwig_chip:
 
 rule calling_peaks_macs2_pe:
     input:
-        ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
-        inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
+        ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+        inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         peakfile = "ChIP/peaks/peaks_pe__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.{peaktype}Peak"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, chip_callpeaks["peaktype"]),
         params = config["chip_callpeaks"]['params'],
         genomesize = config["chip_callpeaks"]['genomesize']
@@ -330,13 +329,13 @@ rule calling_peaks_macs2_pe:
 
 rule calling_peaks_macs2_se:
     input:
-        ipfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
-        inputfile = "ChIP/mapped/{file_type}__{data_type}__{line}__{tissue}__Input__{replicate}__{ref_genome}.bam"
+        ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+        inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         peakfile = "ChIP/peaks/peaks_se__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.{peaktype}Peak"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        inputname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, chip_callpeaks["peaktype"]),
         params = config["chip_callpeaks"]['params'],
         genomesize = config["chip_callpeaks"]['genomesize']
