@@ -9,8 +9,8 @@ rule get_fastq_pe:
         fastq1 = temp("{data_type}/fastq/raw__{sample_name}__R1.fastq.gz"),
         fastq2 = temp("{data_type}/fastq/raw__{sample_name}__R2.fastq.gz")
     params:
-        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
-        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
+        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
+        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type
     log:
@@ -41,8 +41,8 @@ rule get_fastq_se:
     output:
         fastq0 = temp("{data_type}/fastq/raw__{sample_name}__R0.fastq.gz")
     params:
-        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "seq_id"),
-        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, "fastq_path"),
+        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
+        fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type
     log:
