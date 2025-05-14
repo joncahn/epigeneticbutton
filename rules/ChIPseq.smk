@@ -13,8 +13,13 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     return getattr(rule_obj.output, outputfile).format(sample_name=sname)
 
 def assign_chip_input(wildcards):
-    ipname = sample_name(wildcards)
-    ippaired = get_sample_info_from_name(ipname, 'paired')
+    if wildcards.filetype in [merged, pseudo1, pseudo2]:
+        ipname = sample_name(wildcards, 'analysis')
+        ippaired = get_sample_info_from_name(ipname, analysis_samples, 'paired')
+    else:
+        ipname = sample_name(wildcards, 'sample')
+        ippaired = get_sample_info_from_name(ipname, samples, 'paired')
+
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
     if inputname in samples['sample_name']:
         return inputname
@@ -41,8 +46,8 @@ def define_final_output(env, ref_genome):
     
     for _, row in filtered_rep_samples.iterrows():
         peaktype = get_peaktype(row.sample_type, config['chip_callpeaks']['peaktype'])
-        sname = sample_name(row)
-        paired = get_sample_info_from_name(sname,'paired')
+        sname = sample_name(row, 'sample')
+        paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak")
         else:
@@ -385,7 +390,7 @@ rule merging_replicates:
     output:
         mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
-        sname = lambda wildcards: sample_name_analysis(wildcards)
+        sname = lambda wildcards: sample_name(wildcards, 'analysis')
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging", "merged"))
     conda: CONDA_ENV

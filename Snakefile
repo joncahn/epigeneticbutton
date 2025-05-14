@@ -96,8 +96,11 @@ def parse_sample_name(sample_name):
     return parsed
 
 # Function to create a unique name for each sample based on the sample columns, and later based on wildcards
-def sample_name(d):
-    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
+def sample_name(d, string):
+    if string == 'sample':
+        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
+    elif string == 'analysis':
+        return f"{d['env']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # Function to access extra information form the samplefile using wildcards
 def get_sample_info(wildcards, field):
@@ -112,13 +115,13 @@ def get_sample_info_from_name(sname, samples, field):
     else:
         return match[field].iloc[0]
 
-# Function to extract all samples of each data_type based on sample name
-def get_sample_names_by_env(data_type):
-    sample_names = samples.loc[samples['env'] == data_type, "sample_name"].tolist()
+# Function to extract all samples of each env based on sample name
+def get_sample_names_by_env(env, samples):
+    sample_names = samples.loc[samples['env'] == env, "sample_name"].tolist()
     return sample_names
 
-# Map data types to environments
-datatype_to_env = dict(zip(samples["data_type"], samples["env"]))
+# # Map data types to environments
+# datatype_to_env = dict(zip(samples["data_type"], samples["env"]))
 
 # Get unique list of environments
 UNIQUE_ENVS = samples["env"].unique().tolist()
@@ -134,9 +137,9 @@ analysis_samples = (
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
 
-# Function to create the unique name for each sample from analysis file
-def sample_name_analysis(d):
-    return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
+# # Function to create the unique name for each sample from analysis file
+# def sample_name_analysis(d):
+    # return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # To assign all replicates for each ChiP input
 chip_input_to_replicates = (
@@ -151,14 +154,6 @@ chip_input_to_replicates = (
 analysis_to_replicates = (
     samples
     .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
-    .apply(list)
-    .to_dict()
-)
-
-# To assign all ChiP IP to their inputs
-chip_samples_to_replicates = (
-    analysis_samples
-    .groupby(["data_type", "line", "tissue", "ref_genome"])["sample_type"]
     .apply(list)
     .to_dict()
 )
@@ -215,14 +210,14 @@ rule map_only:
         [
             f"{env}/chkpts/process__{sample_name}.done"
             for env in UNIQUE_ENVS
-            for sample_name in get_sample_names_by_env(env)
+            for sample_name in get_sample_names_by_env(env, samples)
         ]
 
 rule coverage_chip:
     input: 
         [
             f"ChIP/tracks/coverage__{sample_name}.bw"
-            for sample_name in get_sample_names_by_env("ChIP")
+            for sample_name in get_sample_names_by_env("ChIP", samples)
         ]
 
 # Rule to perform combined analysis
