@@ -14,7 +14,7 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
-    if wildcards.filetype in ['merged', 'pseudo1', 'pseudo2']:
+    if wildcards.file_type in ['merged', 'pseudo1', 'pseudo2']:
         return inputname
     elif inputname in samples['sample_name']:
         return inputname
