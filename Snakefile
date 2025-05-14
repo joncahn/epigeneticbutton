@@ -100,7 +100,7 @@ def sample_name(d, string):
     if string == 'sample':
         return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
     elif string == 'analysis':
-        return f"{d['env']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
+        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # Function to access extra information form the samplefile using wildcards
 def get_sample_info(wildcards, field):
