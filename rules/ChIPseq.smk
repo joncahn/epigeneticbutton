@@ -74,7 +74,7 @@ def input_peak_files_for_best_peaks(wildcards):
             result = { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
                      "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
                      "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
-    print(result)
+    print("Returning input files:", result)
     return result
 
 def define_final_chip_output(ref_genome):
@@ -527,7 +527,7 @@ rule making_pseudo_replicates:
 
 rule best_peaks_pseudoreps_and_stats:
     input:
-        inputfiles = lambda wildcards: input_peak_files_for_best_peaks(wildcards)
+        input_peak_files_for_best_peaks(wildcards)
     output:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     params:
