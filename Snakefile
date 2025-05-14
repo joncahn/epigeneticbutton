@@ -130,7 +130,7 @@ UNIQUE_ENVS = samples["env"].unique().tolist()
 analysis_samples = (
     samples
     .query("sample_type != 'Input'") # filter Input samples
-    [["data_type", "line", "tissue", "sample_type", "ref_genome", "paired"]]
+    [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired"]]
     .drop_duplicates()
 )
 
