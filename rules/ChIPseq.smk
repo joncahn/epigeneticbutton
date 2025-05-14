@@ -434,8 +434,8 @@ rule IDR_analysis_replicates:
         sname = lambda wildcards: sample_name(wildcards, 'analysis'),
         replicate_pairs = lambda wildcards: " ".join( [ f"{r1}:{r2}" for i, r1 in enumerate(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
                                                        for r2 in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[i+1:] ] ),
-        nb_replicates = lambda wildcards: len(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
-        one_rep = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0]
+        nb_replicates = lambda wildcards: len(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])),
+        one_rep = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0],
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         paired = get_sample_info_from_name(sample_name(wildcards, 'analysis'), 'analysis', 'paired'),
         data_type = lambda wildcars: wildcards.data_type,
