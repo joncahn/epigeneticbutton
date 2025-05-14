@@ -39,7 +39,6 @@ def get_peaktype(sample_type, peaktype_config):
     raise ValueError(f"\nNo peaktype found for sample_type '{sample_type}")
 
 def assign_peak_files_for_idr(wildcards):
-    peakfiles = []
     sname = sample_name(wildcards, 'analysis')
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
