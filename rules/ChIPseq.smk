@@ -451,9 +451,9 @@ rule calling_peaks_macs2_pe:
     shell:
         """
         {{
-        printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        printf "\nCalling {params.peaktype} peaks for paired-end {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g {params.genomesize} {params.params} -n {params.ipname} --outdir ChIP/peaks/ --{params.peaktype}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -476,9 +476,9 @@ rule calling_peaks_macs2_se:
     shell:
         """
         {{
-        printf "\nCalling {params.peaktype} peaks for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        printf "\nCalling {params.peaktype} peaks for single-end {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n {param.ipname} --outdir ChIP/peaks/ --{params.peaktype}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n {params.ipname} --outdir ChIP/peaks/ --{params.peaktype}
         }} 2>&1 | tee -a "{log}"
         """
         
