@@ -99,11 +99,6 @@ def parse_sample_name(sample_name):
 
     return parsed
 
-# Function to access extra information form the samplefile using wildcards
-# def get_sample_info(wildcards, field):
-    # key = (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.replicate, wildcards.ref_genome)
-    # return sample_info_map[key][field]
-
 # Function to access extra information form the samplefile using the name
 def get_sample_info_from_name(sname, samples, field):
     match = samples.loc[samples["sample_name"] == sname]
@@ -143,6 +138,14 @@ analysis_to_replicates = (
     .apply(list)
     .to_dict()
 )
+
+analysis_to_replicates_sname = (
+    samples
+    .groupby(["sample_name"])["replicate"]
+    .apply(list)
+    .to_dict()
+)
+
 
 # Define output directories
 DIRS = {
