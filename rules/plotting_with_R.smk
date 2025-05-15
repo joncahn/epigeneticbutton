@@ -52,7 +52,7 @@ rule prepping_chip_peak_stats:
     output:
         stat_file = "combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
     params:
-        sample_file = wildcards lambda: f"{wildcards.analysis_name}__analysis_samplefile.txt",
+        sample_file = lambda wildcards: f"{wildcards.analysis_name}__analysis_samplefile.txt",
         analysis_name = lambda wildcards: wildcards.analysis_name,
         env = lambda wildcards: wildcards.env
     shell:
