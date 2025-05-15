@@ -128,9 +128,9 @@ def define_final_chip_output(ref_genome):
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
-            qc_files.append(f"ChIP/logs/process_pe_sample__{sample_name}.log") # mapping stats for each paired-end replicate
+            qc_files.append(f"ChIP/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
         else:
-            qc_files.append(f"ChIP/logs/process_se_sample__{sample_name}.log") # mapping stats for each single-end replicate
+            qc_files.append(f"ChIP/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
             
     filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ]
     for _, row in filtered_rep_samples_no_input.iterrows():
