@@ -51,10 +51,10 @@ def assign_peak_files_for_idr(wildcards):
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     replicates = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
     if paired == "PE":
-        return [ f"ChIP/peaks/peaks_pe__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+        return [ f"ChIP/peaks/peaks_pe__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}_peaks.{peaktype}Peak"
                 for replicate in replicates ]
     else:
-        return [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.{peaktype}Peak"
+        return [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}_peaks.{peaktype}Peak"
                 for replicate in replicates ]
 
 def input_peak_files_for_best_peaks(wildcards):
@@ -64,23 +64,23 @@ def input_peak_files_for_best_peaks(wildcards):
 
     if len(analysis_to_replicates[(wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome)]) >= 2:
         if paired == "PE":
-            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" ]
+            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
         else:
-            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" ]
+            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
     else:
         one_rep = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0]
         if paired == "PE":
-            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" ]
+            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
         else:
-            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" ]
+            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
 
     return result
 
@@ -140,9 +140,9 @@ def define_final_chip_output(ref_genome):
         bigwig_files.append(f"ChIP/tracks/FC__final__{sname}.bw") # bigwig log2FC enrichment vs input for each replicate
         qc_files.append(f"ChIP/plots/Fingerprint__final__{sname}.png") # fingerprint plots for each replicate and its input
         if paired == "PE":
-            peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}.{peaktype}Peak") # peak file for each paired-end replicate
+            peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak") # peak file for each paired-end replicate
         else:
-            peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}.{peaktype}Peak") # peak file for each single-end replicate
+            peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak") # peak file for each single-end replicate
             
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_analysis_samples.iterrows():
@@ -437,7 +437,7 @@ rule calling_peaks_macs2_pe:
         ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
         inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
-        peakfile = "ChIP/peaks/peaks_pe__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.{peaktype}Peak"
+        peakfile = "ChIP/peaks/peaks_pe__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.{peaktype}Peak"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
@@ -463,7 +463,7 @@ rule calling_peaks_macs2_se:
         ipfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
         inputfile = lambda wildcards: f"ChIP/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
-        peakfile = "ChIP/peaks/peaks_se__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.{peaktype}Peak"
+        peakfile = "ChIP/peaks/peaks_se__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.{peaktype}Peak"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
@@ -520,9 +520,9 @@ rule IDR_analysis_replicates:
         do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
-            file1 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}.{params.peaktype}Peak"
-            file2 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep2}}__{params.ref_genome}.{params.peaktype}Peak"
-            outfile = "ChIP/peaks/idr_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}_vs_${{rep2}}__{params.ref_genome}.{params.peaktype}Peak"
+            file1 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
+            file2 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
+            outfile = "ChIP/peaks/idr_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}_vs_${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
             printf "\nPerforming IDR for ${{rep1}} vs ${{rep2}}\n"
             idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l ChIP/reports/idr_{params.sname}.log --plot || true
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
@@ -643,7 +643,7 @@ rule make_peak_stats:
         i=0
         while [[ ${{i}} -le 1 ]]; do
             rep={params.reps[${{i}}]}
-            filename="ChIP/peaks/peaks_${{pre}}__final__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep}}__{params.ref_genome}.{params.sample_type}Peak"
+            filename="ChIP/peaks/peaks_${{pre}}__final__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep}}__{params.ref_genome}_peaks.{params.sample_type}Peak"
             n=$(awk '{{print $1,$2,$3}}' ${{filename}} | sort -k1,1 -k2,2n -u | wc -l))
             nrep="${{nrep}}\t${{n}}"
             i=${{i+1}}
