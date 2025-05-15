@@ -198,7 +198,11 @@ rule all:
 rule prepping_mapping_stats:
     input:
         input_file = "{env}/reports/summary_{env}_mapping_stats_{analysis_name}.txt",
-        mapping_done = "{env}/chkpts/map__{sample_name}.done"
+        [
+            f"{env}/chkpts/map__{sample_name}.done"
+            for env in UNIQUE_ENVS
+            for sample_name in get_sample_names_by_env(env, samples)
+        ]
     output:
         stat_file = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     params:
@@ -230,11 +234,6 @@ rule plotting_mapping_stats_chip_rna:
 # Rule to specify final target if only mapping is required
 rule map_only:
     input:
-        [
-            f"{env}/chkpts/map__{sample_name}.done"
-            for env in UNIQUE_ENVS
-            for sample_name in get_sample_names_by_env(env, samples)
-        ],
         expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=UNIQUE_ENVS)
 
 # Rule to specify final target if only chip coverage is wanted
