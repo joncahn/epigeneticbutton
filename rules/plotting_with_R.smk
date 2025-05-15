@@ -1,4 +1,5 @@
 ### R plots
+CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
 
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
@@ -32,6 +33,6 @@ rule plotting_mapping_stats_chip_rna:
         plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     params:
         analysisname = lambda wildcards: f"{wildcards.analysis_name}"
-    conda: "envs/r_plotting.yaml"
+    conda: CONDA_ENV
     script:
         "scripts/MaizeCode_R_mapping_stats.R"
