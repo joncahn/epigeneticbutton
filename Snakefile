@@ -199,7 +199,7 @@ rule prepping_mapping_stats:
     input:
         input_file = lambda wildcards: f"{wildcards.env}/reports/summary_{wildcards.env}_mapping_stats_{analysis_name}.txt"
     output:
-        stat_file = f"combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
+        stat_file = lambda wildcards: f"combined/reports/summary_mapping_stats_{analysis_name}_{wildcards.env}.txt"
     params:
         sample_file = samples,
         name = lambda wildcards: f"{analysis_name}_{wildcards.env}"
