@@ -1,3 +1,8 @@
+# For debugging
+def debug_return(name, value):
+    print(f"[DEBUG] {name} returned: {value} (type: {type(value)})")
+    return value
+
 # function to access logs more easily
 def return_log_chip(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -526,7 +531,8 @@ rule making_pseudo_replicates:
 
 rule best_peaks_pseudoreps_and_stats:
     input:
-        peakfiles = input_peak_files_for_best_peaks
+#        peakfiles = input_peak_files_for_best_peaks
+        peakfiles = lambda wildcards: debug_return("input_peak_files_for_best_peaks", input_peak_files_for_best_peaks(wildcards))
     output:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     params:
