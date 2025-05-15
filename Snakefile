@@ -187,6 +187,7 @@ include: "rules/environment_setup.smk"
 include: "rules/sample_download.smk"
 include: "rules/ChIPseq.smk"
 include: "rules/RNAseq.smk"
+include: "rules/plotting_with_R.smk"
 
 # Rule all to specify final target
 rule all:
