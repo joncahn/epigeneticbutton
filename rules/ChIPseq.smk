@@ -100,7 +100,7 @@ def define_logs_final_input(wildcards):
         log_files.append(return_log_chip(namerep, f"making_bigwig_final", paired))
         log_files.append(return_log_chip(namerep, f"making_fingerprint_final", paired))
     
-    if len(analysis_to_replicates_sname[(sname)]) >= 2:
+    if len(analysis_to_replicates[(data_type, line, tissue, sample_type, ref_genome)]) >= 2:
         log_files.append(return_log_chip(sname, "IDR", ""))
         log_files.append(return_log_chip(sname, "merging_reps", ""))
         
