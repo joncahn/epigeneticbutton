@@ -5,7 +5,7 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        checkpoints = lambda wildcards: [ f"{env}/chkpts/map__{sample_name}.done" for sample_name in get_sample_names_by_env(wildcards.env, samples) ],
+        checkpoints = lambda wildcards: [ f"{wildcards.env}/chkpts/map__{sample_name}.done" for sample_name in get_sample_names_by_env(wildcards.env, samples) ],
         input_file = "{env}/reports/summary_{env}_mapping_stats_{analysis_name}.txt"
     output:
         stat_file = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
@@ -41,7 +41,7 @@ rule plotting_mapping_stats_chip_rna:
 # Rules to prep and then plot the peak stats
 rule prepping_chip_peak_stats:
     input:
-        checkpoints = lambda wildcards: [ f"{env}/logs/called_peaks__{sample_name}.log" for sample_name in get_sample_names_by_env(wildcards.env, wildcards.analysis_samples) ],
+        checkpoints = lambda wildcards: [ f"{wildcards.env}/logs/called_peaks__{sample_name}.log" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ],
         input_file = "{env}/reports/summary_{env}_peak_stats_{analysis_name}.txt"
     output:
         stat_file = "combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
