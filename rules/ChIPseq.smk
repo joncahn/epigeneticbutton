@@ -535,7 +535,7 @@ rule best_peaks_pseudoreps_and_stats:
     input:
 #        peakfiles = input_peak_files_for_best_peaks
         peakfiles = lambda wildcards: debug_return("input_peak_files_for_best_peaks", input_peak_files_for_best_peaks(wildcards)),
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     params:
