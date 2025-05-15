@@ -369,6 +369,7 @@ rule pe_or_se_dispatch:
     shell:
         """
         mv {input} {output.bam}
+        mv {input}.bai {output.bam}.bai
         touch {output.touch} 
         """
     
