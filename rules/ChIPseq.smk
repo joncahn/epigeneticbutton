@@ -299,7 +299,7 @@ rule filter_chip_se:
         samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
         rm -f "{input.samfile}"
         samtools sort -@ {threads} -o "ChIP/mapped/temp2_{params.sample_name}.bam" "ChIP/mapped/temp1_{params.sample_name}.bam"
-        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp2_{sample_name}.bam" "{output.bamfile}"
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp2_{params.sample_name}.bam" "{output.bamfile}"
         samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
