@@ -40,6 +40,10 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 ```bash
 git clone https://github.com/joncahn/epigeneticbutton.git
 ```
+or for ssh connection
+```bash
+git clone git@github.com:joncahn/epigeneticbutton.git
+```
 ```bash
 cd epigeneticbutton
 ```
