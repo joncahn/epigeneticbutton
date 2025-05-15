@@ -262,17 +262,17 @@ rule filter_chip_pe:
     shell:
         """
         {{
-        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
+        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {params.sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{sample_name}.bam" "{input.samfile}"
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
         rm -f "{input.samfile}"
-        samtools fixmate -@ {threads} -m "ChIP/mapped/temp1_{sample_name}.bam" "ChIP/mapped/temp2_{sample_name}.bam"
-        samtools sort -@ {threads} -o "ChIP/mapped/temp3_{sample_name}.bam" "ChIP/mapped/temp2_{sample_name}.bam"
-        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp3_{sample_name}.bam" "{output.bamfile}"
+        samtools fixmate -@ {threads} -m "ChIP/mapped/temp1_{params.sample_name}.bam" "ChIP/mapped/temp2_{params.sample_name}.bam"
+        samtools sort -@ {threads} -o "ChIP/mapped/temp3_{params.sample_name}.bam" "ChIP/mapped/temp2_{params.sample_name}.bam"
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp3_{params.sample_name}.bam" "{output.bamfile}"
         samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f ChIP/mapped/temp*"_{sample_name}.bam"
+        rm -f ChIP/mapped/temp*"_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -294,16 +294,16 @@ rule filter_chip_se:
     shell:
         """
         {{
-        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {sample_name} file using {params.map_option} with samtools version:\n"
+        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {params.sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{sample_name}.bam" "{input.samfile}"
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
         rm -f "{input.samfile}"
-        samtools sort -@ {threads} -o "ChIP/mapped/temp2_{sample_name}.bam" "ChIP/mapped/temp1_{sample_name}.bam"
+        samtools sort -@ {threads} -o "ChIP/mapped/temp2_{params.sample_name}.bam" "ChIP/mapped/temp1_{params.sample_name}.bam"
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp2_{sample_name}.bam" "{output.bamfile}"
         samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f ChIP/mapped/temp*"_{sample_name}.bam"
+        rm -f ChIP/mapped/temp*"_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
