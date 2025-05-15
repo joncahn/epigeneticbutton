@@ -197,12 +197,12 @@ rule all:
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        input_file = "{env}/reports/summary_{env}_mapping_stats_{analysis_name}.txt",
         [
             f"{env}/chkpts/map__{sample_name}.done"
             for env in UNIQUE_ENVS
             for sample_name in get_sample_names_by_env(env, samples)
-        ]
+        ],
+        "{env}/reports/summary_{env}_mapping_stats_{analysis_name}.txt"
     output:
         stat_file = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     params:
