@@ -611,7 +611,7 @@ rule best_peaks_pseudoreps:
         merged=$(wc -l ChIP/peaks/temp_{params.sname}_merged.bed | cut -d" " -f1)
 		pseudos=$(awk '{{print $1,$2,$3}}' ChIP/peaks/temp_{params.sname}_pseudos.bed | sort -k1,1 -k2,2n -u | wc -l)
 		selected=$(cat ChIP/peaks/temp_{params.sname}_selected.bed | sort -k1,1 -k2,2n -u | wc -l)
-		printf "Merged=${{merged}}\nPseudos=${{pseudos}}\nSelected=${{selected}}\n" > "ChIP/reports/stats_pseudoreps__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt"
+		printf "Merged=${{merged}}\nPseudos=${{pseudos}}\nSelected=${{selected}}\n" > "ChIP/reports/stats_pseudoreps__{params.sname}.txt"
         rm -f "ChIP/peaks/temp_{params.sname}"*
         }} 2>&1 | tee -a "{log}"
         """    
