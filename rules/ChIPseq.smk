@@ -94,7 +94,7 @@ def define_logs_final_input(wildcards):
     ref_genome = get_sample_info_from_name(sname, analysis_samples, 'ref_genome')
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
-    for rep in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []):
+    for rep in analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), []):
         namerep = f"{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}"
         log_files.append(return_log_chip(namerep, f"final__{peaktype}peak_calling", paired))
         log_files.append(return_log_chip(namerep, f"making_bigwig_final", paired))
