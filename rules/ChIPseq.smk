@@ -64,23 +64,23 @@ def input_peak_files_for_best_peaks(wildcards):
 
     if len(analysis_to_replicates[(wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome)]) >= 2:
         if paired == "PE":
-            result = { "merged": f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo1": f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo2": f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" }
+            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" ]
         else:
-            result = { "merged": f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo1": f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo2": f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" }
+            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.{peaktype}Peak" ]
     else:
         one_rep = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0]
         if paired == "PE":
-            result = { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
+            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" ]
         else:
-            result = { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
-                     "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
+            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
+                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" ]
     print(f"[DEBUG] input_peak_files_for_best_peaks called with wildcards={wildcards}, returned={result}")
     return result
 
