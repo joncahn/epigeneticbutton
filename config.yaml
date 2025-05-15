@@ -1,5 +1,5 @@
 # Path to the working directory where the repository was cloned
-repo_folder: /grid/martienssen/home/jcahn/nlsas/projects/epibutton
+repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/epibutton"
 repo_folder_rule: "path/to/epigeneticbutton/repo"
 
 # Name of analysis
@@ -82,4 +82,5 @@ analysis:
 resources:
   threads: 8
   memory: "16G"
-  tmp_space: "10G" 
+  tmp_space: "10G"
+  

@@ -1,0 +1,12 @@
+name: r_plotting
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.2.3
+  - r-dplyr
+  - r-ggplot2
+  - r-readr
+  - r-tidyr
+  - r-cowplot
+  - r-RColorBrewer
