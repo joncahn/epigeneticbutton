@@ -632,7 +632,7 @@ rule make_peak_stats:
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'),
-        reps = lambda wildcards: " ".join(analysis_to_replicates.get(get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'line'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'), []))
+        reps = lambda wildcards: " ".join(analysis_to_replicates.get((get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'line'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome')), []))
     shell:
         """
         if [[ {params.paired} == "PE" ]}; then
