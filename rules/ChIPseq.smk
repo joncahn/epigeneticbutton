@@ -554,7 +554,7 @@ rule best_peaks_pseudoreps_and_stats:
 		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles.pseudo2} | sort -k1,1 -k2,2n -u > ChIP/peaks/temp_{params.sname}_pseudo2.bed
 		bedtools intersect -a ChIP/peaks/temp_{params.sname}_pseudo1.bed -b ChIP/peaks/temp_{params.sname}_pseudo2.bed > ChIP/peaks/temp_{params.sname}_pseudos.bed
 		bedtools intersect -a ChIP/peaks/temp_{params.sname}_merged.bed -b ChIP/peaks/temp_{params.sname}_pseudo1.bed -u > ChIP/peaks/temp_{params.sname}_selected.bed
-		bedtools intersect -a {input.merged} -b ChIP/peaks/temp_{params.sname}_selected.bed -u > ChIP/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak
+		bedtools intersect -a {input.peakfiles.merged} -b ChIP/peaks/temp_{params.sname}_selected.bed -u > ChIP/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak
         printf "\nGetting best quality peaks peaks\n"
         ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its summit.
         sort -k1,1 -k2,2n -k5nr ChIP/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" '{{print $1";"$2";"$3,$4,$5,$6,$7,$8,$9,$10}}' | awk 'BEGIN {{a=0}} {{b=$1; if (b!=a) print $0; a=$1}}' | awk -F"[;\t]" -v OFS="\t" -v t={peaktype} '{{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}}' | bedtools sort -g {input.chrom_sizes} > {output.bestpeaks}
