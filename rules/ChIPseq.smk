@@ -1,6 +1,8 @@
 # For debugging
+from snakemake.logging import logger
+
 def debug_return(name, value):
-    print(f"[DEBUG] {name} returned: {value} (type: {type(value)})")
+    logger.info(f"[DEBUG] {name} returned: {value} (type: {type(value)})")
     return value
 
 # function to access logs more easily
