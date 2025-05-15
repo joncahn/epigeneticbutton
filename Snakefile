@@ -197,12 +197,12 @@ rule all:
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        input_file = lambda wildcards: f"{wildcards.env}/reports/summary_{wildcards.env}_mapping_stats_{analysis_name}.txt"
+        input_file = "{env}/reports/summary_{env}_mapping_stats_{analysis_name}.txt"
     output:
-        stat_file = lambda wildcards: f"combined/reports/summary_mapping_stats_{analysis_name}_{wildcards.env}.txt"
+        stat_file = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     params:
         sample_file = samples,
-        name = lambda wildcards: f"{analysis_name}_{wildcards.env}"
+        name = lambda wildcards: f"{wildcards.analysis_name}_{wildcards.env}"
     shell:
         """
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
@@ -216,11 +216,11 @@ rule prepping_mapping_stats:
     
 rule plotting_mapping_stats_chip_rna:
     input:
-        summary_stats = lambda wildcards: f"combined/reports/summary_mapping_stats_{analysis_name}_{wildcards.env}.txt",
+        summary_stats = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     output:
-        plot = f"combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
+        plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     params:
-        analysisname = f"{analysis_name}"
+        analysisname = lambda wildcards: f"{wildcards.analysis_name}"
     conda: "envs/r_plotting_env.yaml"
     script:
         "scripts/MaizeCode_R_mapping_stats.R"
