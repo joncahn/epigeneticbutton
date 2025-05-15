@@ -81,6 +81,7 @@ def input_peak_files_for_best_peaks(wildcards):
             result = { "merged": f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
                      "pseudo1": f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak",
                      "pseudo2": f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}.{peaktype}Peak" }
+    print(f"[DEBUG] input_peak_files_for_best_peaks called with wildcards={wildcards}, returned={result}")
     return result
 
 def define_final_chip_output(ref_genome):
@@ -539,6 +540,7 @@ rule best_peaks_pseudoreps_and_stats:
     output:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     params:
+        debug_wc = lambda wildcards: print(f"[DEBUG] Wildcards: {wildcards}") or "",
         sname = lambda wildcards: sample_name(wildcards, 'analysis'),
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     log:
