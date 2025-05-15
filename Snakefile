@@ -234,7 +234,7 @@ rule map_only:
             for env in UNIQUE_ENVS
             for sample_name in get_sample_names_by_env(env, samples)
         ],
-        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_namme, env=UNIQUE_ENVS)
+        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=UNIQUE_ENVS)
 
 # Rule to specify final target if only chip coverage is wanted
 rule coverage_chip:
