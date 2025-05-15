@@ -316,7 +316,7 @@ rule make_chip_stats_pe:
     output:
         log = "ChIP/logs/process_pe_sample__{sample_name}.log"        
     params:
-        line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'],
+        line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
