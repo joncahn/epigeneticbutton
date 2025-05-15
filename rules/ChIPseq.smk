@@ -449,7 +449,7 @@ rule IDR_analysis_replicates:
         nb_replicates = lambda wildcards: len(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])),
         one_rep = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0],
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
-        paired = lambda wildcards: get_sample_info_from_name(sample_name(wildcards, 'analysis'), 'analysis', 'paired'),
+        paired = lambda wildcards: get_sample_info_from_name(sample_name(wildcards, 'analysis'), analysis_samples, 'paired'),
         data_type = lambda wildcars: wildcards.data_type,
         line = lambda wildcards: wildcards.line,
         tissue = lambda wildcards: wildcards.tissue,
