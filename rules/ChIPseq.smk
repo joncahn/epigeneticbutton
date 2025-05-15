@@ -627,7 +627,7 @@ rule make_peak_stats:
     params:
         sname = lambda wildcards: wildcards.sample_name,
         paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'paired'),
-        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
+        peaktype = lambda wildcards: get_peaktype(get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'), config["chip_callpeaks"]["peaktype"]),
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'),
