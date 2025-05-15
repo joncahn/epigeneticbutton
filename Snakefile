@@ -221,7 +221,7 @@ rule plotting_mapping_stats_chip_rna:
         plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     params:
         analysisname = lambda wildcards: f"{wildcards.analysis_name}"
-    conda: "envs/r_plotting_env.yaml"
+    conda: "envs/r_plotting.yaml"
     script:
         "scripts/MaizeCode_R_mapping_stats.R"
 
