@@ -97,8 +97,8 @@ def define_logs_final_input(wildcards):
     for rep in analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), []):
         namerep = f"{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}"
         log_files.append(return_log_chip(namerep, f"final__{peaktype}peak_calling", paired))
-        log_files.append(return_log_chip(namerep, f"making_bigwig_final", paired))
-        log_files.append(return_log_chip(namerep, f"making_fingerprint_final", paired))
+        log_files.append(return_log_chip(namerep, f"making_bigwig_final", ""))
+        log_files.append(return_log_chip(namerep, f"making_fingerprint_final", ""))
     
     if len(analysis_to_replicates[(data_type, line, tissue, sample_type, ref_genome)]) >= 2:
         log_files.append(return_log_chip(sname, "IDR", ""))
@@ -395,7 +395,7 @@ rule make_bigwig_chip:
         bigwigfile = "ChIP/tracks/FC__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
     params:
         ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
+        inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}",
         binsize = config['chip_tracks']['binsize'],
         params = config['chip_tracks']['params']
     log:
@@ -419,7 +419,7 @@ rule make_fingerprint_plot:
         pngplot = "ChIP/plots/Fingerprint__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.png"
     params:
         ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        inputname = lambda wildcards: f"{assign_chip_input(wildcards)}"
+        inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}"
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_fingerprint_{file_type}", ""))
     conda: CONDA_ENV
@@ -512,10 +512,10 @@ rule IDR_analysis_replicates:
         {{
         printf "\nLooping over each unique pair of biological replicates for {params.sname} to perform IDR with:\n"
         idr --version
-		if {params.paired} == "PE"; then
-            pre = "se"
+		if "{params.paired}" == "PE"; then
+            pre="se"
         else
-            pre = "pe"
+            pre="pe"
         fi
         for pair in {params.replicate_pairs}
         do
