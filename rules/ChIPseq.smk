@@ -26,7 +26,7 @@ def assign_chip_input(wildcards):
     elif inputname in samples['sample_name']:
         return inputname
     else:
-        ipname = sample_name(wildcards, 'sample')
+        ipname = sample_name_str(wildcards, 'sample')
         ippaired = get_sample_info_from_name(ipname, samples, 'paired')
         alts = []
         for rep in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, "Input", wildcards.ref_genome), []):
@@ -46,7 +46,7 @@ def get_peaktype(sample_type, peaktype_config):
     raise ValueError(f"\nNo peaktype found for sample_type '{sample_type}")
 
 def assign_peak_files_for_idr(wildcards):
-    sname = sample_name(wildcards, 'analysis')
+    sname = sample_name_str(wildcards, 'analysis')
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     replicates = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
@@ -59,7 +59,7 @@ def assign_peak_files_for_idr(wildcards):
 
 def input_peak_files_for_best_peaks(wildcards):
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]['peaktype'])
-    sname = sample_name(wildcards, 'analysis')
+    sname = sample_name_str(wildcards, 'analysis')
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
 
     if len(analysis_to_replicates[(wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome)]) >= 2:
@@ -125,7 +125,7 @@ def define_final_chip_output(ref_genome):
     qc_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name(row, 'sample')
+        sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
             qc_files.append(f"ChIP/logs/process_pe_sample__{sample_name}.log") # mapping stats for each paired-end replicate
@@ -135,7 +135,7 @@ def define_final_chip_output(ref_genome):
     filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ]
     for _, row in filtered_rep_samples_no_input.iterrows():
         peaktype = get_peaktype(row.sample_type, config["chip_callpeaks"]['peaktype'])
-        sname = sample_name(row, 'sample')
+        sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         bigwig_files.append(f"ChIP/tracks/FC__final__{sname}.bw") # bigwig log2FC enrichment vs input for each replicate
         qc_files.append(f"ChIP/plots/Fingerprint__final__{sname}.png") # fingerprint plots for each replicate and its input
@@ -146,7 +146,7 @@ def define_final_chip_output(ref_genome):
             
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name(row, 'analysis')
+        spname = sample_name_str(row, 'analysis')
         peak_files.append(f"ChIP/peaks/selected_peaks__{spname}.bed") # best peak file for each analysis sample
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             qc_files.append(f"ChIP/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done") # idr analyses between each pair of replicates
@@ -488,13 +488,13 @@ rule IDR_analysis_replicates:
     output:
         touch = "ChIP/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
     params:
-        sname = lambda wildcards: sample_name(wildcards, 'analysis'),
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         replicate_pairs = lambda wildcards: " ".join( [ f"{r1}:{r2}" for i, r1 in enumerate(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
                                                        for r2 in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[i+1:] ] ),
         nb_replicates = lambda wildcards: len(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])),
         one_rep = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0],
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
-        paired = lambda wildcards: get_sample_info_from_name(sample_name(wildcards, 'analysis'), analysis_samples, 'paired'),
+        paired = lambda wildcards: get_sample_info_from_name(sample_name_str(wildcards, 'analysis'), analysis_samples, 'paired'),
         data_type = lambda wildcards: wildcards.data_type,
         line = lambda wildcards: wildcards.line,
         tissue = lambda wildcards: wildcards.tissue,
@@ -537,7 +537,7 @@ rule merging_replicates:
     output:
         mergefile = "ChIP/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
-        sname = lambda wildcards: sample_name(wildcards, 'analysis')
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
     conda: CONDA_ENV
@@ -560,7 +560,7 @@ rule making_pseudo_replicates:
         pseudo1 = temp("ChIP/mapped/pseudo1__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam"),
         pseudo2 = temp("ChIP/mapped/pseudo2__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam")
     params:
-        sname = lambda wildcards: sample_name(wildcards, 'analysis')
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "splitting_pseudreps", ""))
     conda: CONDA_ENV
@@ -585,7 +585,7 @@ rule best_peaks_pseudoreps:
         bestpeaks = "ChIP/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
         stats_pseudoreps = temp("ChIP/reports/stats_pseudoreps__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt")
     params:
-        sname = lambda wildcards: sample_name(wildcards, 'analysis'),
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", ""))

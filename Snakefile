@@ -40,14 +40,14 @@ if len(unknowns) > 0:
                      "Please check your sample file or update the env_patterns.")
 
 # Function to create a unique name for each sample based on the sample columns, and later based on wildcards
-def sample_name(d, string):
+def sample_name_str(d, string):
     if string == 'sample':
         return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
     elif string == 'analysis':
         return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
 
 # Add a sample_name column to the sample file
-samples["sample_name"] = samples.apply(lambda row: sample_name(row, 'sample'), axis=1)
+samples["sample_name"] = samples.apply(lambda row: sample_name_str(row, 'sample'), axis=1)
 
 # Create a dictionary to store the information for each sample
 sample_info_map = {
@@ -126,7 +126,7 @@ analysis_samples = (
     .drop_duplicates()
 )
 # Add a sample_name column to the analysis_sample file
-analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name(row, 'analysis'), axis=1)
+analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 
 # Save the result to 'analysis_samplefile.txt'
 analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)

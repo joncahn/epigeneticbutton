@@ -7,7 +7,7 @@ def define_final_rna_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ]
     
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name(row, 'sample')
+        sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
             final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
