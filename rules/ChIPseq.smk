@@ -102,6 +102,17 @@ def get_replicate_name(wildcards, pos):
     else:
         return f"{prefix}__final__{data_type}__{line}__{tissue}__{sample_type}__{rep_list[pos]}__{ref_genome}_peaks.{peaktype}Peak"
 
+def get_replicate_pairs(wildcards):
+    sname = wildcards.sample_name
+    reps = analysis_to_replicates.get((wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+    pairs = []
+    for i in range(0,len(reps)):
+        for j in range(i+1, len(reps)):
+            rep_i = reps[i]
+            rep_j = reps[j]
+            pairs.append(f"{rep_i} {rep_j}")
+    return pairs
+
 def define_logs_final_input(wildcards):
     log_files = []
     sname = wildcards.sample_name
@@ -510,22 +521,19 @@ rule calling_peaks_macs2_se:
         
 rule IDR_analysis_replicates:
     input:
-        peakfiles = lambda wildcards: assign_peak_files_for_idr(wildcards)
+        peak_filea = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
         touch = "ChIP/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
-        replicate_pairs = lambda wildcards: " ".join( [ f"{r1}:{r2}" for i, r1 in enumerate(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []))
-                                                       for r2 in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[i+1:] ] ),
-        nb_replicates = lambda wildcards: len(analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])),
-        one_rep = lambda wildcards: analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0],
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         paired = lambda wildcards: get_sample_info_from_name(sample_name_str(wildcards, 'analysis'), analysis_samples, 'paired'),
         data_type = lambda wildcards: wildcards.data_type,
         line = lambda wildcards: wildcards.line,
         tissue = lambda wildcards: wildcards.tissue,
         sample_type = lambda wildcards: wildcards.sample_type,
-        ref_genome = lambda wildcards: wildcards.ref_genome
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        replicate_pairs = lambda wildcards: get_replicate_pairs(wildcards)
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", ""))
     conda: CONDA_ENV
