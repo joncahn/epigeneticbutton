@@ -4,6 +4,7 @@ channels:
   - bioconda
 dependencies:
   - r-base=4.2.3
+  - r-plyr
   - r-dplyr
   - r-ggplot2
   - r-readr
