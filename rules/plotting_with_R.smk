@@ -5,9 +5,8 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        sample_stat_file = lambda wildcards: [ f"{wildcards.env}/reports/summary_ChIP_{paired}_mapping_stats_{sample_name}.txt" 
-                                        paired = get_sample_info_from_name(wildcards.sample_name, samples, 'paired')
-                                        for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
+        sample_stat_files = lambda wildcards: [ f"{wildcards.env}/reports/summary_ChIP_{get_sample_info_from_name(wildcards.sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
+                                                for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
     output:
         stat_file = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt",
         temp_stat_file = temp("combined/reports/temp_summary_mapping_stats_{analysis_name}_{env}.txt")
@@ -18,7 +17,7 @@ rule prepping_mapping_stats:
     shell:
         """
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
-        for f in {input.sample_file_stat}
+        for f in {input.sample_stat_files}
         do
             awk 'NR>1' $f >> "{output.temp_stat_file}"
         done
