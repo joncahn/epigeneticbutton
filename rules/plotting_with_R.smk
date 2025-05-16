@@ -36,7 +36,7 @@ rule plotting_mapping_stats_chip_rna:
         "{env}/logs/plotting_mapping_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     script:
-        {params.script}
+        "{params.script}"
         
 ###
 # Rules to prep and then plot the peak stats
@@ -73,4 +73,4 @@ rule plotting_peaks_stats_chip_tf:
         "{env}/logs/plotting_peaks_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     script:
-        {params.script}
+        "{params.script}"
