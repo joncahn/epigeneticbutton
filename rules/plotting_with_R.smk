@@ -49,7 +49,7 @@ rule plotting_mapping_stats_chip_rna:
     conda: CONDA_ENV
     shell:
         """
-        "Rscript {params.script} {input.summary_stats} {params.analysis_name} {output.plot}"
+        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}"
         """
         
 ###
