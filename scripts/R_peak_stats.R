@@ -10,8 +10,6 @@ analysisname<-snakemake@params[["analysis_name"]]
 env<-snakemake@params[["env"]]
 outputfile<-snakemake@output[["plot"]]
 
-"Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tSelected_peaks\n"
-
 plot.peak.stats<-function(stattable, name) {
   table<-read.delim(stattable, header = TRUE, sep="\t") %>%
     mutate(Label=paste(Line,Tissue,Sample)) %>%
