@@ -44,7 +44,7 @@ plot.mapping.stats<-function(stattable, name) {
 	plot1<-ggplot(table, aes(Label, Count, fill=Read_type)) +
 		geom_bar(stat="identity", position="fill", colour="black", show.legend = T) +
 		labs(title="", x="",y="", fill="Reads") +
-		scale_fill_manual(values = brewer.pal(4,"Paired")) +
+		scale_fill_manual(values = brewer.pal(4,"Paired"), guide = "legend") +
 		scale_y_continuous("Percentage", labels=c(0,25,50,75,100)) +
 		facet_grid(~Line, scales = "free_x") +
 		theme(axis.text.x=element_blank(), 
