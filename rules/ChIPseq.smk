@@ -84,6 +84,23 @@ def input_peak_files_for_best_peaks(wildcards):
 
     return result
 
+def get_replicate_name(wildcards, pos):
+    sname = wildcards.sample_name
+    paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
+    prefix = "peaks_pe" if paired == "PE" else "peaks_se"
+    data_type = get_sample_info_from_name(sname, analysis_samples, 'data_type')
+    line = get_sample_info_from_name(sname, analysis_samples, 'line')
+    tissue = get_sample_info_from_name(sname, analysis_samples, 'tissue')
+    sample_type = get_sample_info_from_name(sname, analysis_samples, 'sample_type')
+    peaktype = get_peaktype(sample_type, config["chip_callpeaks"]["peaktype"])
+    ref_genome = get_sample_info_from_name(sname, analysis_samples, 'ref_genome')
+    rep_list = analysis_to_replicates.get((line, tissue, sample_type, ref_genome), [])
+    
+    if pos >= len(rep_list): 
+        return "missingrep"
+    else:
+        return f"{prefix}__final__{data_type}__{line}__{tissue}__{sample_type}__{rep_list[pos]}__{ref_genome}_peaks.{peaktype}Peak"
+
 def define_logs_final_input(wildcards):
     log_files = []
     sname = wildcards.sample_name
@@ -632,31 +649,21 @@ rule make_peak_stats:
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'),
-        reps = lambda wildcards: " ".join(analysis_to_replicates.get((get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'line'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'), get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome')), []))
+        rep1 = lambda wildcards: get_replicate_name(wildcards, 0),
+        rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
     shell:
         """
-        if [[ {params.paired} == "PE" ]]; then
-            pre="pe"
+        nrep1=$(awk '{{print $1,$2,$3}}' ${{params.rep1}} | sort -k1,1 -k2,2n -u | wc -l))
+        if [[ "{params.rep2}" == "missingrep" ]]; then
+            nrep2=0
         else
-            pre="se"
-        fi
-        nrep=""
-        i=0
-        while [[ ${{i}} -le 1 ]]; do
-            rep={params.reps[${{i}}]}
-            filename="ChIP/peaks/peaks_${{pre}}__final__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep}}__{params.ref_genome}_peaks.{params.sample_type}Peak"
-            n=$(awk '{{print $1,$2,$3}}' ${{filename}} | sort -k1,1 -k2,2n -u | wc -l))
-            nrep="${{nrep}}\t${{n}}"
-            i=${{i+1}}
-        done
-        if [[ ${{i}} == 1 ]]; then
-            nrep="${{nrep}}\t0"
+            nrep2=$(awk '{{print $1,$2,$3}}' ${{params.rep2}} | sort -k1,1 -k2,2n -u | wc -l))
         fi
         merged=$(grep "Merged" {input.stats_pseudoreps} | cut -d"=" -f2)
         pseudos=$(grep "Pseudos" {input.stats_pseudoreps} | cut -d"=" -f2)
         selected=$(grep "Selected" {input.stats_pseudoreps} | cut -d"=" -f2)
         ## Need to add idr if present; limited to 2 reps for now: Estimate max number of reps first, then filling all samples with 0? Easier in R?
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep}} -v b=${{merged}} -v c=${{pseudos}} -v d=${{selected}} 'BEGIN {{print l,t,m,r,a,b,c,d" ("d/b*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{selected}} 'BEGIN {{print l,t,m,r,a,b,c,d,e" ("e/c*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         """
 
