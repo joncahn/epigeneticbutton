@@ -48,6 +48,6 @@ plot.peak.stats<-function(stattable, name) {
 }
 
 pdf(outputfile, height=10, width=12)
-plot.peak.stats(peak_stats, analysisname)
+plot.peak.stats(summary_stats, analysisname)
 dev.off()
 
