@@ -48,7 +48,7 @@ chip_tracks:
 # QC_option: "all"
 QC_option: "none"
 # Keep all intermediary logs for debugging. Set to False for cleaner runs
-debug_keep_logs: true
+debug_keep_logs: false
 
 # For peaks
 chip_callpeaks:
