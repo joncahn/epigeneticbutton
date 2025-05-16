@@ -5,7 +5,7 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"{wildcards.env}/reports/summary_ChIP_{get_sample_info_from_name(sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
+        sample_stat_files = lambda wildcards: [ f"{wildcards.env}/reports/summary_{wildcards.env}_{get_sample_info_from_name(sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
                                                 for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
     output:
         stat_file = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt",
