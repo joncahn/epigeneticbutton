@@ -147,14 +147,14 @@ def define_final_chip_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
             stat_files.append(f"ChIP/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
-            qc_files.append(f"ChIP/reports/raw_sample__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"ChIP/reports/raw_sample__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
-            qc_files.append(f"ChIP/reports/trimmed_sample__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
-            qc_files.append(f"ChIP/reports/trimmed_sample__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+            qc_files.append(f"ChIP/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"ChIP/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"ChIP/reports/trimmed__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"ChIP/reports/trimmed__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
             stat_files.append(f"ChIP/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
-            qc_files.append(f"ChIP/reports/raw_sample__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-            qc_files.append(f"ChIP/reports/trimmed_sample__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            qc_files.append(f"ChIP/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"ChIP/reports/trimmed__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
     filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ]
     for _, row in filtered_rep_samples_no_input.iterrows():

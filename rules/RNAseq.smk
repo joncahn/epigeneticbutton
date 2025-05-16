@@ -13,14 +13,14 @@ def define_final_rna_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
             final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
-            qc_files.append(f"RNA/reports/raw_sample__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"RNA/reports/raw_sample__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
-            qc_files.append(f"RNA/reports/trimmed_sample__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
-            qc_files.append(f"RNA/reports/trimmed_sample__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+            qc_files.append(f"RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"RNA/reports/trimmed__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"RNA/reports/trimmed__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
             final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
-            qc_files.append(f"RNA/reports/raw_sample__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-            qc_files.append(f"RNA/reports/trimmed_sample__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            qc_files.append(f"RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"RNA/reports/trimmed__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
     if qc_option == "all":
         return final_files + qc_files
