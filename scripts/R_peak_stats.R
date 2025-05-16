@@ -31,7 +31,7 @@ plot.peak.stats<-function(stattable, name) {
     labs(title=paste("Number of peaks in each Histone ChIPseq sample of",analysisname), 
          x="",y="Number of peaks", fill="Peaks in:") +
     scale_fill_manual(values = brewer.pal(5,"Paired"), guide = "legend") +
-    facet_grid(~Line+Tissue) +
+    facet_grid(~Line+Tissue, scales = "free") +
     theme(axis.text.x=element_text(color="black",size=10, angle=90, vjust=0.5, hjust = 1),
           title = element_text(size=15),
           axis.title.y = element_text(size=12),
