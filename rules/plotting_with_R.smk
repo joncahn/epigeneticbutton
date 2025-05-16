@@ -30,12 +30,13 @@ rule plotting_mapping_stats_chip_rna:
     output:
         plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     params:
-        analysisname = lambda wildcards: f"{wildcards.analysis_name}"
+        analysisname = lambda wildcards: f"{wildcards.analysis_name}",
+        script=os.path.join(REPO_FOLDER,"scripts/R_mapping_stats.R")
     log:
         "{env}/logs/plotting_mapping_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     script:
-        "scripts/R_mapping_stats.R"
+        {params.script}
         
 ###
 # Rules to prep and then plot the peak stats
@@ -66,9 +67,10 @@ rule plotting_peaks_stats_chip_tf:
         plot = "combined/plots/peak_stats_{analysis_name}_{env}.pdf"
     params:
         analysisname = lambda wildcards: f"{wildcards.analysis_name}",
-        env = lambda wildcards: f"{wildcards.env}"
+        env = lambda wildcards: f"{wildcards.env}",
+        script=os.path.join(REPO_FOLDER,"scripts/R_peak_stats.R")
     log:
         "{env}/logs/plotting_peaks_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     script:
-        "scripts/R_peak_stats.R"
+        {params.script}
