@@ -184,19 +184,15 @@ def define_final_chip_output(ref_genome):
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
-rule stat_file_chip:
-    output:
-        mapping_stat_file = f"ChIP/reports/summary_ChIP_mapping_stats_{analysis_name}.txt",
-        peak_stat_file = f"ChIP/reports/summary_ChIP_peak_stats_{analysis_name}.txt"
-    shell:
-        """
-        if [ ! -s {output.mapping_stat_file} ]; then
-            printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.mapping_stat_file}
-        fi
-        if [ ! -s {output.peak_stat_file} ]; then
-            printf "Line\tTissue\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tCommon_peaks\tPeaks_in_merged\tPeaks_in_pseudo_reps\tSelected_peaks\n" > {output.peak_stat_file}
-        fi
-        """
+# rule stat_file_chip:
+    # output:
+        # mapping_stat_file = f"ChIP/reports/summary_ChIP_mapping_stats_{analysis_name}.txt",
+        # peak_stat_file = f"ChIP/reports/summary_ChIP_peak_stats_{analysis_name}.txt"
+    # shell:
+        # """
+        # printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.mapping_stat_file}
+        # printf "Line\tTissue\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tCommon_peaks\tPeaks_in_merged\tPeaks_in_pseudo_reps\tSelected_peaks\n" > {output.peak_stat_file}
+        # """
 
 rule make_bt2_indices:
     input:
@@ -334,11 +330,11 @@ rule filter_chip_se:
 
 rule make_chip_stats_pe:
     input:
-        stat_file = f"ChIP/reports/summary_ChIP_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_pe__{sample_name}.txt",
         metrics_map = "ChIP/reports/bt2_pe__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
+        stat_file = "ChIP/reports/summary_ChIP_pe_mapping_stats_{sample_name}.txt",
         log = "ChIP/logs/process_pe_sample__{sample_name}.log"        
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
@@ -354,18 +350,19 @@ rule make_chip_stats_pe:
         multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
 
 rule make_chip_stats_se:
     input:
-        stat_file = f"ChIP/reports/summary_ChIP_mapping_stats_{analysis_name}.txt",
         metrics_trim = "ChIP/reports/trim_se__{sample_name}.txt",
         metrics_map = "ChIP/reports/bt2_se__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
+        stat_file = "ChIP/reports/summary_ChIP_se_mapping_stats_{sample_name}.txt",
         log = "ChIP/logs/process_se_sample__{sample_name}.log"
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
@@ -381,6 +378,7 @@ rule make_chip_stats_se:
         multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         allmap=$((multi+single))
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         """
@@ -644,10 +642,10 @@ rule best_peaks_pseudoreps:
 rule make_peak_stats:
     input:
         logs = lambda wildcards: define_logs_final_input(wildcards),
-        stat_file = f"ChIP/reports/summary_ChIP_peak_stats_{analysis_name}.txt",
         stats_pseudoreps = lambda wildcards: f"ChIP/reports/stats_pseudoreps__{wildcards.sample_name}.txt"
         ## maybe an better solution is to append a stat file with wc -l as they are generated, or to create a new stat file for each file, then accessible in bash by regex on the samplename
     output:
+        stat_file = "ChIP/reports/summary_ChIP_peak_stats_{sample_name}.txt",
         log = "ChIP/logs/called_peaks__{sample_name}.log"
     params:
         sname = lambda wildcards: wildcards.sample_name,
@@ -676,7 +674,8 @@ rule make_peak_stats:
         echo "nrep1=${{nrep1}} nrep2=${{nrep2}}" >&2
         echo "merged=${{merged}} pseudos=${{pseudos}} selected=${{selected}}" >&2
         ## Need to add idr if present; limited to 2 reps for now: Estimate max number of reps first, then filling all samples with 0? Easier in R?
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; print l,t,m,r,a,b,c,d,e" ("e/x*100"%)"}}' >> "{input.stat_file}"
+        printf "Line\tTissue\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tCommon_peaks\tPeaks_in_merged\tPeaks_in_pseudo_reps\tSelected_peaks\n" > {output.peak_stat_file}
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; print l,t,m,r,a,b,c,d,e" ("e/x*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         """
 
