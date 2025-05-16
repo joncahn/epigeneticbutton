@@ -7,7 +7,8 @@
 
 # function to access logs more easily
 def return_log_chip(sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+    logpath=os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+    return logpath if config.get("debug_keep_logs", False) else temp(logpath)
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
