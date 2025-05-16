@@ -89,6 +89,7 @@ def get_replicate_name(wildcards, pos):
     sname = wildcards.sample_name
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     prefix = "peaks_pe" if paired == "PE" else "peaks_se"
+    env = get_sample_info_from_name(sname, analysis_samples, 'env')
     data_type = get_sample_info_from_name(sname, analysis_samples, 'data_type')
     line = get_sample_info_from_name(sname, analysis_samples, 'line')
     tissue = get_sample_info_from_name(sname, analysis_samples, 'tissue')
@@ -100,7 +101,7 @@ def get_replicate_name(wildcards, pos):
     if pos >= len(rep_list): 
         return "missingrep"
     else:
-        return f"{prefix}__final__{data_type}__{line}__{tissue}__{sample_type}__{rep_list[pos]}__{ref_genome}_peaks.{peaktype}Peak"
+        return f"{env}/peaks/{prefix}__final__{data_type}__{line}__{tissue}__{sample_type}__{rep_list[pos]}__{ref_genome}_peaks.{peaktype}Peak"
 
 def get_replicate_pairs(wildcards):
     sname = sample_name_str(wildcards, 'analysis')
