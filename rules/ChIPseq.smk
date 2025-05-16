@@ -103,7 +103,7 @@ def get_replicate_name(wildcards, pos):
         return f"{prefix}__final__{data_type}__{line}__{tissue}__{sample_type}__{rep_list[pos]}__{ref_genome}_peaks.{peaktype}Peak"
 
 def get_replicate_pairs(wildcards):
-    sname = wildcards.sample_name
+    sname = sample_name_str(wildcards, 'analysis')
     reps = analysis_to_replicates.get((wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
     pairs = []
     for i in range(0,len(reps)):
