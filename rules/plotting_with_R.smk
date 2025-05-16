@@ -24,33 +24,33 @@ rule prepping_mapping_stats:
         sort {output.temp_stat_file} -u >> "{output.stat_file}"\
         """
     
-rule plotting_mapping_stats_chip_rna:
-    input:
-        summary_stats = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
-    output:
-        plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
-    params:
-        analysisname = lambda wildcards: f"{wildcards.analysis_name}",
-        script=os.path.join(REPO_FOLDER,"scripts/R_mapping_stats.R")
-    conda: CONDA_ENV
-    script:
-        "{params.script}"
-
 # rule plotting_mapping_stats_chip_rna:
     # input:
         # summary_stats = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     # output:
         # plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     # params:
-        # analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
+        # analysisname = lambda wildcards: f"{wildcards.analysis_name}",
         # script=os.path.join(REPO_FOLDER,"scripts/R_mapping_stats.R")
-    # log:
-        # "{env}/logs/plotting_mapping_stats_{analysis_name}_{env}.log"
     # conda: CONDA_ENV
-    # shell:
-        # """
-        # Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}"
-        # """
+    # script:
+        # "{params.script}"
+
+rule plotting_mapping_stats_chip_rna:
+    input:
+        summary_stats = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
+    output:
+        plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
+    params:
+        analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
+        script=os.path.join(REPO_FOLDER,"scripts/R_mapping_stats.R")
+    log:
+        "{env}/logs/plotting_mapping_stats_{analysis_name}_{env}.log"
+    conda: CONDA_ENV
+    shell:
+        """
+        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}"
+        """
         
 ###
 # Rules to prep and then plot the peak stats
