@@ -670,12 +670,13 @@ rule make_peak_stats:
         merged=$(grep "Merged" {input.stats_pseudoreps} | cut -d"=" -f2)
         pseudos=$(grep "Pseudos" {input.stats_pseudoreps} | cut -d"=" -f2)
         selected=$(grep "Selected" {input.stats_pseudoreps} | cut -d"=" -f2)
+        echo "{params.sname}" >&2
         echo "rep1={params.rep1}" >&2
         echo "rep2={params.rep2}" >&2
         echo "nrep1=${{nrep1}} nrep2=${{nrep2}}" >&2
         echo "merged=${{merged}} pseudos=${{pseudos}} selected=${{selected}}" >&2
         ## Need to add idr if present; limited to 2 reps for now: Estimate max number of reps first, then filling all samples with 0? Easier in R?
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{selected}} 'BEGIN {{print l,t,m,r,a,b,c,d,e" ("e/c*100"%)"}}' >> "{input.stat_file}"
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; print l,t,m,r,a,b,c,d,e" ("e/x*100"%)"}}' >> "{input.stat_file}"
         cat {input.logs} > "{output.log}"
         """
 
