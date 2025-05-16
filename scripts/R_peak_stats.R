@@ -15,9 +15,9 @@ env<-args[4]
 plot.peak.stats<-function(stattable, name) {
   table<-read.delim(stattable, header = TRUE, sep="\t") %>%
     mutate(Label=paste(Line,Tissue,Sample)) %>%
-    separate(Selected_peaks, into=c("Selected","temp3"), sep=" ") %>%
+    separate(Selected_peaks, into=c("Selected","temp1"), sep=" ") %>%
     rename(Rep1=Peaks_in_Rep1,Rep2=Peaks_in_Rep2,Merged=Peaks_in_merged, Pseudoreps=Peaks_in_pseudo_reps) %>%
-    select(-temp1, -temp2, -temp3)
+    select(-temp1)
   table$Line<-as.factor(table$Line)
   table$Tissue<-as.factor(table$Tissue)
   table$Sample<-as.factor(table$Sample)
