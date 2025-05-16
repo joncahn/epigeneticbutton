@@ -5,7 +5,7 @@ def return_log_rna(sample_name, step, paired):
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
     final_files = []
-    qc_file = []
+    qc_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ]
     
     for _, row in filtered_rep_samples.iterrows():
