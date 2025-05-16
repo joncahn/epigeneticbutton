@@ -659,7 +659,7 @@ rule make_peak_stats:
         rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
     shell:
         """
-        nrep1=$(awk '{{print $1,$2,$3}}' ${{params.rep1}} | sort -k1,1 -k2,2n -u | wc -l)
+        nrep1=$(awk '{{print $1,$2,$3}}' {params.rep1} | sort -k1,1 -k2,2n -u | wc -l)
         if [[ "{params.rep2}" == "missingrep" ]]; then
             nrep2=0
         else
