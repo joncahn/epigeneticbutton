@@ -107,8 +107,6 @@ rule process_fastq_pe:
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
 		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" 2>&1 | tee "{output.metrics}"
-		#### Removing untrimmed fastq
-		rm -f "{input.raw_fastq1}" "{input.raw_fastq2}"
         }} 2>&1 | tee -a "{log}"        
         """
         
@@ -134,7 +132,5 @@ rule process_fastq_se:
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
 		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" 2>&1 | tee "{output.metrics}"
-		#### Removing untrimmed fastq
-		rm -f "{input.raw_fastq}"
         }} 2>&1 | tee -a "{log}"
         """
