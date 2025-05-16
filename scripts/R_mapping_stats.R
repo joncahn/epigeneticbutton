@@ -6,15 +6,15 @@ library(ggplot2)
 library(cowplot)
 library(RColorBrewer)
 
-# summary_stats<-snakemake@input[["summary_stats"]]
-# analysisname<-snakemake@params[["analysis_name"]]
-# outputfile<-snakemake@output[["plot"]]
+summary_stats<-snakemake@input[["summary_stats"]]
+analysisname<-snakemake@params[["analysis_name"]]
+outputfile<-snakemake@output[["plot"]]
 
-args = commandArgs(trailingOnly=TRUE)
+# args = commandArgs(trailingOnly=TRUE)
 
-summary_stats<-args[1]
-analysisname<-args[2]
-outputfile<-args[3]
+# summary_stats<-args[1]
+# analysisname<-args[2]
+# outputfile<-args[3]
 
 plot.mapping.stats<-function(stattable, name) {
 	table<-read.delim(stattable, header = TRUE, sep="\t") %>%  
