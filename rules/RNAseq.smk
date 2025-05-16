@@ -29,16 +29,6 @@ def define_final_rna_output(ref_genome):
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 
-rule stat_file_rna:
-    output:
-        stat_file = f"RNA/reports/summary_RNA_mapping_stats_{analysis_name}.txt"
-    shell:
-        """
-        if [ ! -s {output.stat_file} ]; then
-            printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
-        fi
-        """
-
 rule make_RNA_indices:
     input:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
@@ -218,11 +208,11 @@ rule filter_rna_se:
 
 rule make_rna_stats_pe:
     input:
-        stat_file = f"RNA/reports/summary_RNA_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
+        stat_file = f"RNA/reports/summary_RNA_PE_mapping_stats_{sample_name}.txt",
         log = "RNA/logs/process_pe_sample__{sample_name}.log"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -238,18 +228,19 @@ rule make_rna_stats_pe:
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
         
 rule make_rna_stats_se:
     input:
-        stat_file = f"RNA/reports/summary_RNA_mapping_stats_{analysis_name}.txt",
         metrics_trim = "RNA/reports/trim_se__{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
+        stat_file = f"RNA/reports/summary_RNA_SE_mapping_stats_{sample_name}.txt",
         log = "RNA/logs/process_se_sample__{sample_name}.log"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -265,7 +256,8 @@ rule make_rna_stats_se:
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
         allmap=$((multi+single))
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{input.stat_file}"
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
