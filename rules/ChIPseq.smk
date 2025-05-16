@@ -139,15 +139,22 @@ def define_final_chip_output(ref_genome):
     qc_option = config["QC_option"]
     peak_files = []
     bigwig_files = []
+    stat_files = []
     qc_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
-            qc_files.append(f"ChIP/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
+            stat_files.append(f"ChIP/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
+            qc_files.append(f"ChIP/reports/raw_sample__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"ChIP/reports/raw_sample__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"ChIP/reports/trimmed_sample__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"ChIP/reports/trimmed_sample__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            qc_files.append(f"ChIP/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
+            stat_files.append(f"ChIP/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
+            qc_files.append(f"ChIP/reports/raw_sample__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"ChIP/reports/trimmed_sample__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
     filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ]
     for _, row in filtered_rep_samples_no_input.iterrows():
@@ -155,7 +162,7 @@ def define_final_chip_output(ref_genome):
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         bigwig_files.append(f"ChIP/tracks/FC__final__{sname}.bw") # bigwig log2FC enrichment vs input for each replicate
-        qc_files.append(f"ChIP/plots/Fingerprint__final__{sname}.png") # fingerprint plots for each replicate and its input
+        stat_files.append(f"ChIP/plots/Fingerprint__final__{sname}.png") # fingerprint plots for each replicate and its input
         if paired == "PE":
             peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak") # peak file for each paired-end replicate
         else:
@@ -166,13 +173,13 @@ def define_final_chip_output(ref_genome):
         spname = sample_name_str(row, 'analysis')
         peak_files.append(f"ChIP/peaks/selected_peaks__{spname}.bed") # best peak file for each analysis sample
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            qc_files.append(f"ChIP/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done") # idr analyses between each pair of replicates
+            stat_files.append(f"ChIP/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done") # idr analyses between each pair of replicates
             bigwig_files.append(f"ChIP/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw") # bigiwig log2FC for merged replicates vs merged inputs
         
     if qc_option == "all":
-        return peak_files + bigwig_files + qc_files
+        return peak_files + bigwig_files + stat_files + qc_files
     else:
-        return peak_files + bigwig_files
+        return peak_files + bigwig_files + stat_files
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 

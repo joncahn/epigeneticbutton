@@ -44,8 +44,9 @@ chip_tracks:
   binsize: 1
   params: "--scaleFactorsMethod 'None' --normalizeUsing CPM --extendReads 300"
 
-# ChIP plots option: default = "all", returns all plots (fingerprints, reports). Replace with "none" if you don't want anything.
-QC_option: "all"
+# Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
+# QC_option: "all"
+QC_option: "none"
 
 # For peaks
 chip_callpeaks:

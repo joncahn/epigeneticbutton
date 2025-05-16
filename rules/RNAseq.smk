@@ -3,7 +3,9 @@ def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")    
 
 def define_final_rna_output(ref_genome):
+    qc_option = config["QC_option"]
     final_files = []
+    qc_file = []
     filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ]
     
     for _, row in filtered_rep_samples.iterrows():
@@ -11,10 +13,19 @@ def define_final_rna_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
             final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
+            qc_files.append(f"RNA/reports/raw_sample__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"RNA/reports/raw_sample__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"RNA/reports/trimmed_sample__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"RNA/reports/trimmed_sample__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
             final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
+            qc_files.append(f"RNA/reports/raw_sample__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"RNA/reports/trimmed_sample__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
-    return final_files
+    if qc_option == "all":
+        return final_files + qc_files
+    else:
+        return final_files
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 

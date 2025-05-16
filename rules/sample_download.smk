@@ -65,6 +65,23 @@ rule get_fastq_se:
         }} 2>&1 | tee -a "{log}"        
         """
 
+rule run_fastqc:
+    input:
+        fastq = "{data_type}/fastq/{step}__{sample_name}__{read}.fastq.gz"
+    output:
+        fastqc = "{data_type}/reports/{step}__{sample_name}__{read}_fastqc.html"
+    params:
+        data_type = lambda wildcards: wildcards.data_type,
+        step = lambda wildcards: wildcards.step,
+        sample_name = lambda wildcards: wildcards.sample_name,
+        read = lambda wildcards: wildcards.read
+    conda: CONDA_ENV
+    threads: workflow.cores
+    shell:
+        """
+        fastqc -o "{params.data_type}/reports/" "{input.fastq}"
+        """
+
 rule process_fastq_pe:
     input:
         raw_fastq1 = "{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
@@ -86,21 +103,12 @@ rule process_fastq_pe:
     shell:
         """
         {{
-        #### QC of the raw reads with FastQC
-        printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
-        fastqc --version
-        fastqc -o "{params.data_type}/reports/" "{input.raw_fastq1}"
-        fastqc -o "{params.data_type}/reports/" "{input.raw_fastq2}"
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
 		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" 2>&1 | tee "{output.metrics}"
 		#### Removing untrimmed fastq
 		rm -f "{input.raw_fastq1}" "{input.raw_fastq2}"
-		#### FastQC on trimmed data
-		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
-		fastqc -o "{params.data_type}/reports/" "{output.fastq1}"
-		fastqc -o "{params.data_type}/reports/" "{output.fastq2}"
         }} 2>&1 | tee -a "{log}"        
         """
         
@@ -122,18 +130,11 @@ rule process_fastq_se:
     shell:
         """
         {{
-        ### QC of the raw reads with FastQC
-        printf "\nRunning fastQC for {params.sample_name} with fastqc version:\n"
-        fastqc --version
-        fastqc -o "{params.data_type}/reports/" "{input.raw_fastq}"
 		#### Trimming illumina adapters with Cutadapt
 		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
 		cutadapt --version
 		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" 2>&1 | tee "{output.metrics}"
 		#### Removing untrimmed fastq
 		rm -f "{input.raw_fastq}"
-		#### FastQC on trimmed data
-		printf "\nRunning fastQC on trimmed files for {params.sample_name}\n"
-		fastqc -o "{params.data_type}/reports/" "{output.fastq}"
         }} 2>&1 | tee -a "{log}"
         """
