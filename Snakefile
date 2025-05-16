@@ -49,6 +49,17 @@ def sample_name_str(d, string):
 # Add a sample_name column to the sample file
 samples["sample_name"] = samples.apply(lambda row: sample_name_str(row, 'sample'), axis=1)
 
+# Function to extract extra information from data_Type (either the name of the TF, or the ChIP Input grouping if it exists)
+def extract_extra_info(d):
+    parts=d['data_type'].split("_", 1)
+    if len(parts) == 2 and parts[0] in ["ChIP", "TF"]:
+        return parts[1]
+    else:
+        return "N/A"   
+    
+# Add an extra_info column to the sample file
+samples["extra_info"] = samples.apply(extract_extra_info, axis=1)
+
 # Create a dictionary to store the information for each sample
 sample_info_map = {
     (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["replicate"], row["ref_genome"]): {
@@ -56,7 +67,8 @@ sample_info_map = {
         "fastq_path": row["fastq_path"],
         "paired": row["paired"],
         "env": row["env"],
-        "sample_name": row["sample_name"]
+        "sample_name": row["sample_name"],
+        "extra_info": row["extra_info"]
     }
     for _, row in samples.iterrows()
 }
