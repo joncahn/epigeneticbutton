@@ -95,7 +95,7 @@ def get_replicate_name(wildcards, pos):
     sample_type = get_sample_info_from_name(sname, analysis_samples, 'sample_type')
     peaktype = get_peaktype(sample_type, config["chip_callpeaks"]["peaktype"])
     ref_genome = get_sample_info_from_name(sname, analysis_samples, 'ref_genome')
-    rep_list = analysis_to_replicates.get((line, tissue, sample_type, ref_genome), [])
+    rep_list = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
     
     if pos >= len(rep_list): 
         return "missingrep"
