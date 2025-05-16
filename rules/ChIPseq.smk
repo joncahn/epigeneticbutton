@@ -536,9 +536,9 @@ rule IDR_analysis_replicates:
         printf "\nLooping over each unique pair of biological replicates for {params.sname} to perform IDR with:\n"
         idr --version
 		if [[ "{params.paired}" == "PE" ]]; then
-            pre="se"
-        else
             pre="pe"
+        else
+            pre="se"
         fi
         for pair in {params.replicate_pairs}
         do
