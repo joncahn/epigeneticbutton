@@ -45,7 +45,7 @@ rule prepping_chip_peak_stats:
         sample_stat_files = lambda wildcards: [ f"{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
     output:
         stat_file = "combined/reports/summary_peak_stats_{analysis_name}_{env}.txt",
-        tmp_stat_file = temp("combined/reports/temp_summary_peak_stats_{analysis_name}_{env}.txt")
+        temp_stat_file = temp("combined/reports/temp_summary_peak_stats_{analysis_name}_{env}.txt")
     params:
         sample_file = lambda wildcards: f"{wildcards.analysis_name}__analysis_samplefile.txt",
         analysis_name = lambda wildcards: wildcards.analysis_name,
