@@ -31,6 +31,8 @@ rule plotting_mapping_stats_chip_rna:
         plot = "combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     params:
         analysisname = lambda wildcards: f"{wildcards.analysis_name}"
+    log:
+        "{env}/logs/plotting_mapping_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     script:
         "scripts/R_mapping_stats.R"
@@ -65,6 +67,8 @@ rule plotting_peaks_stats_chip_tf:
     params:
         analysisname = lambda wildcards: f"{wildcards.analysis_name}",
         env = lambda wildcards: f"{wildcards.env}"
+    log:
+        "{env}/logs/plotting_peaks_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     script:
         "scripts/R_peak_stats.R"
