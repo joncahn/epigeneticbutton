@@ -5,10 +5,12 @@ library(tidyr)
 library(ggplot2)
 library(RColorBrewer)
 
-summary_stats<-snakemake@input[["summary_stats"]]
-analysisname<-snakemake@params[["analysis_name"]]
-env<-snakemake@params[["env"]]
-outputfile<-snakemake@output[["plot"]]
+args = commandArgs(trailingOnly=TRUE)
+
+summary_stats<-args[1]
+analysisname<-args[2]
+outputfile<-args[3]
+env<-args[4]
 
 plot.peak.stats<-function(stattable, name) {
   table<-read.delim(stattable, header = TRUE, sep="\t") %>%
