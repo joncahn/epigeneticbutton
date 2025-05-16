@@ -663,7 +663,7 @@ rule make_peak_stats:
         if [[ "{params.rep2}" == "missingrep" ]]; then
             nrep2=0
         else
-            nrep2=$(awk '{{print $1,$2,$3}}' ${{params.rep2}} | sort -k1,1 -k2,2n -u | wc -l)
+            nrep2=$(awk '{{print $1,$2,$3}}' {params.rep2} | sort -k1,1 -k2,2n -u | wc -l)
         fi
         merged=$(grep "Merged" {input.stats_pseudoreps} | cut -d"=" -f2)
         pseudos=$(grep "Pseudos" {input.stats_pseudoreps} | cut -d"=" -f2)
