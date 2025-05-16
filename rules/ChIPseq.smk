@@ -544,9 +544,9 @@ rule IDR_analysis_replicates:
         do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
-            file1 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
-            file2 = "ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
-            outfile = "ChIP/peaks/idr_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}_vs_${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
+            file1="ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
+            file2="ChIP/peaks/peaks_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
+            outfile="ChIP/peaks/idr_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}_vs_${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
             printf "\nPerforming IDR for ${{rep1}} vs ${{rep2}}\n"
             idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l ChIP/reports/idr_{params.sname}.log --plot || true
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
