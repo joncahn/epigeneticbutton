@@ -37,7 +37,7 @@ rule check_fasta:
         """
         # Search for fasta file
         if [ -s {params.ref_dir}/*.fa.gz ]; then
-            fa_file=$(ls ${params.ref_dir}/*.fa.gz)
+            fa_file=$(ls {params.ref_dir}/*.fa.gz)
             fa_filename=${{fa_file##*/}}
             printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
             pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
