@@ -37,7 +37,6 @@ rule make_RNA_indices:
         indices = directory("genomes/{ref_genome}/STAR_index")
     params:
         star_index = config[config['species']]['star_index']
-        config['chip_mapping'][config['chip_mapping_option']]['map_se']
     log:
         os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
     conda: CONDA_ENV
