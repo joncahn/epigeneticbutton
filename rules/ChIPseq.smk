@@ -480,7 +480,7 @@ rule calling_peaks_macs2_pe:
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         filetype = lambda wildcards: {wildcards.file_type},
         params = config["chip_callpeaks"]['params'],
-        genomesize = config["chip_callpeaks"]['genomesize']
+        genomesize = config[config['species']]['genome_size']
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV
@@ -511,7 +511,7 @@ rule calling_peaks_macs2_se:
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
         filetype = lambda wildcards: {wildcards.file_type},
         params = config["chip_callpeaks"]['params'],
-        genomesize = config["chip_callpeaks"]['genomesize']
+        genomesize = config[config['species']]['genome_size']
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV

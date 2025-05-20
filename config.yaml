@@ -16,6 +16,16 @@ ref_path_rule: "path/to/reference/genomes"
 # default of quality>10 and minimum read length 20nt
 trimming_quality: "-q 10 -m 20"
 
+# Species-dependent parameters:
+species: "maize"
+
+arabidopsis:
+  star_index: "--genomeSAindexNbases 12"
+  genomesize: 1.3e8
+maize: 
+  star_index: "--genomeSAindexNbases 14"
+  genomesize: 2.2e9
+
 # Mapping option default
 chip_mapping_option: "default"
 
@@ -58,11 +68,7 @@ chip_callpeaks:
     'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow"
     'H3|H4': "broad"
   params: "--keep-dup 'all' --nomodel"
-  # For Arabidopsis, use 1.3e8; For maize, 2.2e9
-  genomesize: 1.3e8
-  
-# For Arabidopsis, use 12; For maize, 14 (bowtie2 default) is best
-star_index: "--genomeSAindexNbases 12"
+ 
 
 # RNA parameters
 rna_tracks:
