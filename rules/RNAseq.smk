@@ -56,7 +56,7 @@ rule STAR_map_pe:
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam",
+        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.out.bam",
         touch = "RNA/chkpts/temp_pe__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -81,7 +81,7 @@ rule STAR_map_se:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam",
+        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.out.bam",
         touch = "RNA/chkpts/temp_se__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -103,7 +103,7 @@ rule STAR_map_se:
         
 rule filter_rna_pe:
     input:
-        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.sortedByCoord.out.bam",
+        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.out.bam",
         touch = "RNA/chkpts/temp_pe__{sample_name}.done",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
@@ -158,7 +158,7 @@ rule filter_rna_pe:
 
 rule filter_rna_se:
     input:
-        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.sortedByCoord.out.bam",
+        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.out.bam",
         touch = "RNA/chkpts/temp_se__{sample_name}.done",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
