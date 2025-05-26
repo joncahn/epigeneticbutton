@@ -124,9 +124,9 @@ rule filter_rna_pe:
         """
         {{
         ### Marking duplicates
-        ## This can be an issue with limitBAMsortRAM. Deal with resources better. Might want parameters from sorting duplicates too.
+        ## Errors can happen because of limitBAMsortRAM. Might want parameters from sorting duplicates too.
         printf "\nMarking duplicates\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --limitBAMsortRAM 32000000000 --outFileNamePrefix "RNA/mapped/mrkdup_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{params.sample_name}_"
         #### Indexing bam file
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "RNA/mapped/mrkdup_{params.sample_name}_Processed.out.bam"
@@ -186,7 +186,7 @@ rule filter_rna_se:
         samtools flagstat -@ {threads} "{input.bamfile}" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --limitBAMsortRAM 32000000000 --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
