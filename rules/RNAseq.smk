@@ -124,7 +124,7 @@ rule filter_rna_pe:
         """
         {{
         ### Marking duplicates
-        ## Errors can happen because of limitBAMsortRAM. Might want parameters from sorting duplicates too.
+        ## Errors can happen because of limitBAMsortRAM, which seem to happen when bam files are sorted by coordinates (now removed from mapping step). Might want parameters from sorting duplicates too.
         printf "\nMarking duplicates\n"
         STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{params.sample_name}_"
         #### Indexing bam file
