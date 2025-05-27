@@ -196,16 +196,6 @@ def define_final_chip_output(ref_genome):
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 
-# rule stat_file_chip:
-    # output:
-        # mapping_stat_file = f"ChIP/reports/summary_ChIP_mapping_stats_{analysis_name}.txt",
-        # peak_stat_file = f"ChIP/reports/summary_ChIP_peak_stats_{analysis_name}.txt"
-    # shell:
-        # """
-        # printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.mapping_stat_file}
-        # printf "Line\tTissue\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tCommon_peaks\tPeaks_in_merged\tPeaks_in_pseudo_reps\tSelected_peaks\n" > {output.peak_stat_file}
-        # """
-
 rule make_bt2_indices:
     input:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
@@ -216,7 +206,10 @@ rule make_bt2_indices:
     log:
         os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["bt2_indices"]["threads"]
+    resources:
+        mem=config["resources"]["bt2_indices"]["mem"]
+        tmp=config["resources"]["bt2_indices"]["tmp"]
     shell:
         """
         {{
@@ -242,7 +235,10 @@ rule bowtie2_map_pe:
     log:
         temp(return_log_chip("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["bt2_map"]["threads"]
+    resources:
+        mem=config["resources"]["bt2_map"]["mem"]
+        tmp=config["resources"]["bt2_map"]["tmp"]
     shell:
         """
         {{
@@ -267,7 +263,10 @@ rule bowtie2_map_se:
     log:
         temp(return_log_chip("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["bt2_map"]["threads"]
+    resources:
+        mem=config["resources"]["bt2_map"]["mem"]
+        tmp=config["resources"]["bt2_map"]["tmp"]
     shell:
         """
         {{
@@ -291,7 +290,10 @@ rule filter_chip_pe:
     log:
         temp(return_log_chip("{sample_name}", "filtering", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["filter_chip"]["threads"]
+    resources:
+        mem=config["resources"]["filter_chip"]["mem"]
+        tmp=config["resources"]["filter_chip"]["tmp"]
     shell:
         """
         {{
@@ -323,7 +325,10 @@ rule filter_chip_se:
     log:
         temp(return_log_chip("{sample_name}", "filtering", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["samtools_chip"]["threads"]
+    resources:
+        mem=config["resources"]["samtools_chip"]["mem"]
+        tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
         {{
@@ -354,6 +359,10 @@ rule make_chip_stats_pe:
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -382,6 +391,10 @@ rule make_chip_stats_se:
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -401,6 +414,10 @@ rule pe_or_se_dispatch:
     output:
         bam = "ChIP/mapped/final__{sample_name}.bam",
         touch = "ChIP/chkpts/map__{sample_name}.done"
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         mv {input} {output.bam}
@@ -416,7 +433,10 @@ rule make_coverage_chip:
     params:
         binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["deeptools_bw"]["threads"]
+    resources:
+        mem=config["resources"]["deeptools_bw"]["mem"]
+        tmp=config["resources"]["deeptools_bw"]["tmp"]
     shell:
         """
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
@@ -436,7 +456,10 @@ rule make_bigwig_chip:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["deeptools_bw"]["threads"]
+    resources:
+        mem=config["resources"]["deeptools_bw"]["mem"]
+        tmp=config["resources"]["deeptools_bw"]["tmp"]
     shell:
         """
         {{
@@ -458,7 +481,10 @@ rule make_fingerprint_plot:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_fingerprint_{file_type}", ""))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["deeptools_bw"]["threads"]
+    resources:
+        mem=config["resources"]["deeptools_bw"]["mem"]
+        tmp=config["resources"]["deeptools_bw"]["tmp"]
     shell:
         """
         {{
@@ -484,7 +510,10 @@ rule calling_peaks_macs2_pe:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["macs2"]["threads"]
+    resources:
+        mem=config["resources"]["macs2"]["mem"]
+        tmp=config["resources"]["macs2"]["tmp"]
     shell:
         """
         {{
@@ -515,7 +544,10 @@ rule calling_peaks_macs2_se:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["macs2"]["threads"]
+    resources:
+        mem=config["resources"]["macs2"]["mem"]
+        tmp=config["resources"]["macs2"]["tmp"]
     shell:
         """
         {{
@@ -548,7 +580,10 @@ rule IDR_analysis_replicates:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", ""))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["idr"]["threads"]
+    resources:
+        mem=config["resources"]["idr"]["mem"]
+        tmp=config["resources"]["idr"]["tmp"]
     shell:
         """
         {{
@@ -586,7 +621,10 @@ rule merging_replicates:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["samtools_chip"]["threads"]
+    resources:
+        mem=config["resources"]["samtools_chip"]["mem"]
+        tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
         {{
@@ -609,7 +647,10 @@ rule making_pseudo_replicates:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "splitting_pseudreps", ""))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["samtools_chip"]["threads"]
+    resources:
+        mem=config["resources"]["samtools_chip"]["mem"]
+        tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
         {{
@@ -635,7 +676,10 @@ rule best_peaks_pseudoreps:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", ""))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["bedtools"]["threads"]
+    resources:
+        mem=config["resources"]["bedtools"]["mem"]
+        tmp=config["resources"]["bedtools"]["tmp"]
     shell:
         """
         {{
@@ -676,6 +720,10 @@ rule make_peak_stats:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'),
         rep1 = lambda wildcards: get_replicate_name(wildcards, 0),
         rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         nrep1=$(awk '{{print $1,$2,$3}}' {params.rep1} | sort -k1,1 -k2,2n -u | wc -l)
@@ -698,6 +746,10 @@ rule ChIP_all:
         lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         touch {output.touch}

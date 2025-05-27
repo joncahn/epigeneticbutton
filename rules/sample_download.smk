@@ -16,7 +16,10 @@ rule get_fastq_pe:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["fastq_dump"]["threads"]
+    resources:
+        mem=config["resources"]["fastq_dump"]["mem"]
+        tmp=config["resources"]["fastq_dump"]["tmp"]
     shell:
         """
         {{
@@ -48,7 +51,10 @@ rule get_fastq_se:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["fastq_dump"]["threads"]
+    resources:
+        mem=config["resources"]["fastq_dump"]["mem"]
+        tmp=config["resources"]["fastq_dump"]["tmp"]
     shell:
         """
         {{
@@ -76,7 +82,10 @@ rule run_fastqc:
         sample_name = lambda wildcards: wildcards.sample_name,
         read = lambda wildcards: wildcards.read
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: 1
+    resources:
+        mem=2
+        tmp=2
     shell:
         """
         fastqc -o "{params.data_type}/reports/" "{input.fastq}"
@@ -99,7 +108,10 @@ rule process_fastq_pe:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["cutadapt"]["threads"]
+    resources:
+        mem=config["resources"]["cutadapt"]["mem"]
+        tmp=config["resources"]["cutadapt"]["tmp"]
     shell:
         """
         {{
@@ -124,7 +136,10 @@ rule process_fastq_se:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["cutadapt"]["threads"]
+    resources:
+        mem=config["resources"]["cutadapt"]["mem"]
+        tmp=config["resources"]["cutadapt"]["tmp"]
     shell:
         """
         {{

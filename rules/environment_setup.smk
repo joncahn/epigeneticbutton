@@ -16,6 +16,10 @@ rule prepare_reference:
     output:
         chkpt = "chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         cat {input.logs} > {output.log}
@@ -32,7 +36,10 @@ rule check_fasta:
     log:
         return_log_env("{ref_genome}", "fasta")
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["use_pigz"]["threads"]
+    resources:
+        mem=config["resources"]["use_pigz"]["mem"]
+        tmp=config["resources"]["use_pigz"]["tmp"]
     shell:
         """
         # Search for fasta file
@@ -70,7 +77,10 @@ rule check_gff:
     log:
         return_log_env("{ref_genome}", "gff")
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["use_pigz"]["threads"]
+    resources:
+        mem=config["resources"]["use_pigz"]["mem"]
+        tmp=config["resources"]["use_pigz"]["tmp"]
     shell:
         """
         if [ -s {params.ref_dir}/*.gff*.gz ]; then
@@ -97,7 +107,10 @@ rule check_gtf:
     log:
         return_log_env("{ref_genome}", "gtf")
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["use_pigz"]["threads"]
+    resources:
+        mem=config["resources"]["use_pigz"]["mem"]
+        tmp=config["resources"]["use_pigz"]["tmp"]
     shell:
         """
         if [ -s {params.ref_dir}/*.gtf.gz ]; then
@@ -127,10 +140,14 @@ rule check_chrom_sizes:
     log:
         return_log_env("{ref_genome}", "chrom_sizes")
     conda: CONDA_ENV
+    threads: config["resources"]["chrom_sizes"]["threads"]
+    resources:
+        mem=config["resources"]["chrom_sizes"]["mem"]
+        tmp=config["resources"]["chrom_sizes"]["tmp"]
     shell:
         """
         printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
-        samtools faidx {input.fasta}
+        samtools faidx -@ {threads} {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
         """
 
@@ -146,6 +163,10 @@ rule prep_region_file:
     log:
         return_log_env("{ref_genome}", "region_file")
     conda: CONDA_ENV
+    threads: config["resources"]["bedtools"]["threads"]
+    resources:
+        mem=config["resources"]["bedtools"]["mem"]
+        tmp=config["resources"]["bedtools"]["tmp"]
     shell:
         """
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1

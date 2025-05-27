@@ -40,7 +40,10 @@ rule make_RNA_indices:
     log:
         os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["STAR_indices"]["threads"]
+    resources:
+        mem=config["resources"]["STAR_indices"]["mem"]
+        tmp=config["resources"]["STAR_indices"]["tmp"]
     shell:
         """
         {{
@@ -65,7 +68,10 @@ rule STAR_map_pe:
     log:
         temp(return_log_rna("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["STAR_map"]["threads"]
+    resources:
+        mem=config["resources"]["STAR_map"]["mem"]
+        tmp=config["resources"]["STAR_map"]["tmp"]
     shell:
         """
         {{
@@ -90,7 +96,10 @@ rule STAR_map_se:
     log:
         temp(return_log_rna("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["STAR_map"]["threads"]
+    resources:
+        mem=config["resources"]["STAR_map"]["mem"]
+        tmp=config["resources"]["STAR_map"]["tmp"]
     shell:
         """
         {{
@@ -121,7 +130,10 @@ rule filter_rna_pe:
     log:
         temp(return_log_rna("{sample_name}", "filtering", "PE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["samtools_rna"]["threads"]
+    resources:
+        mem=config["resources"]["samtools_rna"]["mem"]
+        tmp=config["resources"]["samtools_rna"]["tmp"]
     shell:
         """
         {{
@@ -139,7 +151,7 @@ rule filter_rna_pe:
         samtools flagstat -@ {threads} "{output.sorted_file}" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
@@ -179,7 +191,10 @@ rule filter_rna_se:
     log:
         temp(return_log_rna("{sample_name}", "filtering", "SE"))
     conda: CONDA_ENV
-    threads: workflow.cores
+    threads: config["resources"]["samtools_rna"]["threads"]
+    resources:
+        mem=config["resources"]["samtools_rna"]["mem"]
+        tmp=config["resources"]["samtools_rna"]["tmp"]
     shell:
         """
         {{
@@ -194,7 +209,7 @@ rule filter_rna_se:
         samtools flagstat -@ {threads} "{output.sorted_file}" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
@@ -229,6 +244,10 @@ rule make_rna_stats_pe:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -257,6 +276,10 @@ rule make_rna_stats_se:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -276,6 +299,10 @@ rule dispatch_pair_map_only_rna:
         lambda wildcards: assign_mapping_paired(wildcards, "make_rna_stats", "log")
     output:
         touch = "RNA/chkpts/map__{sample_name}.done"
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         touch {output.touch}
@@ -286,6 +313,10 @@ rule all_rna:
         lambda wildcards: define_final_rna_output(wildcards.ref_genome)
     output:
         touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
+    threads: 1
+    resources:
+        mem=1
+        tmp=1
     shell:
         """
         touch {output.touch}
