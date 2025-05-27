@@ -56,7 +56,7 @@ rule STAR_map_pe:
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.out.bam",
+        bamfile = temp("RNA/mapped/map_pe__{sample_name}_Aligned.out.bam"),
         touch = "RNA/chkpts/temp_pe__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -81,7 +81,7 @@ rule STAR_map_se:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.out.bam",
+        bamfile = temp("RNA/mapped/map_se__{sample_name}_Aligned.out.bam"),
         touch = "RNA/chkpts/temp_se__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -107,6 +107,8 @@ rule filter_rna_pe:
         touch = "RNA/chkpts/temp_pe__{sample_name}.done",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
+        mrkdup=temp("RNA/mapped/map_pe__{sample_name}_Processed.out.bam"),
+        sorted_file="RNA/mapped/map_pe__{sample_name}_Processed.sorted.out.bam",
         bw_plus = "RNA/tracks/{sample_name}_plus.bw",
         bw_minus = "RNA/tracks/{sample_name}_minus.bw",
         metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt",
@@ -126,16 +128,18 @@ rule filter_rna_pe:
         ### Marking duplicates
         ## Errors can happen because of limitBAMsortRAM, which seem to happen when bam files are sorted by coordinates (now removed from mapping step). Might want parameters from sorting duplicates too.
         printf "\nMarking duplicates\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/mrkdup_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/map_pe__{params.sample_name}_"
         #### Indexing bam file
+        printf "\nSorting bam file\n"
+        samtools sort -@ {threads} "{output.mrkdup}" -o "{output.sorted_file}"
         printf "\nIndexing bam file\n"
-        samtools index -@ {threads} "RNA/mapped/mrkdup_{params.sample_name}_Processed.out.bam"
+        samtools index -@ {threads} "{output.sorted_file}"
         #### Getting stats from bam file
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} "RNA/mapped/mrkdup_{params.sample_name}_Processed.out.bam" > "{output.metrics_flag}"
+        samtools flagstat -@ {threads} "{output.sorted_file}" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "RNA/mapped/mrkdup_{params.sample_name}_Processed.out.bam" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
@@ -162,6 +166,7 @@ rule filter_rna_se:
         touch = "RNA/chkpts/temp_se__{sample_name}.done",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
+        sorted_file="RNA/mapped/map_se__{sample_name}_Aligned.sorted.out.bam",
         bw_plus = "RNA/tracks/{sample_name}_plus.bw",
         bw_minus = "RNA/tracks/{sample_name}_minus.bw",
         metrics_flag = "RNA/reports/flagstat_se_{sample_name}.txt",
@@ -178,15 +183,18 @@ rule filter_rna_se:
     shell:
         """
         {{
+        #### Sorting bam file
+        printf "\nSorting bam file\n"
+        samtools sort -@ {threads} "{input.bamfile}" -o "{output.sorted_file}"
         #### Indexing bam file
         printf "\nIndexing bam file\n"
-        samtools index -@ {threads} "{input.bamfile}"
+        samtools index -@ {threads} "{output.sorted_file}"
         #### Getting stats from bam file
         printf "\nGetting some stats\n"
-        samtools flagstat -@ {threads} "{input.bamfile}" > "{output.metrics_flag}"
+        samtools flagstat -@ {threads} "{output.sorted_file}" > "{output.metrics_flag}"
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
