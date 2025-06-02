@@ -290,10 +290,10 @@ rule filter_chip_pe:
     log:
         temp(return_log_chip("{sample_name}", "filtering", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["filter_chip"]["threads"]
+    threads: config["resources"]["samtools_chip"]["threads"]
     resources:
-        mem=config["resources"]["filter_chip"]["mem"],
-        tmp=config["resources"]["filter_chip"]["tmp"]
+        mem=config["resources"]["samtools_chip"]["mem"],
+        tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
         {{
