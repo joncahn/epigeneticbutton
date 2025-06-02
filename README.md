@@ -75,7 +75,7 @@ conda install -c bioconda snakemake
    - Species-specific parameters (e.g. gneome size)
    - Resource allocation
    
-3. If changing resource allocation for cluster submission, adjust also the `cluster.yaml`
+3. If changing resource allocation for cluster submission, adjust also the `cluster.yaml`. Keep in mind that units in the snakemake rules and in the cluster file are in MB.
 
 ### Running the Pipeline
 
@@ -89,7 +89,7 @@ snakemake --use-conda --conda-frontend mamba --cores 4
 snakemake --jobs 48 \
   --configfile config.yaml \
   --cluster-config cluster.yaml \
-  --cluster 'qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem}M -j y -o logs/{rule}.{wildcards}.log -N smk_{rule}'
+  --cluster 'qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -j y -o logs/{rule}.{wildcards}.log -N smk_{rule}'
 ```
 
 3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:

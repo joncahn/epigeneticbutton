@@ -246,8 +246,8 @@ rule make_rna_stats_pe:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -278,8 +278,8 @@ rule make_rna_stats_se:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         printf "\nMaking mapping statistics summary\n"

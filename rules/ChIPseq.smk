@@ -393,8 +393,8 @@ rule make_chip_stats_se:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -722,8 +722,8 @@ rule make_peak_stats:
         rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         nrep1=$(awk '{{print $1,$2,$3}}' {params.rep1} | sort -k1,1 -k2,2n -u | wc -l)

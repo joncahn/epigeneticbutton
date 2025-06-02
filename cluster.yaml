@@ -1,74 +1,59 @@
 __default__:
-  threads: 1
-  mem: 1
-  tmp: 1
+  mem_mb: 500
+  tmp_mb: 500
 
 use_pigz:
-  threads: 16
-  mem: 2
-  tmp: 2
+  mem_mb: 2000
+  tmp_mb: 2000
 
 bedtools:
-  threads: 16
-  mem: 2
-  tmp: 2
+  mem_mb: 2000
+  tmp_mb: 2000
 
 chrom_sizes:
-  threads: 16
-  mem: 8
-  tmp: 16
+  mem_mb: 8000
+  tmp_mb: 16000
 
 fastq_dump:
-  threads: 8
-  mem: 2
-  tmp: 16
+  mem_mb: 2000
+  tmp_mb: 16000
 
 cutadapt:
-  threads: 8
-  mem: 2
-  tmp: 16
+  mem_mb: 2000
+  tmp_mb: 16000
   
 bt2_indices:
-  threads: 8
-  mem: 4
-  tmp: 16
+  mem_mb: 4000
+  tmp_mb: 16000
   
 bt2_map:
-  threads: 8
-  mem: 8
-  tmp: 16
+  mem_mb: 8000
+  tmp_mb: 16000
   
 samtools_chip:
-  threads: 8
-  mem: 8
-  tmp: 16
+  mem_mb: 8000
+  tmp_mb: 16000
   
 STAR_indices:
-  threads: 8
-  mem: 4
-  tmp: 16
+  mem_mb: 4000
+  tmp_mb: 16000
   
 STAR_map:
-  threads: 8
-  mem: 8
-  tmp: 16
+  mem_mb: 8000
+  tmp_mb: 16000
   
 samtools_rna:
-  threads: 8
-  mem: 8
-  tmp: 16
+  mem_mb: 8000
+  tmp_mb: 16000
   
 deeptools_bw:
-  threads: 8
-  mem: 8
-  tmp: 4
+  mem_mb: 8000
+  tmp_mb: 4000
   
 macs2:
-  threads: 8
-  mem: 8
-  tmp: 4
+  mem_mb: 8000
+  tmp_mb: 4000
   
 idr:
-  threads: 1
-  mem: 8
-  tmp: 4
+  mem_mb: 8000
+  tmp_mb: 4000
