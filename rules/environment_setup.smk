@@ -147,7 +147,7 @@ rule check_chrom_sizes:
     shell:
         """
         printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
-        samtools faidx -@ {threads} {input.fasta}
+        samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
         """
 
