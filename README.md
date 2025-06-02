@@ -95,7 +95,7 @@ snakemake --jobs 48 \
   --use-conda --conda-frontend mamba \
   --cluster-config cluster.yaml \
   --latency-wait 60 \
-  --restart-times 1 \
+  --restart-times 2 \
   --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
 
