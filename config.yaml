@@ -104,7 +104,7 @@ single_thread: &single
   
 resources:
   use_pigz: *standard
-  chrom_sizes: *heavy
+  chrom_sizes: *single
   region_file: *standard
   fastq_dump: *heavy
   process_fastq: *heavy

@@ -93,9 +93,10 @@ snakemake --use-conda --conda-frontend mamba --cores 4
 ```bash
 snakemake --jobs 48 \
   --use-conda --conda-frontend mamba \
-  --configfile config.yaml \
   --cluster-config cluster.yaml \
-  --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -j y -o logs/smk_{rule}.{wildcards}.log -N smk_{rule}"
+  --latency-wait 60 \
+  --restart-times 1 \
+  --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
 
 3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:
