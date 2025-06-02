@@ -1,59 +1,50 @@
-__default__:
-  mem_mb: 500
-  tmp_mb: 500
+__default__: &default
+  mem_mb: 32
+  tmp_mb: 32
 
-use_pigz:
+standard_resources: &standard
   mem_mb: 2000
   tmp_mb: 2000
 
-bedtools:
-  mem_mb: 2000
-  tmp_mb: 2000
-
-chrom_sizes:
+heavy_resources: &heavy
   mem_mb: 8000
   tmp_mb: 16000
 
-fastq_dump:
-  mem_mb: 2000
-  tmp_mb: 16000
-
-cutadapt:
-  mem_mb: 2000
-  tmp_mb: 16000
-  
-bt2_indices:
-  mem_mb: 4000
-  tmp_mb: 16000
-  
-bt2_map:
-  mem_mb: 8000
-  tmp_mb: 16000
-  
-samtools_chip:
-  mem_mb: 8000
-  tmp_mb: 16000
-  
-STAR_indices:
-  mem_mb: 4000
-  tmp_mb: 16000
-  
-STAR_map:
-  mem_mb: 8000
-  tmp_mb: 16000
-  
-samtools_rna:
-  mem_mb: 8000
-  tmp_mb: 16000
-  
-deeptools_bw:
-  mem_mb: 8000
-  tmp_mb: 4000
-  
-macs2:
-  mem_mb: 8000
-  tmp_mb: 4000
-  
-idr:
-  mem_mb: 8000
-  tmp_mb: 4000
+check_fasta: *standard
+check_gff: *standard
+check_gtf: *standard
+prep_region_file: *standard
+check_chrom_sizes: *heavy
+get_fastq_pe: *heavy
+get_fastq_se: *heavy
+fastqc: *heavy
+process_fastq_pe: *heavy
+process_fastq_se: *heavy
+make_bt2_indices: *heavy
+bowtie2_map_pe: *heavy
+bowtie2_map_se: *heavy
+filter_chip_pe: *heavy
+filter_chip_se: *heavy
+make_chip_stats_pe: *default
+make_chip_stats_se: *default
+pe_or_se_dispatch: *default
+make_coverage_chip: *heavy
+make_bigwig_chip: *heavy
+make_fingerprint_plot: *heavy
+calling_peaks_macs2_pe: *heavy
+calling_peaks_macs2_se: *heavy
+IDR_analysis_replicates: *heavy
+merging_replicates: *heavy
+making_pseudo_replicates: *heavy
+best_peaks_pseudoreps: *standard
+make_peak_stats: *default
+ChIP_all: *default
+make_STAR_indices: *heavy
+STAR_map_pe: *heavy
+STAR_map_se: *heavy
+filter_rna_pe: *heavy
+filter_rna_se: *heavy
+make_rna_stats_pe: *default
+make_rna_stats_se: *default
+dispatch_pair_map_only_rna: *default
+all_rna: *default

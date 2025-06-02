@@ -87,60 +87,40 @@ analysis:
   perform_te_analysis: false   # Whether to perform TE analysis (takes long time)
 
 # Resource allocation
+standard_resources: &standard
+  threads: 4
+  mem: 2000
+  tmp: 2000
+
+heavy_resources: &heavy
+  threads: 16
+  mem: 8000
+  tmp: 16000
+
+single_thread: &single
+  threads: 1
+  mem: 8000
+  tmp: 16000
+  
 resources:
-  use_pigz:
-    threads: 16
-    mem: 2000
-    tmp: 2000
-  bedtools:
-    threads: 16
-    mem: 2000
-    tmp: 2000
-  chrom_sizes:
-    threads: 16
-    mem: 8000
-    tmp: 16000
-  fastq_dump:
-    threads: 8
-    mem: 2000
-    tmp: 16000
-  cutadapt:
-    threads: 8
-    mem: 2000
-    tmp: 16000
-  bt2_indices:
-    threads: 8
-    mem: 4000
-    tmp: 16000
-  bt2_map:
-    threads: 8
-    mem: 8000
-    tmp: 16000
-  samtools_chip:
-    threads: 8
-    mem: 8000
-    tmp: 16000
-  STAR_indices:
-    threads: 8
-    mem: 4000
-    tmp: 16000
-  STAR_map:
-    threads: 8
-    mem: 8000
-    tmp: 16000
-  samtools_rna:
-    threads: 8
-    mem: 8000
-    tmp: 16000
-  deeptools_bw:
-    threads: 8
-    mem: 8000
-    tmp: 4000
-  macs2:
-    threads: 8
-    mem: 8000
-    tmp: 4000
-  idr:
-    threads: 1
-    mem: 8000
-    tmp: 4000
+  use_pigz: *standard
+  chrom_sizes: *heavy
+  region_file: *standard
+  fastq_dump: *heavy
+  process_fastq: *heavy
+  runfastqc: *single
+  bt2_indices: *heavy
+  bt2_map: *heavy
+  filter_chip: *heavy
+  make_coverage_chip: *heavy 
+  make_bigwig_chip: *heavy
+  make_fingerprint_plot: *heavy
+  macs2: *heavy
+  idr: *single
+  merging_replicates: *heavy
+  making_pseudo_replicates: *heavy
+  best_peaks_pseudoreps: *standard
+  STAR_indices: *heavy
+  STAR_map: *heavy
+  filter_rna: *heavy
+

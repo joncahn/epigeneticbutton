@@ -290,10 +290,10 @@ rule filter_chip_pe:
     log:
         temp(return_log_chip("{sample_name}", "filtering", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["samtools_chip"]["threads"]
+    threads: config["resources"]["filter_chip"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"],
-        tmp=config["resources"]["samtools_chip"]["tmp"]
+        mem=config["resources"]["filter_chip"]["mem"],
+        tmp=config["resources"]["filter_chip"]["tmp"]
     shell:
         """
         {{
@@ -325,10 +325,10 @@ rule filter_chip_se:
     log:
         temp(return_log_chip("{sample_name}", "filtering", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["samtools_chip"]["threads"]
+    threads: config["resources"]["filter_chip"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"],
-        tmp=config["resources"]["samtools_chip"]["tmp"]
+        mem=config["resources"]["filter_chip"]["mem"],
+        tmp=config["resources"]["filter_chip"]["tmp"]
     shell:
         """
         {{
@@ -361,8 +361,8 @@ rule make_chip_stats_pe:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -416,8 +416,8 @@ rule pe_or_se_dispatch:
         touch = "ChIP/chkpts/map__{sample_name}.done"
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         mv {input} {output.bam}
@@ -433,10 +433,10 @@ rule make_coverage_chip:
     params:
         binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV
-    threads: config["resources"]["deeptools_bw"]["threads"]
+    threads: config["resources"]["make_coverage_chip"]["threads"]
     resources:
-        mem=config["resources"]["deeptools_bw"]["mem"],
-        tmp=config["resources"]["deeptools_bw"]["tmp"]
+        mem=config["resources"]["make_coverage_chip"]["mem"],
+        tmp=config["resources"]["make_coverage_chip"]["tmp"]
     shell:
         """
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
@@ -456,10 +456,10 @@ rule make_bigwig_chip:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["deeptools_bw"]["threads"]
+    threads: config["resources"]["make_bigwig_chip"]["threads"]
     resources:
-        mem=config["resources"]["deeptools_bw"]["mem"],
-        tmp=config["resources"]["deeptools_bw"]["tmp"]
+        mem=config["resources"]["make_bigwig_chip"]["mem"],
+        tmp=config["resources"]["make_bigwig_chip"]["tmp"]
     shell:
         """
         {{
@@ -481,10 +481,10 @@ rule make_fingerprint_plot:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_fingerprint_{file_type}", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["deeptools_bw"]["threads"]
+    threads: config["resources"]["make_fingerprint_plot"]["threads"]
     resources:
-        mem=config["resources"]["deeptools_bw"]["mem"],
-        tmp=config["resources"]["deeptools_bw"]["tmp"]
+        mem=config["resources"]["make_fingerprint_plot"]["mem"],
+        tmp=config["resources"]["make_fingerprint_plot"]["tmp"]
     shell:
         """
         {{
@@ -621,10 +621,10 @@ rule merging_replicates:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["samtools_chip"]["threads"]
+    threads: config["resources"]["merging_replicates"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"],
-        tmp=config["resources"]["samtools_chip"]["tmp"]
+        mem=config["resources"]["merging_replicates"]["mem"],
+        tmp=config["resources"]["merging_replicates"]["tmp"]
     shell:
         """
         {{
@@ -647,10 +647,10 @@ rule making_pseudo_replicates:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "splitting_pseudreps", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["samtools_chip"]["threads"]
+    threads: config["resources"]["making_pseudo_replicates"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"],
-        tmp=config["resources"]["samtools_chip"]["tmp"]
+        mem=config["resources"]["making_pseudo_replicates"]["mem"],
+        tmp=config["resources"]["making_pseudo_replicates"]["tmp"]
     shell:
         """
         {{
@@ -748,8 +748,8 @@ rule ChIP_all:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         touch {output.touch}

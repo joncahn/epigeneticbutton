@@ -29,7 +29,7 @@ def define_final_rna_output(ref_genome):
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 
-rule make_RNA_indices:
+rule make_STAR_indices:
     input:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
         gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
@@ -301,8 +301,8 @@ rule dispatch_pair_map_only_rna:
         touch = "RNA/chkpts/map__{sample_name}.done"
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         touch {output.touch}
@@ -315,8 +315,8 @@ rule all_rna:
         touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
     threads: 1
     resources:
-        mem=1,
-        tmp=1
+        mem=32,
+        tmp=32
     shell:
         """
         touch {output.touch}

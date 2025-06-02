@@ -163,10 +163,10 @@ rule prep_region_file:
     log:
         return_log_env("{ref_genome}", "region_file")
     conda: CONDA_ENV
-    threads: config["resources"]["bedtools"]["threads"]
+    threads: config["resources"]["region_file"]["threads"]
     resources:
-        mem=config["resources"]["bedtools"]["mem"],
-        tmp=config["resources"]["bedtools"]["tmp"]
+        mem=config["resources"]["region_file"]["mem"],
+        tmp=config["resources"]["region_file"]["tmp"]
     shell:
         """
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
