@@ -9,7 +9,7 @@ analysis_name: "test_snakemake"
 sample_file: "samples.tsv"
 
 # Path to the directory containing reference genomes
-ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
+ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays"
 ref_path_rule: "path/to/reference/genomes"
 
 # Read quality parameters: 
