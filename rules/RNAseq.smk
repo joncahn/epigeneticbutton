@@ -130,10 +130,10 @@ rule filter_rna_pe:
     log:
         temp(return_log_rna("{sample_name}", "filtering", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["samtools_rna"]["threads"]
+    threads: config["resources"]["filter_rna"]["threads"]
     resources:
-        mem=config["resources"]["samtools_rna"]["mem"],
-        tmp=config["resources"]["samtools_rna"]["tmp"]
+        mem=config["resources"]["filter_rna"]["mem"],
+        tmp=config["resources"]["filter_rna"]["tmp"]
     shell:
         """
         {{
@@ -191,10 +191,10 @@ rule filter_rna_se:
     log:
         temp(return_log_rna("{sample_name}", "filtering", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["samtools_rna"]["threads"]
+    threads: config["resources"]["filter_rna"]["threads"]
     resources:
-        mem=config["resources"]["samtools_rna"]["mem"],
-        tmp=config["resources"]["samtools_rna"]["tmp"]
+        mem=config["resources"]["filter_rna"]["mem"],
+        tmp=config["resources"]["filter_rna"]["tmp"]
     shell:
         """
         {{
