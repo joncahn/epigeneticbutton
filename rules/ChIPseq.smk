@@ -676,10 +676,10 @@ rule best_peaks_pseudoreps:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["bedtools"]["threads"]
+    threads: config["resources"]["best_peaks_pseudoreps"]["threads"]
     resources:
-        mem=config["resources"]["bedtools"]["mem"],
-        tmp=config["resources"]["bedtools"]["tmp"]
+        mem=config["resources"]["best_peaks_pseudoreps"]["mem"],
+        tmp=config["resources"]["best_peaks_pseudoreps"]["tmp"]
     shell:
         """
         {{
