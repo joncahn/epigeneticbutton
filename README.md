@@ -92,6 +92,7 @@ snakemake --use-conda --conda-frontend mamba --cores 4
 2. To run the pipeline on a HPC using qsub:
 ```bash
 snakemake --jobs 48 \
+  --use-conda --conda-frontend mamba \
   --configfile config.yaml \
   --cluster-config cluster.yaml \
   --cluster 'qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -j y -o logs/{rule}.{wildcards}.log -N smk_{rule}'
