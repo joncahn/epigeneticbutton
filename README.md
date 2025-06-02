@@ -74,6 +74,8 @@ conda install -c bioconda snakemake
    - Analysis parameters / options
    - Species-specific parameters (e.g. gneome size)
    - Resource allocation
+   
+3. If changing resource allocation for cluster submission, adjust also the `cluster.yaml`
 
 ### Running the Pipeline
 
@@ -84,19 +86,11 @@ snakemake --use-conda --conda-frontend mamba --cores 4
 
 2. To run the pipeline on a HPC using qsub:
 ```bash
-qsub -V -cwd -pe threads 20 -l m_mem_free=8G -l tmp_free=16G -o pipeline.log -j y -N epigeneticbutton <<-'EOF'
-#!/bin/bash
-snakemake --use-conda --conda-frontend mamba --cores 20
-EOF
+snakemake --jobs 48 \
+  --configfile config.yaml \
+  --cluster-config cluster.yaml \
+  --cluster 'qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem}M -j y -o logs/{rule}.{wildcards}.log -N smk_{rule}'
 ```
-
-This qsub command:
-- Requests 20 threads
-- Allocates 8GB of memory
-- Allocates 16GB of temporary storage
-- Outputs logs to pipeline.log
-- Uses the conda environment
-- Runs snakemake with 20 cores
 
 3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:
 ```bash

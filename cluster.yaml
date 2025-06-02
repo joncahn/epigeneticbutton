@@ -27,47 +27,47 @@ cutadapt:
   threads: 8
   mem: 2
   tmp: 16
-
+  
 bt2_indices:
   threads: 8
   mem: 4
   tmp: 16
-
+  
 bt2_map:
   threads: 8
   mem: 8
   tmp: 16
-
+  
 samtools_chip:
   threads: 8
   mem: 8
   tmp: 16
-
+  
 STAR_indices:
   threads: 8
   mem: 4
   tmp: 16
-
+  
 STAR_map:
   threads: 8
   mem: 8
   tmp: 16
-
+  
 samtools_rna:
   threads: 8
   mem: 8
   tmp: 16
-
+  
 deeptools_bw:
   threads: 8
   mem: 8
   tmp: 4
-
+  
 macs2:
   threads: 8
   mem: 8
   tmp: 4
-
+  
 idr:
   threads: 1
   mem: 8
