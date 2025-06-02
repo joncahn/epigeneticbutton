@@ -108,7 +108,7 @@ resources:
   region_file: *standard
   fastq_dump: *heavy
   process_fastq: *heavy
-  runfastqc: *single
+  fastqc: *single
   bt2_indices: *heavy
   bt2_map: *heavy
   filter_chip: *heavy
