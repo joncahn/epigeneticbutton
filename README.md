@@ -77,6 +77,11 @@ conda install -c bioconda snakemake
    
 3. If changing resource allocation for cluster submission, adjust also the `cluster.yaml`. Keep in mind that units in the snakemake rules and in the cluster file are in MB.
 
+4. Create the `logs` folder for cluster logs:
+```bash
+mkdir logs
+```
+
 ### Running the Pipeline
 
 1. To run the pipeline:
