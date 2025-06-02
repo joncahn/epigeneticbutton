@@ -18,7 +18,7 @@ rule prepare_reference:
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -38,7 +38,7 @@ rule check_fasta:
     conda: CONDA_ENV
     threads: config["resources"]["use_pigz"]["threads"]
     resources:
-        mem=config["resources"]["use_pigz"]["mem"]
+        mem=config["resources"]["use_pigz"]["mem"],
         tmp=config["resources"]["use_pigz"]["tmp"]
     shell:
         """
@@ -79,7 +79,7 @@ rule check_gff:
     conda: CONDA_ENV
     threads: config["resources"]["use_pigz"]["threads"]
     resources:
-        mem=config["resources"]["use_pigz"]["mem"]
+        mem=config["resources"]["use_pigz"]["mem"],
         tmp=config["resources"]["use_pigz"]["tmp"]
     shell:
         """
@@ -109,7 +109,7 @@ rule check_gtf:
     conda: CONDA_ENV
     threads: config["resources"]["use_pigz"]["threads"]
     resources:
-        mem=config["resources"]["use_pigz"]["mem"]
+        mem=config["resources"]["use_pigz"]["mem"],
         tmp=config["resources"]["use_pigz"]["tmp"]
     shell:
         """
@@ -142,7 +142,7 @@ rule check_chrom_sizes:
     conda: CONDA_ENV
     threads: config["resources"]["chrom_sizes"]["threads"]
     resources:
-        mem=config["resources"]["chrom_sizes"]["mem"]
+        mem=config["resources"]["chrom_sizes"]["mem"],
         tmp=config["resources"]["chrom_sizes"]["tmp"]
     shell:
         """
@@ -165,7 +165,7 @@ rule prep_region_file:
     conda: CONDA_ENV
     threads: config["resources"]["bedtools"]["threads"]
     resources:
-        mem=config["resources"]["bedtools"]["mem"]
+        mem=config["resources"]["bedtools"]["mem"],
         tmp=config["resources"]["bedtools"]["tmp"]
     shell:
         """

@@ -18,7 +18,7 @@ rule get_fastq_pe:
     conda: CONDA_ENV
     threads: config["resources"]["fastq_dump"]["threads"]
     resources:
-        mem=config["resources"]["fastq_dump"]["mem"]
+        mem=config["resources"]["fastq_dump"]["mem"],
         tmp=config["resources"]["fastq_dump"]["tmp"]
     shell:
         """
@@ -53,7 +53,7 @@ rule get_fastq_se:
     conda: CONDA_ENV
     threads: config["resources"]["fastq_dump"]["threads"]
     resources:
-        mem=config["resources"]["fastq_dump"]["mem"]
+        mem=config["resources"]["fastq_dump"]["mem"],
         tmp=config["resources"]["fastq_dump"]["tmp"]
     shell:
         """
@@ -84,7 +84,7 @@ rule run_fastqc:
     conda: CONDA_ENV
     threads: 1
     resources:
-        mem=2
+        mem=2,
         tmp=2
     shell:
         """
@@ -110,7 +110,7 @@ rule process_fastq_pe:
     conda: CONDA_ENV
     threads: config["resources"]["cutadapt"]["threads"]
     resources:
-        mem=config["resources"]["cutadapt"]["mem"]
+        mem=config["resources"]["cutadapt"]["mem"],
         tmp=config["resources"]["cutadapt"]["tmp"]
     shell:
         """
@@ -138,7 +138,7 @@ rule process_fastq_se:
     conda: CONDA_ENV
     threads: config["resources"]["cutadapt"]["threads"]
     resources:
-        mem=config["resources"]["cutadapt"]["mem"]
+        mem=config["resources"]["cutadapt"]["mem"],
         tmp=config["resources"]["cutadapt"]["tmp"]
     shell:
         """

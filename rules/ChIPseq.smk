@@ -208,7 +208,7 @@ rule make_bt2_indices:
     conda: CONDA_ENV
     threads: config["resources"]["bt2_indices"]["threads"]
     resources:
-        mem=config["resources"]["bt2_indices"]["mem"]
+        mem=config["resources"]["bt2_indices"]["mem"],
         tmp=config["resources"]["bt2_indices"]["tmp"]
     shell:
         """
@@ -237,7 +237,7 @@ rule bowtie2_map_pe:
     conda: CONDA_ENV
     threads: config["resources"]["bt2_map"]["threads"]
     resources:
-        mem=config["resources"]["bt2_map"]["mem"]
+        mem=config["resources"]["bt2_map"]["mem"],
         tmp=config["resources"]["bt2_map"]["tmp"]
     shell:
         """
@@ -265,7 +265,7 @@ rule bowtie2_map_se:
     conda: CONDA_ENV
     threads: config["resources"]["bt2_map"]["threads"]
     resources:
-        mem=config["resources"]["bt2_map"]["mem"]
+        mem=config["resources"]["bt2_map"]["mem"],
         tmp=config["resources"]["bt2_map"]["tmp"]
     shell:
         """
@@ -292,7 +292,7 @@ rule filter_chip_pe:
     conda: CONDA_ENV
     threads: config["resources"]["filter_chip"]["threads"]
     resources:
-        mem=config["resources"]["filter_chip"]["mem"]
+        mem=config["resources"]["filter_chip"]["mem"],
         tmp=config["resources"]["filter_chip"]["tmp"]
     shell:
         """
@@ -327,7 +327,7 @@ rule filter_chip_se:
     conda: CONDA_ENV
     threads: config["resources"]["samtools_chip"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"]
+        mem=config["resources"]["samtools_chip"]["mem"],
         tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
@@ -361,7 +361,7 @@ rule make_chip_stats_pe:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -393,7 +393,7 @@ rule make_chip_stats_se:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -416,7 +416,7 @@ rule pe_or_se_dispatch:
         touch = "ChIP/chkpts/map__{sample_name}.done"
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -435,7 +435,7 @@ rule make_coverage_chip:
     conda: CONDA_ENV
     threads: config["resources"]["deeptools_bw"]["threads"]
     resources:
-        mem=config["resources"]["deeptools_bw"]["mem"]
+        mem=config["resources"]["deeptools_bw"]["mem"],
         tmp=config["resources"]["deeptools_bw"]["tmp"]
     shell:
         """
@@ -458,7 +458,7 @@ rule make_bigwig_chip:
     conda: CONDA_ENV
     threads: config["resources"]["deeptools_bw"]["threads"]
     resources:
-        mem=config["resources"]["deeptools_bw"]["mem"]
+        mem=config["resources"]["deeptools_bw"]["mem"],
         tmp=config["resources"]["deeptools_bw"]["tmp"]
     shell:
         """
@@ -483,7 +483,7 @@ rule make_fingerprint_plot:
     conda: CONDA_ENV
     threads: config["resources"]["deeptools_bw"]["threads"]
     resources:
-        mem=config["resources"]["deeptools_bw"]["mem"]
+        mem=config["resources"]["deeptools_bw"]["mem"],
         tmp=config["resources"]["deeptools_bw"]["tmp"]
     shell:
         """
@@ -512,7 +512,7 @@ rule calling_peaks_macs2_pe:
     conda: CONDA_ENV
     threads: config["resources"]["macs2"]["threads"]
     resources:
-        mem=config["resources"]["macs2"]["mem"]
+        mem=config["resources"]["macs2"]["mem"],
         tmp=config["resources"]["macs2"]["tmp"]
     shell:
         """
@@ -546,7 +546,7 @@ rule calling_peaks_macs2_se:
     conda: CONDA_ENV
     threads: config["resources"]["macs2"]["threads"]
     resources:
-        mem=config["resources"]["macs2"]["mem"]
+        mem=config["resources"]["macs2"]["mem"],
         tmp=config["resources"]["macs2"]["tmp"]
     shell:
         """
@@ -582,7 +582,7 @@ rule IDR_analysis_replicates:
     conda: CONDA_ENV
     threads: config["resources"]["idr"]["threads"]
     resources:
-        mem=config["resources"]["idr"]["mem"]
+        mem=config["resources"]["idr"]["mem"],
         tmp=config["resources"]["idr"]["tmp"]
     shell:
         """
@@ -623,7 +623,7 @@ rule merging_replicates:
     conda: CONDA_ENV
     threads: config["resources"]["samtools_chip"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"]
+        mem=config["resources"]["samtools_chip"]["mem"],
         tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
@@ -649,7 +649,7 @@ rule making_pseudo_replicates:
     conda: CONDA_ENV
     threads: config["resources"]["samtools_chip"]["threads"]
     resources:
-        mem=config["resources"]["samtools_chip"]["mem"]
+        mem=config["resources"]["samtools_chip"]["mem"],
         tmp=config["resources"]["samtools_chip"]["tmp"]
     shell:
         """
@@ -678,7 +678,7 @@ rule best_peaks_pseudoreps:
     conda: CONDA_ENV
     threads: config["resources"]["bedtools"]["threads"]
     resources:
-        mem=config["resources"]["bedtools"]["mem"]
+        mem=config["resources"]["bedtools"]["mem"],
         tmp=config["resources"]["bedtools"]["tmp"]
     shell:
         """
@@ -722,7 +722,7 @@ rule make_peak_stats:
         rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -748,7 +748,7 @@ rule ChIP_all:
         touch = "ChIP/chkpts/ChIP_analysis__{ref_genome}.done"
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """

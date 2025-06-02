@@ -42,7 +42,7 @@ rule make_RNA_indices:
     conda: CONDA_ENV
     threads: config["resources"]["STAR_indices"]["threads"]
     resources:
-        mem=config["resources"]["STAR_indices"]["mem"]
+        mem=config["resources"]["STAR_indices"]["mem"],
         tmp=config["resources"]["STAR_indices"]["tmp"]
     shell:
         """
@@ -70,7 +70,7 @@ rule STAR_map_pe:
     conda: CONDA_ENV
     threads: config["resources"]["STAR_map"]["threads"]
     resources:
-        mem=config["resources"]["STAR_map"]["mem"]
+        mem=config["resources"]["STAR_map"]["mem"],
         tmp=config["resources"]["STAR_map"]["tmp"]
     shell:
         """
@@ -98,7 +98,7 @@ rule STAR_map_se:
     conda: CONDA_ENV
     threads: config["resources"]["STAR_map"]["threads"]
     resources:
-        mem=config["resources"]["STAR_map"]["mem"]
+        mem=config["resources"]["STAR_map"]["mem"],
         tmp=config["resources"]["STAR_map"]["tmp"]
     shell:
         """
@@ -132,7 +132,7 @@ rule filter_rna_pe:
     conda: CONDA_ENV
     threads: config["resources"]["samtools_rna"]["threads"]
     resources:
-        mem=config["resources"]["samtools_rna"]["mem"]
+        mem=config["resources"]["samtools_rna"]["mem"],
         tmp=config["resources"]["samtools_rna"]["tmp"]
     shell:
         """
@@ -193,7 +193,7 @@ rule filter_rna_se:
     conda: CONDA_ENV
     threads: config["resources"]["samtools_rna"]["threads"]
     resources:
-        mem=config["resources"]["samtools_rna"]["mem"]
+        mem=config["resources"]["samtools_rna"]["mem"],
         tmp=config["resources"]["samtools_rna"]["tmp"]
     shell:
         """
@@ -246,7 +246,7 @@ rule make_rna_stats_pe:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -278,7 +278,7 @@ rule make_rna_stats_se:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -301,7 +301,7 @@ rule dispatch_pair_map_only_rna:
         touch = "RNA/chkpts/map__{sample_name}.done"
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
@@ -315,7 +315,7 @@ rule all_rna:
         touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
     threads: 1
     resources:
-        mem=1
+        mem=1,
         tmp=1
     shell:
         """
