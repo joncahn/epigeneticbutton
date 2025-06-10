@@ -37,7 +37,7 @@ rule make_bismark_indices:
     output:
         indices = directory("genomes/{ref_genome}/Bisulfite_Genome")
     params:
-        limthreads = threads // 2
+        limthreads = lambda wildcards, threads: threads // 2
     log:
         os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log")
     conda: CONDA_ENV
@@ -70,7 +70,7 @@ rule bismark_map_pe:
         mapping = config["mC_mapping"][config['mC_method']]['map_pe'],
         process = config["mC_mapping"][config['mC_method']]['process'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
-        limthreads = threads // 4
+        limthreads = lambda wildcards, threads: threads // 4
     log:
         temp(return_log_rna("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
@@ -108,7 +108,7 @@ rule bismark_map_se:
         mapping = config["mC_mapping"][config['mC_method']]['map_pe'],
         process = config["mC_mapping"][config['mC_method']]['process'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
-        limthreads = threads // 4
+        limthreads = lambda wildcards, threads: threads // 4
     log:
         temp(return_log_rna("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
