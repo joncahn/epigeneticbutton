@@ -5,7 +5,7 @@ def return_log_mc(sample_name, step, paired):
     
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/mc.yaml")
 
-def define_final_rna_output(ref_genome):
+def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     final_files = []
     qc_files = []
@@ -16,13 +16,13 @@ def define_final_rna_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         final_files.append(f"mC/chkpts/bigwig__{sname}.done")
         if paired == "PE":
-            final_files.append(f"mC/reports/final_reports_pe__{sample_name}.html")
+            final_files.append(f"mC/reports/final_reports_pe__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
             qc_files.append(f"mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            final_files.append(f"mC/reports/final_reports_se__{sample_name}.html")
+            final_files.append(f"mC/reports/final_reports_se__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
