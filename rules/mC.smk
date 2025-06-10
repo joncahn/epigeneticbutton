@@ -72,7 +72,7 @@ rule bismark_map_pe:
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: threads // 4
     log:
-        temp(return_log_rna("{sample_name}", "mapping", "PE"))
+        temp(return_log_mc("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
     threads: config["resources"]["bismark_map"]["threads"]
     resources:
@@ -110,7 +110,7 @@ rule bismark_map_se:
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: threads // 4
     log:
-        temp(return_log_rna("{sample_name}", "mapping", "SE"))
+        temp(return_log_mc("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
     threads: config["resources"]["bismark_map"]["threads"]
     resources:
@@ -230,7 +230,7 @@ rule make_mc_bigwig_files:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         context = config['mC_context']
     log:
-        temp(return_log_rna("{sample_name}", "bigiwig", "both"))
+        temp(return_log_mc("{sample_name}", "bigwig", "both"))
     conda: CONDA_ENV
     threads: config["resources"]["mc_bigwig"]["threads"]
     resources:
