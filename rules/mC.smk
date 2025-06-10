@@ -136,7 +136,7 @@ rule make_mc_stats_pe:
         metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_PE_report.txt",
         metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_pe.deduplication_report.txt"
     output:
-        stat_file = "RNA/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
+        stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -172,7 +172,7 @@ rule make_mc_stats_se:
         metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2_SE_report.txt",
         metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2.deduplication_report.txt"
     output:
-        stat_file = "RNA/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
+        stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_se__{sample_name}.html"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
