@@ -37,7 +37,6 @@ rule make_bismark_indices:
     output:
         indices = directory("genomes/{ref_genome}/Bisulfite_Genome")
     params:
-        bismark_index = config[config['species']]['bismark_index'],
         limthreads = threads // 2
     log:
         os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log")
