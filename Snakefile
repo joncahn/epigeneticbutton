@@ -230,7 +230,7 @@ rule combined_analysis:
         expand("RNA/chkpts/RNA_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("mC/chkpts/mC_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
-        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","RNA"]]),
+        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","RNA","mC"]]),
         expand("combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"

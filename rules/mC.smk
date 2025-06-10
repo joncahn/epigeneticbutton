@@ -5,6 +5,32 @@ def return_log_mc(sample_name, step, paired):
     
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/mc.yaml")
 
+def define_final_rna_output(ref_genome):
+    qc_option = config["QC_option"]
+    final_files = []
+    qc_files = []
+    filtered_rep_samples = samples[ (samples['env'] == 'mC') & (samples['ref_genome'] == ref_genome) ]
+    
+    for _, row in filtered_rep_samples.iterrows():
+        sname = sample_name_str(row, 'sample')
+        paired = get_sample_info_from_name(sname, samples, 'paired')
+        final_files.append(f"mC/chkpts/bigwig__{sname}.done")
+        if paired == "PE":
+            final_files.append(f"mC/reports/final_reports_pe__{sample_name}.html")
+            qc_files.append(f"mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+        else:
+            final_files.append(f"mC/reports/final_reports_se__{sample_name}.html")
+            qc_files.append(f"mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+        
+    if qc_option == "all":
+        return final_files + qc_files
+    else:
+        return final_files
+
 rule make_bismark_indices:
     input:
         fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa"
@@ -37,7 +63,8 @@ rule bismark_map_pe:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}_bismark_bt2_pe.bam"),
         bamfile = "mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
+        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_PE_report.txt"),
+        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_pe.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -56,15 +83,13 @@ rule bismark_map_pe:
         """
         {{
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2} |& tee mC/reports/alignment_bismark_pe__{params.sample_name}.txt
+        bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
         printf "\nDeduplicating with bismark\n"
-        deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile} |& tee mC/reports/deduplication_bismark_pe__{params.sample_name}.txt
+        deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
         rm -f mC/methylcall/C*context_PE__{params.sample_name}*
         rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
-        printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o final_report_pe__{params.sample_name}.html --dir mC/reports/ --alignment_report {params.prefix}/trim__{params.sample_name}_R1_bismark_bt2_PE_report.txt --dedup_report {params.prefix}/trim__{params.sample_name}_R1_bismark_bt2_pe.deduplication_report.txt --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}_R1_bismark_bt2_pe.nucleotide_stats.txt
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -76,7 +101,8 @@ rule bismark_map_se:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}_bismark_bt2_se.bam"),
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        reportfile = "mC/reports/final_reports_se__{sample_name}.html"
+        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2_SE_report.txt"),
+        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -95,18 +121,88 @@ rule bismark_map_se:
         """
         {{
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0} |& tee mC/reports/alignment_bismark_se__{params.sample_name}.txt
+        bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
         printf "\nDeduplicating with bismark\n"
-        deduplicate_bismark -p --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile} |& tee mC/reports/deduplication_bismark_se__{params.sample_name}.txt
+        deduplicate_bismark -p --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
         rm -f mC/methylcall/C*context_SE__{params.sample_name}*
         rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
-        printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o final_report_se__{params.sample_name}.html --dir mC/reports/ --alignment_report {params.prefix}/trim__{params.sample_name}_bismark_bt2_SE_report.txt --dedup_report {params.prefix}/trim__{params.sample_name}_bismark_bt2.deduplication_report.txt --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}_bismark_bt2.nucleotide_stats.txt
         }} 2>&1 | tee -a "{log}"
         """
         
+rule make_mc_stats_pe:
+    input:
+        metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
+        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_PE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_pe.deduplication_report.txt"
+    output:
+        stat_file = "RNA/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
+        reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
+    params:
+        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
+        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}"
+    threads: 1
+    resources:
+        mem=32,
+        tmp=32
+    shell:
+        """
+        printf "\nMaking mapping statistics summary\n"
+        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
+        uniq=$(cat reports/deduplication_bismark_{params.sample_name}.txt | grep "Total count of deduplicated leftover sequences:" | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
+        allmap=$((single+multi))
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{uniq}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
+        cat {input.logs} > "{output.log}"
+        printf "\nMaking final html report for {params.sample_name}\n"
+        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}_R1_bismark_bt2_pe.nucleotide_stats.txt
+        rm -f {input.logs}
+        """
+        
+rule make_mc_stats_se:
+    input:
+        metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
+        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2_SE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2.deduplication_report.txt"
+    output:
+        stat_file = "RNA/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
+        reportfile = "mC/reports/final_reports_se__{sample_name}.html"
+    params:
+        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
+        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}"
+    threads: 1
+    resources:
+        mem=32,
+        tmp=32
+    shell:
+        """
+        printf "\nMaking mapping statistics summary\n"
+        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
+        uniq=$(cat reports/deduplication_bismark_{params.sample_name}.txt | grep "Total count of deduplicated leftover sequences:" | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
+        allmap=$((single+multi))
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{uniq}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
+        cat {input.logs} > "{output.log}"
+        printf "\nMaking final html report for {params.sample_name}\n"
+        bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}_bismark_bt2.nucleotide_stats.txt
+        rm -f {input.logs}
+        """
+
 rule pe_or_se_mc_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "bismark_map", "cx_report")

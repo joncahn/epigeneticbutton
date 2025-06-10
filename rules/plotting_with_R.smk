@@ -21,10 +21,10 @@ rule prepping_mapping_stats:
         do
             awk 'NR>1' $f >> "{output.temp_stat_file}"
         done
-        sort {output.temp_stat_file} -u >> "{output.stat_file}"\
+        sort {output.temp_stat_file} -u >> "{output.stat_file}"
         """
     
-rule plotting_mapping_stats_chip_rna:
+rule plotting_mapping_stats:
     input:
         summary_stats = "combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     output:
