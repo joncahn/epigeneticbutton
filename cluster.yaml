@@ -48,3 +48,6 @@ make_rna_stats_pe: *default
 make_rna_stats_se: *default
 dispatch_pair_map_only_rna: *default
 all_rna: *default
+bismark_indices: *heavy
+bismark_map: *heavy
+mc_bigwig: *heavy

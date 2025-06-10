@@ -1,10 +1,3 @@
-# For debugging
-# from snakemake.logging import logger
-
-# def debug_return(name, value):
-    # logger.info(f"[DEBUG] {name} returned: {value} (type: {type(value)})")
-    # return value
-
 # function to access logs more easily
 def return_log_chip(sample_name, step, paired):
     logpath=os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -408,7 +401,7 @@ rule make_chip_stats_se:
         cat {input.logs} > "{output.log}"
         """
 
-rule pe_or_se_dispatch:
+rule pe_or_se_chip_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:

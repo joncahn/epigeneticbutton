@@ -183,6 +183,8 @@ def create_directories(unique_envs, dirs):
             os.makedirs(f"{env}/{d}", exist_ok=True)
         if env in ["ChIP", "TF"]:
             os.makedirs(f"{env}/peaks", exist_ok=True)
+        if env in ["mC"]:
+            os.makedirs(f"{env}/methylcall", exist_ok=True)
     
     for key, value in dirs.items():
         if isinstance(value, dict):
@@ -199,6 +201,7 @@ include: "rules/environment_setup.smk"
 include: "rules/sample_download.smk"
 include: "rules/ChIPseq.smk"
 include: "rules/RNAseq.smk"
+include: "rules/mC.smk"
 include: "rules/plotting_with_R.smk"
 
 # Rule all to specify final target
@@ -225,6 +228,7 @@ rule combined_analysis:
     input:
         expand("ChIP/chkpts/ChIP_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("RNA/chkpts/RNA_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
+        expand("mC/chkpts/mC_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","RNA"]]),
         expand("combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])

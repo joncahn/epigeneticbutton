@@ -78,6 +78,25 @@ rna_tracks:
     param_bg: "--outWigType bedGraph read1_5p"
     strandedness: "forward"
 
+# WGBS parameters
+mC_method: "default" # default works for WGBS, replace with Pico or EMSeq when appropriate
+mC_context: "All" # another option should be set for CG-only (changes parameters for methylation extraction step)
+
+# If using the Pico or EMseq kit for DNA methylation, trimming parameters should be changed "-u 10 -q 10 -m 20" for SE and "-u 10 -U 10 -q 10 -m 20" ## Can be added as an option based on "sample" name and PE
+mC_mapping:
+  default: 
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process: "--ignore_r2 2 --buffer_size 16G" # change buffer size if not appropriate for setup
+  EMseq:
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process: "--buffer_size 16G" # change buffer size if not appropriate for setup
+  Pico:
+    map_pe: "--maxins 1000 --non_directional"
+    map_se: "--non_directional"
+    process: "--buffer_size 16G" # change buffer size if not appropriate for setup
+
 # Analysis parameters
 analysis:
   mark_of_interest: "H3K27ac"  # Default histone mark to focus on
@@ -123,4 +142,7 @@ resources:
   STAR_indices: *heavy
   STAR_map: *heavy
   filter_rna: *heavy
+  bismark_indices: *heavy
+  bismark_map: *heavy
+  mc_bigwig: *single
 
