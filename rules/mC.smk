@@ -122,7 +122,7 @@ rule bismark_map_se:
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
         bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
         printf "\nDeduplicating with bismark\n"
-        deduplicate_bismark -p --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
+        deduplicate_bismark -s --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
         rm -f mC/methylcall/C*context_SE__{params.sample_name}*
