@@ -5,6 +5,10 @@ def return_log_mc(sample_name, step, paired):
     
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/mc.yaml")
 
+def define_DMR_samples(sample_name):
+    replicates = []
+    return replicates
+
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     final_files = []
@@ -93,8 +97,8 @@ rule bismark_map_pe:
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        # rm -f mC/methylcall/C*context_PE__{params.sample_name}*
-        # rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
+        rm -f mC/methylcall/C*context_PE__{params.sample_name}*
+        rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -105,8 +109,8 @@ rule bismark_map_se:
     output:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
-        cx_report = "mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz",
-        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
+        cx_report = temp("mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        metrics_map = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -131,16 +135,18 @@ rule bismark_map_se:
         deduplicate_bismark -s --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        # rm -f mC/methylcall/C*context_SE__{params.sample_name}*
-        # rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
+        rm -f mC/methylcall/C*context_SE__{params.sample_name}*
+        rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
         
 rule make_mc_stats_pe:
     input:
         metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
-        metrics_alignment = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.deduplication_report.txt"
+        metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.deduplication_report.txt",
+        cx_report = "mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
@@ -159,23 +165,28 @@ rule make_mc_stats_pe:
         """
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
-        filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
-        multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
-        single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
-        uniq=$(grep "Total count of deduplicated leftover sequences:" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
+        filt=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Sequences did not map uniquely" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Number of alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
+        uniq=$(grep "Total count of deduplicated leftover sequences" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{uniq}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
-        cat {input.logs} > "{output.log}"
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
+        ## Can change the name of the plastid chromosome to calculate non-conversion rate
+        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {c+=1; d+=b;}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
+
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
+        cp mC/methylcall/PE__"{params.sample_name}"*.txt mC/reports/
+        cp {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
         """
         
 rule make_mc_stats_se:
     input:
         metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
-        metrics_alignment = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt"
+        metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt",
+        cx_report = "mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_se__{sample_name}.html"
@@ -193,17 +204,20 @@ rule make_mc_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
-        filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
-        multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
-        single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
-        uniq=$(grep "Total count of deduplicated leftover sequences:" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
+        tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        filt=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Sequences did not map uniquely" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Number of alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
+        uniq=$(grep "Total count of deduplicated leftover sequences" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{uniq}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
-        cat {input.logs} > "{output.log}"
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
+        ## Can change the name of the plastid chromosome to calculate non-conversion rate
+        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {c+=1; d+=b;}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
+
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
+        mv mC/methylcall/SE__"{params.sample_name}"*.txt mC/reports/
+        mv {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
         """
 
 rule pe_or_se_mc_dispatch:
@@ -300,6 +314,25 @@ rule make_mc_bigwig_files:
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
+
+rule call_DMRs_pairwise:
+    input:
+        sample1 = define_DMR_samples(wildcards.sample1),
+        sample2 = define_DMR_samples(wildcards.sample2),
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample1)['ref_genome']}/chrom.sizes"
+    output:
+        DMRs = "mC/DMRs/{sample1}__vs__{sample2}__CG.txt"
+    params:
+        script=os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
+        context=
+    log:
+        temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
+    conda: CONDA_ENV
+    shell:
+        """
+        printf "placeholder for DMRs\n"
+        # Rscript "{params.script}" "{input.sample1}" "{input.sample2}" "{output.DMRs}"
+        """    
 
 rule all_mC:
     input:

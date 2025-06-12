@@ -18,7 +18,7 @@ plot.mapping.stats<-function(stattable, name) {
     separate(Passing_filtering, into=c("filt","temp1"), sep=" ") %>%
     separate(All_mapped_reads, into=c("all","temp2"), sep=" ") %>%
     separate(Uniquely_mapped_reads, into=c("unique","temp3"), sep=" ") %>%
-    select(-Reference_genome, -temp1, -temp2, -temp3)
+    select(Line, Tissue, Sample, Rep, filt, all, unique)
   
 	table$Line<-as.factor(table$Line)
 	table$Tissue<-as.factor(table$Tissue)

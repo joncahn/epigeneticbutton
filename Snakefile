@@ -181,6 +181,7 @@ def create_directories(unique_envs, dirs):
             os.makedirs(f"{env}/peaks", exist_ok=True)
         if env in ["mC"]:
             os.makedirs(f"{env}/methylcall", exist_ok=True)
+            os.makedirs(f"{env}/DMRs", exist_ok=True)
     
     for key, value in dirs.items():
         if isinstance(value, dict):
