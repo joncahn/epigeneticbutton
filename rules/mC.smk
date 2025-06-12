@@ -124,7 +124,7 @@ rule bismark_map_se:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
+        bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
         rm -f mC/methylcall/C*context_SE__{params.sample_name}*
         rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
