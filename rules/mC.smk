@@ -7,6 +7,7 @@ CONDA_ENV=os.path.join(REPO_FOLDER,"envs/mc.yaml")
 
 def define_DMR_samples(sample_name):
     replicates = []
+    
     return replicates
 
 def define_final_mC_output(ref_genome):

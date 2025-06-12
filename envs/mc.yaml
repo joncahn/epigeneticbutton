@@ -10,4 +10,4 @@ dependencies:
   - ucsc-bedgraphtobigwig=377
   - r-base=4.2.3
   - r-dplyr
-  - r-DMRcaller
+  - r-dmrcaller
