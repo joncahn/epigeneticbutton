@@ -7,5 +7,3 @@ dependencies:
   - bismark=0.23.0
   - bowtie2=2.4.2
   - ucsc-bedgraphtobigwig=377
-  - r-base
-  - r-dplyr
