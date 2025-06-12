@@ -105,7 +105,7 @@ rule bismark_map_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        mapping = config["mC_mapping"][config['mC_method']]['map_pe'],
+        mapping = config["mC_mapping"][config['mC_method']]['map_se'],
         process = config["mC_mapping"][config['mC_method']]['process'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: threads // 4
