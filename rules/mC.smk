@@ -324,14 +324,14 @@ rule call_DMRs_pairwise:
         DMRs = "mC/DMRs/{sample1}__vs__{sample2}__CG.txt"
     params:
         script=os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
-        context=
+        context=config['mC_context']
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
     conda: CONDA_ENV
     shell:
         """
         printf "placeholder for DMRs\n"
-        # Rscript "{params.script}" "{input.sample1}" "{input.sample2}" "{output.DMRs}"
+        # Rscript "{params.script}" "{input.chrom_sizes}" "{input.sample1}" "{input.sample2}" "{params.context}"
         """    
 
 rule all_mC:
