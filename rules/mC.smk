@@ -99,7 +99,7 @@ rule bismark_map_se:
     output:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
-        cx_report = temp("mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        cx_report = "mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz",
         metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2.deduplication_report.txt")
     params:
