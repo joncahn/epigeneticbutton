@@ -87,8 +87,8 @@ rule bismark_map_pe:
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f mC/methylcall/C*context_PE__{params.sample_name}*
-        rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
+        # rm -f mC/methylcall/C*context_PE__{params.sample_name}*
+        # rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -125,8 +125,8 @@ rule bismark_map_se:
         deduplicate_bismark -s --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f mC/methylcall/C*context_SE__{params.sample_name}*
-        rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
+        # rm -f mC/methylcall/C*context_SE__{params.sample_name}*
+        # rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -163,7 +163,6 @@ rule make_mc_stats_pe:
         cat {input.logs} > "{output.log}"
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
-        rm -f {input.logs}
         """
         
 rule make_mc_stats_se:
@@ -199,7 +198,6 @@ rule make_mc_stats_se:
         cat {input.logs} > "{output.log}"
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
-        rm -f {input.logs}
         """
 
 rule pe_or_se_mc_dispatch:
