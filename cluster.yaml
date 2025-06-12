@@ -34,7 +34,7 @@ make_fingerprint_plot: *heavy
 calling_peaks_macs2_pe: *heavy
 calling_peaks_macs2_se: *heavy
 IDR_analysis_replicates: *heavy
-merging_replicates: *heavy
+merging_chip_replicates: *heavy
 making_pseudo_replicates: *heavy
 best_peaks_pseudoreps: *standard
 make_peak_stats: *default
@@ -51,3 +51,4 @@ all_rna: *default
 bismark_indices: *heavy
 bismark_map: *heavy
 mc_bigwig: *heavy
+merging_mc_replicates: *heavy

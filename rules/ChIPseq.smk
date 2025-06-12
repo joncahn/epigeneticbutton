@@ -557,7 +557,7 @@ rule calling_peaks_macs2_se:
         
 rule IDR_analysis_replicates:
     input:
-        peak_filea = lambda wildcards: assign_peak_files_for_idr(wildcards)
+        peak_file = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
         touch = "ChIP/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
     params:
@@ -603,7 +603,7 @@ rule IDR_analysis_replicates:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule merging_replicates:
+rule merging_chip_replicates:
     input:
         bamfiles = lambda wildcards: [ f"ChIP/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
@@ -614,10 +614,10 @@ rule merging_replicates:
     log:
         temp(return_log_chip("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["merging_replicates"]["threads"]
+    threads: config["resources"]["merging_chip_replicates"]["threads"]
     resources:
-        mem=config["resources"]["merging_replicates"]["mem"],
-        tmp=config["resources"]["merging_replicates"]["tmp"]
+        mem=config["resources"]["merging_chip_replicates"]["mem"],
+        tmp=config["resources"]["merging_chip_replicates"]["tmp"]
     shell:
         """
         {{

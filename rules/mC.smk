@@ -25,7 +25,13 @@ def define_final_mC_output(ref_genome):
             final_files.append(f"mC/reports/final_reports_se__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
-        
+    
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ]
+    for _, row in filtered_analysis_samples.iterrows():
+        spname = sample_name_str(row, 'analysis')
+        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
+            bigwig_files.append(f"mC/chkpts/bigwig_{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
+    
     if qc_option == "all":
         return final_files + qc_files
     else:
@@ -62,8 +68,8 @@ rule bismark_map_pe:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
         bamfile = "mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_PE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_pe.deduplication_report.txt")
+        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
+        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -100,8 +106,8 @@ rule bismark_map_se:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
         cx_report = "mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz",
-        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2_SE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2.deduplication_report.txt")
+        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
+        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -133,8 +139,8 @@ rule bismark_map_se:
 rule make_mc_stats_pe:
     input:
         metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
-        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_PE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_pe.deduplication_report.txt"
+        metrics_alignment = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.deduplication_report.txt"
     output:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
@@ -168,8 +174,8 @@ rule make_mc_stats_pe:
 rule make_mc_stats_se:
     input:
         metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
-        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2_SE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2.deduplication_report.txt"
+        metrics_alignment = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt"
     output:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_se__{sample_name}.html"
@@ -215,6 +221,31 @@ rule pe_or_se_mc_dispatch:
         mv {input} {output.cx_report}
         touch {output.touch} 
         """
+
+rule merging_mc_replicates:
+    input:
+        reportfiles = lambda wildcards: [ f"mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz" 
+                                      for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
+    output:
+        bedfile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
+        mergefile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt.gz")
+    params:
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
+    log:
+        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
+    conda: CONDA_ENV
+    threads: config["resources"]["merging_mc_replicates"]["threads"]
+    resources:
+        mem=config["resources"]["merging_mc_replicates"]["mem"],
+        tmp=config["resources"]["merging_mc_replicates"]["tmp"]
+    shell:
+        """
+        {{
+        printf "\nMerging replicates of {params.sname}\n"
+        zcat {input.report_files} | sort -k1,1 -k2,2n | awk -v OFS="\t" '{{print $1,$2-1,$2,$3,$4,$5,$6,$7}}' > {output.bedfile}
+		bedtools merge -d -1 -o distinct,sum,sum,distinct,distinct -c 4,5,6,7,8 -i {output.bedfile} > {output.mergefile}
+        }} 2>&1 | tee -a "{log}"
+        """    
 
 rule make_mc_bigwig_files:
     input:

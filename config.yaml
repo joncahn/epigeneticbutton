@@ -139,7 +139,7 @@ resources:
   make_fingerprint_plot: *heavy
   macs2: *heavy
   idr: *single
-  merging_replicates: *heavy
+  merging_chip_replicates: *heavy
   making_pseudo_replicates: *heavy
   best_peaks_pseudoreps: *standard
   STAR_indices: *heavy
@@ -148,4 +148,5 @@ resources:
   bismark_indices: *heavy
   bismark_map: *heavy
   mc_bigwig: *single
+  merging_mc_replicates: *single
 
