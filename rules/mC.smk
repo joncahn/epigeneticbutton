@@ -59,11 +59,11 @@ rule bismark_map_pe:
         fastq2 = "mC/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
-        temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}_bismark_bt2_pe.bam"),
+        temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
         bamfile = "mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_PE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_pe.deduplication_report.txt")
+        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_PE_report.txt"),
+        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_pe.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -97,11 +97,11 @@ rule bismark_map_se:
         fastq0 = "mC/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
-        temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}_bismark_bt2_se.bam"),
+        temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2_SE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2.deduplication_report.txt")
+        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2_SE_report.txt"),
+        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -133,8 +133,8 @@ rule bismark_map_se:
 rule make_mc_stats_pe:
     input:
         metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
-        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_PE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}_R1_bismark_bt2_pe.deduplication_report.txt"
+        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_PE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_pe.deduplication_report.txt"
     output:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
@@ -156,21 +156,21 @@ rule make_mc_stats_pe:
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
-        uniq=$(cat reports/deduplication_bismark_{params.sample_name}.txt | grep "Total count of deduplicated leftover sequences:" | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
+        uniq=$(grep "Total count of deduplicated leftover sequences:" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{uniq}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}_R1_bismark_bt2_pe.nucleotide_stats.txt
+        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
         rm -f {input.logs}
         """
         
 rule make_mc_stats_se:
     input:
         metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
-        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2_SE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}_bismark_bt2.deduplication_report.txt"
+        metrics_alignment = "mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2_SE_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2.deduplication_report.txt"
     output:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_se__{sample_name}.html"
@@ -192,13 +192,13 @@ rule make_mc_stats_se:
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
-        uniq=$(cat reports/deduplication_bismark_{params.sample_name}.txt | grep "Total count of deduplicated leftover sequences:" | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
+        uniq=$(grep "Total count of deduplicated leftover sequences:" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{uniq}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}_bismark_bt2.nucleotide_stats.txt
+        bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
         rm -f {input.logs}
         """
 
