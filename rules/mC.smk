@@ -66,7 +66,7 @@ rule bismark_map_pe:
         metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_pe.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome'])
+        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
         mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_pe'],
         process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_pe'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
