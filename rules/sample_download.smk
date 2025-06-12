@@ -31,11 +31,11 @@ rule get_fastq_pe:
             mv "{params.data_type}/fastq/{params.seq_id}_1.fastq.gz" "{output.fastq1}"
             pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_2.fastq"
             mv "{params.data_type}/fastq/{params.seq_id}_2.fastq.gz" "{output.fastq2}"
-        elif [[ -e "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz ]] && [[ -e "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz ]]; then
+        elif ls "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz 1> /dev/null 2>&1 && ls "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz 1> /dev/null 2>&1; then
             printf "Copying PE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
-        elif [[ -e "{params.fastq_path}"/*"{params.seq_id}"*R1*q ]] && [[ -e "{params.fastq_path}"/*"{params.seq_id}"*R2*q ]]; then
+        elif ls "{params.fastq_path}"/*"{params.seq_id}"*R1*q 1> /dev/null 2>&1 && ls "{params.fastq_path}"/*"{params.seq_id}"*R2*q 1> /dev/null 2>&1; then
             printf "Copying and gzipping PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*R1*q -c > "{output.fastq1}"
             pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*R2*q -c > "{output.fastq2}"
@@ -70,10 +70,10 @@ rule get_fastq_se:
             printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
             pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}.fastq"
             mv "{params.data_type}/fastq/{params.seq_id}.fastq.gz" "{output.fastq0}"
-        elif [[ -e "{params.fastq_path}"/*"{params.seq_id}"*q.gz ]]; then
+        elif ls "{params.fastq_path}"/*"{params.seq_id}"*q.gz 1> /dev/null 2>&1; then
             printf "\nCopying SE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*q.gz "{output.fastq0}"
-        elif [[ -e "{params.fastq_path}"/*"{params.seq_id}"*q ]]; then
+        elif ls "{params.fastq_path}"/*"{params.seq_id}"*q 1> /dev/null 2>&1; then
             printf "\nCopying and gzipping SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*q -c > "{output.fastq0}"          
         else
