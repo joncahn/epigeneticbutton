@@ -9,5 +9,5 @@ dependencies:
   - bowtie2=2.4.2
   - ucsc-bedgraphtobigwig=377
   - r-base=4.2.3
-  - r-dplyr=1.1.0
-  - bioconductor-dmrcaller=1.22.0
+  - r-dplyr
+  - bioconductor-dmrcaller
