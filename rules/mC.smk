@@ -66,7 +66,7 @@ rule bismark_map_pe:
         metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R1_bismark_bt2_pe.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome'])
         mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_pe'],
         process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_pe'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
@@ -82,11 +82,11 @@ rule bismark_map_pe:
         """
         {{
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
+        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
+        bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f mC/methylcall/C*context_PE__{params.sample_name}*
         rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
@@ -104,7 +104,7 @@ rule bismark_map_se:
         metrics_dedup = temp("mC/mapped/{sample_name}/trim__{params.sample_name}__R0_bismark_bt2.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
         mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_se'],
         process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_se'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
@@ -120,11 +120,11 @@ rule bismark_map_se:
         """
         {{
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        bismark --genome genomes/{params.ref_genome} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
+        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder genomes/{params.ref_genome} {output.bamfile}
+        bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f mC/methylcall/C*context_SE__{params.sample_name}*
         rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"

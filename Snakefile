@@ -124,9 +124,6 @@ def get_sample_names_by_env(env, samples):
     sample_names = samples.loc[samples['env'] == env, "sample_name"].tolist()
     return sample_names
 
-# # Map data types to environments
-# datatype_to_env = dict(zip(samples["data_type"], samples["env"]))
-
 # Get unique list of environments
 UNIQUE_ENVS = samples["env"].unique().tolist()
 
@@ -157,7 +154,6 @@ analysis_to_replicates_sname = (
     .apply(list)
     .to_dict()
 )
-
 
 # Define output directories
 DIRS = {
