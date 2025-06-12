@@ -317,8 +317,8 @@ rule make_mc_bigwig_files:
 
 rule call_DMRs_pairwise:
     input:
-        sample1 = define_DMR_samples(wildcards.sample1),
-        sample2 = define_DMR_samples(wildcards.sample2),
+        sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
+        sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample1)['ref_genome']}/chrom.sizes"
     output:
         DMRs = "mC/DMRs/{sample1}__vs__{sample2}__CG.txt"
