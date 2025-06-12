@@ -9,4 +9,3 @@ dependencies:
   - ucsc-bedgraphtobigwig=377
   - r-base
   - r-dplyr
-  - bioconductor-dmrcaller
