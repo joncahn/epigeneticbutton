@@ -86,30 +86,28 @@ mkdir logs
 
 1. To run the pipeline:
 ```bash
-snakemake --use-conda --conda-frontend mamba --cores 4
+snakemake --use-conda --conda-frontend conda --cores 12
 ```
 
 2. To run the pipeline on a HPC using qsub:
 ```bash
 snakemake --jobs 48 \
-  --use-conda --conda-frontend mamba \
+  --use-conda --conda-frontend conda \
   --cluster-config cluster.yaml \
   --latency-wait 60 \
   --restart-times 2 \
   --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
 
-3. Optional: for increased speed for solving environments, consider using mamba and/or prebuilding the environments:
+3. Optional: for increased speed for solving environments consider prebuilding the environments:
 ```bash
-conda install mamba -n base -c conda-forge # to install mamba, if not already
-```
-```bash
-snakemake --use-conda --conda-frontend mamba --conda-create-envs-only --cores 1
+snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 ```
 It is also recommended to set strict conda channel priorities:
 ```bash
 conda config --set channel_priority strict
 ```
+Using mamba has led to issues so it is not recommended
 
 4. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
 ```bash
