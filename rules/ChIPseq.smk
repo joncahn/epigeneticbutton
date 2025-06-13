@@ -179,7 +179,7 @@ def define_final_chip_output(ref_genome):
         else:
             peak_files.append(f"{env}/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak") # peak file for each single-end replicate
             
-    filtered_analysis_samples = analysis_samples[ ((analysis_samples['env'] == 'ChIP') | (samples['env'] == 'TF')) & (analysis_samples['ref_genome'] == ref_genome) ]
+    filtered_analysis_samples = analysis_samples[ ((analysis_samples['env'] == 'ChIP') | (analysis_samples['env'] == 'TF')) & (analysis_samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         env = get_sample_info_from_name(spname, analysis_samples, 'env')
