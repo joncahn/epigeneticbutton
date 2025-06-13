@@ -408,8 +408,6 @@ rule make_chip_stats_se:
         cat {input.logs} > "{output.log}"
         """
 
-NEED TO KEEP UPDATING CHIP INTO ENV
-
 rule pe_or_se_chip_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
