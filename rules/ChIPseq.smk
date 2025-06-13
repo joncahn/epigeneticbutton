@@ -1,6 +1,6 @@
 # function to access logs more easily
-def return_log_chip(sample_name, step, paired):
-    logpath=os.path.join(REPO_FOLDER,"ChIP","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+def return_log_chip(env, sample_name, step, paired):
+    logpath = os.path.join(REPO_FOLDER,env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
     return logpath if config.get("debug_keep_logs", False) else temp(logpath)
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
@@ -44,37 +44,39 @@ def assign_peak_files_for_idr(wildcards):
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     replicates = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+    env = get_sample_info_from_name(sname, analysis_samples, 'env')
     if paired == "PE":
-        return [ f"ChIP/peaks/peaks_pe__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}_peaks.{peaktype}Peak"
+        return [ f"{env}/peaks/peaks_pe__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}_peaks.{peaktype}Peak"
                 for replicate in replicates ]
     else:
-        return [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}_peaks.{peaktype}Peak"
+        return [ f"{env}/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}_peaks.{peaktype}Peak"
                 for replicate in replicates ]
 
 def input_peak_files_for_best_peaks(wildcards):
     peaktype = get_peaktype(wildcards.sample_type, config["chip_callpeaks"]['peaktype'])
     sname = sample_name_str(wildcards, 'analysis')
     paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
+    env = get_sample_info_from_name(sname, analysis_samples, 'env')
 
     if len(analysis_to_replicates[(wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome)]) >= 2:
         if paired == "PE":
-            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
+            result = [ f"{env}/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
         else:
-            result = [ f"ChIP/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
+            result = [ f"{env}/peaks/peaks_pe__merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_pe__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_pe__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
     else:
         one_rep = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])[0]
         if paired == "PE":
-            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
+            result = [ f"{env}/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
         else:
-            result = [ f"ChIP/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
-                       f"ChIP/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
+            result = [ f"{env}/peaks/peaks_se__final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_se__pseudo1__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak",
+                       f"{env}/peaks/peaks_se__pseudo2__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{one_rep}__{wildcards.ref_genome}_peaks.{peaktype}Peak" ]
 
     return result
 
@@ -147,40 +149,43 @@ def define_final_chip_output(ref_genome):
     bigwig_files = []
     stat_files = []
     qc_files = []
-    filtered_rep_samples = samples[ (samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome) ]
+    filtered_rep_samples = samples[ ((samples['env'] == 'ChIP') | (samples['env'] == 'TF')) & (samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
+        env = get_sample_info_from_name(sname, samples, 'env')
         if paired == "PE":
-            stat_files.append(f"ChIP/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
-            qc_files.append(f"ChIP/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"ChIP/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
-            qc_files.append(f"ChIP/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
-            qc_files.append(f"ChIP/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+            stat_files.append(f"{env}/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
+            qc_files.append(f"{env}/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"{env}/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"{env}/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"{env}/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            stat_files.append(f"ChIP/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
-            qc_files.append(f"ChIP/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-            qc_files.append(f"ChIP/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            stat_files.append(f"{env}/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
+            qc_files.append(f"{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"{env}/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
     filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ]
     for _, row in filtered_rep_samples_no_input.iterrows():
         peaktype = get_peaktype(row.sample_type, config["chip_callpeaks"]['peaktype'])
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
-        bigwig_files.append(f"ChIP/tracks/FC__final__{sname}.bw") # bigwig log2FC enrichment vs input for each replicate
-        stat_files.append(f"ChIP/plots/Fingerprint__final__{sname}.png") # fingerprint plots for each replicate and its input
+        env = get_sample_info_from_name(sname, samples, 'env')
+        bigwig_files.append(f"{env}/tracks/FC__final__{sname}.bw") # bigwig log2FC enrichment vs input for each replicate
+        stat_files.append(f"{env}/plots/Fingerprint__final__{sname}.png") # fingerprint plots for each replicate and its input
         if paired == "PE":
-            peak_files.append(f"ChIP/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak") # peak file for each paired-end replicate
+            peak_files.append(f"{env}/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak") # peak file for each paired-end replicate
         else:
-            peak_files.append(f"ChIP/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak") # peak file for each single-end replicate
+            peak_files.append(f"{env}/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak") # peak file for each single-end replicate
             
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ]
+    filtered_analysis_samples = analysis_samples[ ((analysis_samples['env'] == 'ChIP') | (samples['env'] == 'TF')) & (analysis_samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
-        peak_files.append(f"ChIP/peaks/selected_peaks__{spname}.bed") # best peak file for each analysis sample
+        env = get_sample_info_from_name(spname, analysis_samples, 'env')
+        peak_files.append(f"{env}/peaks/selected_peaks__{spname}.bed") # best peak file for each analysis sample
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            stat_files.append(f"ChIP/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done") # idr analyses between each pair of replicates
-            bigwig_files.append(f"ChIP/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw") # bigiwig log2FC for merged replicates vs merged inputs
+            stat_files.append(f"{env}/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done") # idr analyses between each pair of replicates
+            bigwig_files.append(f"{env}/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw") # bigiwig log2FC for merged replicates vs merged inputs
         
     if qc_option == "all":
         return peak_files + bigwig_files + stat_files + qc_files
@@ -214,19 +219,19 @@ rule make_bt2_indices:
 
 rule bowtie2_map_pe:
     input:
-        fastq1 = "ChIP/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "ChIP/fastq/trim__{sample_name}__R2.fastq.gz",
+        fastq1 = "{env}/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "{env}/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
     output:
-        samfile = temp("ChIP/mapped/mapped_pe__{sample_name}.sam"),
-        metrics = "ChIP/reports/bt2_pe__{sample_name}.txt"
+        samfile = temp("{env}/mapped/mapped_pe__{sample_name}.sam"),
+        metrics = "{env}/reports/bt2_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_pe']    
     log:
-        temp(return_log_chip("{sample_name}", "mapping", "PE"))
+        temp(return_log_chip("{env}","{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
     threads: config["resources"]["bt2_map"]["threads"]
     resources:
@@ -243,18 +248,18 @@ rule bowtie2_map_pe:
         
 rule bowtie2_map_se:
     input:
-        fastq = "ChIP/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq = "{env}/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
     output:
-        samfile = temp("ChIP/mapped/mapped_se__{sample_name}.sam"),
-        metrics = "ChIP/reports/bt2_se__{sample_name}.txt"
+        samfile = temp("{env}/mapped/mapped_se__{sample_name}.sam"),
+        metrics = "{env}/reports/bt2_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
-        temp(return_log_chip("{sample_name}", "mapping", "SE"))
+        temp(return_log_chip("{env}","{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
     threads: config["resources"]["bt2_map"]["threads"]
     resources:
@@ -271,17 +276,18 @@ rule bowtie2_map_se:
 
 rule filter_chip_pe:
     input:
-        samfile = "ChIP/mapped/mapped_pe__{sample_name}.sam"
+        samfile = "{env}/mapped/mapped_pe__{sample_name}.sam"
     output:
-        bamfile = temp("ChIP/mapped/mapped_pe__{sample_name}.bam"),
-        metrics_dup = "ChIP/reports/markdup_pe__{sample_name}.txt",
-        metrics_flag = "ChIP/reports/flagstat_pe__{sample_name}.txt"
+        bamfile = temp("{env}/mapped/mapped_pe__{sample_name}.bam"),
+        metrics_dup = "{env}/reports/markdup_pe__{sample_name}.txt",
+        metrics_flag = "{env}/reports/flagstat_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
+        env = lambda wildcards: wildcards.env,
         map_option = lambda wildcards: config['chip_mapping_option'],
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
-        temp(return_log_chip("{sample_name}", "filtering", "PE"))
+        temp(return_log_chip("{env}","{sample_name}", "filtering", "PE"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_chip"]["threads"]
     resources:
@@ -292,31 +298,32 @@ rule filter_chip_pe:
         {{
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {params.sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o "{params.env}/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
         rm -f "{input.samfile}"
-        samtools fixmate -@ {threads} -m "ChIP/mapped/temp1_{params.sample_name}.bam" "ChIP/mapped/temp2_{params.sample_name}.bam"
-        samtools sort -@ {threads} -o "ChIP/mapped/temp3_{params.sample_name}.bam" "ChIP/mapped/temp2_{params.sample_name}.bam"
-        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp3_{params.sample_name}.bam" "{output.bamfile}"
+        samtools fixmate -@ {threads} -m "{params.env}/mapped/temp1_{params.sample_name}.bam" "{params.env}/mapped/temp2_{params.sample_name}.bam"
+        samtools sort -@ {threads} -o "{params.env}/mapped/temp3_{params.sample_name}.bam" "{params.env}/mapped/temp2_{params.sample_name}.bam"
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "{params.env}/mapped/temp3_{params.sample_name}.bam" "{output.bamfile}"
         samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f ChIP/mapped/temp*"_{params.sample_name}.bam"
+        rm -f {params.env}/mapped/temp*"_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_chip_se:
     input:
-        samfile = "ChIP/mapped/mapped_se__{sample_name}.sam"
+        samfile = "{env}/mapped/mapped_se__{sample_name}.sam"
     output:
-        bamfile = temp("ChIP/mapped/mapped_se__{sample_name}.bam"),
-        metrics_dup = "ChIP/reports/markdup_se__{sample_name}.txt",
-        metrics_flag = "ChIP/reports/flagstat_se__{sample_name}.txt"
+        bamfile = temp("{env}/mapped/mapped_se__{sample_name}.bam"),
+        metrics_dup = "{env}/reports/markdup_se__{sample_name}.txt",
+        metrics_flag = "{env}/reports/flagstat_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
+        env = lambda wildcards: wildcards.env,
         map_option = lambda wildcards: config['chip_mapping_option'],
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
-        temp(return_log_chip("{sample_name}", "filtering", "SE"))
+        temp(return_log_chip("{env}","{sample_name}", "filtering", "SE"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_chip"]["threads"]
     resources:
@@ -327,25 +334,25 @@ rule filter_chip_se:
         {{
         printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {params.sample_name} file using {params.map_option} with samtools version:\n"
         samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o "ChIP/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
+        samtools view -@ {threads} -b -h -q 10 -F 256 -o "{params.env}/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
         rm -f "{input.samfile}"
-        samtools sort -@ {threads} -o "ChIP/mapped/temp2_{params.sample_name}.bam" "ChIP/mapped/temp1_{params.sample_name}.bam"
-        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "ChIP/mapped/temp2_{params.sample_name}.bam" "{output.bamfile}"
+        samtools sort -@ {threads} -o "{params.env}/mapped/temp2_{params.sample_name}.bam" "{params.env}/mapped/temp1_{params.sample_name}.bam"
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "{params.env}/mapped/temp2_{params.sample_name}.bam" "{output.bamfile}"
         samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f ChIP/mapped/temp*"_{params.sample_name}.bam"
+        rm -f {params.env}/mapped/temp*"_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_chip_stats_pe:
     input:
-        metrics_trim = "ChIP/reports/trim_pe__{sample_name}.txt",
-        metrics_map = "ChIP/reports/bt2_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        metrics_trim = "{env}/reports/trim_pe__{sample_name}.txt",
+        metrics_map = "{env}/reports/bt2_pe__{sample_name}.txt",
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        stat_file = "ChIP/reports/summary_ChIP_PE_mapping_stats_{sample_name}.txt",
-        log = "ChIP/logs/process_pe_sample__{sample_name}.log"        
+        stat_file = "{env}/reports/summary_ChIP_PE_mapping_stats_{sample_name}.txt",
+        log = "{env}/logs/process_pe_sample__{sample_name}.log"        
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
@@ -372,12 +379,12 @@ rule make_chip_stats_pe:
 
 rule make_chip_stats_se:
     input:
-        metrics_trim = "ChIP/reports/trim_se__{sample_name}.txt",
-        metrics_map = "ChIP/reports/bt2_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        metrics_trim = "{env}/reports/trim_se__{sample_name}.txt",
+        metrics_map = "{env}/reports/bt2_se__{sample_name}.txt",
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
     output:
-        stat_file = "ChIP/reports/summary_ChIP_SE_mapping_stats_{sample_name}.txt",
-        log = "ChIP/logs/process_se_sample__{sample_name}.log"
+        stat_file = "{env}/reports/summary_ChIP_SE_mapping_stats_{sample_name}.txt",
+        log = "{env}/logs/process_se_sample__{sample_name}.log"
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
@@ -401,12 +408,14 @@ rule make_chip_stats_se:
         cat {input.logs} > "{output.log}"
         """
 
+NEED TO KEEP UPDATING CHIP INTO ENV
+
 rule pe_or_se_chip_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
-        bam = "ChIP/mapped/final__{sample_name}.bam",
-        touch = "ChIP/chkpts/map__{sample_name}.done"
+        bam = "{env}/mapped/final__{sample_name}.bam",
+        touch = "{env}/chkpts/map__{sample_name}.done"
     threads: 1
     resources:
         mem=32,
