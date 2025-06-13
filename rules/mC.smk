@@ -87,8 +87,8 @@ rule bismark_map_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
-        mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['map_pe'],
-        process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['process_pe'],
+        mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_pe'],
+        process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_pe'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
@@ -125,8 +125,8 @@ rule bismark_map_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
-        mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['map_se'],
-        process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['process_se'],
+        mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_se'],
+        process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_se'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
@@ -142,7 +142,7 @@ rule bismark_map_se:
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
         bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
         printf "\nDeduplicating with bismark\n"
-        deduplicate_bismark -s --output_dir {params.prefix}/ -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
+        deduplicate_bismark -s --output_dir {params.prefix} -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f mC/methylcall/C*context_SE__{params.sample_name}*
