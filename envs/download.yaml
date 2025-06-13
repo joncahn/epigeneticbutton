@@ -1,4 +1,3 @@
-name: download
 channels:
   - conda-forge
   - bioconda

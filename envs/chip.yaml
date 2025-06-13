@@ -1,4 +1,3 @@
-name: chip
 channels:
   - conda-forge
   - bioconda
