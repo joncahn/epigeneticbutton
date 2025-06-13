@@ -84,6 +84,11 @@ mC_context: "All" # another option should be set for CG-only (changes parameters
 
 # If using the Pico or EMseq kit for DNA methylation, trimming parameters should be changed "-u 10 -q 10 -m 20" for SE and "-u 10 -U 10 -q 10 -m 20" ## Can be added as an option based on "sample" name and PE
 mC_mapping:
+  default: 
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--ignore_r2 2 --buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
   WGBS: 
     map_pe: "--maxins 1000"
     map_se: ""

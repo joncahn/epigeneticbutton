@@ -5,6 +5,11 @@ def return_log_mc(sample_name, step, paired):
     
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/mc.yaml")
 
+def parameters_for_mc(sample_name):
+    temp = parse_sample_name(sample_name)['sample_type']
+    options = {"WGBS", "Pico", "EMseq"}
+    return temp if temp in options else "default"
+
 def define_DMR_samples(sample_name):
     replicates = []
     
@@ -82,8 +87,8 @@ rule bismark_map_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
-        mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_pe'],
-        process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_pe'],
+        mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['map_pe'],
+        process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['process_pe'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
@@ -120,8 +125,8 @@ rule bismark_map_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
-        mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_se'],
-        process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_se'],
+        mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['map_se'],
+        process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name}]['process_se'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
