@@ -48,7 +48,7 @@ rule make_bismark_indices:
     output:
         indices = directory("genomes/{ref_genome}/Bisulfite_Genome")
     params:
-        limthreads = lambda wildcards, threads: threads // 2
+        limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
         os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log")
     conda: CONDA_ENV
@@ -60,7 +60,11 @@ rule make_bismark_indices:
         """
         {{
         printf "\nBuilding bismark index directory for {wildcards.ref_genome}\n"
-        bismark_genome_preparation --parallel {params.limthreads} --bowtie2 --genomic_composition genomes/{wildcards.ref_genome}
+        if [[ {params.limthreads} -gt 1 ]]; then
+            bismark_genome_preparation --parallel {params.limthreads} --bowtie2 --genomic_composition genomes/{wildcards.ref_genome}
+        else
+            bismark_genome_preparation --bowtie2 --genomic_composition genomes/{wildcards.ref_genome}
+        fi
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -81,7 +85,7 @@ rule bismark_map_pe:
         mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_pe'],
         process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_pe'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
-        limthreads = lambda wildcards, threads: threads // 4
+        limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
@@ -119,7 +123,7 @@ rule bismark_map_se:
         mapping = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['map_se'],
         process = lambda wildcards: config["mC_mapping"][parse_sample_name(wildcards.sample_name)['sample_type']]['process_se'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
-        limthreads = lambda wildcards, threads: threads // 4
+        limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
