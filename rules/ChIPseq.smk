@@ -752,7 +752,7 @@ rule ChIP_all:
     input:
         lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
-        touch = "{env}/chkpts/{env}_analysis__{ref_genome}.done"
+        touch = "{env}/chkpts/ChIP_analysis__{ref_genome}.done"
     threads: 1
     resources:
         mem=32,
@@ -761,3 +761,4 @@ rule ChIP_all:
         """
         touch {output.touch}
         """
+       

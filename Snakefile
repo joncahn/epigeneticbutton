@@ -224,10 +224,11 @@ rule coverage_chip:
 rule combined_analysis:
     input:
         expand("ChIP/chkpts/ChIP_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
+        expand("TF/chkpts/ChIP_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("RNA/chkpts/RNA_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("mC/chkpts/mC_analysis__{ref_genome}.done", ref_genome=REF_GENOMES),
-        expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
-        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","RNA","mC"]]),
+#        expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
+        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","RNA","mC"]]),
         expand("combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
