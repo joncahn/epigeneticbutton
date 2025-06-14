@@ -50,7 +50,6 @@ def define_final_mC_output(ref_genome):
             merged_files.append(f"mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
     
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
-    if (a.line != b.line) or (a.tissue != b.tissue):
         a_dict = a._asdict()
         b_dict = b._asdict()
         sample1 = sample_name_str(a_dict, 'analysis')
