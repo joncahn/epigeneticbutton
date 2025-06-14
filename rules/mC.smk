@@ -168,13 +168,29 @@ rule bismark_map_se:
         rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
+
+rule pe_or_se_mc_dispatch:
+    input:
+        lambda wildcards: assign_mapping_paired(wildcards, "bismark_map", "cx_report")
+    output:
+        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
+        touch = "mC/chkpts/map__{sample_name}.done"
+    threads: 1
+    resources:
+        mem=32,
+        tmp=32
+    shell:
+        """
+        mv {input} {output.cx_report}
+        touch {output.touch} 
+        """
         
 rule make_mc_stats_pe:
     input:
         metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
         metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
         metrics_dedup = "mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
-        cx_report = "mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz",
+        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
@@ -215,7 +231,7 @@ rule make_mc_stats_se:
         metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
         metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
         metrics_dedup = "mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
-        cx_report = "mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz",
+        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
@@ -249,22 +265,6 @@ rule make_mc_stats_se:
         bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
         mv mC/methylcall/SE__"{params.sample_name}"*.txt mC/reports/
         mv {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
-        """
-
-rule pe_or_se_mc_dispatch:
-    input:
-        lambda wildcards: assign_mapping_paired(wildcards, "bismark_map", "cx_report")
-    output:
-        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        touch = "mC/chkpts/map__{sample_name}.done"
-    threads: 1
-    resources:
-        mem=32,
-        tmp=32
-    shell:
-        """
-        mv {input} {output.cx_report}
-        touch {output.touch} 
         """
 
 rule merging_mc_replicates:
