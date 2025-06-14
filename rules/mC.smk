@@ -17,8 +17,10 @@ def define_DMR_samples(sample_name):
     tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
     sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
     ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
-    return [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
-                for replicate in replicates ]
+    list_of_reps = [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
+                    for replicate in replicates ]
+    print(f"Input files for {sample_name}: {list_of_reps}")
+    return list_of_reps
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
@@ -313,7 +315,7 @@ rule make_mc_bigwig_files:
     shell:
         """
         {{
-        if [ {params.context} == "All" ]; then
+        if [[ {params.context} == "all" ]]; then
             zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CG.bedGraph"}}'
             for strand in plus minus
             do
@@ -326,7 +328,7 @@ rule make_mc_bigwig_files:
             for context in CG CHG CHH
             do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                LC_COLLATE=C sort -k1,1 -k2,2n mC/methylcall/{params.sample_name}_$){context}}.bedGraph > mC/methylcall/sorted_{params.sample_name}_${{context}}.bedGraph
+                LC_COLLATE=C sort -k1,1 -k2,2n mC/methylcall/{params.sample_name}_${{context}}.bedGraph > mC/methylcall/sorted_{params.sample_name}_${{context}}.bedGraph
                 bedGraphToBigWig mC/methylcall/sorted_{params.sample_name}_${{context}}.bedGraph {input.chrom_sizes} mC/methylcall/{params.sample_name}_${{context}}.bw
                 for strand in plus minus
                 do
@@ -336,10 +338,10 @@ rule make_mc_bigwig_files:
                 done
             done
             rm -f mC/methylcall/*"{params.sample_name}"*bedGraph*
-        elif [ {params.context} == "CG-only" ]; then
+        elif [[ {params.context} == "CG-only" ]]; then
             printf "Script for CG-only not ready yet\n" ## To update for CG-only!
         else
-            printf "Unknown sequence context selection! Check the config file and set 'mC_context' to either 'All' or 'CG-only'\n"
+            printf "Unknown sequence context selection! Check the config file and set 'mC_context' to either 'all' or 'CG-only'\n"
             exit 1
         fi
         touch {output.touch}
