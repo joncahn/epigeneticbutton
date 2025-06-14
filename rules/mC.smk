@@ -180,6 +180,7 @@ rule make_mc_stats_pe:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
     params:
+        sample_name = lambda wildcards" wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
@@ -201,7 +202,7 @@ rule make_mc_stats_pe:
         allmap=$((single+multi))
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
         ## Can change the name of the plastid chromosome to calculate non-conversion rate
-        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {c+=1; d+=b;}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
+        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_alignment} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
@@ -220,6 +221,7 @@ rule make_mc_stats_se:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_se__{sample_name}.html"
     params:
+        sample_name = lambda wildcards" wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
