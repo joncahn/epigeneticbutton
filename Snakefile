@@ -11,6 +11,7 @@ min_version("6.0")
 
 # Configuration
 configfile: "config.yaml"
+analysis = config['full_analysis']
 
 # Define patterns and envs
 env_patterns = [

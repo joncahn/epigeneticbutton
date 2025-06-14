@@ -2,8 +2,11 @@
 repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/testmC"
 repo_folder_rule: "path/to/epigeneticbutton/repo"
 
-# Name of analysis
+# Name of the run
 analysis_name: "test_snakemake"
+
+# To perform the whole analysis
+full_analysis: true
 
 # Path to the sample metadata file
 sample_file: "samples.tsv"
