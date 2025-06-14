@@ -337,7 +337,7 @@ rule call_DMRs_pairwise:
         context=config['mC_context']
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
-    conda: CONDA_ENV
+    conda: os.path.join(REPO_FOLDER,"envs/call_dmrs.yaml")
     shell:
         """
         printf "placeholder for DMRs\n"

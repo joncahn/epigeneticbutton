@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
-library(DMRcaller)
 library(dplyr)
+library(DMRcaller)
 
 args = commandArgs(trailingOnly=TRUE)
 
