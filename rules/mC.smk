@@ -180,7 +180,7 @@ rule make_mc_stats_pe:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
     params:
-        sample_name = lambda wildcards" wildcards.sample_name,
+        sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
@@ -221,7 +221,7 @@ rule make_mc_stats_se:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "mC/reports/final_reports_se__{sample_name}.html"
     params:
-        sample_name = lambda wildcards" wildcards.sample_name,
+        sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
