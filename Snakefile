@@ -150,13 +150,6 @@ analysis_to_replicates = (
     .to_dict()
 )
 
-analysis_to_replicates_sname = (
-    samples
-    .groupby(["sample_name"])["replicate"]
-    .apply(list)
-    .to_dict()
-)
-
 # Define output directories
 DIRS = {
     "genomes": "genomes",

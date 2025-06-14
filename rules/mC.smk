@@ -11,16 +11,15 @@ def parameters_for_mc(sample_name):
     return temp if temp in options else "default"
 
 def define_DMR_samples(sample_name):
-    replicates = analysis_to_replicates_sname.get(sample_name, [])
     data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
     line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
     tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
     sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
     ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
-    list_of_reps = [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
+    replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
+    
+    return [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
                     for replicate in replicates ]
-    print(f"Input files for {sample_name}: {list_of_reps}")
-    return list_of_reps
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
