@@ -5,6 +5,7 @@ import fnmatch
 import sys
 import re
 from snakemake.utils import min_version
+from itertools import combinations
 
 min_version("6.0")
 

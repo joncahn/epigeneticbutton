@@ -11,13 +11,20 @@ def parameters_for_mc(sample_name):
     return temp if temp in options else "default"
 
 def define_DMR_samples(sample_name):
-    replicates = []
-    
-    return replicates
+    replicates = analysis_to_replicates_sname.get(sample_name, [])
+    data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
+    line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
+    tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
+    sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
+    ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
+    return [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
+                for replicate in replicates ]
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     final_files = []
+    dmr_files = []
+    merged_files = []
     qc_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'mC') & (samples['ref_genome'] == ref_genome) ]
     
@@ -40,12 +47,25 @@ def define_final_mC_output(ref_genome):
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            final_files.append(f"mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
+            merged_files.append(f"mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
+    
+    for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
+    if (a.line != b.line) or (a.tissue != b.tissue):
+        a_dict = a._asdict()
+        b_dict = b._asdict()
+        sample1 = sample_name_str(a_dict, 'analysis')
+        sample2 = sample_name_str(b_dict, 'analysis')
+        dmr_files.append(f"mC/DMRs/summary__{sample1}__vs__{sample2}__dmrs.txt")
     
     if qc_option == "all":
-        return final_files + qc_files
+        results = final_files + qc_files
     else:
-        return final_files
+        results = final_files
+    
+    if analysis:
+        results += dmr_files + merged_files
+
+    return results
 
 rule make_bismark_indices:
     input:
@@ -83,7 +103,7 @@ rule bismark_map_pe:
         bamfile = "mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
         metrics_alignement = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.deduplication_report.txt")
+        metrics_dedup = temp("mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -121,7 +141,7 @@ rule bismark_map_se:
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
         cx_report = temp("mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
         metrics_map = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt")
+        metrics_dedup = temp("mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -154,7 +174,7 @@ rule make_mc_stats_pe:
     input:
         metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
         metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.deduplication_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
         cx_report = "mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
@@ -194,7 +214,7 @@ rule make_mc_stats_se:
     input:
         metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
         metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.deduplication_report.txt",
+        metrics_dedup = "mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
         cx_report = "mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
@@ -331,17 +351,20 @@ rule call_DMRs_pairwise:
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample1)['ref_genome']}/chrom.sizes"
     output:
-        DMRs = "mC/DMRs/{sample1}__vs__{sample2}__CG.txt"
+        dmr_summary = "mC/DMRs/summary__{sample1}__vs__{sample2}__dmrs.txt"
     params:
-        script=os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
-        context=config['mC_context']
+        script = os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
+        context = config['mC_context'],
+        sample1 = lambda wildcards: wildcards.sample1,
+        sample2 = lambda wildcards: wildcards.sample2
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
     conda: os.path.join(REPO_FOLDER,"envs/call_dmrs.yaml")
     shell:
         """
         printf "placeholder for DMRs\n"
-        # Rscript "{params.script}" "{input.chrom_sizes}" "{input.sample1}" "{input.sample2}" "{params.context}"
+        touch {output.dmr_summary}
+        # Rscript "{params.script}" "{input.chrom_sizes}" "{params.sample1}" "{params.sample2}" "{params.context}"
         """    
 
 rule all_mC:
