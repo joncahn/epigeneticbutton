@@ -270,7 +270,7 @@ rule make_mc_stats_se:
 
 rule merging_mc_replicates:
     input:
-        reportfiles = lambda wildcards: [ f"mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz" 
+        report_files = lambda wildcards: [ f"mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         bedfile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
