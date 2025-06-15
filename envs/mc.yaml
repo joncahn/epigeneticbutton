@@ -7,4 +7,5 @@ dependencies:
   - bismark>=0.24.2
   - bowtie2>=2.4
   - samtools>=1.10
+  - bedtools>=2.29
   - ucsc-bedgraphtobigwig=377

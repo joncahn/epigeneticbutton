@@ -236,7 +236,7 @@ rule make_mc_stats_se:
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
-        reportfile = "mC/reports/final_reports_se__{sample_name}.html"
+        reportfile = "mC/reports/final_report_se__{sample_name}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -314,30 +314,30 @@ rule make_mc_bigwig_files:
     shell:
         """
         {{
-        if [[ {params.context} == "all" ]]; then
-            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CG.bedGraph"}}'
+        if [[ "{params.context}" == "all" ]]; then
+            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CG.bedGraph"}}'
             for strand in plus minus
             do
                 case "${{strand}}" in 
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CHH_"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CHG_"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "mC/methylcall/"s"_CG_"d".bedGraph"}}'
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHH_"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHG_"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CG_"d".bedGraph"}}'
             done
             for context in CG CHG CHH
             do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                LC_COLLATE=C sort -k1,1 -k2,2n mC/methylcall/{params.sample_name}_${{context}}.bedGraph > mC/methylcall/sorted_{params.sample_name}_${{context}}.bedGraph
-                bedGraphToBigWig mC/methylcall/sorted_{params.sample_name}_${{context}}.bedGraph {input.chrom_sizes} mC/methylcall/{params.sample_name}_${{context}}.bw
+                LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}_${{context}}.bedGraph > mC/tracks/sorted_{params.sample_name}_${{context}}.bedGraph
+                bedGraphToBigWig mC/tracks/sorted_{params.sample_name}_${{context}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}_${{context}}.bw
                 for strand in plus minus
                 do
                     printf "\nMaking ${{strand}} strand bigwig files of ${{context}} context for {params.sample_name}\n"
-                    LC_COLLATE=C sort -k1,1 -k2,2n mC/methylcall/{params.sample_name}_${{context}}_${{strand}}.bedGraph > mC/methylcall/sorted_{params.sample_name}_${{context}}_${{strand}}.bedGraph
-                    bedGraphToBigWig mC/methylcall/sorted_{params.sample_name}_${{context}}_${{strand}}.bedGraph {input.chrom_sizes} mC/methylcall/{params.sample_name}_${{context}}_${{strand}}.bw
+                    LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}_${{context}}_${{strand}}.bedGraph > mC/tracks/sorted_{params.sample_name}_${{context}}_${{strand}}.bedGraph
+                    bedGraphToBigWig mC/tracks/sorted_{params.sample_name}_${{context}}_${{strand}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}_${{context}}_${{strand}}.bw
                 done
             done
-            rm -f mC/methylcall/*"{params.sample_name}"*bedGraph*
-        elif [[ {params.context} == "CG-only" ]]; then
+            rm -f mC/tracks/*"{params.sample_name}"*bedGraph*
+        elif [[ "{params.context}" == "CG-only" ]]; then
             printf "Script for CG-only not ready yet\n" ## To update for CG-only!
         else
             printf "Unknown sequence context selection! Check the config file and set 'mC_context' to either 'all' or 'CG-only'\n"
