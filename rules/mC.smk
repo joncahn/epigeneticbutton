@@ -34,13 +34,13 @@ def define_final_mC_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         final_files.append(f"mC/chkpts/bigwig__{sname}.done")
         if paired == "PE":
-            final_files.append(f"mC/reports/final_reports_pe__{sname}.html")
+            final_files.append(f"mC/reports/final_report_pe__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
             qc_files.append(f"mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            final_files.append(f"mC/reports/final_reports_se__{sname}.html")
+            final_files.append(f"mC/reports/final_report_se__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
     
@@ -195,7 +195,7 @@ rule make_mc_stats_pe:
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
-        reportfile = "mC/reports/final_reports_pe__{sample_name}.html"
+        reportfile = "mC/reports/final_report_pe__{sample_name}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
