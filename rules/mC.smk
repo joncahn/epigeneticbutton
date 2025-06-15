@@ -355,7 +355,7 @@ rule call_DMRs_pairwise:
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
         chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
-        dmr_summary = "mC/DMRs/summary__{sample1}__vs__{sample2}__dmrs.txt"
+        dmr_summary = "mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
         context = config['mC_context'],
@@ -373,8 +373,7 @@ rule call_DMRs_pairwise:
     shell:
         """
         printf "placeholder for DMRs\n"
-        touch {output.dmr_summary}
-        # Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
+        Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
         """    
 
 rule all_mC:
