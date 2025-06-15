@@ -274,6 +274,7 @@ rule merging_mc_replicates:
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         bedfile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
+        tempmergefile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt"),
         mergefile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt.gz")
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
@@ -289,7 +290,8 @@ rule merging_mc_replicates:
         {{
         printf "\nMerging replicates of {params.sname}\n"
         zcat {input.report_files} | sort -k1,1 -k2,2n | awk -v OFS="\t" '{{print $1,$2-1,$2,$3,$4,$5,$6,$7}}' > {output.bedfile}
-		bedtools merge -d -1 -o distinct,sum,sum,distinct,distinct -c 4,5,6,7,8 -i {output.bedfile} > {output.mergefile}
+		bedtools merge -d -1 -o distinct,sum,sum,distinct,distinct -c 4,5,6,7,8 -i {output.bedfile} > {output.tempmergefile}
+        pigz -p {threads} "{output.tempmergefile}" -c > "{output.mergefile}"
         }} 2>&1 | tee -a "{log}"
         """    
 

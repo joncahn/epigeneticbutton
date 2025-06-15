@@ -9,3 +9,4 @@ dependencies:
   - samtools>=1.10
   - bedtools>=2.29
   - ucsc-bedgraphtobigwig=377
+  - pigz>=2.3

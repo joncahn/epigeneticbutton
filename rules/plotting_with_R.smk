@@ -17,17 +17,10 @@ rule prepping_mapping_stats:
     shell:
         """
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
-        if [[ {params.env} == "ChIP" || {params.env} == "RNA" ]]; then
-            for f in {input.sample_stat_files}
-            do
-                awk 'NR>1' $f >> "{output.temp_stat_file}"
-            done
-        elif [[ {params.env} == "mC" ]]; then
-            for f in {input.sample_stat_files}
-            do
-                awk 'NR>1 {{print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' $f >> "{output.temp_stat_file}"
-            done
-        fi
+        for f in {input.sample_stat_files}
+        do
+            awk -v OFS="\t" 'NR>1 {{print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' $f >> "{output.temp_stat_file}"
+        done
         sort {output.temp_stat_file} -u >> "{output.stat_file}"
         """
     

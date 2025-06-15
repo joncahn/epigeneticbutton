@@ -18,7 +18,7 @@ plot.mapping.stats<-function(stattable, name) {
     separate(Passing_filtering, into=c("filt","temp1"), sep=" ") %>%
     separate(All_mapped_reads, into=c("all","temp2"), sep=" ") %>%
     separate(Uniquely_mapped_reads, into=c("unique","temp3"), sep=" ") %>%
-    select(Line, Tissue, Sample, Rep, filt, all, unique)
+    select(Line, Tissue, Sample, Rep, Total_reads, filt, all, unique)
   
 	table$Line<-as.factor(table$Line)
 	table$Tissue<-as.factor(table$Tissue)
@@ -29,7 +29,7 @@ plot.mapping.stats<-function(stattable, name) {
 	table$unique<-as.numeric(table$unique)
   
 	table<-table %>% mutate(Filtered=Total_reads-filt, unmapped=Total_reads-all, multi=all-unique) %>%
-		select(-filt, -all) %>%
+		select(-filt, -all, -Total_reads) %>%
 		gather(key="Read_type",value="Count", Filtered, unmapped, multi, unique) %>%
 		group_by(Line,Tissue,Sample,Rep,Read_type)
   

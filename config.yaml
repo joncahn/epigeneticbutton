@@ -156,6 +156,6 @@ resources:
   bismark_indices: *heavy
   bismark_map: *heavy
   mc_bigwig: *single
-  merging_mc_replicates: *single
+  merging_mc_replicates: *heavy
   call_dmrs: *heavy
 
