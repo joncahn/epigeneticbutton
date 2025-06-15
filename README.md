@@ -147,6 +147,13 @@ epigeneticbutton/
 - `colcenall`: Centromere mapping with relaxed MAPQ
 - `all`: Relaxed mapping parameters
 
+### DMRs parameters
+- By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
+- DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG and CHH and the following (stringent) parameters: 
+	CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
+	CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
+- Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the `call_DMRs_pairwise` rule in the `mC.smk` file.
+
 ###  Intermediate Target Rules
 - `map_only`: Only performs the up to mapping of all samples. It returns bam files, QC files and mapping metrics.
 - `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in config (chip_tracks: binsize: 1)
@@ -166,10 +173,8 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 ### Features under development
 - Finishing ChIP-seq and RNA-seq
 - Assignment of IP to Input based on suffix (e.g. ChIP_A)
-- TF ChIP-seq
 - RAMPAGE
 - small RNAseq
-- WGBS
 - Plotting
 - ATAC-seq
 

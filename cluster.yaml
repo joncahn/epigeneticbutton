@@ -52,3 +52,4 @@ bismark_indices: *heavy
 bismark_map: *heavy
 mc_bigwig: *heavy
 merging_mc_replicates: *heavy
+call_dmrs: *heavy

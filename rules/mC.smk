@@ -358,15 +358,21 @@ rule call_DMRs_pairwise:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
         context = config['mC_context'],
         sample1 = lambda wildcards: wildcards.sample1,
-        sample2 = lambda wildcards: wildcards.sample2
+        sample2 = lambda wildcards: wildcards.sample2,
+        nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
+        nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
     conda: os.path.join(REPO_FOLDER,"envs/call_dmrs.yaml")
+    threads: config["resources"]["call_dmrs"]["threads"]
+    resources:
+        mem=config["resources"]["call_dmrs"]["mem"],
+        tmp=config["resources"]["call_dmrs"]["tmp"]
     shell:
         """
         printf "placeholder for DMRs\n"
         touch {output.dmr_summary}
-        # Rscript "{params.script}" "{input.chrom_sizes}" "{params.sample1}" "{params.sample2}" "{params.context}"
+        # Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
         """    
 
 rule all_mC:

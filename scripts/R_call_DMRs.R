@@ -5,33 +5,32 @@ library(DMRcaller)
 
 args = commandArgs(trailingOnly=TRUE)
 
-chromsizes<-read.table(args[1], col.names = c("chr", "length"))
-sample1<-args[2]
-sample2<-args[3]
+threads<-as.numeric(args[1])
+chromsizes<-read.table(args[2], col.names = c("chr", "length"))
+context<-args[3]
+sample1<-args[4]
+sample2<-args[5]
+nb_sample1<-as.numeric(args[6])
+nb_sample2<-as.numeric(args[7])
+list_sample1<-args[8:(7+nb_sample1)]
+list_sample2<-args[(8+nb_sample1):(7+nb_sample1+nb_sample2)]
 
 chrs<-GRanges(seqnames = chromsizes$chr, ranges = IRanges(start = 1, end = chromsizes$length))
 
-# methylationDataddm1hirapool<-readBismarkPool(c("CX_reports/ddm1hira_A_Rep1.deduplicated.CX_report.txt.gz","CX_reports/ddm1hira_A_Rep2.deduplicated.CX_report.txt.gz"))
-# methylationDataddm1pool<-readBismarkPool(c("CX_reports/ddm1_A_Rep1.deduplicated.CX_report.txt.gz","CX_reports/ddm1_A_Rep2.deduplicated.CX_report.txt.gz"))
-# DMRsCGpool<-computeDMRs(methylationDataddm1hirapool, methylationDataddm1pool, regions=tair10_chrs, context="CG", method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=6)
+methylationDatasample1pool<-readBismarkPool(list_sample1)
+methylationDatasample2pool<-readBismarkPool(list_sample2)
 
-# CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),ddm1hira=elementMetadata(DMRsCGpool)[,3],ddm1=elementMetadata(DMRsCGpool)[,6], Pvalue=elementMetadata(DMRsCGpool)[,10]) %>%
-	# mutate(Delta=ddm1hira-ddm1)
+DMRsCGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CG", method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
+CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=elementMetadata(DMRsCGpool)[,3],secondsample=elementMetadata(DMRsCGpool)[,6], Pvalue=elementMetadata(DMRsCGpool)[,10]) %>%
+		mutate(Delta=firstsample-secondsample) %>%
+		rename(!!sample1 := firstsample, !!sample2 := secondsample)
+		
+DMRsCHHpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHH", method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
+CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),sample1=elementMetadata(DMRsCHHpool)[,3],sample2=elementMetadata(DMRsCHHpool)[,6], Pvalue=elementMetadata(DMRsCHHpool)[,10]) %>%
+	mutate(Delta=sample1-sample2)
 
-# methylationDataddm1hirarep1<-readBismarkPool("CX_reports/ddm1hira_A_Rep1.deduplicated.CX_report.txt.gz")
-# methylationDataddm1rep1<-readBismark("CX_reports/ddm1_A_Rep1.deduplicated.CX_report.txt.gz")
-# DMRsCGrep1<-computeDMRs(methylationDataddm1hirarep1, methylationDataddm1rep1, regions=tair10_chrs, context="CG", method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=6)
+write.table(CGpool,paste0("mC/DMRS/",sample1,"vs",sample2,"_CG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
-# CGrep1<-data.frame(Chr=seqnames(DMRsCGrep1),Start=start(DMRsCGrep1)-1,End=end(DMRsCGrep1),ddm1hirarep1=elementMetadata(DMRsCGrep1)[,3],ddm1rep1=elementMetadata(DMRsCGrep1)[,6], Pvaluerep1=elementMetadata(DMRsCGrep1)[,10]) %>%
-	# mutate(Delta=ddm1hirarep1-ddm1rep1)
-	
-# methylationDataddm1hirarep2<-readBismarkPool("CX_reports/ddm1hira_A_Rep2.deduplicated.CX_report.txt.gz")
-# methylationDataddm1rep2<-readBismark("CX_reports/ddm1_A_Rep2.deduplicated.CX_report.txt.gz")
-# DMRsCGrep2<-computeDMRs(methylationDataddm1hirarep2, methylationDataddm1rep2, regions=tair10_chrs, context="CG", method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=6)
 
-# CGrep2<-data.frame(Chr=seqnames(DMRsCGrep2),Start=start(DMRsCGrep2)-1,End=end(DMRsCGrep2),ddm1hirarep2=elementMetadata(DMRsCGrep2)[,3],ddm1rep2=elementMetadata(DMRsCGrep2)[,6], Pvaluerep2=elementMetadata(DMRsCGrep2)[,10]) %>%
-	# mutate(Deltarep2=ddm1hirarep2-ddm1rep2)
 
-# write.table(CGrep1,"DMRs_CG_rep1.txt",sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
-# write.table(CGrep2,"DMRs_CG_rep2.txt",sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
-# write.table(CGpool,"DMRs_CG_pool.txt",sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+"mC/DMRs/summary__{sample1}__vs__{sample2}__dmrs.txt"

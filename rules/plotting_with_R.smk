@@ -16,15 +16,18 @@ rule prepping_mapping_stats:
         env = lambda wildcards: wildcards.env
     shell:
         """
+        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
         if [[ {params.env} == "ChIP" || {params.env} == "RNA" ]]; then
-            printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
+            for f in {input.sample_stat_files}
+            do
+                awk 'NR>1' $f >> "{output.temp_stat_file}"
+            done
         elif [[ {params.env} == "mC" ]]; then
-            printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > "{output.stat_file}"
+            for f in {input.sample_stat_files}
+            do
+                awk 'NR>1 {{print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' $f >> "{output.temp_stat_file}"
+            done
         fi
-        for f in {input.sample_stat_files}
-        do
-            awk 'NR>1' $f >> "{output.temp_stat_file}"
-        done
         sort {output.temp_stat_file} -u >> "{output.stat_file}"
         """
     

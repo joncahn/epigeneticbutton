@@ -157,4 +157,5 @@ resources:
   bismark_map: *heavy
   mc_bigwig: *single
   merging_mc_replicates: *single
+  call_dmrs: *heavy
 
