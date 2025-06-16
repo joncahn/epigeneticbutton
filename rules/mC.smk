@@ -63,7 +63,6 @@ def define_final_mC_output(ref_genome):
     else:
         results = final_files
     
-    print(config['full_analysis'], type(config['full_analysis']))
     if analysis:
         results += dmr_files + merged_files
 
