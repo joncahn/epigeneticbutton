@@ -372,7 +372,7 @@ rule call_DMRs_pairwise:
         tmp=config["resources"]["call_dmrs"]["tmp"]
     shell:
         """
-        printf "placeholder for DMRs\n"
+        printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
         Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
         """    
 
