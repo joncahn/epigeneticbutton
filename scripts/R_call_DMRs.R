@@ -20,7 +20,7 @@ chrs<-GRanges(seqnames = chromsizes$chr, ranges = IRanges(start = 1, end = chrom
 methylationDatasample1pool<-readBismarkPool(list_sample1)
 methylationDatasample2pool<-readBismarkPool(list_sample2)
 
-DMRsCGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CG", method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
+DMRsCGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CG", method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=elementMetadata(DMRsCGpool)[,3],secondsample=elementMetadata(DMRsCGpool)[,6], Pvalue=elementMetadata(DMRsCGpool)[,10]) %>%
 		mutate(Delta=firstsample-secondsample) %>%
 		rename(!!sample1 := firstsample, !!sample2 := secondsample)
