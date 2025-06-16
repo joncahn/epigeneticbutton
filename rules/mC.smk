@@ -56,8 +56,7 @@ def define_final_mC_output(ref_genome):
         b_dict = b._asdict()
         sample1 = sample_name_str(a_dict, 'analysis')
         sample2 = sample_name_str(b_dict, 'analysis')
-        dmr_files.append(f"mC/DMRs/summary__{sample1}__vs__{sample2}__dmrs.txt")
-        print(dmr_files)
+        dmr_files.append(f"mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
     
     if qc_option == "all":
         results = final_files + qc_files
@@ -67,7 +66,6 @@ def define_final_mC_output(ref_genome):
     if analysis:
         results += dmr_files + merged_files
     
-    print(results)
     return results
 
 rule make_bismark_indices:
