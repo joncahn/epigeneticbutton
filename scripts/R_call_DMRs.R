@@ -23,25 +23,26 @@ methylationDatasample2pool<-readBismarkPool(list_sample2)
 DMRsCGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CG", method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=elementMetadata(DMRsCGpool)[,3],secondsample=elementMetadata(DMRsCGpool)[,6], Pvalue=elementMetadata(DMRsCGpool)[,10]) %>%
 		mutate(Delta=firstsample-secondsample) %>%
-		rename(!!sample1 := firstsample, !!sample2 := secondsample)
+		rename(!!sym(sample1) := firstsample, !!sym(sample2) := secondsample)
 write.table(CGpool,paste0("mC/DMRS/",sample1,"__vs__",sample2,"__CG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 summary_file<-mutate(CGpool, Type=ifelse(Delta>0, "hyper", "hypo")) %>%
-	gorup_by(!!sample1, !!sample2, Type) %>%
-	summarize("CG DMRs"=n())
+	group_by(!!sym(sample1), !!sym(sample2), Type) %>%
+	summarize(CG_DMRs=n())
 
 if (context == "all") {
 	DMRsCHHpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHH", method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 	CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),sample1=elementMetadata(DMRsCHHpool)[,3],sample2=elementMetadata(DMRsCHHpool)[,6], Pvalue=elementMetadata(DMRsCHHpool)[,10]) %>%
-			mutate(Delta=sample1-sample2)
+			mutate(Delta=sample1-sample2) %>%
+			rename(!!sym(sample1) := firstsample, !!sym(sample2) := secondsample)
 
 	write.table(CGpool,paste0("mC/DMRS/",sample1,"__vs__",sample2,"__CHH_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	
 	summary_fileCHH<-mutate(CHHpool, Type=ifelse(Delta>0, "hyper", "hypo")) %>%
-	gorup_by(!!sample1, !!sample2, Type) %>%
-	summarize("CHH DMRs"=n())
+	group_by(!!sym(sample1), !!sym(sample2), Type) %>%
+	summarize(CHH_DMRs=n())
 	
-	summary_file<-merge(summary_file, summary_fileCHH, by=c(!!sample1, !!sample2, Type))
+	summary_file<-merge(summary_file, summary_fileCHH, by=c(sample1, sample2, Type))
 }
 
 write.table(summary_file,paste0("mC/DMRS/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
