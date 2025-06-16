@@ -290,7 +290,7 @@ rule merging_mc_replicates:
         {{
         printf "\nMerging replicates of {params.sname}\n"
         zcat {input.report_files} | sort -k1,1 -k2,2n | awk -v OFS="\t" '{{print $1,$2-1,$2,$3,$4,$5,$6,$7}}' > {output.bedfile}
-		bedtools merge -d -1 -o distinct,sum,sum,distinct,distinct -c 4,5,6,7,8 -i {output.bedfile} > {output.tempmergefile}
+		bedtools merge -d -1 -o distinct,sum,sum,distinct,distinct -c 4,5,6,7,8 -i {output.bedfile} | awk -v OFS="\t" '{{print $1,$3,$4,$5,$6,$7,$8}}' > {output.tempmergefile}
         pigz -p {threads} "{output.tempmergefile}" -c > "{output.mergefile}"
         }} 2>&1 | tee -a "{log}"
         """    
@@ -300,7 +300,7 @@ rule make_mc_bigwig_files:
         cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bigwig = "mC/tracks/{sample_name}_CG.bw",
+        bigwig = "mC/tracks/{sample_name}__CG.bw",
         touch = "mC/chkpts/bigwig__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -317,25 +317,25 @@ rule make_mc_bigwig_files:
         """
         {{
         if [[ "{params.context}" == "all" ]]; then
-            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CG.bedGraph"}}'
+            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CG.bedGraph"}}'
             for strand in plus minus
             do
                 case "${{strand}}" in 
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHH_"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CHG_"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"_CG_"d".bedGraph"}}'
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CG__"d".bedGraph"}}'
             done
             for context in CG CHG CHH
             do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}_${{context}}.bedGraph > mC/tracks/sorted_{params.sample_name}_${{context}}.bedGraph
-                bedGraphToBigWig mC/tracks/sorted_{params.sample_name}_${{context}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}_${{context}}.bw
+                LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}__${{context}}.bedGraph > mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
+                bedGraphToBigWig mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}__${{context}}.bw
                 for strand in plus minus
                 do
                     printf "\nMaking ${{strand}} strand bigwig files of ${{context}} context for {params.sample_name}\n"
-                    LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}_${{context}}_${{strand}}.bedGraph > mC/tracks/sorted_{params.sample_name}_${{context}}_${{strand}}.bedGraph
-                    bedGraphToBigWig mC/tracks/sorted_{params.sample_name}_${{context}}_${{strand}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}_${{context}}_${{strand}}.bw
+                    LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
+                    bedGraphToBigWig mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
                 done
             done
             rm -f mC/tracks/*"{params.sample_name}"*bedGraph*
