@@ -186,6 +186,8 @@ def create_directories(unique_envs, dirs):
             os.makedirs(value, exist_ok=True)
 
 # Call the function to create directories
+print("DIRS being used:", DIRS)
+print("UNIQUE_ENVS being used:", UNIQUE_ENVS)
 create_directories(UNIQUE_ENVS, DIRS)
 
 # Include all rule files
