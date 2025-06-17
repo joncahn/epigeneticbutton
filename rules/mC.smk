@@ -102,7 +102,7 @@ rule bismark_map_pe:
     output:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
         bamfile = "mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
-        cx_report = temp("mC/methylcall/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        cx_report = temp("mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
         metrics_alignement = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
         metrics_dedup = temp("mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
     params:
@@ -127,9 +127,9 @@ rule bismark_map_pe:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -p --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f mC/methylcall/C*context_PE__{params.sample_name}*
-        rm -f mC/methylcall/PE__{params.sample_name}*bismark.cov*
+        bismark_methylation_extractor -p --comprehensive -o mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
+        rm -f mC/mapped/C*context_PE__{params.sample_name}*
+        rm -f mC/mapped/PE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -140,7 +140,7 @@ rule bismark_map_se:
     output:
         temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
         bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
-        cx_report = temp("mC/methylcall/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        cx_report = temp("mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
         metrics_map = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
     params:
@@ -165,9 +165,9 @@ rule bismark_map_se:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix} -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -s --comprehensive -o mC/methylcall/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f mC/methylcall/C*context_SE__{params.sample_name}*
-        rm -f mC/methylcall/SE__{params.sample_name}*bismark.cov*
+        bismark_methylation_extractor -s --comprehensive -o mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
+        rm -f mC/mapped/C*context_SE__{params.sample_name}*
+        rm -f mC/mapped/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -223,8 +223,8 @@ rule make_mc_stats_pe:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
-        cp mC/methylcall/PE__"{params.sample_name}"*.txt mC/reports/
+        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
+        cp mC/mapped/PE__"{params.sample_name}"*.txt mC/reports/
         cp {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
         """
         
@@ -264,8 +264,8 @@ rule make_mc_stats_se:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/methylcall/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/methylcall/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
-        mv mC/methylcall/SE__"{params.sample_name}"*.txt mC/reports/
+        bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
+        mv mC/mapped/SE__"{params.sample_name}"*.txt mC/reports/
         mv {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
         """
 
