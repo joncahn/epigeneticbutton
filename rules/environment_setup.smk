@@ -34,7 +34,7 @@ rule check_fasta:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log_env("{ref_genome}", "fasta")
+        temp(return_log_env("{ref_genome}", "fasta"))
     conda: CONDA_ENV
     threads: config["resources"]["use_pigz"]["threads"]
     resources:
@@ -75,7 +75,7 @@ rule check_gff:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log_env("{ref_genome}", "gff")
+        temp(return_log_env("{ref_genome}", "gff"))
     conda: CONDA_ENV
     threads: config["resources"]["use_pigz"]["threads"]
     resources:
@@ -105,7 +105,7 @@ rule check_gtf:
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
-        return_log_env("{ref_genome}", "gtf")
+        temp(return_log_env("{ref_genome}", "gtf"))
     conda: CONDA_ENV
     threads: config["resources"]["use_pigz"]["threads"]
     resources:
@@ -138,7 +138,7 @@ rule check_chrom_sizes:
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
-        return_log_env("{ref_genome}", "chrom_sizes")
+        temp(return_log_env("{ref_genome}", "chrom_sizes"))
     conda: CONDA_ENV
     threads: config["resources"]["chrom_sizes"]["threads"]
     resources:
@@ -161,7 +161,7 @@ rule prep_region_file:
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
-        return_log_env("{ref_genome}", "region_file")
+        temp(return_log_env("{ref_genome}", "region_file"))
     conda: CONDA_ENV
     threads: config["resources"]["region_file"]["threads"]
     resources:

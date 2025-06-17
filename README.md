@@ -86,12 +86,12 @@ mkdir logs
 
 1. To run the pipeline:
 ```bash
-snakemake --use-conda --conda-frontend conda --cores 12
+snakemake --use-conda --conda-frontend conda --cores 12 --delete-temp-output
 ```
 
 2. To run the pipeline on a HPC using qsub:
 ```bash
-snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
+snakemake --jobs 48 --use-conda --conda-frontend conda --delete-temp-output --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
 
 3. Optional: for increased speed for solving environments consider prebuilding the environments:
@@ -142,16 +142,16 @@ epigeneticbutton/
 - `colcenall`: Centromere mapping with relaxed MAPQ
 - `all`: Relaxed mapping parameters
 
+###  Intermediate Target Rules
+- `map_only`: Only performs the up to mapping of all samples. It returns bam files, QC files and mapping metrics.
+- `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in config (chip_tracks: binsize: 1)
+
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
 - DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG and CHH and the following (stringent) parameters: 
 	CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
 	CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
 - Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the `call_DMRs_pairwise` rule in the `mC.smk` file.
-
-###  Intermediate Target Rules
-- `map_only`: Only performs the up to mapping of all samples. It returns bam files, QC files and mapping metrics.
-- `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in config (chip_tracks: binsize: 1)
 
 ### Analysis Parameters
 - `mark_of_interest`: Default histone mark (e.g., H3K27ac)
@@ -172,6 +172,12 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 - small RNAseq
 - Plotting
 - ATAC-seq
+
+## FAQ
+
+- How does the logging works?
+The flag `--delete-temp-output` is useful to clean-up the temporary files and logs generated during the run. Snakemake does not necessarily clean them automatically by default, especially the logs, if this is not set. 
+If all the logs should be kept, use `snakemake --notemp` when running the pipeline. This will keep *ALL* intermediary files, including potentially large processed files, so consider using `--delete-all-temp` after the logs have been checked.
 
 ## Contributing
 

@@ -1,7 +1,6 @@
 # function to access logs more easily
 def return_log_chip(env, sample_name, step, paired):
-    logpath = os.path.join(REPO_FOLDER,env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
-    return logpath if config.get("debug_keep_logs", False) else temp(logpath)
+    return os.path.join(REPO_FOLDER,env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
@@ -203,7 +202,7 @@ rule make_bt2_indices:
     output:
         indices = directory("genomes/{ref_genome}/bt2_index")
     log:
-        os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log")
+        temp(os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log"))
     conda: CONDA_ENV
     threads: config["resources"]["bt2_indices"]["threads"]
     resources:

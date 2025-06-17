@@ -1,8 +1,7 @@
 # function to access logs more easily
 def return_log_mc(sample_name, step, paired):
-    logpath=os.path.join(REPO_FOLDER,"mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
-    return logpath if config.get("debug_keep_logs", False) else temp(logpath)
-    
+    return os.path.join(REPO_FOLDER,"mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+     
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/mc.yaml")
 
 def parameters_for_mc(sample_name):
@@ -76,7 +75,7 @@ rule make_bismark_indices:
     params:
         limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
-        os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log")
+        temp(os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log"))
     conda: CONDA_ENV
     threads: config["resources"]["bismark_indices"]["threads"]
     resources:
@@ -308,7 +307,7 @@ rule make_mc_bigwig_files:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         context = config['mC_context']
     log:
-        temp(return_log_mc("{sample_name}", "bigwig", "both"))
+        temp(return_log_mc("{sample_name}", "bigwig", ""))
     conda: CONDA_ENV
     threads: config["resources"]["mc_bigwig"]["threads"]
     resources:

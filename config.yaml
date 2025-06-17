@@ -60,8 +60,6 @@ chip_tracks:
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 # QC_option: "all"
 QC_option: "none"
-# Keep all intermediary logs for debugging. Set to False for cleaner runs
-debug_keep_logs: false
 
 # For peaks
 chip_callpeaks:

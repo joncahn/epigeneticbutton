@@ -1,6 +1,6 @@
 # function to access logs more easily
 def return_log_rna(sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")    
+    return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -38,7 +38,7 @@ rule make_STAR_indices:
     params:
         star_index = config[config['species']]['star_index']
     log:
-        os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log")
+        temp(os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log"))
     conda: CONDA_ENV
     threads: config["resources"]["STAR_indices"]["threads"]
     resources:
