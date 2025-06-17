@@ -177,7 +177,7 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 
 - How does the logging works?
 The flag `--delete-temp-output` is useful to clean-up the temporary files and logs generated during the run. Snakemake does not necessarily clean them automatically by default, especially the logs, if this is not set. 
-If all the logs should be kept, use `snakemake --notemp` when running the pipeline. This will keep *ALL* intermediary files, including potentially large processed files, so consider using `--delete-all-temp` after the logs have been checked.
+If all the logs should be kept, use `snakemake --notemp` when running the pipeline. This will keep *ALL* intermediary files, including potentially large processed files, so use with caution.
 
 ## Contributing
 
