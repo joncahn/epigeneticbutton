@@ -86,12 +86,12 @@ mkdir logs
 
 1. To run the pipeline:
 ```bash
-snakemake --use-conda --conda-frontend conda --cores 12 --delete-temp-output
+snakemake --use-conda --conda-frontend conda --cores 12
 ```
 
 2. To run the pipeline on a HPC using qsub:
 ```bash
-snakemake --jobs 48 --use-conda --conda-frontend conda --delete-temp-output --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
+snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
 
 3. Optional: for increased speed for solving environments consider prebuilding the environments:
@@ -174,10 +174,6 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 - ATAC-seq
 
 ## FAQ
-
-- How does the logging works?
-The flag `--delete-temp-output` is useful to clean-up the temporary files and logs generated during the run. Snakemake does not necessarily clean them automatically by default, especially the logs, if this is not set. 
-If all the logs should be kept, use `snakemake --notemp` when running the pipeline. This will keep *ALL* intermediary files, including potentially large processed files, so use with caution.
 
 ## Contributing
 
