@@ -58,13 +58,13 @@ conda install -c bioconda snakemake
 ### Configuration
 
 1. Prepare your sample metadata file (`samples.tsv`) with the following columns:
-   - `data_type`: Type of data [RNAseq | RAMPAGE | shRNA | ChIP_* | TF_* | mC]
+   - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC] (RAMPAGE and shRNA under development)
    - `line`: Sample line (e.g., B73)
    - `tissue`: Tissue type
    - `sample`: Sample identifier
    - `replicate`: Replicate ID
-   - `seq_id`: Sequencing ID
-   - `fastq_path`: Path to FASTQ files
+   - `seq_id`: Sequencing ID; use the corresponding SRR####### if downloading from SRA
+   - `fastq_path`: Path to FASTQ files; if downloading from SRA, use "SRA" 
    - `paired`: [PE | SE]
    - `ref_genome`: Reference genome name
 
@@ -72,7 +72,7 @@ conda install -c bioconda snakemake
    - Reference genome path
    - Sample file path
    - Analysis parameters / options
-   - Species-specific parameters (e.g. gneome size)
+   - Species-specific parameters (e.g. genome size)
    - Resource allocation
    
 3. If changing resource allocation for cluster submission, adjust also the `cluster.yaml`. Keep in mind that units in the snakemake rules and in the cluster file are in MB.
