@@ -231,7 +231,7 @@ rule bowtie2_map_pe:
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_pe']    
     log:
-        temp(return_log_chip("{env}","{sample_name}", "mapping", "PE"))
+        temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "PE"))
     conda: CONDA_ENV
     threads: config["resources"]["bt2_map"]["threads"]
     resources:
@@ -259,7 +259,7 @@ rule bowtie2_map_se:
         map_option = lambda wildcards: config['chip_mapping_option'],
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
-        temp(return_log_chip("{env}","{sample_name}", "mapping", "SE"))
+        temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "SE"))
     conda: CONDA_ENV
     threads: config["resources"]["bt2_map"]["threads"]
     resources:
@@ -349,7 +349,7 @@ rule make_chip_stats_pe:
     input:
         metrics_trim = "{env}/reports/trim_pe__{sample_name}.txt",
         metrics_map = "{env}/reports/bt2_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filtering"] ]
     output:
         stat_file = "{env}/reports/summary_ChIP_PE_mapping_stats_{sample_name}.txt",
         log = "{env}/logs/process_pe_sample__{sample_name}.log"        
@@ -381,7 +381,7 @@ rule make_chip_stats_se:
     input:
         metrics_trim = "{env}/reports/trim_se__{sample_name}.txt",
         metrics_map = "{env}/reports/bt2_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filtering"] ]
     output:
         stat_file = "{env}/reports/summary_ChIP_SE_mapping_stats_{sample_name}.txt",
         log = "{env}/logs/process_se_sample__{sample_name}.log"

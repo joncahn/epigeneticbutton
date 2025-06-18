@@ -2,6 +2,17 @@
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
+# def define_RNA_samples(sample_name):
+    # data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
+    # line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
+    # tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
+    # sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
+    # ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
+    # replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
+    
+    # return [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
+                    # for replicate in replicates ]
+
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
     final_files = []
@@ -66,7 +77,7 @@ rule STAR_map_pe:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"RNA/mapped/map_pe__{wildcards.sample_name}_"
     log:
-        temp(return_log_rna("{sample_name}", "mapping", "PE"))
+        temp(return_log_rna("{sample_name}", "mappingSTAR", "PE"))
     conda: CONDA_ENV
     threads: config["resources"]["STAR_map"]["threads"]
     resources:
@@ -94,7 +105,7 @@ rule STAR_map_se:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"RNA/mapped/map_se__{wildcards.sample_name}_"
     log:
-        temp(return_log_rna("{sample_name}", "mapping", "SE"))
+        temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
     conda: CONDA_ENV
     threads: config["resources"]["STAR_map"]["threads"]
     resources:
@@ -234,7 +245,7 @@ rule make_rna_stats_pe:
     input:
         metrics_trim = "RNA/reports/trim_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filtering"] ]
     output:
         stat_file = "RNA/reports/summary_RNA_PE_mapping_stats_{sample_name}.txt",
         log = "RNA/logs/process_pe_sample__{sample_name}.log"
@@ -266,7 +277,7 @@ rule make_rna_stats_se:
     input:
         metrics_trim = "RNA/reports/trim_se__{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mapping", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filtering"] ]
     output:
         stat_file = "RNA/reports/summary_RNA_SE_mapping_stats_{sample_name}.txt",
         log = "RNA/logs/process_se_sample__{sample_name}.log"
@@ -307,6 +318,33 @@ rule dispatch_pair_map_only_rna:
         """
         touch {output.touch}
         """
+
+# rule call_all_DEGs:
+    # input:
+        # sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
+        # sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
+        # chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+    # output:
+        # dmr_summary = "mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+    # params:
+        # script = os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
+        # context = config['mC_context'],
+        # sample1 = lambda wildcards: wildcards.sample1,
+        # sample2 = lambda wildcards: wildcards.sample2,
+        # nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
+        # nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
+    # log:
+        # temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
+    # conda: os.path.join(REPO_FOLDER,"envs/call_dmrs.yaml")
+    # threads: config["resources"]["call_dmrs"]["threads"]
+    # resources:
+        # mem=config["resources"]["call_dmrs"]["mem"],
+        # tmp=config["resources"]["call_dmrs"]["tmp"]
+    # shell:
+        # """
+        # printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
+        # Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
+        # """
 
 rule all_rna:
     input:
