@@ -4,7 +4,6 @@ channels:
   - defaults
 dependencies:
   - python=3.8
-  - __glibc=2.28
   - cutadapt=3.4
   - sra-tools=2.10.9
   - pigz>=2.3

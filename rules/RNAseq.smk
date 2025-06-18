@@ -2,7 +2,7 @@
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
-# def define_RNA_input_for_deg(ref_genome):
+# def define_RNA_input_for_degs(ref_genome):
     # data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
     # line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
     # tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
@@ -371,8 +371,7 @@ rule make_rna_stranded_bigwigs:
 
 # rule call_all_DEGs:
     # input:
-        # sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
-        # sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
+        # samples = lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome),
         # chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     # output:
         # deg_summary = "RNA/DEGs/summary.txt"
@@ -392,8 +391,9 @@ rule make_rna_stranded_bigwigs:
         # tmp=config["resources"]["call_dmrs"]["tmp"]
     # shell:
         # """
-        # printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
-        # Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
+        # printf "running edgeR for all samples in {params.ref_genome}\n"
+        # #Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
+        # touch {output.deg_summary}
         # """
 
 rule all_rna:

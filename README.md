@@ -98,11 +98,11 @@ snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.
 ```bash
 snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 ```
-It is also recommended to set strict conda channel priorities:
+While it is recommended by snakemake, having set strict conda channel priorities can be a problem. If environment conflicts occur, set the conda channel priorities to flexible:
 ```bash
-conda config --set channel_priority strict
+conda config --set channel_priority flexible
 ```
-Using mamba has led to issues so it is not recommended
+Using mamba has also led to issues so it is not recommended
 
 4. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
 ```bash
