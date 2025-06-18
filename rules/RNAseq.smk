@@ -335,7 +335,7 @@ rule make_rna_stranded_bigwigs:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness'],
-        multimap = = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
+        multimap = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
     conda: CONDA_ENV
     threads: config["resources"]["filter_rna"]["threads"]
     resources:
