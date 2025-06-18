@@ -145,23 +145,25 @@ def define_logs_final_input(wildcards):
 
 def define_final_chip_output(ref_genome):
     qc_option = config["QC_option"]
-    peak_files = []
-    bigwig_files = []
+    analysis = config['full_analysis']
+    map_files = []
     stat_files = []
     qc_files = []
+    peak_files = []
+    bigwig_files = []
     filtered_rep_samples = samples[ ((samples['env'] == 'ChIP') | (samples['env'] == 'TF')) & (samples['ref_genome'] == ref_genome) ]
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         env = get_sample_info_from_name(sname, samples, 'env')
         if paired == "PE":
-            stat_files.append(f"{env}/logs/process_chip_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
+            map_files.append(f"{env}/logs/process_chip_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
             qc_files.append(f"{env}/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
             qc_files.append(f"{env}/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"{env}/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"{env}/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            stat_files.append(f"{env}/logs/process_chip_pse_sample__{sname}.log") # mapping stats for each single-end replicate
+            map_files.append(f"{env}/logs/process_chip_pse_sample__{sname}.log") # mapping stats for each single-end replicate
             qc_files.append(f"{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"{env}/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
@@ -188,9 +190,14 @@ def define_final_chip_output(ref_genome):
             bigwig_files.append(f"{env}/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw") # bigiwig log2FC for merged replicates vs merged inputs
         
     if qc_option == "all":
-        return peak_files + bigwig_files + stat_files + qc_files
+        results = map_files + qc_files
     else:
-        return peak_files + bigwig_files + stat_files
+        results = map_files 
+        
+    if analysis:
+        results += bigwig_files + peak_files + stat_files
+    
+    return results
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
 

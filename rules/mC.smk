@@ -25,22 +25,22 @@ def define_final_mC_output(ref_genome):
     analysis = config['full_analysis']
     final_files = []
     dmr_files = []
-    merged_files = []
+    bigwig_files = []
     qc_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'mC') & (samples['ref_genome'] == ref_genome) ]
     
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
-        final_files.append(f"mC/chkpts/bigwig__{sname}.done")
+        bigwig_files.append(f"mC/chkpts/bigwig__{sname}.done")
         if paired == "PE":
-            final_files.append(f"mC/reports/final_report_pe__{sname}.html")
+            map_files.append(f"mC/reports/final_report_pe__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
             qc_files.append(f"mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            final_files.append(f"mC/reports/final_report_se__{sname}.html")
+            map_files.append(f"mC/reports/final_report_se__{sname}.html")
             qc_files.append(f"mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
     
@@ -48,7 +48,7 @@ def define_final_mC_output(ref_genome):
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            merged_files.append(f"mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
+            bigwig_files.append(f"mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
     
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
         a_dict = a._asdict()
@@ -58,12 +58,12 @@ def define_final_mC_output(ref_genome):
         dmr_files.append(f"mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
     
     if qc_option == "all":
-        results = final_files + qc_files
+        results = map_files + qc_files
     else:
-        results = final_files
+        results = map_files
     
     if analysis:
-        results += dmr_files + merged_files
+        results += dmr_files + bigwig_files
     
     return results
 
