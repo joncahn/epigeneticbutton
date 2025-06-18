@@ -48,14 +48,15 @@ def define_final_rna_output(ref_genome):
     
     # deg_files.append(f"RNA/DEGs/summary.txt")
     
+    results = map_files
+    
     if qc_option == "all":
-        results = map_files + qc_files
-    else:
-        results = map_files
+        results += qc_files
         
     if analysis:
         results += bigwig_files
         # results += bigwig_files + deg_files
+    print(results)
     return results
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
