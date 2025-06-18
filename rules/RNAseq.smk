@@ -54,7 +54,8 @@ def define_final_rna_output(ref_genome):
         results += qc_files
         
     if analysis:
-        results += bigwig_files + deg_files
+        results += bigwig_files
+        # results += bigwig_files + deg_files
 
     return results
         
