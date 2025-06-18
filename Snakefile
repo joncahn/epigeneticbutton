@@ -129,7 +129,7 @@ def get_sample_names_by_env(env, samples):
 # Get unique list of environments
 UNIQUE_ENVS = samples["env"].unique().tolist()
 
-print(UNIQUE_ENVS)
+print("Unique envs:", UNIQUE_ENVS)
 # Load the sample metadata and perform all operations in a single chain
 analysis_samples = (
     samples
