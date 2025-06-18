@@ -56,6 +56,7 @@ def define_final_rna_output(ref_genome):
     if analysis:
         results += bigwig_files
         # results += bigwig_files + deg_files
+    return results
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
 
