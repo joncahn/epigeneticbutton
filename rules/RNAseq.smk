@@ -43,8 +43,8 @@ def define_final_rna_output(ref_genome):
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            bigwig_files.append(f"RNA/tracks/merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
-            bigwig_files.append(f"RNA/tracks/merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
+            bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
+            bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
     # deg_files.append(f"RNA/DEGs/summary.txt")
     
