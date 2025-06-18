@@ -107,7 +107,7 @@ rule STAR_map_pe:
         """
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
-        if [[ {params.fileorder} == "rampage"]]; then
+        if [[ {params.file_order} == "rampage" ]]; then
             printf "Input file order for RAMPAGE (R2 R1)\n"
             input="{input.fastq2}" "{input.fastq1}"
         else
