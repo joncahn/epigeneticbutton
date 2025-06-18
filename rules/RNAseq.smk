@@ -46,7 +46,7 @@ def define_final_rna_output(ref_genome):
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
-    # deg_files.append(f"RNA/DEGs/summary.txt")
+    deg_files.append(f"RNA/DEGs/summary.txt")
     
     results = map_files
     
@@ -54,8 +54,8 @@ def define_final_rna_output(ref_genome):
         results += qc_files
         
     if analysis:
-        results += bigwig_files
-        # results += bigwig_files + deg_files
+        results += bigwig_files + deg_files
+
     return results
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
