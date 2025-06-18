@@ -212,9 +212,9 @@ rule make_mc_stats_pe:
         """
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
-        filt=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
-        multi=$(grep "Sequences did not map uniquely" "{input.metrics_map}" | awk '{{print $NF}}')
-        single=$(grep "Number of alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
+        filt=$(grep "Sequence pairs analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
+        multi=$(grep "Sequence pairs did not map uniquely" "{input.metrics_map}" | awk '{{print $NF}}')
+        single=$(grep "Number of paired-end alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
         uniq=$(grep "Total count of deduplicated leftover sequences" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
