@@ -23,13 +23,13 @@ def define_final_rna_output(ref_genome):
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
-            final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
+            final_files.append(f"RNA/logs/process_rna_pe_sample__{sname}.log")
             qc_files.append(f"RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
             qc_files.append(f"RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"RNA/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"RNA/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            final_files.append(f"RNA/logs/process_pe_sample__{sname}.log")
+            final_files.append(f"RNA/logs/process_rna_se_sample__{sname}.log")
             qc_files.append(f"RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
@@ -248,7 +248,7 @@ rule make_rna_stats_pe:
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
         stat_file = "RNA/reports/summary_RNA_PE_mapping_stats_{sample_name}.txt",
-        log = "RNA/logs/process_pe_sample__{sample_name}.log"
+        log = "RNA/logs/process_rna_pe_sample__{sample_name}.log"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
@@ -280,7 +280,7 @@ rule make_rna_stats_se:
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
         stat_file = "RNA/reports/summary_RNA_SE_mapping_stats_{sample_name}.txt",
-        log = "RNA/logs/process_se_sample__{sample_name}.log"
+        log = "RNA/logs/process_rna_se_sample__{sample_name}.log"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],

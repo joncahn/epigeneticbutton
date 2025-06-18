@@ -155,13 +155,13 @@ def define_final_chip_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         env = get_sample_info_from_name(sname, samples, 'env')
         if paired == "PE":
-            stat_files.append(f"{env}/logs/process_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
+            stat_files.append(f"{env}/logs/process_chip_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
             qc_files.append(f"{env}/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
             qc_files.append(f"{env}/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"{env}/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"{env}/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            stat_files.append(f"{env}/logs/process_se_sample__{sname}.log") # mapping stats for each single-end replicate
+            stat_files.append(f"{env}/logs/process_chip_pse_sample__{sname}.log") # mapping stats for each single-end replicate
             qc_files.append(f"{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"{env}/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
@@ -352,7 +352,7 @@ rule make_chip_stats_pe:
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filteringChIP"] ]
     output:
         stat_file = "{env}/reports/summary_ChIP_PE_mapping_stats_{sample_name}.txt",
-        log = "{env}/logs/process_pe_sample__{sample_name}.log"        
+        log = "{env}/logs/process_chip_pe_sample__{sample_name}.log"        
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
@@ -384,7 +384,7 @@ rule make_chip_stats_se:
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filteringChIP"] ]
     output:
         stat_file = "{env}/reports/summary_ChIP_SE_mapping_stats_{sample_name}.txt",
-        log = "{env}/logs/process_se_sample__{sample_name}.log"
+        log = "{env}/logs/process_chip_se_sample__{sample_name}.log"
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
