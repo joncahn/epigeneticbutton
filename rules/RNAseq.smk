@@ -139,7 +139,7 @@ rule filter_rna_pe:
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
-        temp(return_log_rna("{sample_name}", "filtering", "PE"))
+        temp(return_log_rna("{sample_name}", "filteringRNA", "PE"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_rna"]["threads"]
     resources:
@@ -200,7 +200,7 @@ rule filter_rna_se:
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
     log:
-        temp(return_log_rna("{sample_name}", "filtering", "SE"))
+        temp(return_log_rna("{sample_name}", "filteringRNA", "SE"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_rna"]["threads"]
     resources:
@@ -245,7 +245,7 @@ rule make_rna_stats_pe:
     input:
         metrics_trim = "RNA/reports/trim_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
         stat_file = "RNA/reports/summary_RNA_PE_mapping_stats_{sample_name}.txt",
         log = "RNA/logs/process_pe_sample__{sample_name}.log"
@@ -277,7 +277,7 @@ rule make_rna_stats_se:
     input:
         metrics_trim = "RNA/reports/trim_se__{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filtering"] ]
+        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
         stat_file = "RNA/reports/summary_RNA_SE_mapping_stats_{sample_name}.txt",
         log = "RNA/logs/process_se_sample__{sample_name}.log"
