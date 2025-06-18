@@ -53,3 +53,4 @@ bismark_map: *heavy
 mc_bigwig: *heavy
 merging_mc_replicates: *heavy
 call_dmrs: *heavy
+merging_rna_replicates: *heavy
