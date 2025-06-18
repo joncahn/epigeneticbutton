@@ -73,12 +73,12 @@ chip_callpeaks:
 # RNA parameters
 rna_tracks:
   RNAseq:
-    fileorder: "rnaseq"
+    file_order: "rnaseq"
     param_bg: "--outWigType bedGraph"
     strandedness: "reverse"
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
   RAMPAGE:
-    fileorder: "rampage"
+    file_order: "rampage"
     param_bg: "--outWigType bedGraph read1_5p"
     strandedness: "forward"
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
