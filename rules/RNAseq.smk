@@ -285,7 +285,7 @@ rule pe_or_se_rna_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file")
     output:
-        bam = "RNA/mapped/final__{sample_name}.bam",
+        bam = "RNA/mapped/fin__{sample_name}.bam",
         touch = "RNA/chkpts/map_rna__{sample_name}.done"
     threads: 1
     resources:
@@ -300,7 +300,7 @@ rule pe_or_se_rna_dispatch:
 
 rule merging_rna_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"RNA/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
+        bamfiles = lambda wildcards: [ f"RNA/mapped/fin__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         mergefile = "RMA/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
@@ -326,7 +326,7 @@ rule merging_rna_replicates:
 
 rule make_rna_stranded_bigwigs:
     input: 
-        bamfile = "ChIP/mapped/final__{sample_name}.bam",
+        bamfile = "ChIP/mapped/fin__{sample_name}.bam",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         bw_plus = "RNA/tracks/{sample_name}__plus.bw",
