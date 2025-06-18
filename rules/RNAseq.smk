@@ -56,7 +56,6 @@ def define_final_rna_output(ref_genome):
     if analysis:
         results += bigwig_files
         # results += bigwig_files + deg_files
-    print(results)
     return results
         
 CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
@@ -91,12 +90,12 @@ rule STAR_map_pe:
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = temp("RNA/mapped/map_pe__{sample_name}_Aligned.out.bam")
+        bamfile = temp("RNA/mapped/star_pe__{sample_name}_Aligned.out.bam")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         file_order = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['file_order'],
-        prefix = lambda wildcards: f"RNA/mapped/map_pe__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"RNA/mapped/star_pe__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "PE"))
     conda: CONDA_ENV
@@ -117,7 +116,7 @@ rule STAR_map_pe:
         fi
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
-        mv "RNA/mapped/map_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
+        mv "RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         rm -f RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """    
@@ -127,11 +126,11 @@ rule STAR_map_se:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = temp("RNA/mapped/map_se__{sample_name}_Aligned.out.bam")
+        bamfile = temp("RNA/mapped/star_se__{sample_name}_Aligned.out.bam")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"RNA/mapped/map_se__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"RNA/mapped/star_se__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
     conda: CONDA_ENV
@@ -145,17 +144,17 @@ rule STAR_map_se:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
-        mv "RNA/mapped/map_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
+        mv "RNA/mapped/star_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         rm -f RNA/mapped/*"{params.sample_namparams.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
         
 rule filter_rna_pe:
     input:
-        bamfile = "RNA/mapped/map_pe__{sample_name}_Aligned.out.bam"
+        bamfile = "RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"
     output:
-        mrkdup=temp("RNA/mapped/map_pe__{sample_name}_Processed.out.bam"),
-        sorted_file=temp("RNA/mapped/map_pe__{sample_name}_Processed.sorted.out.bam"),
+        mrkdup=temp("RNA/mapped/star_pe__{sample_name}_Processed.out.bam"),
+        sorted_file=temp("RNA/mapped/star_pe__{sample_name}_Processed.sorted.out.bam"),
         metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt",
         metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
     params:
@@ -174,7 +173,7 @@ rule filter_rna_pe:
         ### Marking duplicates
         ## Errors can happen because of limitBAMsortRAM, which seem to happen when bam files are sorted by coordinates (now removed from mapping step). Might want parameters from sorting duplicates too.
         printf "\nMarking duplicates\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/map_pe__{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/star_pe__{params.sample_name}_"
         #### Indexing bam file
         printf "\nSorting bam file\n"
         samtools sort -@ {threads} "{output.mrkdup}" -o "{output.sorted_file}"
@@ -188,9 +187,9 @@ rule filter_rna_pe:
 
 rule filter_rna_se:
     input:
-        bamfile = "RNA/mapped/map_se__{sample_name}_Aligned.out.bam"
+        bamfile = "RNA/mapped/star_se__{sample_name}_Aligned.out.bam"
     output:
-        sorted_file=temp("RNA/mapped/map_se__{sample_name}_Aligned.sorted.out.bam"),
+        sorted_file=temp("RNA/mapped/star_se__{sample_name}_Aligned.sorted.out.bam"),
         metrics_flag = "RNA/reports/flagstat_se_{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt"
     params:
@@ -287,7 +286,7 @@ rule pe_or_se_rna_dispatch:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file")
     output:
         bam = "RNA/mapped/final__{sample_name}.bam",
-        touch = "RNA/chkpts/map__{sample_name}.done"
+        touch = "RNA/chkpts/map_rna__{sample_name}.done"
     threads: 1
     resources:
         mem=32,

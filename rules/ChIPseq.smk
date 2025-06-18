@@ -420,7 +420,7 @@ rule pe_or_se_chip_dispatch:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         bam = "{env}/mapped/final__{sample_name}.bam",
-        touch = "{env}/chkpts/map__{sample_name}.done"
+        touch = temp("{env}/chkpts/map_chip__{sample_name}.done")
     threads: 1
     resources:
         mem=32,
