@@ -93,6 +93,7 @@ rule STAR_map_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        file_order = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['file_order'],
         prefix = lambda wildcards: f"RNA/mapped/map_pe__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "PE"))
@@ -105,8 +106,15 @@ rule STAR_map_pe:
         """
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
+        if [[ {params.fileorder} == "rampage"]]; then
+            printf "Input file order for RAMPAGE (R2 R1)\n"
+            input="{input.fastq2}" "{input.fastq1}"
+        else
+            printf "Input file order for RNAseq (R1 R2)\n"
+            input="{input.fastq1}" "{input.fastq2}"
+        fi
         STAR --version
-        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq1}" "{input.fastq2}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
         mv "RNA/mapped/map_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         rm -f RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
@@ -326,7 +334,8 @@ rule make_rna_stranded_bigwigs:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
-        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness']
+        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness'],
+        multimap = = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
     conda: CONDA_ENV
     threads: config["resources"]["filter_rna"]["threads"]
     resources:
@@ -339,14 +348,21 @@ rule make_rna_stranded_bigwigs:
         STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{output.sorted_file}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
-        bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg"
-        bedSort "RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str2.out.bg" "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg"
+        if [[ {params.multimap} == "multiple" ]]; then
+            bed1="RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg"
+            bed2="RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str2.out.bg"
+        elif [[ {params.multimap} == "unique" ]]; then
+            bed1="RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
+            bed2="RNA/tracks/bg_{params.sample_name}_Signal.Unique.str2.out.bg"
+        fi        
+        bedSort ${{bed1}} "RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg"
+        bedSort ${{bed2}} "RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg"
         if [[ "{params.strandedness}" == "forward" ]]; then
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
         elif [[ "{params.strandedness}" == "reverse" ]]; then
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.UniqueMultiple.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
+            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
+            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
         fi
         rm -f RNA/tracks/*"{params.sample_name}_Signal"*
         rm -f RNA/tracks/*"{params.sample_name}_Log"*
