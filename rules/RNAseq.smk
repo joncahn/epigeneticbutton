@@ -378,7 +378,7 @@ rule prep_files_for_DEGs:
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
-        temp(return_log_mc("{ref_genome}", "prep_for_DEGs", ""))
+        temp(return_log_rna("{ref_genome}", "prep_for_DEGs", ""))
     threads: config["resources"]["rna_degs"]["threads"]
     resources:
         mem=config["resources"]["rna_degs"]["mem"],
