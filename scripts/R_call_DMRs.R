@@ -45,9 +45,23 @@ if (context == "all") {
 						group_by(Type) %>%
 						summarize(CHH_DMRs=n(), .groups = "drop")
 	} else {
-		summary_fileCHH<-tibble::tibble(Type=c("hyper", "hypo"), CG_DMRs=c(0, 0))
+		summary_fileCHH<-tibble::tibble(Type=c("hyper", "hypo"), CHH_DMRs=c(0, 0))
 	}
 	
+	DMRsCHGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHG", method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
+	if ( length(DMRsCHGpool) > 0 ) {
+		CHGpool<-data.frame(Chr=seqnames(DMRsCHGpool),Start=start(DMRsCHGpool)-1,End=end(DMRsCHGpool),firstsample=elementMetadata(DMRsCHGpool)[,3],secondsample=elementMetadata(DMRsCHGpool)[,6], Pvalue=elementMetadata(DMRsCHGpool)[,10]) %>%
+				mutate(Delta=firstsample-secondsample)
+		write.table(CHGpool,paste0("mC/DMRs/",sample1,"__vs__",sample2,"__CHG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	
+		summary_fileCHG<-mutate(CHGpool, Type=ifelse(Delta>0, "hyper", "hypo")) %>%
+						group_by(Type) %>%
+						summarize(CHG_DMRs=n(), .groups = "drop")
+	} else {
+		summary_fileCHG<-tibble::tibble(Type=c("hyper", "hypo"), CHG_DMRs=c(0, 0))
+	}					
+	
+	summary_file<-merge(summary_file, summary_fileCHG, by=c("Type"))
 	summary_file<-merge(summary_file, summary_fileCHH, by=c("Type"))
 }
 

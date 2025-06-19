@@ -159,7 +159,7 @@ resources:
   bismark_map: *heavy
   mc_bigwig: *single
   merging_mc_replicates: *heavy
-  call_dmrs: *single
+  call_dmrs: *single # while technically it could be parallelized, if small scaffolds are present and do not report any DMRs, DMRcaller will crash.
   merging_rna_replicates: *heavy
   rna_degs: *single
 
