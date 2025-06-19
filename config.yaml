@@ -159,7 +159,7 @@ resources:
   bismark_map: *heavy
   mc_bigwig: *single
   merging_mc_replicates: *heavy
-  call_dmrs: *heavy
+  call_dmrs: *single
   merging_rna_replicates: *heavy
   rna_degs: *single
 
