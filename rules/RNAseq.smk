@@ -422,7 +422,7 @@ rule call_all_DEGs:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
         analysis_name = config['analysis_name']
     log:
-        temp(return_log_mc("{ref_genome}", "call_DEGs", ""))
+        temp(return_log_rna("{ref_genome}", "call_DEGs", ""))
     conda: os.path.join(REPO_FOLDER,"envs/call_degs.yaml")
     threads: config["resources"]["rna_degs"]["threads"]
     resources:
