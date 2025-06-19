@@ -2,16 +2,10 @@
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
-# def define_RNA_input_for_degs(ref_genome):
-    # data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
-    # line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
-    # tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
-    # sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
-    # ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
-    # replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
-    
-    # return [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
-                    # for replicate in replicates ]
+def define_RNA_input_for_degs(ref_genome):
+    file_paths = []
+    filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
+    return [f"RNA/DEG/counts_{sname}.tab" for sname in filtered_samples['sample_name']]
 
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -20,7 +14,7 @@ def define_final_rna_output(ref_genome):
     bigwig_files = []
     qc_files = []
     deg_files = []
-    filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ]
+    filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ].copy()
     
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')        
@@ -39,14 +33,14 @@ def define_final_rna_output(ref_genome):
         bigwig_files.append(f"RNA/tracks/{sname}__plus.bw")
         bigwig_files.append(f"RNA/tracks/{sname}__minus.bw")
         
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ]
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
-    deg_files.append(f"RNA/DEGs/summary.txt")
+    deg_files.append(f"RNA/DEG/summary.txt")
     
     results = map_files
     
@@ -91,7 +85,8 @@ rule STAR_map_pe:
         fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = temp("RNA/mapped/star_pe__{sample_name}_Aligned.out.bam")
+        bamfile = temp("RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"),
+        count_file = temp("RNA/mapped/star_pe__{sample_name}_ReadsPerGene.out.tab")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -127,7 +122,8 @@ rule STAR_map_se:
         fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = temp("RNA/mapped/star_se__{sample_name}_Aligned.out.bam")
+        bamfile = temp("RNA/mapped/star_se__{sample_name}_Aligned.out.bam"),
+        count_file = temp("RNA/mapped/star_se__{sample_name}_ReadsPerGene.out.tab")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -284,9 +280,11 @@ rule make_rna_stats_se:
 
 rule pe_or_se_rna_dispatch:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file")
+        bamfile = lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file"),
+        countfile = lambda wildcards: assign_mapping_paired(wildcards, "STAR_map", "count_file")
     output:
         bam = "RNA/mapped/{sample_name}.bam",
+        count = "RNA/DEG/counts_{sample_name}.tab",
         touch = "RNA/chkpts/map_rna__{sample_name}.done"
     threads: 1
     resources:
@@ -294,8 +292,9 @@ rule pe_or_se_rna_dispatch:
         tmp=32
     shell:
         """
-        mv {input} {output.bam}
-        mv {input}.bai {output.bam}.bai
+        mv {input.bamfile} {output.bam}
+        mv {input.bamfile}.bai {output.bam}.bai
+        mv {input.countfile} {output.count}
         touch {output.touch} 
         """
 
@@ -370,32 +369,71 @@ rule make_rna_stranded_bigwigs:
         rm -f RNA/tracks/*"{params.sample_name}_Log"*
         """
 
-# rule call_all_DEGs:
-    # input:
-        # samples = lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome),
-        # chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
-    # output:
-        # deg_summary = "RNA/DEGs/summary.txt"
-    # params:
-        # script = os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
-        # context = config['mC_context'],
-        # sample1 = lambda wildcards: wildcards.sample1,
-        # sample2 = lambda wildcards: wildcards.sample2,
-        # nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
-        # nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
-    # log:
-        # temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
-    # conda: os.path.join(REPO_FOLDER,"envs/call_dmrs.yaml")
-    # threads: config["resources"]["call_dmrs"]["threads"]
-    # resources:
-        # mem=config["resources"]["call_dmrs"]["mem"],
-        # tmp=config["resources"]["call_dmrs"]["tmp"]
-    # shell:
-        # """
-        # printf "running edgeR for all samples in {params.ref_genome}\n"
-        # #Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
-        # touch {output.deg_summary}
-        # """
+rule prep_files_for_DEGs:
+    input: 
+        lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome)
+    output:
+        rna_samples = lambda wildcards: "RNA/DEG/samples__{config['analysis_name']}__{ref_genome}.txt",
+        rna_counts = lambda wildcards: "RNA/DEG/counts__{config['analysis_name']}__{ref_genome}.txt"
+    params:
+        ref_genome = lambda wildcards: wildcards.ref_genome
+    log:
+        temp(return_log_mc("{ref_genome}", "prep_for_DEGs", ""))
+    threads: config["resources"]["rna_degs"]["threads"]
+    resources:
+        mem=config["resources"]["rna_degs"]["mem"],
+        tmp=config["resources"]["rna_degs"]["tmp"]
+    run:
+        filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == {params.ref_genome}) ].copy()
+        filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
+        filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
+        
+        RNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()    
+        RNA_samples = RNA_samples.sort_values(by=['Sample', 'Replicate'],ascending=[True, True]).reset_index(drop=True)
+        RNA_samples['Color'] = pd.factorize(RNA_samples['Sample'])[0] + 1
+
+        RNA_samples.to_csv(output.rna_samples, sep="\t", index=False)
+        
+        RNA_counts = None
+        replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
+        for sname, rep in replicates.values:
+            file_path = f"RNA/DEG/counts_{sname}.tab"
+            temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
+            temp.columns = ['GeneID', rep]
+
+            if RNA_counts is None:
+                RNA_counts = temp
+            else:
+                RNA_counts = pd.merge(RNA_counts, temp, on='GeneID', how='outer')
+    
+        replicate_order = RNA_samples['Replicate'].tolist()
+        column_order = ['GeneID'] + replicate_order
+        RNA_counts = RNA_counts[column_order]
+        RNA_counts.to_csv(output.rna_counts, sep="\t", index=False)
+    
+rule call_all_DEGs:
+    input:
+        samples = "RNA/DEG/samples__{ref_genome}.txt",
+        counts = "RNA/DEG/counts__{ref_genome}.txt",
+        chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+    output:
+        deg_summary = "RNA/DEG/summary.txt"
+    params:
+        script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
+        analysis_name = config['analysis_name']
+    log:
+        temp(return_log_mc("{ref_genome}", "call_DEGs", ""))
+    conda: os.path.join(REPO_FOLDER,"envs/call_degs.yaml")
+    threads: config["resources"]["rna_degs"]["threads"]
+    resources:
+        mem=config["resources"]["rna_degs"]["mem"],
+        tmp=config["resources"]["rna_degs"]["tmp"]
+    shell:
+        """
+        printf "running edgeR for all samples in {params.ref_genome}\n"
+        #Rscript "{params.script}" "{input.chrom_sizes}" "{input.samples}" "{input.counts}" "{params.analysis_name}"
+        touch {output.deg_summary}
+        """
 
 rule all_rna:
     input:

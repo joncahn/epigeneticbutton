@@ -157,8 +157,6 @@ DIRS = {
     "logs": "logs",
     "combined": {
         "peaks": "combined/peaks",
-        "DEG": "combined/DEG",
-        "TSS": "combined/TSS",
         "reports": "combined/reports",
         "matrix": "combined/matrix",
         "plots": "combined/plots",
@@ -177,6 +175,8 @@ def create_directories(unique_envs, dirs):
         if env in ["mC"]:
             os.makedirs(f"{env}/methylcall", exist_ok=True)
             os.makedirs(f"{env}/DMRs", exist_ok=True)
+        if env in ["RNA"]:
+            os.makedirs(f"{env}/DEG", exist_ok=True)
     
     for key, value in dirs.items():
         if isinstance(value, dict):

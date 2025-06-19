@@ -151,7 +151,7 @@ def define_final_chip_output(ref_genome):
     qc_files = []
     peak_files = []
     bigwig_files = []
-    filtered_rep_samples = samples[ ((samples['env'] == 'ChIP') | (samples['env'] == 'TF')) & (samples['ref_genome'] == ref_genome) ]
+    filtered_rep_samples = samples[ ((samples['env'] == 'ChIP') | (samples['env'] == 'TF')) & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
@@ -167,7 +167,7 @@ def define_final_chip_output(ref_genome):
             qc_files.append(f"{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"{env}/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
-    filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ]
+    filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ].copy()
     for _, row in filtered_rep_samples_no_input.iterrows():
         peaktype = get_peaktype(row.sample_type, config["chip_callpeaks"]['peaktype'])
         sname = sample_name_str(row, 'sample')
@@ -180,7 +180,7 @@ def define_final_chip_output(ref_genome):
         else:
             peak_files.append(f"{env}/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak") # peak file for each single-end replicate
             
-    filtered_analysis_samples = analysis_samples[ ((analysis_samples['env'] == 'ChIP') | (analysis_samples['env'] == 'TF')) & (analysis_samples['ref_genome'] == ref_genome) ]
+    filtered_analysis_samples = analysis_samples[ ((analysis_samples['env'] == 'ChIP') | (analysis_samples['env'] == 'TF')) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         env = get_sample_info_from_name(spname, analysis_samples, 'env')
@@ -719,7 +719,7 @@ rule make_peak_stats:
     input:
         logs = lambda wildcards: define_logs_final_input(wildcards),
         stats_pseudoreps = lambda wildcards: f"{wildcards.env}/reports/stats_pseudoreps__{wildcards.sample_name}.txt"
-        ## maybe an better solution is to append a stat file with wc -l as they are generated, or to create a new stat file for each file, then accessible in bash by regex on the samplename
+        ## maybe a better solution is to append a stat file with wc -l as they are generated, or to create a new stat file for each file, then accessible in bash by regex on the samplename
     output:
         stat_file = "{env}/reports/summary_ChIP_peak_stats_{sample_name}.txt",
         log = "{env}/logs/called_peaks__{sample_name}.log"
