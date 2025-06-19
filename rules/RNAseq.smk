@@ -283,8 +283,8 @@ rule pe_or_se_rna_dispatch:
         bamfile = lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file"),
         countfile = lambda wildcards: assign_mapping_paired(wildcards, "STAR_map", "count_file")
     output:
-        bam = "RNA/mapped/{sample_name}.bam",
-        count = "RNA/DEG/counts_{sample_name}.tab",
+        bam_file = "RNA/mapped/{sample_name}.bam",
+        count_file = "RNA/DEG/counts_{sample_name}.tab",
         touch = "RNA/chkpts/map_rna__{sample_name}.done"
     threads: 1
     resources:
@@ -292,9 +292,9 @@ rule pe_or_se_rna_dispatch:
         tmp=32
     shell:
         """
-        mv {input.bamfile} {output.bam}
-        mv {input.bamfile}.bai {output.bam}.bai
-        mv {input.countfile} {output.count}
+        mv {input.bamfile} {output.bam_file}
+        mv {input.bamfile}.bai {output.bam_file}.bai
+        mv {input.countfile} {output.count_file}
         touch {output.touch} 
         """
 
