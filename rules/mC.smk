@@ -23,7 +23,7 @@ def define_DMR_samples(sample_name):
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
-    final_files = []
+    map_files = []
     dmr_files = []
     bigwig_files = []
     qc_files = []
