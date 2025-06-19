@@ -373,8 +373,8 @@ rule prep_files_for_DEGs:
     input: 
         lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome)
     output:
-        rna_samples = lambda wildcards: "RNA/DEG/samples__{config['analysis_name']}__{ref_genome}.txt",
-        rna_counts = lambda wildcards: "RNA/DEG/counts__{config['analysis_name']}__{ref_genome}.txt"
+        rna_samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        rna_counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
