@@ -40,7 +40,7 @@ def define_final_rna_output(ref_genome):
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
-    deg_files.append(f"RNA/DEG/summary.txt")
+    deg_files.append(f"RNA/DEG/summary__DEGs__{ref_genome}.txt")
     
     results = map_files
     
@@ -417,7 +417,7 @@ rule call_all_DEGs:
         counts = "RNA/DEG/counts__{ref_genome}.txt",
         chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
-        deg_summary = "RNA/DEG/summary.txt"
+        deg_summary = "RNA/DEG/summary__DEGs__{ref_genome}.txt"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
         analysis_name = config['analysis_name']
