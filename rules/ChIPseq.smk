@@ -6,13 +6,14 @@ def return_log_chip(env, sample_name, step, paired):
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
+    env = get_sample_info_from_name(sname, samples, 'env')
     paired = get_sample_info_from_name(sname, samples, 'paired')
     if paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     elif paired == "SE":
         rule_obj = getattr(rules, f"{rulename}_se")
         
-    return getattr(rule_obj.output, outputfile).format(sample_name=sname)
+    return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
