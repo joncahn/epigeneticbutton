@@ -398,7 +398,7 @@ rule prep_files_for_DEGs:
         RNA_counts = None
         replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
         for sname, rep in replicates.values:
-            file_path = f"RNA/DEG/counts_{sname}.tab"
+            file_path = f"RNA/DEG/counts__{sname}.tab"
             temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
             temp.columns = ['GeneID', rep]
 
@@ -414,14 +414,14 @@ rule prep_files_for_DEGs:
     
 rule call_all_DEGs:
     input:
-        samples = "RNA/DEG/samples__{ref_genome}.txt",
-        counts = "RNA/DEG/counts__{ref_genome}.txt",
-        chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+        samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     output:
-        deg_summary = "RNA/DEG/summary_DEGs__{ref_genome}.txt"
+        deg_summary = "RNA/DEG/summary_DEGs__{analysis_name}__{ref_genome}.txt"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
-        analysis_name = config['analysis_name']
+        analysis_name = config['analysis_name'],
+        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
     log:
         temp(return_log_rna("{ref_genome}", "call_DEGs", ""))
     conda: os.path.join(REPO_FOLDER,"envs/call_degs.yaml")
@@ -432,7 +432,7 @@ rule call_all_DEGs:
     shell:
         """
         printf "running edgeR for all samples in {params.ref_genome}\n"
-        #Rscript "{params.script}" "{input.chrom_sizes}" "{input.samples}" "{input.counts}" "{params.analysis_name}"
+        # Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.region_file}"
         touch {output.deg_summary}
         """
 

@@ -176,29 +176,6 @@ DIRS = {
     }
 }
 
-# Function to create directories
-def create_directories(unique_envs, dirs):
-    for env in unique_envs:
-        for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
-            os.makedirs(f"{env}/{d}", exist_ok=True)
-        if env in ["ChIP", "TF"]:
-            os.makedirs(f"{env}/peaks", exist_ok=True)
-        if env in ["mC"]:
-            os.makedirs(f"{env}/methylcall", exist_ok=True)
-            os.makedirs(f"{env}/DMRs", exist_ok=True)
-        if env in ["RNA"]:
-            os.makedirs(f"{env}/DEG", exist_ok=True)
-    
-    for key, value in dirs.items():
-        if isinstance(value, dict):
-            for sub_key, sub_value in value.items():
-                os.makedirs(sub_value, exist_ok=True)
-        else:
-            os.makedirs(value, exist_ok=True)
-
-# Call the function to create directories
-create_directories(UNIQUE_ENVS, DIRS)
-
 # Include all rule files
 include: "rules/environment_setup.smk"
 include: "rules/sample_download.smk"
@@ -210,17 +187,29 @@ include: "rules/plotting_with_R.smk"
 # Rule all to specify final target
 rule all:
 	input:
-		f"chkpts/combined_analysis__{analysis_name}.done"
+		f"chkpts/combined_analysis__{analysis_name}.done",
+        "combined/chkpts/directories_setup.done"
+
+# Call the function to create directories
+rule setup_directories:
+    output:
+        touch = "combined/chkpts/directories_setup.done"
+    run:
+        create_directories(UNIQUE_ENVS, DIRS)
+        with open(output.touch, "w") as f:
+            f.write("Setup complete\n")
 
 ### Intermediate target rules
 # Rule to specify final target if only mapping is required
 rule map_only:
     input:
+        "combined/chkpts/directories_setup.done",
         expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=UNIQUE_ENVS)
 
 # Rule to specify final target if only chip coverage is wanted
 rule coverage_chip:
     input: 
+        "combined/chkpts/directories_setup.done",
         [
             f"ChIP/tracks/coverage__{sample_name}.bw"
             for sample_name in get_sample_names_by_env("ChIP", samples)
@@ -229,6 +218,8 @@ rule coverage_chip:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
+        "combined/chkpts/directories_setup.done",
+        expand("combined/chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("ChIP/chkpts/ChIP_analysis__{ref_genome}.done", ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
         expand("TF/chkpts/ChIP_analysis__{ref_genome}.done", ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
         expand("RNA/chkpts/RNA_analysis__{ref_genome}.done", ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
@@ -242,7 +233,7 @@ rule combined_analysis:
         scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
         analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
     log:
-        f"logs/combined_analysis__{analysis_name}.log"
+        f"combined/logs/combined_analysis__{analysis_name}.log"
     shell:
         """
         touch {output.chkpt}

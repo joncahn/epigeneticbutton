@@ -2,11 +2,32 @@
 
 # function to access logs more easily
 def return_log_env(ref_genome, step):
-    return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
+    return os.path.join(REPO_FOLDER,"combined","logs",f"tmp_{step}_{ref_genome}.log")
+
+# Function to create directories
+def create_directories(unique_envs, dirs):
+    for env in unique_envs:
+        for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
+            os.makedirs(f"{env}/{d}", exist_ok=True)
+        if env in ["ChIP", "TF"]:
+            os.makedirs(f"{env}/peaks", exist_ok=True)
+        if env in ["mC"]:
+            os.makedirs(f"{env}/methylcall", exist_ok=True)
+            os.makedirs(f"{env}/DMRs", exist_ok=True)
+        if env in ["RNA"]:
+            os.makedirs(f"{env}/DEG", exist_ok=True)
+    
+    for key, value in dirs.items():
+        if isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                os.makedirs(sub_value, exist_ok=True)
+        else:
+            os.makedirs(value, exist_ok=True)
 
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
+        "combined/chkpts/directories_setup.done",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
@@ -14,7 +35,7 @@ rule prepare_reference:
         region_files = ["combined/tracks/{ref_genome}_protein_coding_genes.bed", "combined/tracks/{ref_genome}_all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
-        chkpt = "chkpts/ref__{ref_genome}.done",
+        chkpt = "combined/chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
     threads: 1
     resources:

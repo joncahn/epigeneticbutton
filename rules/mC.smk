@@ -365,7 +365,7 @@ rule call_DMRs_pairwise:
         nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
-    conda: os.path.join(REPO_FOLDER,"envs/call_dmrs.yaml")
+    conda: CONDA_ENV
     threads: config["resources"]["call_dmrs"]["threads"]
     resources:
         mem=config["resources"]["call_dmrs"]["mem"],
