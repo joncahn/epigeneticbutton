@@ -187,8 +187,8 @@ include: "rules/plotting_with_R.smk"
 # Rule all to specify final target
 rule all:
 	input:
-        "combined/chkpts/directories_setup.done"
-		f"chkpts/combined_analysis__{analysis_name}.done",
+        "combined/chkpts/directories_setup.done",
+		f"chkpts/combined_analysis__{analysis_name}.done"
 
 # Call the function to create directories
 rule setup_directories:
