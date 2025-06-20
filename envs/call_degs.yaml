@@ -5,7 +5,7 @@ channels:
 dependencies:
   - r-base
   - r-limma
-  - r-edger
+  - bioconductor-edger
   - r-dplyr
   - r-tidyr
   - r-stringr
