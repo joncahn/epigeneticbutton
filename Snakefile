@@ -17,8 +17,6 @@ min_version("6.0")
         # "echo Environment: $CONDA_DEFAULT_ENV && "
         # "conda info"
 
-CONDA_ENV=os.path.join(REPO_FOLDER,"envs/epibutton.yaml")
-
 # Configuration
 configfile: "config.yaml"
 analysis = config['full_analysis']
@@ -92,8 +90,11 @@ REF_PATH = config["ref_path"]
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
 
-# Define the folde rin which the snakemake pipeline has been cloned
+# Define the folder in which the snakemake pipeline has been cloned
 REPO_FOLDER = config["repo_folder"]
+
+# Define the conda environment to build
+CONDA_ENV=os.path.join(REPO_FOLDER,"envs/epibutton.yaml")
 
 # Define label for the analysis
 analysis_name = config["analysis_name"]
