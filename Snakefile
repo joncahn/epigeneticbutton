@@ -9,13 +9,15 @@ from itertools import combinations
 
 min_version("6.0")
 
-rule show_env:
-    shell:
-        "echo Conda version: $(conda --version) && "
-        "echo $(conda config --show solver) &&"
-        "echo Conda executable: $(which conda) && "
-        "echo Environment: $CONDA_DEFAULT_ENV && "
-        "conda info"
+# rule show_env:
+    # shell:
+        # "echo Conda version: $(conda --version) && "
+        # "echo $(conda config --show solver) &&"
+        # "echo Conda executable: $(which conda) && "
+        # "echo Environment: $CONDA_DEFAULT_ENV && "
+        # "conda info"
+
+CONDA_ENV=os.path.join(REPO_FOLDER,"envs/epibutton.yaml")
 
 # Configuration
 configfile: "config.yaml"

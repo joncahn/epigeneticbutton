@@ -1,5 +1,5 @@
 ### R plots
-CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
+# CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
 
 ###
 # Rules to prep and then plot the mapping stats

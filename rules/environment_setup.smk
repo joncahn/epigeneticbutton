@@ -1,8 +1,8 @@
+# CONDA_ENV=os.path.join(REPO_FOLDER,"envs/reference.yaml")
+
 # function to access logs more easily
 def return_log_env(ref_genome, step):
     return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
-
-CONDA_ENV=os.path.join(REPO_FOLDER,"envs/reference.yaml")
 
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
