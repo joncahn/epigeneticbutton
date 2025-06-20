@@ -12,6 +12,7 @@ def define_RNA_input_for_degs(ref_genome):
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
+    analysis_name = config['analysis_name']
     map_files = []
     bigwig_files = []
     qc_files = []
@@ -45,10 +46,10 @@ def define_final_rna_output(ref_genome):
     filtered_analysis_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
     filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
     if len(filtered_analysis_samples2['Sample'].drop_duplicates()) >= 2:   
-        deg_files.append(f"RNA/chkpts/calling_DEGs__{ref_genome}.done")
-        deg_files.append(f"RNA/DEG/genes_rpkm__{ref_genome}.txt")
+        deg_files.append(f"RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
+        deg_files.append(f"RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
     elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
-        deg_files.append(f"RNA/DEG/genes_rpkm__{ref_genome}.txt")
+        deg_files.append(f"RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         
     results = map_files
     
@@ -427,7 +428,7 @@ rule call_all_DEGs:
         counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     output:
         rdata = "RNA/DEG/ReadyToPlot_{analysis_name}__{ref_genome}.RData",
-        touch = "RNA/chkpts/calling_DEGs__{ref_genome}.done"
+        touch = "RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
         analysis_name = config['analysis_name'],
@@ -452,8 +453,8 @@ rule gather_gene_expression_rpkm:
         samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     output:
-        touch = "RNA/chkpts/gene_expression__{ref_genome}.done",
-        rpkm = "RNA/DEG/genes_rpkm__{ref_genome}.txt"
+        touch = "RNA/chkpts/gene_expression__{analysis_name}__{ref_genome}.done",
+        rpkm = "RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
