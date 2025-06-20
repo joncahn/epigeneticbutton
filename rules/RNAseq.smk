@@ -42,16 +42,21 @@ def define_final_rna_output(ref_genome):
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
-    deg_files.append(f"RNA/DEG/summary_DEGs__{ref_genome}.txt")
-    
+    filtered_analysis_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
+    filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
+    if len(filtered_analysis_samples2['Sample'].drop_duplicates()) >= 2:   
+        deg_files.append(f"RNA/chkpts/calling_DEGs__{ref_genome}.done")
+        deg_files.append(f"RNA/DEG/genes_rpkm__{ref_genome}.txt")
+    elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
+        deg_files.append(f"RNA/DEG/genes_rpkm__{ref_genome}.txt")
+        
     results = map_files
     
     if qc_option == "all":
         results += qc_files
         
     if analysis:
-        results += bigwig_files
-        # results += bigwig_files + deg_files
+        results += bigwig_files + deg_files
 
     return results
         
@@ -338,6 +343,8 @@ rule make_rna_stranded_bigwigs:
         param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
         strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness'],
         multimap = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
+    log:
+        temp(return_log_rna("{sample_name}", "making_bigiwig", ""))
     conda: CONDA_ENV
     threads: config["resources"]["filter_rna"]["threads"]
     resources:
@@ -345,6 +352,7 @@ rule make_rna_stranded_bigwigs:
         tmp=config["resources"]["filter_rna"]["tmp"]
     shell:
         """
+        {{
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
         STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
@@ -368,6 +376,7 @@ rule make_rna_stranded_bigwigs:
         fi
         rm -f RNA/tracks/*"{params.sample_name}_Signal"*
         rm -f RNA/tracks/*"{params.sample_name}_Log"*
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule prep_files_for_DEGs:
@@ -417,10 +426,12 @@ rule call_all_DEGs:
         samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     output:
-        deg_summary = "RNA/DEG/summary_DEGs__{analysis_name}__{ref_genome}.txt"
+        rdata = "RNA/DEG/ReadyToPlot_{analysis_name}__{ref_genome}.RData",
+        touch = "RNA/chkpts/calling_DEGs__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
         analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
         region_file = "combined/tracks/{ref_genome}__all_genes.bed"
     log:
         temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
@@ -432,8 +443,34 @@ rule call_all_DEGs:
     shell:
         """
         printf "running edgeR for all samples in {params.ref_genome}\n"
-        # Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.region_file}"
-        touch {output.deg_summary}
+        Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{params.region_file}"
+        touch {output.touch}
+        """
+
+rule gather_gene_expression_rpkm:
+    input:
+        samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
+    output:
+        touch = "RNA/chkpts/gene_expression__{ref_genome}.done",
+        rpkm = "RNA/DEG/genes_rpkm__{ref_genome}.txt"
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
+    log:
+        temp(return_log_rna("{ref_genome}", "gene_expression", "{analysis_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["region_file"]["threads"]
+    resources:
+        mem=config["resources"]["region_file"]["mem"],
+        tmp=config["resources"]["region_file"]["tmp"]
+    shell:
+        """
+        {{
+        printf "Gathering gene expression levels for samples from {params.analysis_name} mapping to {params.ref_genome}\n"
+        touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule all_rna:

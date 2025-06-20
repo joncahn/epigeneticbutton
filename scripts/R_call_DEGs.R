@@ -17,7 +17,7 @@ filtered<-genecount[keep.exprs,]
 targets<-read.delim(args[2], header = TRUE)
 samples<-as.factor(targets$Sample)
 reps<-as.factor(targets$Replicate)
-tissues<-unique(samples)
+genotypes<-unique(samples)
 
 targets$Color<-as.numeric(targets$Color)
 
@@ -26,7 +26,9 @@ color_samples<-colors[targets$Color]
 
 analysisname<-args[3]
 
-ref_genes<-read.delim(args[4], header = FALSE, 
+refgenome<-args[4]
+
+ref_genes<-read.delim(args[5], header = FALSE, 
                       col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 ref_genes<-mutate(ref_genes, GeneID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
   select(-Name, -Value)
@@ -76,20 +78,20 @@ create.DEG.table<-function(sample1, sample2, y) {
 }
 
 allDEG<-c()
-for (i in 1:(length(tissues)-1)) {
-  sample1<-tissues[i]
-  for (j in (i+1):length(tissues)) {
-	sample2<-tissues[j]
+for (i in 1:(length(genotypes)-1)) {
+  sample1<-genotypes[i]
+  for (j in (i+1):length(genotypes)) {
+	sample2<-genotypes[j]
 	FCtable<-create.FC.table(sample1,sample2,y)
 	FCtable<-merge(ref_genes,FCtable,by=c("GeneID")) %>%
 		select(Chr,Start,Stop,GeneID,logFC,Strand,logCPM,PValue,FDR,Sample) %>%
 		arrange(Chr,Start)
-	write.table(FCtable,paste0("combined/DEG/FC_",analysisname,"_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(FCtable,paste0("RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	DEGtable<-create.DEG.table(sample1,sample2,y)
 	DEGtable<-merge(ref_genes,DEGtable,by=c("GeneID")) %>%
 		select(Chr,Start,Stop,GeneID,logFC,Strand,logCPM,PValue,FDR,Sample,DEG) %>%
 		arrange(DEG,Chr,Start)
-	write.table(DEGtable,paste0("combined/DEG/DEG_",analysisname,"_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(DEGtable,paste0("RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	allDEG<-c(allDEG,DEGtable$GeneID)
   }
 }
@@ -98,16 +100,16 @@ keepDEG<-unique(allDEG)
 logcounts<-cpm(y, log=TRUE)
 lcpm<-logcounts[keepDEG,]
 
-pdf(paste0("combined/plots/Heatmap_cpm_",analysisname,".pdf"),10,15)
+pdf(paste0("combined/plots/Heatmap_cpm_",analysisname,"__",refgenome,".pdf"),10,15)
 heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-          main=paste0("Differentially expressed genes in all samples from ",analysisname),
+          main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
           margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45,
           lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
 dev.off()
 
-pdf(paste0("combined/plots/Heatmap_zscore_",analysisname,".pdf"),10,15)
+pdf(paste0("combined/plots/Heatmap_zscore_",analysisname,"__",refgenome,".pdf"),10,15)
 heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-          main=paste0("Differentially expressed genes in all samples from ",analysisname),
+          main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
           margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45, scale="row",
           lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
 dev.off()
@@ -123,7 +125,7 @@ plot.Expression <- function(gene) {
   dataline<-filter(genextable, GID==gene) %>% reshape2::melt(id=c("GID")) %>%
     select(GID, Replicate=variable, CountPerMillion=value)
   
-  uniqueDEGs<-read.delim(paste0("combined/DEG/unique_DEGs_",analysisname,".txt"), header = TRUE)
+  uniqueDEGs<-read.delim(paste0("RNA/DEG/unique_DEGs_",analysisname,"__",refgenome,".txt"), header = TRUE)
  
   dataline<-merge(dataline, targets, by=c("Replicate")) %>%
     merge(uniqueDEGs, by=c("GID","Sample"), all.x = TRUE)
@@ -152,5 +154,5 @@ plot.Expression <- function(gene) {
   
 }
 
-save(plot.Expression,genextable,targets, file = paste0("combined/DEG/ReadyToPlot_",analysisname,".RData"))
+save(plot.Expression,genextable,targets, file = paste0("RNA/DEG/ReadyToPlot_",analysisname,"__",refgenome,".RData"))
 

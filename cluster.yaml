@@ -13,7 +13,7 @@ heavy_resources: &heavy
 check_fasta: *standard
 check_gff: *standard
 check_gtf: *standard
-prep_region_file: *standard
+region_file: *standard
 check_chrom_sizes: *heavy
 get_fastq_pe: *heavy
 get_fastq_se: *heavy
