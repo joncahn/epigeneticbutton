@@ -103,14 +103,14 @@ rule STAR_map_pe:
     shell:
         """
         {{
-        printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
-        if [[ {params.file_order} == "rampage" ]]; then
+        if [[ "{params.file_order}" == "rampage" ]]; then
             printf "Input file order for RAMPAGE (R2 R1)\n"
-            input="{input.fastq2}" "{input.fastq1}"
+            input='"{input.fastq2}" "{input.fastq1}"'
         else
             printf "Input file order for RNAseq (R1 R2)\n"
-            input="{input.fastq1}" "{input.fastq2}"
+            input='"{input.fastq1}" "{input.fastq2}"'
         fi
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
         mv "RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
