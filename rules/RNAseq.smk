@@ -86,7 +86,8 @@ rule STAR_map_pe:
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         bamfile = temp("RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"),
-        count_file = temp("RNA/mapped/star_pe__{sample_name}_ReadsPerGene.out.tab")
+        count_file = temp("RNA/mapped/star_pe__{sample_name}_ReadsPerGene.out.tab"),
+        metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -123,7 +124,8 @@ rule STAR_map_se:
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         bamfile = temp("RNA/mapped/star_se__{sample_name}_Aligned.out.bam"),
-        count_file = temp("RNA/mapped/star_se__{sample_name}_ReadsPerGene.out.tab")
+        count_file = temp("RNA/mapped/star_se__{sample_name}_ReadsPerGene.out.tab"),
+        metrics_map = "RNA/reports/star_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -152,8 +154,7 @@ rule filter_rna_pe:
     output:
         mrkdup=temp("RNA/mapped/star_pe__{sample_name}_Processed.out.bam"),
         sorted_file=temp("RNA/mapped/star_pe__{sample_name}_Processed.sorted.out.bam"),
-        metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt",
-        metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
+        metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']

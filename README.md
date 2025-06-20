@@ -94,7 +94,7 @@ snakemake --use-conda --conda-frontend conda --cores 12
 snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
 
-3. Optional: consider prebuilding the environments to make sure no conflict arise:
+3. Optional: consider prebuilding the environments to make sure no conflict arise (it should take ~10min):
 ```bash
 snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 ```
