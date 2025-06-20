@@ -439,7 +439,7 @@ rule call_all_DEGs:
 rule all_rna:
     input:
         setup = "chkpts/directories_setup.done",
-        lambda wildcards: define_final_rna_output(wildcards.ref_genome)
+        final = lambda wildcards: define_final_rna_output(wildcards.ref_genome)
     output:
         touch = "RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done"
     threads: 1

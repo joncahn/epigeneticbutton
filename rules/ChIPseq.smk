@@ -765,7 +765,7 @@ rule make_peak_stats:
 rule ChIP_all:
     input:
         setup = "chkpts/directories_setup.done",
-        lambda wildcards: define_final_chip_output(wildcards.ref_genome)
+        final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
         touch = "{env}/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done"
     threads: 1

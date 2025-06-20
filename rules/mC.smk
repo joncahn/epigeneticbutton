@@ -379,7 +379,7 @@ rule call_DMRs_pairwise:
 rule all_mC:
     input:
         setup = "chkpts/directories_setup.done",
-        lambda wildcards: define_final_mC_output(wildcards.ref_genome)
+        final = lambda wildcards: define_final_mC_output(wildcards.ref_genome)
     output:
         touch = "mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
     threads: 1
