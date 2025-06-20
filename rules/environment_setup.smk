@@ -32,7 +32,7 @@ rule prepare_reference:
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        region_files = ["combined/tracks/{ref_genome}_protein_coding_genes.bed", "combined/tracks/{ref_genome}_all_genes.bed"],
+        region_files = ["combined/tracks/{ref_genome}__protein_coding_genes.bed", "combined/tracks/{ref_genome}__all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
         chkpt = "chkpts/ref__{ref_genome}.done",
