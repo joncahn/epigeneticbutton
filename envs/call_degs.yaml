@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - r-base
-  - r-limma
+  - bioconductor-limma
   - bioconductor-edger
   - r-dplyr
   - r-tidyr
