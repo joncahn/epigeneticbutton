@@ -789,7 +789,7 @@ rule make_peak_stats:
         cat {input.logs} > "{output.log}"
         """
 
-rule ChIP_all:
+rule all_ChIP:
     input:
         setup = "chkpts/directories_setup.done",
         final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
