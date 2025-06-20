@@ -794,8 +794,6 @@ rule ChIP_all:
         final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
         touch = "{env}/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done"
-    wildcard_constraints:
-        env = "ChIP|TF"
     threads: 1
     resources:
         mem=32,
