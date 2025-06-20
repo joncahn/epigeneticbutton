@@ -184,7 +184,7 @@ rule check_chrom_sizes:
 rule prep_region_file:
     input:
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        gff = "genomes/{ref_genome}/{ref_genome}.gtf"
+        gff = "genomes/{ref_genome}/{ref_genome}.gff"
     output:
         region_file1 = "combined/tracks/{ref_genome}__protein_coding_genes.bed",
         region_file2 = "combined/tracks/{ref_genome}__all_genes.bed"
