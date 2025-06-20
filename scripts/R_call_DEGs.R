@@ -6,6 +6,7 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(gplots)
+library(RColorBrewer)
 
 args = commandArgs(trailingOnly=TRUE)
 
@@ -20,7 +21,7 @@ tissues<-unique(samples)
 
 targets$Color<-as.numeric(targets$Color)
 
-colors<-c("black","blue","red","purple","green","lightblue","grey")
+colors<-brewer.pal(9,"Set1") #limited to 9 different samples. Can change this to include more if needed.
 color_samples<-colors[targets$Color]
 
 analysisname<-args[3]
