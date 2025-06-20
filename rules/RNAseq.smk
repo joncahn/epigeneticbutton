@@ -423,7 +423,7 @@ rule call_all_DEGs:
         analysis_name = config['analysis_name'],
         region_file = "combined/tracks/{ref_genome}__all_genes.bed"
     log:
-        temp(return_log_rna("{ref_genome}", "call_DEGs", ""))
+        temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
     conda: os.path.join(REPO_FOLDER,"envs/call_degs.yaml")
     threads: config["resources"]["rna_degs"]["threads"]
     resources:
@@ -440,7 +440,7 @@ rule all_rna:
     input:
         lambda wildcards: define_final_rna_output(wildcards.ref_genome)
     output:
-        touch = "RNA/chkpts/RNA_analysis__{ref_genome}.done"
+        touch = "RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done"
     threads: 1
     resources:
         mem=32,

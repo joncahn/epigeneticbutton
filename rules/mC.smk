@@ -380,7 +380,7 @@ rule all_mC:
     input:
         lambda wildcards: define_final_mC_output(wildcards.ref_genome)
     output:
-        touch = "mC/chkpts/mC_analysis__{ref_genome}.done"
+        touch = "mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
     threads: 1
     resources:
         mem=32,
