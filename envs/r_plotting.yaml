@@ -2,7 +2,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - r-base=4.2.3
+  - r-base #=4.2.3
   - r-plyr
   - r-dplyr
   - r-ggplot2

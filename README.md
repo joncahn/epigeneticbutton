@@ -97,7 +97,7 @@ snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.
 
 3. Optional: consider prebuilding the environments to mak esure no conflict arise:
 ```bash
-snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1 --conda-prefix /tmp/conda_envs_test
+snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1 --conda-prefix ./tmp/conda_envs
 ```
 While it is recommended by snakemake, having set strict conda channel priorities can be a problem. If environment conflicts occur, set the conda channel priorities to flexible:
 ```bash
