@@ -6,7 +6,7 @@ def return_log_sample(data_type, sample_name, step, paired):
     
 rule get_fastq_pe:
     input:
-        "combined/chkpts/directories_setup.done"
+        setup = "chkpts/directories_setup.done"
     output:
         fastq1 = temp("{data_type}/fastq/raw__{sample_name}__R1.fastq.gz"),
         fastq2 = temp("{data_type}/fastq/raw__{sample_name}__R2.fastq.gz")
@@ -49,7 +49,7 @@ rule get_fastq_pe:
 
 rule get_fastq_se:
     input:
-        "combined/chkpts/directories_setup.done"
+        setup = "chkpts/directories_setup.done"
     output:
         fastq0 = temp("{data_type}/fastq/raw__{sample_name}__R0.fastq.gz")
     params:

@@ -193,13 +193,11 @@ rule all:
 # Rule to specify final target if only mapping is required
 rule map_only:
     input:
-        "combined/chkpts/directories_setup.done",
         expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=UNIQUE_ENVS)
 
 # Rule to specify final target if only chip coverage is wanted
 rule coverage_chip:
     input: 
-        "combined/chkpts/directories_setup.done",
         [
             f"ChIP/tracks/coverage__{sample_name}.bw"
             for sample_name in get_sample_names_by_env("ChIP", samples)
@@ -208,8 +206,7 @@ rule coverage_chip:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        "combined/chkpts/directories_setup.done",
-        expand("combined/chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
+        expand("chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
         expand("ChIP/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
         expand("TF/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
         expand("RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
@@ -218,10 +215,6 @@ rule combined_analysis:
         expand("combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
-    params:
-        region_file="all_genes.txt",
-        scripts_dir = os.path.join(REPO_FOLDER,"scripts"),
-        analysis_samplefile = f"{analysis_name}__analysis_samplefile.txt"
     shell:
         """
         touch {output.chkpt}

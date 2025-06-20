@@ -2,7 +2,7 @@
 
 # function to access logs more easily
 def return_log_env(ref_genome, step):
-    return os.path.join(REPO_FOLDER,"combined","logs",f"tmp_{step}_{ref_genome}.log")
+    return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
 
 # Function to create directories
 def create_directories(unique_envs, dirs):
@@ -27,7 +27,7 @@ def create_directories(unique_envs, dirs):
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        setup = "combined/chkpts/directories_setup.done",
+        setup = "chkpts/directories_setup.done",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
@@ -35,7 +35,7 @@ rule prepare_reference:
         region_files = ["combined/tracks/{ref_genome}_protein_coding_genes.bed", "combined/tracks/{ref_genome}_all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
-        chkpt = "combined/chkpts/ref__{ref_genome}.done",
+        chkpt = "chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
     threads: 1
     resources:
@@ -51,7 +51,7 @@ rule prepare_reference:
 # Call the function to create directories
 rule setup_directories:
     output:
-        touch = "combined/chkpts/directories_setup.done"
+        touch = "chkpts/directories_setup.done"
     run:
         create_directories(UNIQUE_ENVS, DIRS)
         with open(output.touch, "w") as f:
