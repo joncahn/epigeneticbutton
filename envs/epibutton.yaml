@@ -1,0 +1,32 @@
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3
+  - pyyaml
+  - cutadapt
+  - sra-tools
+  - pigz
+  - fastqc
+  - bowtie2
+  - samtools
+  - bedtools
+  - deeptools
+  - macs2
+  - idr
+  - bismark
+  - star
+  - ucsc-bedgraphtobigwig
+  - ucsc-bedsort
+  - r-base
+  - r-plyr
+  - r-dplyr
+  - r-ggplot2
+  - r-readr
+  - r-tidyr
+  - r-cowplot
+  - r-RColorBrewer
+  - bioconductor-dmrcaller
+
+
