@@ -93,10 +93,11 @@ snakemake --use-conda --conda-frontend conda --cores 12
 ```bash
 snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule}"
 ```
+`--conda-prefix /tmp/conda_envs_test` saves the conda environments locally and has shown better results than without using it.
 
-3. Optional: for increased speed for solving environments consider prebuilding the environments:
+3. Optional: consider prebuilding the environments to mak esure no conflict arise:
 ```bash
-snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
+snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1 --conda-prefix /tmp/conda_envs_test
 ```
 While it is recommended by snakemake, having set strict conda channel priorities can be a problem. If environment conflicts occur, set the conda channel priorities to flexible:
 ```bash
