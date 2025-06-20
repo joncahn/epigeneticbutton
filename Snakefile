@@ -189,15 +189,6 @@ rule all:
 	input:
 		f"chkpts/combined_analysis__{analysis_name}.done"
 
-# Call the function to create directories
-rule setup_directories:
-    output:
-        touch = "combined/chkpts/directories_setup.done"
-    run:
-        create_directories(UNIQUE_ENVS, DIRS)
-        with open(output.touch, "w") as f:
-            f.write("Setup complete\n")
-
 ### Intermediate target rules
 # Rule to specify final target if only mapping is required
 rule map_only:

@@ -27,7 +27,7 @@ def create_directories(unique_envs, dirs):
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        "combined/chkpts/directories_setup.done",
+        setup = "combined/chkpts/directories_setup.done",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
@@ -47,6 +47,15 @@ rule prepare_reference:
         rm {input.logs}
         touch {output.chkpt}
         """
+
+# Call the function to create directories
+rule setup_directories:
+    output:
+        touch = "combined/chkpts/directories_setup.done"
+    run:
+        create_directories(UNIQUE_ENVS, DIRS)
+        with open(output.touch, "w") as f:
+            f.write("Setup complete\n")
 
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
