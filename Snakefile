@@ -12,7 +12,7 @@ min_version("6.0")
 rule show_env:
     shell:
         "echo Conda version: $(conda --version) && "
-        "echo ${conda config --show solver &&"
+        "echo $(conda config --show solver) &&"
         "echo Conda executable: $(which conda) && "
         "echo Environment: $CONDA_DEFAULT_ENV && "
         "conda info"
