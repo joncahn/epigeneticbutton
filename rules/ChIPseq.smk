@@ -232,6 +232,8 @@ rule bowtie2_map_pe:
     output:
         samfile = temp("{env}/mapped/mapped_pe__{sample_name}.sam"),
         metrics = "{env}/reports/bt2_pe__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -260,6 +262,8 @@ rule bowtie2_map_se:
     output:
         samfile = temp("{env}/mapped/mapped_se__{sample_name}.sam"),
         metrics = "{env}/reports/bt2_se__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -288,6 +292,8 @@ rule filter_chip_pe:
         bamfile = temp("{env}/mapped/mapped_pe__{sample_name}.bam"),
         metrics_dup = "{env}/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "{env}/reports/flagstat_pe__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
@@ -324,6 +330,8 @@ rule filter_chip_se:
         bamfile = temp("{env}/mapped/mapped_se__{sample_name}.bam"),
         metrics_dup = "{env}/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "{env}/reports/flagstat_se__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
@@ -360,6 +368,8 @@ rule make_chip_stats_pe:
     output:
         stat_file = "{env}/reports/summary_ChIP_PE_mapping_stats_{sample_name}.txt",
         log = "{env}/logs/process_chip_pe_sample__{sample_name}.log"        
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
@@ -392,6 +402,8 @@ rule make_chip_stats_se:
     output:
         stat_file = "{env}/reports/summary_ChIP_SE_mapping_stats_{sample_name}.txt",
         log = "{env}/logs/process_chip_se_sample__{sample_name}.log"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
@@ -421,6 +433,8 @@ rule pe_or_se_chip_dispatch:
     output:
         bam = "{env}/mapped/final__{sample_name}.bam",
         touch = temp("{env}/chkpts/map_chip__{sample_name}.done")
+    wildcard_constraints:
+        env = "ChIP|TF"
     threads: 1
     resources:
         mem=32,
@@ -437,6 +451,8 @@ rule make_coverage_chip:
         bamfile = "{env}/mapped/final__{sample_name}.bam"
     output:
         bigwigcov = "{env}/tracks/coverage__{sample_name}.bw"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV
@@ -455,6 +471,8 @@ rule make_bigwig_chip:
         inputfile = lambda wildcards: f"{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         bigwigfile = "{env}/tracks/FC__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bw"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}",
@@ -482,6 +500,8 @@ rule make_fingerprint_plot:
         inputfile = lambda wildcards: f"{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         pngplot = "{env}/plots/Fingerprint__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.png"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}"
@@ -507,6 +527,8 @@ rule calling_peaks_macs2_pe:
         inputfile = lambda wildcards: f"{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         peakfile = "{env}/peaks/peaks_pe__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.{peaktype}Peak"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
@@ -542,6 +564,8 @@ rule calling_peaks_macs2_se:
         inputfile = lambda wildcards: f"{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
     output:
         peakfile = "{env}/peaks/peaks_se__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.{peaktype}Peak"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_chip_input(wildcards)}",
@@ -576,6 +600,8 @@ rule IDR_analysis_replicates:
         peak_file = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
         touch = "{env}/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"]),
@@ -626,6 +652,8 @@ rule merging_chip_replicates:
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         mergefile = "{env}/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         env = lambda wildcards: wildcards.env
@@ -653,6 +681,8 @@ rule making_pseudo_replicates:
     output:
         pseudo1 = temp("{env}/mapped/pseudo1__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam"),
         pseudo2 = temp("{env}/mapped/pseudo2__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam")
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         env = lambda wildcards: wildcards.env
@@ -682,6 +712,8 @@ rule best_peaks_pseudoreps:
     output:
         bestpeaks = "{env}/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
         stats_pseudoreps = temp("{env}/reports/stats_pseudoreps__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt")
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         env = lambda wildcards: wildcards.env,
@@ -723,6 +755,8 @@ rule make_peak_stats:
     output:
         stat_file = "{env}/reports/summary_ChIP_peak_stats_{sample_name}.txt",
         log = "{env}/logs/called_peaks__{sample_name}.log"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sname = lambda wildcards: wildcards.sample_name,
         paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'paired'),
@@ -760,6 +794,8 @@ rule ChIP_all:
         final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
         touch = "{env}/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done"
+    wildcard_constraints:
+        env = "ChIP|TF"
     threads: 1
     resources:
         mem=32,
