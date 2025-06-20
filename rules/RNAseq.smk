@@ -7,7 +7,7 @@ def return_log_rna(sample_name, step, paired):
 def define_RNA_input_for_degs(ref_genome):
     file_paths = []
     filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
-    return [f"RNA/DEG/counts_{sname}.tab" for sname in filtered_samples['sample_name']]
+    return [f"RNA/DEG/counts__{sname}.tab" for sname in filtered_samples['sample_name']]
 
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -42,7 +42,7 @@ def define_final_rna_output(ref_genome):
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
             bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
-    deg_files.append(f"RNA/DEG/summary__DEGs__{ref_genome}.txt")
+    deg_files.append(f"RNA/DEG/summary_DEGs__{ref_genome}.txt")
     
     results = map_files
     
@@ -57,8 +57,8 @@ def define_final_rna_output(ref_genome):
         
 rule make_STAR_indices:
     input:
-        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
-        gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
     output:
         indices = directory("genomes/{ref_genome}/STAR_index")
     params:
@@ -188,7 +188,7 @@ rule filter_rna_se:
         bamfile = "RNA/mapped/star_se__{sample_name}_Aligned.out.bam"
     output:
         sorted_file=temp("RNA/mapped/star_se__{sample_name}_Aligned.sorted.out.bam"),
-        metrics_flag = "RNA/reports/flagstat_se_{sample_name}.txt",
+        metrics_flag = "RNA/reports/flagstat_se__{sample_name}.txt",
         metrics_map = "RNA/reports/star_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -285,7 +285,7 @@ rule pe_or_se_rna_dispatch:
         countfile = lambda wildcards: assign_mapping_paired(wildcards, "STAR_map", "count_file")
     output:
         bam_file = "RNA/mapped/{sample_name}.bam",
-        count_file = "RNA/DEG/counts_{sample_name}.tab",
+        count_file = "RNA/DEG/counts__{sample_name}.tab",
         touch = "RNA/chkpts/map_rna__{sample_name}.done"
     threads: 1
     resources:
@@ -418,7 +418,7 @@ rule call_all_DEGs:
         counts = "RNA/DEG/counts__{ref_genome}.txt",
         chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
-        deg_summary = "RNA/DEG/summary__DEGs__{ref_genome}.txt"
+        deg_summary = "RNA/DEG/summary_DEGs__{ref_genome}.txt"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
         analysis_name = config['analysis_name']

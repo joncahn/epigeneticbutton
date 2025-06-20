@@ -203,8 +203,8 @@ def define_final_chip_output(ref_genome):
         
 rule make_bt2_indices:
     input:
-        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
-        gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        gff = "genomes/{ref_genome}/{ref_genome}.gff",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
         indices = directory("genomes/{ref_genome}/bt2_index")
@@ -232,6 +232,8 @@ rule bowtie2_map_pe:
     output:
         samfile = temp("{env}/mapped/mapped_pe__{sample_name}.sam"),
         metrics = "{env}/reports/bt2_pe__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -260,6 +262,8 @@ rule bowtie2_map_se:
     output:
         samfile = temp("{env}/mapped/mapped_se__{sample_name}.sam"),
         metrics = "{env}/reports/bt2_se__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -288,6 +292,8 @@ rule filter_chip_pe:
         bamfile = temp("{env}/mapped/mapped_pe__{sample_name}.bam"),
         metrics_dup = "{env}/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "{env}/reports/flagstat_pe__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
@@ -324,6 +330,8 @@ rule filter_chip_se:
         bamfile = temp("{env}/mapped/mapped_se__{sample_name}.bam"),
         metrics_dup = "{env}/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "{env}/reports/flagstat_se__{sample_name}.txt"
+    wildcard_constraints:
+        env = "ChIP|TF"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,

@@ -69,7 +69,7 @@ def define_final_mC_output(ref_genome):
 
 rule make_bismark_indices:
     input:
-        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = directory("genomes/{ref_genome}/Bisulfite_Genome")
     params:

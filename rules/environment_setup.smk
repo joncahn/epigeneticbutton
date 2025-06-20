@@ -7,9 +7,9 @@ def return_log_env(ref_genome, step):
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa",
-        gff = "genomes/{ref_genome}/temp_{ref_genome}.gff",
-        gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf",
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        gff = "genomes/{ref_genome}/{ref_genome}.gff",
+        gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
         region_files = ["combined/tracks/{ref_genome}_protein_coding_genes.bed", "combined/tracks/{ref_genome}_all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
@@ -30,7 +30,7 @@ rule prepare_reference:
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
-        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
@@ -71,7 +71,7 @@ rule check_fasta:
         
 rule check_gff:
     output:
-        gff = "genomes/{ref_genome}/temp_{ref_genome}.gff"
+        gff = "genomes/{ref_genome}/{ref_genome}.gff"
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
@@ -101,7 +101,7 @@ rule check_gff:
 
 rule check_gtf:
     output:
-        gtf = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
+        gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
     params:
         ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
     log:
@@ -131,9 +131,9 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        fasta = "genomes/{ref_genome}/temp_{ref_genome}.fa"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
-        fasta_index = "genomes/{ref_genome}/temp_{ref_genome}.fa.fai",
+        fasta_index = "genomes/{ref_genome}/{ref_genome}.fa.fai",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
@@ -154,10 +154,10 @@ rule check_chrom_sizes:
 rule prep_region_file:
     input:
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        gff = "genomes/{ref_genome}/temp_{ref_genome}.gtf"
+        gff = "genomes/{ref_genome}/{ref_genome}.gtf"
     output:
-        region_file1 = "combined/tracks/{ref_genome}_protein_coding_genes.bed",
-        region_file2 = "combined/tracks/{ref_genome}_all_genes.bed"
+        region_file1 = "combined/tracks/{ref_genome}__protein_coding_genes.bed",
+        region_file2 = "combined/tracks/{ref_genome}__all_genes.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
