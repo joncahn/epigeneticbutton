@@ -26,7 +26,7 @@ env_patterns = [
     ("ChIP*", "ChIP"),
     ("RNAseq", "RNA"),
     ("RAMPAGE", "RNA"),
-    ("shRNA", "shRNA"),
+    ("sRNA", "sRNA"),
     ("mC", "mC"),
     ("TF_*", "TF"),
 ]

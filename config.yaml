@@ -15,10 +15,6 @@ sample_file: "samples.tsv"
 ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
 ref_path_rule: "path/to/reference/genomes"
 
-# Read quality parameters: 
-# default of quality>10 and minimum read length 20nt
-trimming_quality: "-q 10 -m 20"
-
 # Species-dependent parameters:
 species: "arabidopsis"
 
@@ -28,6 +24,21 @@ arabidopsis:
 maize: 
   star_index: "--genomeSAindexNbases 14"
   genomesize: 2.2e9
+
+# Trimming and processing parameters:
+trimming_quality:
+    ChIP: "-q 10 -m 20"
+    RNA: "-q 10 -m 20"
+    TF: "-q 10 -m 20"
+    mC: "-q 10 -m 20"
+    sRNA: "-q 10 -m 15"
+
+adapter1:
+    ChIP: "AGATCGGAAGAGCACACGTCTGAAC"
+    RNA: "AGATCGGAAGAGCACACGTCTGAAC"
+    TF: "AGATCGGAAGAGCACACGTCTGAAC"
+    mC: "AGATCGGAAGAGCACACGTCTGAAC"
+    sRNA: "TGGAATTCTCGGGTGCCAAGG"
 
 # Mapping option default
 chip_mapping_option: "default"
@@ -109,6 +120,9 @@ mC_mapping:
     map_se: "--non_directional"
     process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+
+# small RNA parameters
+structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended when studying microRNAs and small interfering RNAs. Build a database of such structural RNAs based on Zea mays.
 
 # Analysis parameters
 analysis:

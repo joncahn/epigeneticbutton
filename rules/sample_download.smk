@@ -1,5 +1,3 @@
-# CONDA_ENV=os.path.join(REPO_FOLDER,"envs/download.yaml")
-
 # function to access logs more easily
 def return_log_sample(data_type, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,f"{data_type}","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -118,7 +116,7 @@ rule process_fastq_pe:
         data_type = lambda wildcards: wildcards.data_type,
         adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
         adapter2 = "AGATCGGAAGAGCGTCGTGTAGGGA",
-        trimming_quality = config['trimming_quality']
+        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')]
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))
     conda: CONDA_ENV
@@ -145,8 +143,8 @@ rule process_fastq_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
-        adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
-        trimming_quality = config['trimming_quality']
+        adapter1 = lambda wildcards: config['adapter1'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')]
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "SE"))
     conda: CONDA_ENV

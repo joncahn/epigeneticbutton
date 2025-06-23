@@ -1,5 +1,3 @@
-# CONDA_ENV=os.path.join(REPO_FOLDER,"envs/rna.yaml")
-
 # function to access logs more easily
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -416,7 +414,7 @@ rule prep_files_for_DEGs:
                 RNA_counts = temp
             else:
                 RNA_counts = pd.merge(RNA_counts, temp, on='GeneID', how='outer')
-    
+            
         replicate_order = RNA_samples['Replicate'].tolist()
         column_order = ['GeneID'] + replicate_order
         RNA_counts = RNA_counts[column_order]

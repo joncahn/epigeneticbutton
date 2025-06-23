@@ -1,5 +1,3 @@
-# CONDA_ENV=os.path.join(REPO_FOLDER,"envs/chip.yaml")
-
 # function to access logs more easily
 def return_log_chip(env, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
