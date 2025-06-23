@@ -18,6 +18,7 @@ dependencies:
   - idr
   - bismark
   - star
+  - shortstack
   - ucsc-bedgraphtobigwig
   - ucsc-bedsort
   - r-base

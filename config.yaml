@@ -123,6 +123,8 @@ mC_mapping:
 
 # small RNA parameters
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended when studying microRNAs and small interfering RNAs. Build a database of such structural RNAs based on Zea mays.
+structural_rna_fafile: "data/zm.structural_RNAs.fa.gz" # defaul to structural RNAs from Zea mays dowloaded through Rfam (see corresponding Help) 
+srna_mapping_params: "--mmap u --dicermin 20 --dicermax 24 --bowtie_m all --mismatches 1 --foldsize 1000 --pad 250"
 
 # Analysis parameters
 analysis:
@@ -176,4 +178,5 @@ resources:
   call_dmrs: *single # while technically it could be parallelized, if small scaffolds are present and do not report any DMRs, DMRcaller will crash.
   merging_rna_replicates: *heavy
   rna_degs: *single
+  shortstack_map: *heavy
 
