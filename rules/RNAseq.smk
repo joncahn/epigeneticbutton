@@ -393,7 +393,7 @@ rule prep_files_for_DEGs:
         mem=config["resources"]["rna_degs"]["mem"],
         tmp=config["resources"]["rna_degs"]["tmp"]
     run:
-        filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == {params.ref_genome}) ].copy()
+        filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == params.ref_genome) ].copy()
         filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
         filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
         
