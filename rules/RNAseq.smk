@@ -498,11 +498,6 @@ rule plot_expression_levels:
         touch {output.touch}
         """
 
-analysisname<-args[1]
-refgenome<-args[2]
-targetfile<-args[3]
-filename<-args[4]
-
 rule all_rna:
     input:
         setup = "chkpts/directories_setup.done",
