@@ -434,7 +434,7 @@ rule call_all_DEGs:
         region_file = "combined/tracks/{ref_genome}__all_genes.bed"
     log:
         temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
-    conda: os.path.join(REPO_FOLDER,"envs/call_degs.yaml")
+    conda: CONDA_ENV
     threads: config["resources"]["rna_degs"]["threads"]
     resources:
         mem=config["resources"]["rna_degs"]["mem"],
@@ -468,6 +468,7 @@ rule gather_gene_expression_rpkm:
         """
         {{
         printf "Gathering gene expression levels for samples from {params.analysis_name} mapping to {params.ref_genome}\n"
+        touch {output.rpkm}
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """

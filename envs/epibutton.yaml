@@ -28,7 +28,7 @@ dependencies:
   - r-readr
   - r-tidyr
   - r-cowplot
-  - r-RColorBrewer
+  - r-rcolorbrewer
   - bioconductor-dmrcaller
 
 

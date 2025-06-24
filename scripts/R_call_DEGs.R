@@ -122,36 +122,41 @@ genextable<-mutate(genextable, GID=row.names(genextable))
 
 plot.Expression <- function(gene) {
   
-  dataline<-filter(genextable, GID==gene) %>% reshape2::melt(id=c("GID")) %>%
-    select(GID, Replicate=variable, CountPerMillion=value)
+	dataline<-filter(genextable, GID==gene) %>% reshape2::melt(id=c("GID")) %>%
+		select(GID, Replicate=variable, CountPerMillion=value)
   
-  uniqueDEGs<-read.delim(paste0("RNA/DEG/unique_DEGs_",analysisname,"__",refgenome,".txt"), header = TRUE)
+	filepath <- paste0("RNA/DEG/unique_DEGs_", analysisname, "__", refgenome, ".txt")
+
+	if (file.exists(filepath)) {
+		uniqueDEGs <- read.delim(filepath, header = TRUE)
+	} else {
+		uniqueDEGs <- data.frame(GID = character(), Sample = character(), stringsAsFactors = FALSE)
+	}
  
-  dataline<-merge(dataline, targets, by=c("Replicate")) %>%
-    merge(uniqueDEGs, by=c("GID","Sample"), all.x = TRUE)
+	dataline<-merge(dataline, targets, by=c("Replicate")) %>%
+			merge(uniqueDEGs, by=c("GID","Sample"), all.x = TRUE)
   
-  dataline$Sample<-as.factor(dataline$Sample)
-  dataline$CountPerMillion<-as.numeric(dataline$CountPerMillion)
-  dataline<-group_by(dataline, Sample) %>% 
-    mutate(Average = mean(CountPerMillion))
-  dataline$Average[is.na(dataline$Average)]<-as.numeric(0)
-  dataline$DEG<-as.factor(dataline$DEG)
+	dataline$Sample<-as.factor(dataline$Sample)
+	dataline$CountPerMillion<-as.numeric(dataline$CountPerMillion)
+	dataline<-group_by(dataline, Sample) %>% 
+			mutate(Average = mean(CountPerMillion))
+	dataline$Average[is.na(dataline$Average)]<-as.numeric(0)
+	dataline$DEG<-as.factor(dataline$DEG)
   
-  plot<-ggplot(dataline, aes(Sample,DEG)) + 
-    geom_col(position="dodge", aes(y=Average, fill=DEG)) + 
-    scale_fill_manual(values = c("0"="grey", "UP"="pink", "DOWN"="lightblue"),
-                      labels=c("0"="No", "UP"="Up", "DOWN"="Down")) +
-    geom_point(aes(y=CountPerMillion), size=2, shape=3) + 
-    labs(title = gene, y="cpm") + 
-    theme(axis.title.y=element_text(size=10), axis.title.x=element_blank(),
-          plot.title=element_text(size=15), 
-          axis.text.x=element_text(size=10, angle = 90),
-          panel.grid.major.y = element_blank(), 
-          panel.grid.minor.y = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.background = element_rect(fill = "white", colour = "black"))
-  plot
-  
+	plot<-ggplot(dataline, aes(Sample,DEG)) + 
+			geom_col(position="dodge", aes(y=Average, fill=DEG)) + 
+			scale_fill_manual(values = c("0"="grey", "UP"="pink", "DOWN"="lightblue"),
+							labels=c("0"="No", "UP"="Up", "DOWN"="Down")) +
+			geom_point(aes(y=CountPerMillion), size=2, shape=3) + 
+			labs(title = gene, y="cpm") + 
+			theme(axis.title.y=element_text(size=10), axis.title.x=element_blank(),
+				plot.title=element_text(size=15), 
+				axis.text.x=element_text(size=10, angle = 90),
+				panel.grid.major.y = element_blank(), 
+				panel.grid.minor.y = element_blank(),
+				panel.grid.major.x = element_blank(),
+				panel.background = element_rect(fill = "white", colour = "black"))
+	plot  
 }
 
 save(plot.Expression,genextable,targets, file = paste0("RNA/DEG/ReadyToPlot_",analysisname,"__",refgenome,".RData"))
