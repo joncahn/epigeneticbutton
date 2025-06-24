@@ -126,6 +126,10 @@ structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs
 structural_rna_fafile: "data/zm.structural_RNAs.fa.gz" # defaul to structural RNAs from Zea mays dowloaded through Rfam (see corresponding Help) 
 srna_mapping_params: "--mmap u --dicermin 20 --dicermax 24 --bowtie_m all --mismatches 1 --foldsize 1000 --pad 250"
 
+# optional targets for extra output
+plot_target_file: "data/target_genes.txt" # default gene list format for plotting gene expression. Replace with actual file of target genes, and potentially update the label below too.
+target_file_label: "" # When blank, it will use the name of the plot_target_file (i.e "target_genes")
+
 # Analysis parameters
 analysis:
   mark_of_interest: "H3K27ac"  # Default histone mark to focus on
@@ -179,4 +183,5 @@ resources:
   merging_rna_replicates: *heavy
   rna_degs: *single
   shortstack_map: *heavy
+  plot_expression: *single
 

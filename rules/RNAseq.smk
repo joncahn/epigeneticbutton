@@ -475,6 +475,34 @@ rule gather_gene_expression_rpkm:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule plot_expression_levels:
+    input:
+        rdata = "RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
+        target_file = config['plot_target_file']
+    output:
+        touch = "combined/plots/plot_expression_{analysis_name}_{ref_genome}.done"
+    params:
+        script = os.path.join(REPO_FOLDER,"scripts/R_plot_expression_level.R"),
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        filename = config['target_file_label']
+    conda: CONDA_ENV
+    threads: config["resources"]["plot_expression"]["threads"]
+    resources:
+        mem=config["resources"]["plot_expression"]["mem"],
+        tmp=config["resources"]["plot_expression"]["tmp"]
+    shell:
+        """
+        printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
+        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.filename}"
+        touch {output.touch}
+        """
+
+analysisname<-args[1]
+refgenome<-args[2]
+targetfile<-args[3]
+filename<-args[4]
+
 rule all_rna:
     input:
         setup = "chkpts/directories_setup.done",

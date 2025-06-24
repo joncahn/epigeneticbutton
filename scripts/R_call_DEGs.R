@@ -165,7 +165,7 @@ norm<-cpm(y, normalized.lib.size=T)
 genextable<-data.frame(norm, stringsAsFactors = FALSE)
 genextable<-mutate(genextable, GID=row.names(genextable))
 
-plot.Expression <- function(gene) {
+plot.Expression <- function(gene, label) {
   
 	dataline<-filter(genextable, GID==gene) %>% reshape2::melt(id=c("GID")) %>%
 		select(GID, Replicate=variable, CountPerMillion=value)
@@ -185,7 +185,7 @@ plot.Expression <- function(gene) {
 			scale_fill_manual(values = c("0"="grey", "UP"="pink", "DOWN"="lightblue"),
 							labels=c("0"="No", "UP"="Up", "DOWN"="Down")) +
 			geom_point(aes(y=CountPerMillion), size=2, shape=3) + 
-			labs(title = gene, y="cpm") + 
+			labs(title = paste0(label, "(",gene,")"), y="cpm") + 
 			theme(axis.title.y=element_text(size=10), axis.title.x=element_blank(),
 				plot.title=element_text(size=15), 
 				axis.text.x=element_text(size=10, angle = 90),

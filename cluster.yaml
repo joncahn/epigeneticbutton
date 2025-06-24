@@ -56,3 +56,4 @@ call_dmrs: *heavy
 merging_rna_replicates: *heavy
 rna_degs: *heavy
 shortstack_map: *heavy
+plot_expression: *heavy
