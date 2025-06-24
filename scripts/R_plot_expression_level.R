@@ -16,7 +16,7 @@ filename<-args[4]
 if (filename == "") {
 	name<-tools::file_path_sans_ext(basename(targetfile))
 } else {
-	name<-str(filename)
+	name<-c(filename)
 }
 
 load(paste0("RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))

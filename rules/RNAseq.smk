@@ -480,7 +480,7 @@ rule plot_expression_levels:
         rdata = "RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         target_file = config['plot_target_file']
     output:
-        touch = "combined/plots/plot_expression_{analysis_name}_{ref_genome}.done"
+        touch = "combined/chkpts/plot_expression_{analysis_name}_{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_plot_expression_level.R"),
         analysis_name = config['analysis_name'],
