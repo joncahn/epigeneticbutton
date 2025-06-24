@@ -28,5 +28,5 @@ for (i in 1:(length(genelist))) {
 	gene<-genelist[i,1]
 	label<-genelist[i,2]
 	print(plot.Expression(gene, label))
-|
+}
 dev.off()
