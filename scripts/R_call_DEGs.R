@@ -136,6 +136,22 @@ uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
 
 write.table(uniqueDEGs,paste0("RNA/DEG/unique_DEGs__",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
+#### To create a summary table of number of DEGs
+
+stat_table<-group_by(allDEG, firstsample, secondsample, DEG) %>%
+			summarize(Nb=n())
+	
+for (sample1 in genotypes) {
+	nunique<-filter(uniqueDEGs, Sample == sample1) %>%
+		mutate(secondsample="Unique")) %>%
+		group_by(firstsample, secondsample, DEG) %>%
+		summarize(Nb=n())
+	
+	stat_table<-rbind(stat_table, nunique)
+}
+
+write.table(stat_table,paste0("RNA/reports/summary_DEG_stats__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+
 #### To create heatmaps over all DEGs (by count per million and z-score)
 
 keepDEG<-unique(allDEG$GeneID)

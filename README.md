@@ -148,7 +148,7 @@ snakemake --cores 1 combined/chkpts/plot_expression_{analysis_name}_{ref_genome}
 ```
 or to set the file and label directly in the snakemake command:
 ```bash 
-snakemake --cores 1 --config plot_target_file="data/target_gene_list.txt" target_file_label="my_genes_of_interests" combined/chkpts/plot_expression_{analysis_name}_{ref_genome}.done
+snakemake --cores 1 combined/chkpts/plot_expression_{analysis_name}_{ref_genome}.done --config plot_target_file="data/target_gene_list.txt" target_file_label="my_genes_of_interests"
 ```
 Output is a single pdf file where each gene of the list is a page, named `combined/plots/plot_expression_{analysis_name}_{ref_genome}_{target_file_label}.pdf`
 
