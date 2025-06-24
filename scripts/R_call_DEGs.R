@@ -196,5 +196,5 @@ plot.Expression <- function(gene) {
 	plot  
 }
 
-save(plot.Expression,genextable,targets,uniqueDEGs, file = paste0("RNA/DEG/ReadyToPlot_",analysisname,"__",refgenome,".RData"))
+save(plot.Expression,genextable,targets,uniqueDEGs, file = paste0("RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))
 
