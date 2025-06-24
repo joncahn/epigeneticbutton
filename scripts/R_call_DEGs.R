@@ -140,7 +140,7 @@ write.table(uniqueDEGs,paste0("RNA/DEG/unique_DEGs__",analysisname,"__",refgenom
 
 keepDEG<-unique(allDEG$GeneID)
 
-if (len(keepDEG) >= 2) {
+if (length(keepDEG) >= 2) {
 	logcounts<-cpm(y, log=TRUE)
 	lcpm<-logcounts[keepDEG,]
 
