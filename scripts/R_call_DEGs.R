@@ -143,7 +143,7 @@ stat_table<-group_by(allDEG, firstsample, secondsample, DEG) %>%
 	
 for (sample1 in genotypes) {
 	nunique<-filter(uniqueDEGs, Sample == sample1) %>%
-		mutate(secondsample="Unique")) %>%
+		mutate(secondsample="Unique") %>%
 		group_by(firstsample, secondsample, DEG) %>%
 		summarize(Nb=n())
 	
