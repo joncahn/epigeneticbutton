@@ -139,22 +139,25 @@ write.table(uniqueDEGs,paste0("RNA/DEG/unique_DEGs__",analysisname,"__",refgenom
 #### To create heatmaps over all DEGs (by count per million and z-score)
 
 keepDEG<-unique(allDEG$GeneID)
-logcounts<-cpm(y, log=TRUE)
-lcpm<-logcounts[keepDEG,]
 
-pdf(paste0("combined/plots/Heatmap_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
-heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-          main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
-          margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45,
-          lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
-dev.off()
+if (len(keepDEG) >= 2) {
+	logcounts<-cpm(y, log=TRUE)
+	lcpm<-logcounts[keepDEG,]
 
-pdf(paste0("combined/plots/Heatmap_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
-heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-          main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
-          margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45, scale="row",
-          lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
-dev.off()
+	pdf(paste0("combined/plots/Heatmap_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
+	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
+			main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
+			margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45,
+			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
+	dev.off()
+
+	pdf(paste0("combined/plots/Heatmap_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
+	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
+			main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
+			margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45, scale="row",
+			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
+	dev.off()
+}
 
 ### To make R object for later plotting gene expression
 
