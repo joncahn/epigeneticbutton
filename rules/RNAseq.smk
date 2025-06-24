@@ -408,30 +408,30 @@ rule prep_files_for_DEGs:
         for sname, rep in replicates.values:
             file_path = f"RNA/DEG/counts__{sname}.tab"
             temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
-            temp.columns = ['GeneID', rep]
+            temp.columns = ['GID', rep]
 
             if RNA_counts is None:
                 RNA_counts = temp
             else:
-                RNA_counts = pd.merge(RNA_counts, temp, on='GeneID', how='outer')
+                RNA_counts = pd.merge(RNA_counts, temp, on='GID', how='outer')
             
         replicate_order = RNA_samples['Replicate'].tolist()
-        column_order = ['GeneID'] + replicate_order
+        column_order = ['GID'] + replicate_order
         RNA_counts = RNA_counts[column_order]
         RNA_counts.to_csv(output.rna_counts, sep="\t", index=False)
     
 rule call_all_DEGs:
     input:
         samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
+        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
+        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
     output:
-        rdata = "RNA/DEG/ReadyToPlot_{analysis_name}__{ref_genome}.RData",
+        rdata = "RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         touch = "RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
         analysis_name = config['analysis_name'],
-        ref_genome = lambda wildcards: wildcards.ref_genome,
-        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
     conda: CONDA_ENV
@@ -442,14 +442,15 @@ rule call_all_DEGs:
     shell:
         """
         printf "running edgeR for all samples in {params.ref_genome}\n"
-        Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{params.region_file}"
+        Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
         touch {output.touch}
         """
 
 rule gather_gene_expression_rpkm:
     input:
         samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
+        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
+        genes = "combined/tracks/{ref_genome}__all_genes.bed"
     output:
         touch = "RNA/chkpts/gene_expression__{analysis_name}__{ref_genome}.done",
         rpkm = "RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
@@ -468,6 +469,7 @@ rule gather_gene_expression_rpkm:
         """
         {{
         printf "Gathering gene expression levels for samples from {params.analysis_name} mapping to {params.ref_genome}\n"
+        
         touch {output.rpkm}
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"

@@ -10,7 +10,8 @@ library(RColorBrewer)
 
 args = commandArgs(trailingOnly=TRUE)
 
-genecount<-read.delim(args[1], header = TRUE, row.names = "gene_ID")
+genecount<-read.delim(args[1], header = TRUE, row.names = "GID")
+genecount<-genecount[!grepl("^N_", rownames(genecount)), ]
 keep.exprs<-rowSums(cpm(genecount)>1)>=2
 filtered<-genecount[keep.exprs,]
 
@@ -30,11 +31,12 @@ refgenome<-args[4]
 
 ref_genes<-read.delim(args[5], header = FALSE, 
                       col.names = c("Chr","Start","Stop","Name","Value","Strand"))
-ref_genes<-mutate(ref_genes, GeneID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
+ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
   select(-Name, -Value)
-ref_genes$GeneID<-str_remove_all(ref_genes$GeneID, pattern = "_.")
+ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
 
 # EdgeR analysis
+
 y<-DGEList(counts=filtered, group = samples)
 y<-calcNormFactors(y)
 
@@ -57,34 +59,38 @@ pdf(paste0("combined/plots/BCV_",analysisname,".pdf"),10,8)
 plotBCV(y)
 dev.off()
 
-#### Function to create a fold change tables for all genes
+#### Function to create a fold change table for all genes between a pair of samples
+
 create.FC.table<-function(sample1, sample2, table) {
   et<-exactTest(table, pair = c(sample2,sample1))
   out<-topTags(et, n=Inf, adjust.method="BH")
   table<-as.data.frame(out)
-  table$GeneID<-rownames(table)
+  table$GID<-rownames(table)
   table<-mutate(table, Sample=paste0(sample1,"_vs_",sample2))
   table
 }
 
 #### Function to create a table of DEGs between a pair of samples
+
 create.DEG.table<-function(sample1, sample2, y) {
   et<-exactTest(y, pair = c(sample2,sample1))
   out<-topTags(et, n=Inf, adjust.method="BH")
   table<-filter(out$table, FDR<=0.05, logFC<=-2 | logFC>=2)
-  table$GeneID<-rownames(table)
+  table$GID<-rownames(table)
   table<-mutate(table, DEG=as.factor(ifelse(logFC<0, "DOWN", "UP")),Sample=paste0(sample1,"_vs_",sample2))
   table
 }
 
-allDEG<-c()
+#### Applying above function to all possible pairs of samples, and creating temp files for unique DEGs
+
+allDEG<-data.frame()
 for (i in 1:(length(genotypes)-1)) {
   sample1<-genotypes[i]
   for (j in (i+1):length(genotypes)) {
 	sample2<-genotypes[j]
 	FCtable<-create.FC.table(sample1,sample2,y)
-	FCtable<-merge(ref_genes,FCtable,by=c("GeneID")) %>%
-		select(Chr,Start,Stop,GeneID,logFC,Strand,logCPM,PValue,FDR,Sample) %>%
+	FCtable<-merge(ref_genes,FCtable,by=c("GID")) %>%
+		select(Chr,Start,Stop,GID,logFC,Strand,logCPM,PValue,FDR,Sample) %>%
 		arrange(Chr,Start)
 	write.table(FCtable,paste0("RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	DEGtable<-create.DEG.table(sample1,sample2,y)
@@ -92,22 +98,58 @@ for (i in 1:(length(genotypes)-1)) {
 		select(Chr,Start,Stop,GeneID,logFC,Strand,logCPM,PValue,FDR,Sample,DEG) %>%
 		arrange(DEG,Chr,Start)
 	write.table(DEGtable,paste0("RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
-	allDEG<-c(allDEG,DEGtable$GeneID)
+	temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
+				select(GeneID, DEG, firstsample, secondsample)
+	allDEG<-rbind(allDEG,temptable)
   }
 }
 
-keepDEG<-unique(allDEG)
+#### To create a table of DEGs unique to each sample
+
+uniqueUP<-data.frame()
+uniqueDOWN<-data.frame()
+for (sample in genotypes) {
+	tempUP<-filter(allDEG, (DEG=="UP" & firstsample==sample1) | (DEG=="DOWN" & secondsample==sample1)) %>%
+			mutate(Sample=sample) %>%
+			select(GID=GeneID, Sample)
+	uniqueUP<-rbind(uniqueUP, tempUP)
+	tempDOWN<-filter(allDEG, (DEG=="UP" & secondsample==sample1) | (DEG=="DOWN" & firstsample==sample1)) %>%
+			mutate(Sample=sample) %>%
+			select(GID=GeneID, Sample)
+	uniqueDOWN<-rbind(uniqueDOWN, tempDOWN)
+}
+
+uniqueUP<-unique(uniqueUP) %>%
+		group_by(GID) %>%
+		filter(n() == 1) %>%
+		ungroup() %>%
+		mutate(DEG="UP")
+
+uniqueDOWN<-unique(uniqueDOWN) %>%
+		group_by(GID) %>%
+		filter(n() == 1) %>%
+		ungroup() %>%
+		mutate(DEG="DOWN")
+
+uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
+			arrange(Sample)
+
+write.table(uniqueDEGs,paste0("RNA/DEG/unique_DEGs__",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+
+#### To create heatmaps over all DEGs (by count per million and z-score)
+
+keepDEG<-unique(allDEG$GeneID)
 logcounts<-cpm(y, log=TRUE)
 lcpm<-logcounts[keepDEG,]
 
-pdf(paste0("combined/plots/Heatmap_cpm_",analysisname,"__",refgenome,".pdf"),10,15)
+pdf(paste0("combined/plots/Heatmap_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
 heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
           main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
           margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45,
           lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
 dev.off()
 
-pdf(paste0("combined/plots/Heatmap_zscore_",analysisname,"__",refgenome,".pdf"),10,15)
+pdf(paste0("combined/plots/Heatmap_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
 heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
           main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
           margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45, scale="row",
@@ -125,14 +167,6 @@ plot.Expression <- function(gene) {
 	dataline<-filter(genextable, GID==gene) %>% reshape2::melt(id=c("GID")) %>%
 		select(GID, Replicate=variable, CountPerMillion=value)
   
-	filepath <- paste0("RNA/DEG/unique_DEGs_", analysisname, "__", refgenome, ".txt")
-
-	if (file.exists(filepath)) {
-		uniqueDEGs <- read.delim(filepath, header = TRUE)
-	} else {
-		uniqueDEGs <- data.frame(GID = character(), Sample = character(), stringsAsFactors = FALSE)
-	}
- 
 	dataline<-merge(dataline, targets, by=c("Replicate")) %>%
 			merge(uniqueDEGs, by=c("GID","Sample"), all.x = TRUE)
   
@@ -159,5 +193,5 @@ plot.Expression <- function(gene) {
 	plot  
 }
 
-save(plot.Expression,genextable,targets, file = paste0("RNA/DEG/ReadyToPlot_",analysisname,"__",refgenome,".RData"))
+save(plot.Expression,genextable,targets,uniqueDEGs, file = paste0("RNA/DEG/ReadyToPlot_",analysisname,"__",refgenome,".RData"))
 
