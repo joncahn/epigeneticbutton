@@ -94,12 +94,12 @@ for (i in 1:(length(genotypes)-1)) {
 		arrange(Chr,Start)
 	write.table(FCtable,paste0("RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	DEGtable<-create.DEG.table(sample1,sample2,y)
-	DEGtable<-merge(ref_genes,DEGtable,by=c("GeneID")) %>%
-		select(Chr,Start,Stop,GeneID,logFC,Strand,logCPM,PValue,FDR,Sample,DEG) %>%
+	DEGtable<-merge(ref_genes,DEGtable,by=c("GID")) %>%
+		select(Chr,Start,Stop,GID,logFC,Strand,logCPM,PValue,FDR,Sample,DEG) %>%
 		arrange(DEG,Chr,Start)
 	write.table(DEGtable,paste0("RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
-				select(GeneID, DEG, firstsample, secondsample)
+				select(GID, DEG, firstsample, secondsample)
 	allDEG<-rbind(allDEG,temptable)
   }
 }
@@ -111,11 +111,11 @@ uniqueDOWN<-data.frame()
 for (sample in genotypes) {
 	tempUP<-filter(allDEG, (DEG=="UP" & firstsample==sample1) | (DEG=="DOWN" & secondsample==sample1)) %>%
 			mutate(Sample=sample) %>%
-			select(GID=GeneID, Sample)
+			select(GID, Sample)
 	uniqueUP<-rbind(uniqueUP, tempUP)
 	tempDOWN<-filter(allDEG, (DEG=="UP" & secondsample==sample1) | (DEG=="DOWN" & firstsample==sample1)) %>%
 			mutate(Sample=sample) %>%
-			select(GID=GeneID, Sample)
+			select(GID, Sample)
 	uniqueDOWN<-rbind(uniqueDOWN, tempDOWN)
 }
 
