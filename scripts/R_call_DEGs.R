@@ -103,6 +103,8 @@ for (i in 1:(length(genotypes)-1)) {
 	allDEG<-rbind(allDEG,temptable)
   }
 }
+allDEG
+summary(allDEG)
 
 #### To create a table of DEGs unique to each sample
 
@@ -112,11 +114,13 @@ for (sample in genotypes) {
 	tempUP<-filter(allDEG, (DEG=="UP" & firstsample==sample1) | (DEG=="DOWN" & secondsample==sample1)) %>%
 			mutate(Sample=sample) %>%
 			select(GID, Sample)
+	tempUP
 	uniqueUP<-rbind(uniqueUP, tempUP)
 	tempDOWN<-filter(allDEG, (DEG=="UP" & secondsample==sample1) | (DEG=="DOWN" & firstsample==sample1)) %>%
 			mutate(Sample=sample) %>%
 			select(GID, Sample)
 	uniqueDOWN<-rbind(uniqueDOWN, tempDOWN)
+	tempDOWN
 }
 
 uniqueUP<-unique(uniqueUP) %>%
@@ -125,16 +129,20 @@ uniqueUP<-unique(uniqueUP) %>%
 		ungroup() %>%
 		mutate(DEG="UP")
 
+uniqueUP
+
 uniqueDOWN<-unique(uniqueDOWN) %>%
 		group_by(GID) %>%
 		filter(n() == 1) %>%
 		ungroup() %>%
 		mutate(DEG="DOWN")
 
+uniqueDOWN
+
 uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
 			arrange(Sample)
 
-write.table(uniqueDEGs,paste0("RNA/DEG/unique_DEGs__",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(uniqueDEGs,paste0("RNA/DEG/unique_DEGs__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 #### To create a summary table of number of DEGs
 
