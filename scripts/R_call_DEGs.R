@@ -192,8 +192,8 @@ genextable<-mutate(genextable, GID=row.names(genextable))
 
 plot.Expression <- function(gene, label) {
   
-	dataline<-filter(genextable, GID==gene) %>% reshape2::melt(id=c("GID")) %>%
-		select(GID, Replicate=variable, CountPerMillion=value)
+	dataline<-filter(genextable, GID==gene) %>% 
+		pivot_longer(cols = -GID, names_to=Replicate, values_to=CoutPerMillion)
   
 	dataline<-merge(dataline, targets, by=c("Replicate")) %>%
 			merge(uniqueDEGs, by=c("GID","Sample"), all.x = TRUE)
