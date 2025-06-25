@@ -1,3 +1,6 @@
+ADD rules resources to config and clusters
+dispatch_srna_fastq: *default
+
 # function to access logs more easily
 def return_log_smallrna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"smallRNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -5,16 +8,30 @@ def return_log_smallrna(sample_name, step, paired):
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     if paired == "se":
-        return "cleaned_{sample_name}__R0" if config['structural_rna_depletion'] else "trim_{sample_name}__R0"
+        return "filtered_{sample_name}__R0" if config['structural_rna_depletion'] else "trim_{sample_name}__R0"
     
+rule dispatch_srna_fastq:
+    input:
+        fastq = lambda wildcards: f"sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
+    output:
+        fastq_file = temp("sRNA/fastq/clean_(sample_name).fastq.gz")
+    conda: CONDA_ENV
+    threads: config["resources"]["dispatch_srna_fastq"]["threads"]
+    resources:
+        mem=config["resources"]["dispatch_srna_fastq"]["mem"],
+        tmp=config["resources"]["dispatch_srna_fastq"]["tmp"]
+    shell:
+        """
+        cp {input.fastq} {output.fastq_file}
+        """
+
 rule shortstack_map:
     input:
-        fastq = lambda wildcards: f"sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz",
+        fastq = "sRNA/fastq/clean_{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
-        count_file = "RNA/mapped/{sample_name}/ShortStack_All.gff3",
-        bam_file = temp("RNA/mapped/star_se__{sample_name}_ReadsPerGene.out.tab"),
-        metrics_map = "RNA/reports/star_se__{sample_name}.txt"
+        count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
+        bam_file = temp("RNA/mapped/clean_{sample_name).bam")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -31,6 +48,7 @@ rule shortstack_map:
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --bowtie_cores $threads --sort_mem {resources.mem} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --bowtie_cores {threads} --sort_mem {resources.mem} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
         }} 2>&1 | tee -a "{log}"
         """
+

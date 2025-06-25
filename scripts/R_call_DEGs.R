@@ -103,21 +103,19 @@ for (i in 1:(length(genotypes)-1)) {
 	allDEG<-rbind(allDEG,temptable)
   }
 }
-allDEG
-summary(allDEG)
 
 #### To create a table of DEGs unique to each sample
 
 uniqueUP<-data.frame()
 uniqueDOWN<-data.frame()
-for (sample in genotypes) {
+for (sample1 in genotypes) {
 	tempUP<-filter(allDEG, (DEG=="UP" & firstsample==sample1) | (DEG=="DOWN" & secondsample==sample1)) %>%
-			mutate(Sample=sample) %>%
+			mutate(Sample=sample1) %>%
 			select(GID, Sample)
 	tempUP
 	uniqueUP<-rbind(uniqueUP, tempUP)
 	tempDOWN<-filter(allDEG, (DEG=="UP" & secondsample==sample1) | (DEG=="DOWN" & firstsample==sample1)) %>%
-			mutate(Sample=sample) %>%
+			mutate(Sample=sample1) %>%
 			select(GID, Sample)
 	uniqueDOWN<-rbind(uniqueDOWN, tempDOWN)
 	tempDOWN
