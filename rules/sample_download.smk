@@ -16,10 +16,10 @@ rule get_fastq_pe:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["fastq_dump"]["threads"]
+    threads: config["resources"]["get_fastq_pe"]["threads"]
     resources:
-        mem=config["resources"]["fastq_dump"]["mem"],
-        tmp=config["resources"]["fastq_dump"]["tmp"]
+        mem=config["resources"]["get_fastq_pe"]["mem"],
+        tmp=config["resources"]["get_fastq_pe"]["tmp"]
     shell:
         """
         {{
@@ -58,10 +58,10 @@ rule get_fastq_se:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["fastq_dump"]["threads"]
+    threads: config["resources"]["get_fastq_se"]["threads"]
     resources:
-        mem=config["resources"]["fastq_dump"]["mem"],
-        tmp=config["resources"]["fastq_dump"]["tmp"]
+        mem=config["resources"]["get_fastq_se"]["mem"],
+        tmp=config["resources"]["get_fastq_se"]["tmp"]
     shell:
         """
         {{
@@ -96,8 +96,8 @@ rule run_fastqc:
     conda: CONDA_ENV
     threads: 1
     resources:
-        mem=config["resources"]["fastqc"]["mem"],
-        tmp=config["resources"]["fastqc"]["tmp"]
+        mem=config["resources"]["run_fastqc"]["mem"],
+        tmp=config["resources"]["run_fastqc"]["tmp"]
     shell:
         """
         fastqc -o "{params.data_type}/reports/" "{input.fastq}"
@@ -120,10 +120,10 @@ rule process_fastq_pe:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["process_fastq"]["threads"]
+    threads: config["resources"]["process_fastq_pe"]["threads"]
     resources:
-        mem=config["resources"]["process_fastq"]["mem"],
-        tmp=config["resources"]["process_fastq"]["tmp"]
+        mem=config["resources"]["process_fastq_pe"]["mem"],
+        tmp=config["resources"]["process_fastq_pe"]["tmp"]
     shell:
         """
         {{
@@ -148,10 +148,10 @@ rule process_fastq_se:
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["process_fastq"]["threads"]
+    threads: config["resources"]["process_fastq_se"]["threads"]
     resources:
-        mem=config["resources"]["process_fastq"]["mem"],
-        tmp=config["resources"]["process_fastq"]["tmp"]
+        mem=config["resources"]["process_fastq_se"]["mem"],
+        tmp=config["resources"]["process_fastq_se"]["tmp"]
     shell:
         """
         {{

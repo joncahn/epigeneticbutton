@@ -75,10 +75,10 @@ rule make_bismark_indices:
     log:
         temp(os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log"))
     conda: CONDA_ENV
-    threads: config["resources"]["bismark_indices"]["threads"]
+    threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
-        mem=config["resources"]["bismark_indices"]["mem"],
-        tmp=config["resources"]["bismark_indices"]["tmp"]
+        mem=config["resources"]["make_bismark_indices"]["mem"],
+        tmp=config["resources"]["make_bismark_indices"]["tmp"]
     shell:
         """
         {{
@@ -112,10 +112,10 @@ rule bismark_map_pe:
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["bismark_map"]["threads"]
+    threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
-        mem=config["resources"]["bismark_map"]["mem"],
-        tmp=config["resources"]["bismark_map"]["tmp"]
+        mem=config["resources"]["bismark_map_pe"]["mem"],
+        tmp=config["resources"]["bismark_map_pe"]["tmp"]
     shell:
         """
         {{
@@ -150,10 +150,10 @@ rule bismark_map_se:
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["bismark_map"]["threads"]
+    threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
-        mem=config["resources"]["bismark_map"]["mem"],
-        tmp=config["resources"]["bismark_map"]["tmp"]
+        mem=config["resources"]["bismark_map_se"]["mem"],
+        tmp=config["resources"]["bismark_map_se"]["tmp"]
     shell:
         """
         {{
@@ -174,10 +174,10 @@ rule pe_or_se_mc_dispatch:
     output:
         cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         touch = "mC/chkpts/map__{sample_name}.done"
-    threads: 1
+    threads: config["resources"]["pe_or_se_mc_dispatch"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["pe_or_se_mc_dispatch"]["mem"],
+        tmp=config["resources"]["pe_or_se_mc_dispatch"]["tmp"]
     shell:
         """
         mv {input} {output.cx_report}
@@ -202,10 +202,10 @@ rule make_mc_stats_pe:
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}"
-    threads: 1
+    threads: config["resources"]["make_mc_stats_pe"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["make_mc_stats_pe"]["mem"],
+        tmp=config["resources"]["make_mc_stats_pe"]["tmp"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -243,10 +243,10 @@ rule make_mc_stats_se:
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}"
-    threads: 1
+    threads: config["resources"]["make_mc_stats_se"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["make_mc_stats_se"]["mem"],
+        tmp=config["resources"]["make_mc_stats_se"]["tmp"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -307,10 +307,10 @@ rule make_mc_bigwig_files:
     log:
         temp(return_log_mc("{sample_name}", "bigwig", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["mc_bigwig"]["threads"]
+    threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
-        mem=config["resources"]["mc_bigwig"]["mem"],
-        tmp=config["resources"]["mc_bigwig"]["tmp"]    
+        mem=config["resources"]["make_mc_bigwig_files"]["mem"],
+        tmp=config["resources"]["make_mc_bigwig_files"]["tmp"]    
     shell:
         """
         {{
@@ -364,26 +364,26 @@ rule call_DMRs_pairwise:
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["call_dmrs"]["threads"]
+    threads: config["resources"]["call_DMRs_pairwise"]["threads"]
     resources:
-        mem=config["resources"]["call_dmrs"]["mem"],
-        tmp=config["resources"]["call_dmrs"]["tmp"]
+        mem=config["resources"]["call_DMRs_pairwise"]["mem"],
+        tmp=config["resources"]["call_DMRs_pairwise"]["tmp"]
     shell:
         """
         printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
         Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
         """    
 
-rule all_mC:
+rule all_mc:
     input:
         setup = "chkpts/directories_setup.done",
         final = lambda wildcards: define_final_mC_output(wildcards.ref_genome)
     output:
         touch = "mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
-    threads: 1
+    threads: config["resources"]["all_mc"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["all_mc"]["mem"],
+        tmp=config["resources"]["all_mc"]["tmp"]
     shell:
         """
         touch {output.touch}

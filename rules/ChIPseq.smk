@@ -210,10 +210,10 @@ rule make_bt2_indices:
     log:
         temp(os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log"))
     conda: CONDA_ENV
-    threads: config["resources"]["bt2_indices"]["threads"]
+    threads: config["resources"]["make_bt2_indices"]["threads"]
     resources:
-        mem=config["resources"]["bt2_indices"]["mem"],
-        tmp=config["resources"]["bt2_indices"]["tmp"]
+        mem=config["resources"]["make_bt2_indices"]["mem"],
+        tmp=config["resources"]["make_bt2_indices"]["tmp"]
     shell:
         """
         {{
@@ -241,10 +241,10 @@ rule bowtie2_map_pe:
     log:
         temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["bt2_map"]["threads"]
+    threads: config["resources"]["bowtie2_map_pe"]["threads"]
     resources:
-        mem=config["resources"]["bt2_map"]["mem"],
-        tmp=config["resources"]["bt2_map"]["tmp"]
+        mem=config["resources"]["bowtie2_map_pe"]["mem"],
+        tmp=config["resources"]["bowtie2_map_pe"]["tmp"]
     shell:
         """
         {{
@@ -271,10 +271,10 @@ rule bowtie2_map_se:
     log:
         temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["bt2_map"]["threads"]
+    threads: config["resources"]["bowtie2_map_se"]["threads"]
     resources:
-        mem=config["resources"]["bt2_map"]["mem"],
-        tmp=config["resources"]["bt2_map"]["tmp"]
+        mem=config["resources"]["bowtie2_map_se"]["mem"],
+        tmp=config["resources"]["bowtie2_map_se"]["tmp"]
     shell:
         """
         {{
@@ -301,10 +301,10 @@ rule filter_chip_pe:
     log:
         temp(return_log_chip("{env}","{sample_name}", "filteringChIP", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["filter_chip"]["threads"]
+    threads: config["resources"]["filter_chip_pe"]["threads"]
     resources:
-        mem=config["resources"]["filter_chip"]["mem"],
-        tmp=config["resources"]["filter_chip"]["tmp"]
+        mem=config["resources"]["filter_chip_pe"]["mem"],
+        tmp=config["resources"]["filter_chip_pe"]["tmp"]
     shell:
         """
         {{
@@ -339,10 +339,10 @@ rule filter_chip_se:
     log:
         temp(return_log_chip("{env}","{sample_name}", "filteringChIP", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["filter_chip"]["threads"]
+    threads: config["resources"]["filter_chip_se"]["threads"]
     resources:
-        mem=config["resources"]["filter_chip"]["mem"],
-        tmp=config["resources"]["filter_chip"]["tmp"]
+        mem=config["resources"]["filter_chip_se"]["mem"],
+        tmp=config["resources"]["filter_chip_se"]["tmp"]
     shell:
         """
         {{
@@ -375,10 +375,10 @@ rule make_chip_stats_pe:
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
-    threads: 1
+    threads: config["resources"]["make_chip_stats_pe"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["make_chip_stats_pe"]["mem"],
+        tmp=config["resources"]["make_chip_stats_pe"]["tmp"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -409,10 +409,10 @@ rule make_chip_stats_se:
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
-    threads: 1
+    threads: config["resources"]["make_chip_stats_se"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["make_chip_stats_se"]["mem"],
+        tmp=config["resources"]["make_chip_stats_se"]["tmp"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -434,10 +434,10 @@ rule pe_or_se_chip_dispatch:
         touch = temp("{env}/chkpts/map_chip__{sample_name}.done")
     wildcard_constraints:
         env = "ChIP|TF"
-    threads: 1
+    threads: config["resources"]["pe_or_se_chip_dispatch"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["pe_or_se_chip_dispatch"]["mem"],
+        tmp=config["resources"]["pe_or_se_chip_dispatch"]["tmp"]
     shell:
         """
         mv {input} {output.bam}
@@ -539,10 +539,10 @@ rule calling_peaks_macs2_pe:
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV
-    threads: config["resources"]["macs2"]["threads"]
+    threads: config["resources"]["calling_peaks_macs2_pe"]["threads"]
     resources:
-        mem=config["resources"]["macs2"]["mem"],
-        tmp=config["resources"]["macs2"]["tmp"]
+        mem=config["resources"]["calling_peaks_macs2_pe"]["mem"],
+        tmp=config["resources"]["calling_peaks_macs2_pe"]["tmp"]
     shell:
         """
         {{
@@ -576,10 +576,10 @@ rule calling_peaks_macs2_se:
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV
-    threads: config["resources"]["macs2"]["threads"]
+    threads: config["resources"]["calling_peaks_macs2_se"]["threads"]
     resources:
-        mem=config["resources"]["macs2"]["mem"],
-        tmp=config["resources"]["macs2"]["tmp"]
+        mem=config["resources"]["calling_peaks_macs2_se"]["mem"],
+        tmp=config["resources"]["calling_peaks_macs2_se"]["tmp"]
     shell:
         """
         {{
@@ -594,7 +594,7 @@ rule calling_peaks_macs2_se:
         }} 2>&1 | tee -a "{log}"
         """
         
-rule IDR_analysis_replicates:
+rule idr_analysis_replicates:
     input:
         peak_file = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
@@ -615,10 +615,10 @@ rule IDR_analysis_replicates:
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", ""))
     conda: CONDA_ENV
-    threads: config["resources"]["idr"]["threads"]
+    threads: config["resources"]["idr_analysis_replicates"]["threads"]
     resources:
-        mem=config["resources"]["idr"]["mem"],
-        tmp=config["resources"]["idr"]["tmp"]
+        mem=config["resources"]["idr_analysis_replicates"]["mem"],
+        tmp=config["resources"]["idr_analysis_replicates"]["tmp"]
     shell:
         """
         {{
@@ -766,10 +766,10 @@ rule make_peak_stats:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'),
         rep1 = lambda wildcards: get_replicate_name(wildcards, 0),
         rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
-    threads: 1
+    threads: config["resources"]["make_peak_stats"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["make_peak_stats"]["mem"],
+        tmp=config["resources"]["make_peak_stats"]["tmp"]
     shell:
         """
         nrep1=$(awk '{{print $1,$2,$3}}' {params.rep1} | sort -k1,1 -k2,2n -u | wc -l)
@@ -787,7 +787,7 @@ rule make_peak_stats:
         cat {input.logs} > "{output.log}"
         """
 
-rule all_ChIP:
+rule all_chip:
     input:
         setup = "chkpts/directories_setup.done",
         final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
@@ -795,10 +795,10 @@ rule all_ChIP:
         touch = "{env}/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done"
     wildcard_constraints:
         env = "ChIP|TF"
-    threads: 1
+    threads: config["resources"]["all_chip"]["threads"]
     resources:
-        mem=32,
-        tmp=32
+        mem=config["resources"]["all_chip"]["mem"],
+        tmp=config["resources"]["all_chip"]["tmp"]
     shell:
         """
         touch {output.touch}

@@ -35,10 +35,10 @@ rule prepare_reference:
     output:
         chkpt = "chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
-    threads: 1
+    threads: config["resources"]["prepare_reference"]["threads"]
     resources:
-        mem=1,
-        tmp=1
+        mem=config["resources"]["prepare_reference"]["mem"],
+        tmp=config["resources"]["prepare_reference"]["tmp"]
     shell:
         """
         cat {input.logs} > {output.log}
@@ -50,6 +50,10 @@ rule prepare_reference:
 rule setup_directories:
     output:
         touch = "chkpts/directories_setup.done"
+    threads: config["resources"]["setup_directories"]["threads"]
+    resources:
+        mem=config["resources"]["setup_directories"]["mem"],
+        tmp=config["resources"]["setup_directories"]["tmp"]
     run:
         create_directories(UNIQUE_ENVS, DIRS)
         with open(output.touch, "w") as f:
@@ -64,10 +68,10 @@ rule check_fasta:
     log:
         temp(return_log_env("{ref_genome}", "fasta"))
     conda: CONDA_ENV
-    threads: config["resources"]["use_pigz"]["threads"]
+    threads: config["resources"]["check_fasta"]["threads"]
     resources:
-        mem=config["resources"]["use_pigz"]["mem"],
-        tmp=config["resources"]["use_pigz"]["tmp"]
+        mem=config["resources"]["check_fasta"]["mem"],
+        tmp=config["resources"]["check_fasta"]["tmp"]
     shell:
         """
         # Search for fasta file
@@ -105,10 +109,10 @@ rule check_gff:
     log:
         temp(return_log_env("{ref_genome}", "gff"))
     conda: CONDA_ENV
-    threads: config["resources"]["use_pigz"]["threads"]
+    threads: config["resources"]["check_gff"]["threads"]
     resources:
-        mem=config["resources"]["use_pigz"]["mem"],
-        tmp=config["resources"]["use_pigz"]["tmp"]
+        mem=config["resources"]["check_gff"]["mem"],
+        tmp=config["resources"]["check_gff"]["tmp"]
     shell:
         """
         if [ -s {params.ref_dir}/*.gff*.gz ]; then
@@ -135,10 +139,10 @@ rule check_gtf:
     log:
         temp(return_log_env("{ref_genome}", "gtf"))
     conda: CONDA_ENV
-    threads: config["resources"]["use_pigz"]["threads"]
+    threads: config["resources"]["check_gtf"]["threads"]
     resources:
-        mem=config["resources"]["use_pigz"]["mem"],
-        tmp=config["resources"]["use_pigz"]["tmp"]
+        mem=config["resources"]["check_gtf"]["mem"],
+        tmp=config["resources"]["check_gtf"]["tmp"]
     shell:
         """
         if [ -s {params.ref_dir}/*.gtf.gz ]; then
@@ -168,10 +172,10 @@ rule check_chrom_sizes:
     log:
         temp(return_log_env("{ref_genome}", "chrom_sizes"))
     conda: CONDA_ENV
-    threads: config["resources"]["chrom_sizes"]["threads"]
+    threads: config["resources"]["check_chrom_sizes"]["threads"]
     resources:
-        mem=config["resources"]["chrom_sizes"]["mem"],
-        tmp=config["resources"]["chrom_sizes"]["tmp"]
+        mem=config["resources"]["check_chrom_sizes"]["mem"],
+        tmp=config["resources"]["check_chrom_sizes"]["tmp"]
     shell:
         """
         printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
@@ -191,10 +195,10 @@ rule prep_region_file:
     log:
         temp(return_log_env("{ref_genome}", "region_file"))
     conda: CONDA_ENV
-    threads: config["resources"]["region_file"]["threads"]
+    threads: config["resources"]["prep_region_file"]["threads"]
     resources:
-        mem=config["resources"]["region_file"]["mem"],
-        tmp=config["resources"]["region_file"]["tmp"]
+        mem=config["resources"]["prep_region_file"]["mem"],
+        tmp=config["resources"]["prep_region_file"]["tmp"]
     shell:
         """
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1

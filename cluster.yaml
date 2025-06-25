@@ -2,22 +2,32 @@ __default__: &default
   mem_mb: 32
   tmp_mb: 32
 
+low_resources: &low
+  mem_mb: 1000
+  tmp_mb: 1000
+
 standard_resources: &standard
   mem_mb: 2000
   tmp_mb: 2000
 
 heavy_resources: &heavy
-  mem_mb: 8000
-  tmp_mb: 16000
+  mem_mb: 6000
+  tmp_mb: 32000
 
+single_thread: &single
+  mem_mb: 16000
+  tmp_mb: 32000
+
+prepare_reference: *default
+setup_directories: *default
 check_fasta: *standard
 check_gff: *standard
 check_gtf: *standard
-region_file: *standard
-check_chrom_sizes: *heavy
+check_chrom_sizes: *single
+prep_region_file: *low
 get_fastq_pe: *heavy
 get_fastq_se: *heavy
-fastqc: *heavy
+run_fastqc: *single
 process_fastq_pe: *heavy
 process_fastq_se: *heavy
 make_bt2_indices: *heavy
@@ -25,35 +35,43 @@ bowtie2_map_pe: *heavy
 bowtie2_map_se: *heavy
 filter_chip_pe: *heavy
 filter_chip_se: *heavy
-make_chip_stats_pe: *default
-make_chip_stats_se: *default
-pe_or_se_dispatch: *default
-make_coverage_chip: *heavy
+make_chip_stats_pe: *low
+make_chip_stats_se: *low
+pe_or_se_chip_dispatch: *default
+make_coverage_chip: *heavy 
 make_bigwig_chip: *heavy
 make_fingerprint_plot: *heavy
 calling_peaks_macs2_pe: *heavy
 calling_peaks_macs2_se: *heavy
-IDR_analysis_replicates: *heavy
+idr_analysis_replicates: *single
 merging_chip_replicates: *heavy
 making_pseudo_replicates: *heavy
-best_peaks_pseudoreps: *standard
-make_peak_stats: *default
-ChIP_all: *default
+best_peaks_pseudoreps: *low
+make_peak_stats: *low
+all_chip: *default
+make_bismark_indices: *heavy
+bismark_map_pe: *heavy
+bismark_map_se: *heavy
+pe_or_se_mc_dispatch: *default
+make_mc_stats_pe: *low
+make_mc_stats_se: *low
+merging_mc_replicates: *heavy
+make_mc_bigwig_files: *single
+call_DMRs_pairwise: *single # while technically it could be parallelized, if small scaffolds are present and do not report any DMRs, DMRcaller will crash.
+all_mc: *default
 make_STAR_indices: *heavy
 STAR_map_pe: *heavy
 STAR_map_se: *heavy
 filter_rna_pe: *heavy
 filter_rna_se: *heavy
-make_rna_stats_pe: *default
-make_rna_stats_se: *default
-dispatch_pair_map_only_rna: *default
-all_rna: *default
-bismark_indices: *heavy
-bismark_map: *heavy
-mc_bigwig: *heavy
-merging_mc_replicates: *heavy
-call_dmrs: *heavy
+make_rna_stats_pe: *low
+make_rna_stats_se: *low
+pe_or_se_rna_dispatch: *default
 merging_rna_replicates: *heavy
-rna_degs: *heavy
+make_rna_stranded_bigwigs: *heavy
+prep_files_for_DEGs: *single
+call_all_DEGs: *single
+gather_gene_expression_rpkm: *single
+plot_expression_levels: *single
+all_rna: *default
 shortstack_map: *heavy
-plot_expression: *heavy
