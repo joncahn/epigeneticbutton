@@ -23,7 +23,7 @@ load(paste0("RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))
 genelist<-read.delim(targetfile, header = FALSE)
 
 pdf(paste0("combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
-for (i in 1:(length(genelist))) {
+for (i in 1:(nrow(genelist))) {
 	gene<-genelist[i,1]
 	label<-genelist[i,2]
 	print(plot.Expression(gene, label))
