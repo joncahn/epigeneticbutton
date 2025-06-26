@@ -25,7 +25,7 @@ ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(ge
 ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
 
 all_rpkm<-data.frame()
-for (sample1 in genotype) {
+for (sample1 in genotypes) {
 	nbreps<-sum(grepl(sample1, reps))
 	tmp<-genecount[, grepl(sample1, colnames(genecount)) | colnames(genecount) == "GID"]
 	tmp<-mutate(tmp, avg = rowMeans(select(tmp, -GID)))
