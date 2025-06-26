@@ -450,14 +450,13 @@ rule gather_gene_expression_rpkm:
     input:
         samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        genes = "combined/tracks/{ref_genome}__all_genes.bed"
+        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
     output:
-        touch = "RNA/chkpts/gene_expression__{analysis_name}__{ref_genome}.done",
         rpkm = "RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
     params:
+        script = os.path.join(REPO_FOLDER,"scripts/R_gene_expression_rpkm.R"),
         analysis_name = config['analysis_name'],
-        ref_genome = lambda wildcards: wildcards.ref_genome,
-        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_rna("{ref_genome}", "gene_expression", "{analysis_name}"))
     conda: CONDA_ENV
@@ -469,9 +468,7 @@ rule gather_gene_expression_rpkm:
         """
         {{
         printf "Gathering gene expression levels for samples from {params.analysis_name} mapping to {params.ref_genome}\n"
-        
-        touch {output.rpkm}
-        touch {output.touch}
+        Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
         }} 2>&1 | tee -a "{log}"
         """
 
