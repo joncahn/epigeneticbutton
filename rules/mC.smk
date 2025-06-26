@@ -316,16 +316,14 @@ rule make_mc_bigwig_files:
         {{
         if [[ "{params.context}" == "all" ]]; then
             zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CG.bedGraph"}}'
-            for strand in plus minus
-            do
+            for strand in plus minus; do
                 case "${{strand}}" in 
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
                 zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CG__"d".bedGraph"}}'
             done
-            for context in CG CHG CHH
-            do
+            for context in CG CHG CHH; do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
                 LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}__${{context}}.bedGraph > mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
                 bedGraphToBigWig mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}__${{context}}.bw

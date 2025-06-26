@@ -629,8 +629,7 @@ rule idr_analysis_replicates:
         else
             pre="se"
         fi
-        for pair in {params.replicate_pairs}
-        do
+        for pair in {params.replicate_pairs}; do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
             file1="{params.env}/peaks/peaks_${{pre}}__final__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
