@@ -127,15 +127,11 @@ uniqueUP<-unique(uniqueUP) %>%
 		ungroup() %>%
 		mutate(DEG="UP")
 
-uniqueUP
-
 uniqueDOWN<-unique(uniqueDOWN) %>%
 		group_by(GID) %>%
 		filter(n() == 1) %>%
 		ungroup() %>%
 		mutate(DEG="DOWN")
-
-uniqueDOWN
 
 uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
 			arrange(Sample)

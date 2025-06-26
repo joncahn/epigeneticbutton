@@ -9,7 +9,59 @@ def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     if paired == "se":
         return "filtered_{sample_name}__R0" if config['structural_rna_depletion'] else "trim_{sample_name}__R0"
+
+rule make_bt2_indices:
+    input:
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        gff = "genomes/{ref_genome}/{ref_genome}.gff",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+    output:
+        indices = directory("genomes/{ref_genome}/bt2_index")
+    log:
+        temp(os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log"))
+    conda: CONDA_ENV
+    threads: config["resources"]["make_bt2_indices"]["threads"]
+    resources:
+        mem=config["resources"]["make_bt2_indices"]["mem"],
+        tmp=config["resources"]["make_bt2_indices"]["tmp"]
+    shell:
+        """
+        {{
+        printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
+        mkdir genomes/{wildcards.ref_genome}/bt2_index
+        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}"
+        }} 2>&1 | tee -a "{log}"
+        """
     
+rule filter_structural_rna:
+    input:
+        fastq = "sRNA/fastq/trim_{sample_name}__R0.fastq.gz",
+        fasta = config['structural_rna_fafile']
+    output:
+        count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
+        bam_file = temp("RNA/mapped/clean_{sample_name).bam")
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        srna_params = config['srna_mapping_params']
+    log:
+        temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
+    conda: CONDA_ENV
+    threads: config["resources"]["shortstack_map"]["threads"]
+    resources:
+        mem=config["resources"]["shortstack_map"]["mem"],
+        tmp=config["resources"]["shortstack_map"]["tmp"]
+    shell:
+        """
+        {{
+        if [[ ! -d genomes/structural_RNAs/{ref_genome}/bt2_index ]]; then
+            gunzip {input.fasta}
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
+        ShortStack --version
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --bowtie_cores {threads} --sort_mem {resources.mem} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"

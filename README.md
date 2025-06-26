@@ -144,11 +144,11 @@ epigeneticbutton/
 ###  Additional output options
 - `rule plot_expression_levels`: Given a list of genes (and optional labels), it will plot the expression levels in all the different samples in the samplefile and analysis name defined. Genes uniquely differentially regulated in one sample versus one or more samples are color coded. It is based on a Rdata file created during the Differential Expression analysis (rule call_all_degs). To use it, edit the config file with the target gene list file (`plot_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels) and a potential label (`target_file_label`, default is the name of the chosen file) and run, replacing analysis_name and ref_genome with wanted values:
 ```bash 
-snakemake --cores 1 combined/chkpts/plot_expression_{analysis_name}_{ref_genome}.done
+snakemake --cores 1 combined/chkpts/plot_expression__{analysis_name}__{ref_genome}.done
 ```
 or to set the file and label directly in the snakemake command:
 ```bash 
-snakemake --cores 1 combined/chkpts/plot_expression_{analysis_name}_{ref_genome}.done --config plot_target_file="data/target_gene_list.txt" target_file_label="my_genes_of_interests"
+snakemake --cores 1 combined/chkpts/plot_expression__{analysis_name}__{ref_genome}.done --config plot_target_file="data/target_gene_list.txt" target_file_label="my_genes_of_interests"
 ```
 Output is a single pdf file where each gene of the list is a page, named `combined/plots/plot_expression_{analysis_name}_{ref_genome}_{target_file_label}.pdf`
 
