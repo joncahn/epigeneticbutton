@@ -35,10 +35,7 @@ rule prepare_reference:
     output:
         chkpt = "chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
-    threads: config["resources"]["prepare_reference"]["threads"]
-    resources:
-        mem=config["resources"]["prepare_reference"]["mem"],
-        tmp=config["resources"]["prepare_reference"]["tmp"]
+    localrule: True
     shell:
         """
         cat {input.logs} > {output.log}
@@ -50,10 +47,7 @@ rule prepare_reference:
 rule setup_directories:
     output:
         touch = "chkpts/directories_setup.done"
-    threads: config["resources"]["setup_directories"]["threads"]
-    resources:
-        mem=config["resources"]["setup_directories"]["mem"],
-        tmp=config["resources"]["setup_directories"]["tmp"]
+    localrule: True
     run:
         create_directories(UNIQUE_ENVS, DIRS)
         with open(output.touch, "w") as f:

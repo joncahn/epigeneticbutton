@@ -174,10 +174,7 @@ rule pe_or_se_mc_dispatch:
     output:
         cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         touch = "mC/chkpts/map__{sample_name}.done"
-    threads: config["resources"]["pe_or_se_mc_dispatch"]["threads"]
-    resources:
-        mem=config["resources"]["pe_or_se_mc_dispatch"]["mem"],
-        tmp=config["resources"]["pe_or_se_mc_dispatch"]["tmp"]
+    localrule: True
     shell:
         """
         mv {input} {output.cx_report}
@@ -378,10 +375,7 @@ rule all_mc:
         final = lambda wildcards: define_final_mC_output(wildcards.ref_genome)
     output:
         touch = "mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
-    threads: config["resources"]["all_mc"]["threads"]
-    resources:
-        mem=config["resources"]["all_mc"]["mem"],
-        tmp=config["resources"]["all_mc"]["tmp"]
+    localrule: True
     shell:
         """
         touch {output.touch}

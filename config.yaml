@@ -167,8 +167,6 @@ single_thread: &single
   tmp: 32000
   
 resources:
-  prepare_reference: *default
-  setup_directories: *default
   check_fasta: *standard
   check_gff: *standard
   check_gtf: *standard
@@ -186,7 +184,6 @@ resources:
   filter_chip_se: *heavy
   make_chip_stats_pe: *low
   make_chip_stats_se: *low
-  pe_or_se_chip_dispatch: *default
   make_coverage_chip: *heavy 
   make_bigwig_chip: *heavy
   make_fingerprint_plot: *heavy
@@ -197,17 +194,14 @@ resources:
   making_pseudo_replicates: *heavy
   best_peaks_pseudoreps: *low
   make_peak_stats: *low
-  all_chip: *default
   make_bismark_indices: *heavy
   bismark_map_pe: *heavy
   bismark_map_se: *heavy
-  pe_or_se_mc_dispatch: *default
   make_mc_stats_pe: *low
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *single # while technically it could be parallelized, if small scaffolds are present and do not report any DMRs, DMRcaller will crash.
-  all_mc: *default
   make_STAR_indices: *heavy
   STAR_map_pe: *heavy
   STAR_map_se: *heavy
@@ -215,12 +209,16 @@ resources:
   filter_rna_se: *heavy
   make_rna_stats_pe: *low
   make_rna_stats_se: *low
-  pe_or_se_rna_dispatch: *default
   merging_rna_replicates: *heavy
   make_rna_stranded_bigwigs: *heavy
   prep_files_for_DEGs: *single
   call_all_DEGs: *single
   gather_gene_expression_rpkm: *single
   plot_expression_levels: *single
-  all_rna: *default
   shortstack_map: *heavy
+  filter_structural_rna: *heavy
+  shortstack_map: *heavy
+  make_srna_size_stats: *standard
+  filter_size_srna_sample: *standard
+  merging_srna_replicates: *standard
+  make_srna_stranded_bigwigs: *standard

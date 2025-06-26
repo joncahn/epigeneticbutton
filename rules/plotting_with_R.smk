@@ -1,6 +1,3 @@
-### R plots
-# CONDA_ENV=os.path.join(REPO_FOLDER,"envs/r_plotting.yaml")
-
 ###
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
@@ -77,4 +74,45 @@ rule plotting_peaks_stats_chip_tf:
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}" "{params.env}"
+        """
+
+###
+# Rules to prep and then plot the sizes stats for sRNA
+rule prepping_srna_sizes_stats:
+    input:
+        sample_stat_files = lambda wildcards: [ f"sRNA/reports/sizes_stats__{sample_name}.txt"
+                                                for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
+    output:
+        stat_file = "combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt",
+        temp_stat_file = temp("combined/reports/temp_summary_sizes_stats_{analysis_name}_{env}.txt")
+    params:
+        sample_file = config['sample_file'],
+        analysis_name = lambda wildcards: wildcards.analysis_name,
+        env = lambda wildcards: wildcards.env
+    shell:
+        """
+        printf "Sample\tType\tSize\tCount\n" > "{output.stat_file}"
+        for f in {input.sample_stat_files}
+        do
+            awk -F "\t" -v OFS="\t" 'NR>1' $f >> "{output.temp_stat_file}"
+        done
+        sort {output.temp_stat_file} -u >> "{output.stat_file}"
+        """
+    
+rule plotting_srna_sizes_stats:
+    input:
+        summary_stats = "combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt"
+    output:
+        plot = "combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf"
+    params:
+        analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
+        srna_min = config['srna_min_size'],
+        srna_max = config['srna_max_size'],
+        script=os.path.join(REPO_FOLDER,"scripts/R_size_stats.R")
+    log:
+        "sRNA/logs/plotting_srna_sizes_stats_{analysis_name}_{env}.log"
+    conda: CONDA_ENV
+    shell:
+        """
+        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{params.srna_min}" "{params.srna_max}"
         """

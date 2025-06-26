@@ -434,10 +434,7 @@ rule pe_or_se_chip_dispatch:
         touch = temp("{env}/chkpts/map_chip__{sample_name}.done")
     wildcard_constraints:
         env = "ChIP|TF"
-    threads: config["resources"]["pe_or_se_chip_dispatch"]["threads"]
-    resources:
-        mem=config["resources"]["pe_or_se_chip_dispatch"]["mem"],
-        tmp=config["resources"]["pe_or_se_chip_dispatch"]["tmp"]
+    localrule: True
     shell:
         """
         mv {input} {output.bam}
@@ -794,10 +791,7 @@ rule all_chip:
         touch = "{env}/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done"
     wildcard_constraints:
         env = "ChIP|TF"
-    threads: config["resources"]["all_chip"]["threads"]
-    resources:
-        mem=config["resources"]["all_chip"]["mem"],
-        tmp=config["resources"]["all_chip"]["tmp"]
+    localrule: True
     shell:
         """
         touch {output.touch}

@@ -9,14 +9,6 @@ from itertools import combinations
 
 min_version("6.0")
 
-# rule show_env:
-    # shell:
-        # "echo Conda version: $(conda --version) && "
-        # "echo $(conda config --show solver) &&"
-        # "echo Conda executable: $(which conda) && "
-        # "echo Environment: $CONDA_DEFAULT_ENV && "
-        # "conda info"
-
 # Configuration
 configfile: "config.yaml"
 analysis = config['full_analysis']
@@ -188,12 +180,15 @@ include: "rules/plotting_with_R.smk"
 rule all:
 	input:
 		expand(f"chkpts/combined_analysis__{analysis_name}.done", analysis_name = analysis_name)
+    localrule: True
 
 ### Intermediate target rules
 # Rule to specify final target if only mapping is required
 rule map_only:
     input:
-        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=UNIQUE_ENVS)
+        expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","RNA","mC"]]),
+        expand("combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
+    localrule: True
 
 # Rule to specify final target if only chip coverage is wanted
 rule coverage_chip:
@@ -202,6 +197,7 @@ rule coverage_chip:
             f"ChIP/tracks/coverage__{sample_name}.bw"
             for sample_name in get_sample_names_by_env("ChIP", samples)
         ]
+    localrule: True
 
 # Rule to perform combined analysis
 rule combined_analysis:
@@ -211,10 +207,13 @@ rule combined_analysis:
         expand("TF/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
         expand("RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
         expand("mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
+        expand("sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
         expand("combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","RNA","mC"]]),
+        expand("combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]]),
         expand("combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
     output:
         chkpt = f"chkpts/combined_analysis__{analysis_name}.done"
+    localrule: True
     shell:
         """
         touch {output.chkpt}

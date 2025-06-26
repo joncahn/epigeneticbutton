@@ -1,40 +1,52 @@
-ADD rules resources to config and clusters
-dispatch_srna_fastq: *default
-filter_structural_rna: *heavy
-shortstack_map: *heavy
-
 # function to access logs more easily
-def return_log_smallrna(sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"smallRNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+def return_log_smallrna(sample_name, step, size):
+    return os.path.join(REPO_FOLDER,"sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
 
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     if paired == "se":
         return "filtered__{sample_name}__R0" if config['structural_rna_depletion'] else "trim__{sample_name}__R0"
-
-rule make_bt2_indices:
-    input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        gff = "genomes/{ref_genome}/{ref_genome}.gff",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
-    output:
-        indices = directory("genomes/{ref_genome}/bt2_index")
-    log:
-        temp(os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log"))
-    conda: CONDA_ENV
-    threads: config["resources"]["make_bt2_indices"]["threads"]
-    resources:
-        mem=config["resources"]["make_bt2_indices"]["mem"],
-        tmp=config["resources"]["make_bt2_indices"]["tmp"]
-    shell:
-        """
-        {{
-        printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
-        mkdir genomes/{wildcards.ref_genome}/bt2_index
-        bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}"
-        }} 2>&1 | tee -a "{log}"
-        """
     
+def define_final_srna_output(ref_genome):
+    qc_option = config["QC_option"]
+    analysis = config['full_analysis']
+    analysis_name = config['analysis_name']
+    srna_min = config['srna_min_size']
+    srna_max = config['srna_max_size']
+    map_files = []
+    bigwig_files = []
+    qc_files = []
+    deg_files = []
+    filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
+    
+    for _, row in filtered_rep_samples.iterrows():
+        sname = sample_name_str(row, 'sample')        
+        map_files.append(f"sRNA/reports/sizes_stats__{sname}.txt")
+        qc_files.append(f"RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+        qc_files.append(f"RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+        
+        for size in range(srna_min, srna_max + 1):
+            bigwig_files.append(f"sRNA/tracks/{sname}__{size}nt__plus.bw")
+            bigwig_files.append(f"sRNA/tracks/{sname}__{size}nt__minus.bw")
+        
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    for _, row in filtered_analysis_samples.iterrows():
+        spname = sample_name_str(row, 'analysis')
+        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
+            for size in range(srna_min, srna_max + 1):
+                bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
+                bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
+            
+    results = map_files
+    
+    if qc_option == "all":
+        results += qc_files
+        
+    if analysis:
+        results += bigwig_files
+
+    return results
+
 rule filter_structural_rna:
     input:
         fastq = "sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
@@ -45,7 +57,7 @@ rule filter_structural_rna:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
+        temp(return_log_rna("{sample_name}", "filter_structural_rna", "all"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_structural_rna"]["threads"]
     resources:
@@ -76,10 +88,7 @@ rule dispatch_srna_fastq:
     output:
         fastq_file = temp("sRNA/fastq/clean_(sample_name).fastq.gz")
     conda: CONDA_ENV
-    threads: config["resources"]["dispatch_srna_fastq"]["threads"]
-    resources:
-        mem=config["resources"]["dispatch_srna_fastq"]["mem"],
-        tmp=config["resources"]["dispatch_srna_fastq"]["tmp"]
+    localrule: True
     shell:
         """
         cp {input.fastq} {output.fastq_file}
@@ -91,13 +100,14 @@ rule shortstack_map:
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
         count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
-        bam_file = temp("RNA/mapped/clean_{sample_name).bam")
+        bam_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name).bam"),
+        bai_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name).bam.bai")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         srna_params = config['srna_mapping_params']
     log:
-        temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
+        temp(return_log_rna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
@@ -109,58 +119,131 @@ rule shortstack_map:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --bowtie_cores {threads} --sort_mem {resources.mem} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
+        samtools index -@ {threads} {input.bamfile}
         }} 2>&1 | tee -a "{log}"
         """
         
-rule process_srna_sample:
+rule make_srna_size_stats:
     input:
-        bamfile = "RNA/mapped/clean_{sample_name).bam"
+        bamfile = "sRNA/mapped/{sample_name)/clean__{sample_name).bam",
+        baifile = "sRNA/mapped/{sample_name)/clean__{sample_name).bam.bai"
     output:
-        count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
-        bam_file = temp("RNA/mapped/clean_{sample_name).bam")
+        report = "sRNA/reports/sizes_stats__{params.sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        srna_min = config['srna_min_size'],
-        srna_max = config['srna_max_size']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
+        temp(return_log_rna("{sample_name}", "make_srna_stats", "all"))
     conda: CONDA_ENV
-    threads: config["resources"]["shortstack_map"]["threads"]
+    threads: config["resources"]["make_srna_size_stats"]["threads"]
     resources:
-        mem=config["resources"]["shortstack_map"]["mem"],
-        tmp=config["resources"]["shortstack_map"]["tmp"]
+        mem=config["resources"]["make_srna_size_stats"]["mem"],
+        tmp=config["resources"]["make_srna_size_stats"]["tmp"]
     shell:
         """
         {{
-        samtools index -@ {threads} {input.bamfile}
-        printf "Filtering only small RNA sizes ({params.srna_min}nt to {params.srna_max}nt) for {params.sample_name}\n"
-        for ((nt={params.srna_min}; nt<={params.srna_max}; nt++)); do
-            samtools view -h {input.bamfile} | awk -v m={params.srna_min} -v n={params.srna_max} '(length($10) >= m && length($10) <= n) || $1 ~ /^@/' | samtools view -bS - > mapped/${name}/sized_${name}.bam
-        #### Getting stats of size distribution
-        printf "\nGetting trimmed stats for ${name}\n"
-        zcat fastq/trimmed_${name}.fastq.gz | awk '{if(NR%4==2) print length($1)}' | sort -n | uniq -c | awk -v OFS="\t" -v n=${name} '{print n,"trimmed",$2,$1}' > reports/sizes_trimmed_${name}.txt
+        printf "\nGetting stats for {params.sample_name}\n"
+        printf "Sample\tType\tSize\tCount\n" > sRNA/reports/sizes_stats__{params.sample_name}.txt
+        zcat sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> sRNA/reports/sizes_stats__{params.sample_name}.txt
         printf "\nGetting filtered stats for ${name}\n"
-        zcat fastq/filtered_${name}.fastq.gz | awk '{if(NR%4==2) print length($1)}' | sort -n | uniq -c | awk -v OFS="\t" -v n=${name} '{print n,"filtered",$2,$1}' > reports/sizes_filtered_${name}.txt
-        printf "\nGetting mapped stats for ${name}\n"
-        samtools view mapped/${name}/filtered_${name}.bam | awk '$2==0 || $2==16 {print length($10)}' | sort -n | uniq -c | awk -v OFS="\t" -v n=${name} '{print n,"mapped",$2,$1}' > reports/sizes_mapped_${name}.txt
+        if [[ -s sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz ]]; then
+            zcat sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> sRNA/reports/sizes_stats__${name}.txt
+        fi
+        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> sRNA/reports/sizes_stats__${name}.txt
         }} 2>&1 | tee -a "{log}"
         """
 
-		# # printf "Filtering ${line}_${tissue}_Rep1 shRNA files for reads =24nt\n"
-		# # samtools view -@ ${threads} -h ${pathtobamshrna}/${line}_${tissue}_shRNA_Rep1/filtered_${line}_${tissue}_shRNA_Rep1.bam | awk 'length($10) == 24 || $1 ~ /^@/' | samtools view -bS - > ${pathtobamshrna}/temp_${line}_${tissue}_24RNA_Rep1.bam
-		# # printf "Filtering ${line}_${tissue}_Rep2 shRNA files for reads =24nt\n"
-		# # samtools view -@ ${threads} -h ${pathtobamshrna}/${line}_${tissue}_shRNA_Rep2/filtered_${line}_${tissue}_shRNA_Rep2.bam | awk 'length($10) == 24 || $1 ~ /^@/' | samtools view -bS - > ${pathtobamshrna}/temp_${line}_${tissue}_24RNA_Rep2.bam
-		# # printf "Merging ${line}_${tissue} Replicates\n"
-		# # samtools merge -@ ${threads} ${pathtobamshrna}/temp_${line}_${tissue}_24RNA_merged.bam ${pathtobamshrna}/temp_${line}_${tissue}_24RNA_Rep*.bam
-		# # samtools sort -@ ${threads} -o ${pathtobamshrna}/${line}_${tissue}_24RNA_merged.bam ${pathtobamshrna}/temp_${line}_${tissue}_24RNA_merged.bam
-		# # rm -f ${pathtobamshrna}/temp_${line}_${tissue}_24RNA*.bam
-		# # samtools index -@ ${threads} ${pathtobamshrna}/${line}_${tissue}_24RNA_merged.bam
-		# # printf "Getting stranded coverage for ${line}_${tissue}\n"
-		# # bamCoverage --filterRNAstrand forward -bs 1 -p ${threads} --normalizeUsing CPM -b ${pathtobamshrna}/${line}_${tissue}_24RNA_merged.bam -o ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_plus.bw
-		# # bamCoverage --filterRNAstrand reverse -bs 1 -p ${threads} --normalizeUsing CPM -b ${pathtobamshrna}/${line}_${tissue}_24RNA_merged.bam -o ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_minus.bw
-		# # printf "Merging strands for ${line}_${tissue} 24RNA\n"
-		# # bigWigMerge ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_plus.bw ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_minus.bw ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_sum.bg
-		# # sort -k1,1 -k2,2n ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_sum.bg > ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_sum_sorted.bg
-		# # bedGraphToBigWig ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_sum_sorted.bg ${ref_dir}/chrom.sizes ${pathtobwshrna}/${line}_${tissue}_24RNA_merged_sum.bw
-		# # rm -f ${pathtobwshrna}/${line}_${tissue}_24RNA*.bg
+rule filter_size_srna_sample:
+    input:
+        bamfile = "sRNA/mapped/{sample_name)/clean__{sample_name).bam",
+        baifile = "sRNA/mapped/{sample_name)/clean__{sample_name).bam.bai"
+    output:
+        filtered_file = "sRNA/mapped/sized__{size}nt__{sample_name}.bam"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        size = lambda wildcards: wildcards.size
+    log:
+        temp(return_log_rna("{sample_name}", "filter_size_srna", "{size}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["filter_size_srna_sample"]["threads"]
+    resources:
+        mem=config["resources"]["filter_size_srna_sample"]["mem"],
+        tmp=config["resources"]["filter_size_srna_sample"]["tmp"]
+    shell:
+        """
+        {{
+        printf "Filtering only {params.size} nucleotides sRNAs for {params.sample_name}\n"
+        samtools view -h {input.bamfile} | awk -v n={params.size} '(length($10) == n) || $1 ~ /^@/' | samtools view -bS - > sRNA/mapped/sized__${{nt}}nt__{params.sample_name}.bam
+        samtools index -@ {threads} sRNA/mapped/sized__${{nt}}nt__{params.sample_name}.bam
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule merging_srna_replicates:
+    input:
+        bamfiles = lambda wildcards: [ f"sRNA/mapped/sized__{wildcards.size}nt__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
+                                      for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
+    output:
+        mergefile = "RNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+    params:
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
+        size = lambda wildcards: wildcards.size
+    log:
+        temp(return_log_rna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_srna_reps", "{size}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["merging_srna_replicates"]["threads"]
+    resources:
+        mem=config["resources"]["merging_srna_replicates"]["mem"],
+        tmp=config["resources"]["merging_srna_replicates"]["tmp"]
+    shell:
+        """
+        {{
+        printf "\nMerging replicates of {params.sname}\n"
+		samtools merge -@ {threads} sRNA/mapped/temp_{params.size}_{params.sname}.bam {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} RNA/mapped/temp_{params.size}_{params.sname}.bam
+		rm -f RNA/mapped/temp_{params.size}_{params.sname}.bam
+		samtools index -@ {threads} {output.mergefile}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_srna_stranded_bigwigs:
+    input: 
+        bamfile = lambda wildcards: f"sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam"
+    output:
+        bw_plus = "RNA/tracks/{sample_name}__{size}nt__plus.bw",
+        bw_minus = "RNA/tracks/{sample_name}__{size}nt__minus.bw"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        size = lambda wildcards: wildcards.size,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
+        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness'],
+        multimap = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
+    log:
+        temp(return_log_rna("{sample_name}", "making_bigiwig", ""))
+    conda: CONDA_ENV
+    threads: config["resources"]["make_srna_stranded_bigwigs"]["threads"]
+    resources:
+        mem=config["resources"]["make_srna_stranded_bigwigs"]["mem"],
+        tmp=config["resources"]["make_srna_stranded_bigwigs"]["tmp"]
+    shell:
+        """
+        {{
+        printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
+		bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
+		bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule all_srna:
+    input:
+        setup = "chkpts/directories_setup.done",
+        final = lambda wildcards: define_final_srna_output(wildcards.ref_genome)
+    output:
+        touch = "sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done"
+    localrule: True
+    shell:
+        """
+        touch {output.touch}
+        """

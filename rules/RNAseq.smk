@@ -291,10 +291,7 @@ rule pe_or_se_rna_dispatch:
         bam_file = "RNA/mapped/final__{sample_name}.bam",
         count_file = "RNA/DEG/counts__{sample_name}.tab",
         touch = "RNA/chkpts/map_rna__{sample_name}.done"
-    threads: config["resources"]["pe_or_se_rna_dispatch"]["threads"]
-    resources:
-        mem=config["resources"]["pe_or_se_rna_dispatch"]["mem"],
-        tmp=config["resources"]["pe_or_se_rna_dispatch"]["tmp"]
+    localrule: True
     shell:
         """
         mv {input.bamfile} {output.bam_file}
@@ -501,10 +498,7 @@ rule all_rna:
         final = lambda wildcards: define_final_rna_output(wildcards.ref_genome)
     output:
         touch = "RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done"
-    threads: config["resources"]["all_rna"]["threads"]
-    resources:
-        mem=config["resources"]["all_rna"]["mem"],
-        tmp=config["resources"]["all_rna"]["tmp"]
+    localrule: True
     shell:
         """
         touch {output.touch}
