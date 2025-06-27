@@ -12,7 +12,7 @@ standard_resources: &standard
 
 heavy_resources: &heavy
   mem_mb: 6000
-  tmp_mb: 32000
+  tmp_mb: 48000
 
 single_thread: &single
   mem_mb: 16000

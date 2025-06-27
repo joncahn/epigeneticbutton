@@ -157,9 +157,9 @@ standard_resources: &standard
   tmp: 2000
 
 heavy_resources: &heavy
-  threads: 16
+  threads: 8
   mem: 6000
-  tmp: 32000
+  tmp: 48000
 
 single_thread: &single
   threads: 1
