@@ -124,7 +124,7 @@ mC_mapping:
 # small RNA parameters
 structural_rna_depletion: false # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
 structural_rna_fafile: "data/zm.structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
-srna_mapping_params: "--mmap u --dicermin 20 --dicermax 24 --bowtie_m all --mismatches 1 --foldsize 1000 --pad 250"
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 
@@ -158,13 +158,13 @@ standard_resources: &standard
 
 heavy_resources: &heavy
   threads: 8
-  mem: 6000
+  mem: 8000
   tmp: 48000
 
 single_thread: &single
   threads: 1
-  mem: 16000
-  tmp: 32000
+  mem: 32000
+  tmp: 48000
   
 resources:
   check_fasta: *standard

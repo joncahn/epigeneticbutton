@@ -11,12 +11,12 @@ standard_resources: &standard
   tmp_mb: 2000
 
 heavy_resources: &heavy
-  mem_mb: 6000
+  mem_mb: 8000
   tmp_mb: 48000
 
 single_thread: &single
-  mem_mb: 16000
-  tmp_mb: 32000
+  mem_mb: 32000
+  tmp_mb: 48000
 
 check_fasta: *standard
 check_gff: *standard
