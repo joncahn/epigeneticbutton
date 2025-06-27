@@ -215,10 +215,7 @@ rule make_srna_stranded_bigwigs:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         size = lambda wildcards: wildcards.size,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
-        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness'],
-        multimap = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_rna("{sample_name}", "making_bigiwig", "{size}"))
     conda: CONDA_ENV
