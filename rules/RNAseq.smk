@@ -494,7 +494,6 @@ rule plot_expression_levels:
 
 rule all_rna:
     input:
-        setup = "chkpts/directories_setup.done",
         final = lambda wildcards: define_final_rna_output(wildcards.ref_genome)
     output:
         touch = "RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done"

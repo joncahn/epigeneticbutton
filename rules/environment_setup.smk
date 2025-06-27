@@ -2,25 +2,25 @@
 def return_log_env(ref_genome, step):
     return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
 
-# Function to create directories
-def create_directories(unique_envs, dirs):
-    for env in unique_envs:
-        for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
-            os.makedirs(f"{env}/{d}", exist_ok=True)
-        if env in ["ChIP", "TF"]:
-            os.makedirs(f"{env}/peaks", exist_ok=True)
-        if env in ["mC"]:
-            os.makedirs(f"{env}/methylcall", exist_ok=True)
-            os.makedirs(f"{env}/DMRs", exist_ok=True)
-        if env in ["RNA"]:
-            os.makedirs(f"{env}/DEG", exist_ok=True)
+# # Function to create directories
+# def create_directories(unique_envs, dirs):
+    # for env in unique_envs:
+        # for d in ["fastq", "mapped", "tracks", "reports", "logs", "chkpts", "plots"]:
+            # os.makedirs(f"{env}/{d}", exist_ok=True)
+        # if env in ["ChIP", "TF"]:
+            # os.makedirs(f"{env}/peaks", exist_ok=True)
+        # if env in ["mC"]:
+            # os.makedirs(f"{env}/methylcall", exist_ok=True)
+            # os.makedirs(f"{env}/DMRs", exist_ok=True)
+        # if env in ["RNA"]:
+            # os.makedirs(f"{env}/DEG", exist_ok=True)
     
-    for key, value in dirs.items():
-        if isinstance(value, dict):
-            for sub_key, sub_value in value.items():
-                os.makedirs(sub_value, exist_ok=True)
-        else:
-            os.makedirs(value, exist_ok=True)
+    # for key, value in dirs.items():
+        # if isinstance(value, dict):
+            # for sub_key, sub_value in value.items():
+                # os.makedirs(sub_value, exist_ok=True)
+        # else:
+            # os.makedirs(value, exist_ok=True)
 
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
@@ -43,15 +43,15 @@ rule prepare_reference:
         touch {output.chkpt}
         """
 
-# Call the function to create directories
-rule setup_directories:
-    output:
-        touch = "chkpts/directories_setup.done"
-    localrule: True
-    run:
-        create_directories(UNIQUE_ENVS, DIRS)
-        with open(output.touch, "w") as f:
-            f.write("Setup complete\n")
+# # Call the function to create directories
+# rule setup_directories:
+    # output:
+        # touch = "chkpts/directories_setup.done"
+    # localrule: True
+    # run:
+        # create_directories(UNIQUE_ENVS, DIRS)
+        # with open(output.touch, "w") as f:
+            # f.write("Setup complete\n")
 
 # Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
