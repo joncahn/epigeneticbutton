@@ -128,7 +128,7 @@ rule make_srna_size_stats:
         bamfile = "sRNA/mapped/{sample_name)/clean__{sample_name).bam",
         baifile = "sRNA/mapped/{sample_name)/clean__{sample_name).bam.bai"
     output:
-        report = "sRNA/reports/sizes_stats__{params.sample_name}.txt"
+        report = "sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
