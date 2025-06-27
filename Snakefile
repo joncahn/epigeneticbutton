@@ -179,8 +179,8 @@ include: "rules/plotting_with_R.smk"
 
 # Rule all to specify final target
 rule all:
-	input:
-		expand(f"chkpts/combined_analysis__{analysis_name}.done", analysis_name = analysis_name)
+    input:
+	    expand(f"chkpts/combined_analysis__{analysis_name}.done", analysis_name = analysis_name)
     localrule: True
 
 ### Intermediate target rules
