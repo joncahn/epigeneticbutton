@@ -100,8 +100,8 @@ rule shortstack_map:
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
         count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
-        bam_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name).bam"),
-        bai_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name).bam.bai")
+        bam_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name}.bam"),
+        bai_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -161,7 +161,6 @@ rule filter_size_srna_sample:
         filtered_file = "sRNA/mapped/sized__{size}nt__{sample_name}.bam"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         size = lambda wildcards: wildcards.size
     log:
