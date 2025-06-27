@@ -86,7 +86,7 @@ rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
     output:
-        fastq_file = temp("sRNA/fastq/clean_(sample_name).fastq.gz")
+        fastq_file = temp("sRNA/fastq/clean_{sample_name}.fastq.gz")
     conda: CONDA_ENV
     localrule: True
     shell:
@@ -125,8 +125,8 @@ rule shortstack_map:
         
 rule make_srna_size_stats:
     input:
-        bamfile = "sRNA/mapped/{sample_name)/clean__{sample_name}.bam",
-        baifile = "sRNA/mapped/{sample_name)/clean__{sample_name}.bam.bai"
+        bamfile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
+        baifile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     output:
         report = "sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
@@ -155,8 +155,8 @@ rule make_srna_size_stats:
 
 rule filter_size_srna_sample:
     input:
-        bamfile = "sRNA/mapped/{sample_name)/clean__{sample_name}.bam",
-        baifile = "sRNA/mapped/{sample_name)/clean__{sample_name}.bam.bai"
+        bamfile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
+        baifile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     output:
         filtered_file = "sRNA/mapped/sized__{size}nt__{sample_name}.bam"
     params:
