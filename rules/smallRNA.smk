@@ -4,7 +4,7 @@ def return_log_smallrna(sample_name, step, size):
 
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
-    if paired == "se":
+    if paired == "SE":
         return "filtered__{sample_name}__R0" if config['structural_rna_depletion'] else "trim__{sample_name}__R0"
     
 def define_final_srna_output(ref_genome):
