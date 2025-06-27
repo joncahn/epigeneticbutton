@@ -57,8 +57,8 @@ conda install -c bioconda snakemake
 
 ### Configuration
 
-1. Prepare your sample metadata file (`samples.tsv`) with the following columns:
-   - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC] (RAMPAGE and smallRNA under development)
+1. Prepare your sample metadata file (default to `samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
+   - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (TF and RAMPAGE under development)
    - `line`: Sample line (e.g., B73)
    - `tissue`: Tissue type
    - `sample`: Sample identifier
@@ -108,7 +108,13 @@ or to force all steps to be performed:
  snakemake --dag --forceall | dot -Tpng > dag.png
 ```
 
-### Output Structure
+## Input requirements
+
+### Transcription factor ChIP
+- Set the sample_type to `IP` for transcription factors with narrow peaks (default); use `IPb` for broad peaks.
+
+
+## Output Structure
 
 ```
 epigeneticbutton/
@@ -156,6 +162,7 @@ Output is a single pdf file where each gene of the list is a page, named `combin
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
 - DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG and CHH and the following (stringent) parameters: 
 	CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
+	CHG: `method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
 	CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
 - Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the `call_DMRs_pairwise` rule in the `mC.smk` file.
 

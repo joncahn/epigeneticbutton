@@ -159,7 +159,7 @@ DIRS = {
     "chkpts": "chkpts",
     "logs": "logs",
     "combined": {
-        "peaks": "combined/peaks",
+        "bedfiles": "combined/bedfiles",
         "reports": "combined/reports",
         "matrix": "combined/matrix",
         "plots": "combined/plots",

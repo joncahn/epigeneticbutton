@@ -34,6 +34,8 @@ def assign_chip_input(wildcards):
         raise ValueError(f"\nSample '{ipname}' does not have corresponding Input among:\n{alts}")
                 
 def get_peaktype(sample_type, peaktype_config):
+    if sample_type == "IP":
+        return "narrow"
     for pattern, peaktype in peaktype_config.items():
         if re.search(pattern, sample_type):
             return peaktype

@@ -119,7 +119,7 @@ rule shortstack_map:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --bowtie_cores {threads} --sort_mem {resources.mem} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
-        samtools index -@ {threads} {input.bamfile}
+        samtools index -@ {threads} {output.bam_file}
         }} 2>&1 | tee -a "{log}"
         """
         
