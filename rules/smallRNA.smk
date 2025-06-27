@@ -57,7 +57,7 @@ rule filter_structural_rna:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_rna("{sample_name}", "filter_structural_rna", "all"))
+        temp(return_log_smallrna("{sample_name}", "filter_structural_rna", "all"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_structural_rna"]["threads"]
     resources:
@@ -107,7 +107,7 @@ rule shortstack_map:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         srna_params = config['srna_mapping_params']
     log:
-        temp(return_log_rna("{sample_name}", "mapping_shortstack", "all"))
+        temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
@@ -118,7 +118,7 @@ rule shortstack_map:
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --bowtie_cores {threads} --sort_mem {resources.mem} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
         samtools index -@ {threads} {output.bam_file}
         }} 2>&1 | tee -a "{log}"
         """
@@ -133,7 +133,7 @@ rule make_srna_size_stats:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_rna("{sample_name}", "make_srna_stats", "all"))
+        temp(return_log_smallrna("{sample_name}", "make_srna_stats", "all"))
     conda: CONDA_ENV
     threads: config["resources"]["make_srna_size_stats"]["threads"]
     resources:
@@ -164,7 +164,7 @@ rule filter_size_srna_sample:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         size = lambda wildcards: wildcards.size
     log:
-        temp(return_log_rna("{sample_name}", "filter_size_srna", "{size}"))
+        temp(return_log_smallrna("{sample_name}", "filter_size_srna", "{size}"))
     conda: CONDA_ENV
     threads: config["resources"]["filter_size_srna_sample"]["threads"]
     resources:
@@ -189,7 +189,7 @@ rule merging_srna_replicates:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         size = lambda wildcards: wildcards.size
     log:
-        temp(return_log_rna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_srna_reps", "{size}"))
+        temp(return_log_smallrna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_srna_reps", "{size}"))
     conda: CONDA_ENV
     threads: config["resources"]["merging_srna_replicates"]["threads"]
     resources:
@@ -217,7 +217,7 @@ rule make_srna_stranded_bigwigs:
         size = lambda wildcards: wildcards.size,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_rna("{sample_name}", "making_bigiwig", "{size}"))
+        temp(return_log_smallrna("{sample_name}", "making_bigiwig", "{size}"))
     conda: CONDA_ENV
     threads: config["resources"]["make_srna_stranded_bigwigs"]["threads"]
     resources:
