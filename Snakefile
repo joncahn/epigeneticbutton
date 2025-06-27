@@ -153,21 +153,6 @@ analysis_to_replicates = (
     .to_dict()
 )
 
-# Define output directories
-DIRS = {
-    "genomes": "genomes",
-    "chkpts": "chkpts",
-    "logs": "logs",
-    "combined": {
-        "bedfiles": "combined/bedfiles",
-        "reports": "combined/reports",
-        "matrix": "combined/matrix",
-        "plots": "combined/plots",
-        "chkpts": "combined/chkpts",
-        "logs": "combined/logs"
-    }
-}
-
 # Include all rule files
 include: "rules/environment_setup.smk"
 include: "rules/sample_download.smk"
