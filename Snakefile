@@ -174,6 +174,7 @@ include: "rules/sample_download.smk"
 include: "rules/ChIPseq.smk"
 include: "rules/RNAseq.smk"
 include: "rules/mC.smk"
+include: "rules/smallRNA.smk"
 include: "rules/plotting_with_R.smk"
 
 # Rule all to specify final target

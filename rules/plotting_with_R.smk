@@ -103,11 +103,10 @@ rule plotting_srna_sizes_stats:
     input:
         summary_stats = "combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt"
     output:
-        plot = "combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf"
+        plot1 = "combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf",
+        plot2 = "combined/plots/srna_sizes_stats_zoom_{analysis_name}_{env}.pdf"
     params:
         analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
-        srna_min = config['srna_min_size'],
-        srna_max = config['srna_max_size'],
         script=os.path.join(REPO_FOLDER,"scripts/R_size_stats.R")
     log:
         "sRNA/logs/plotting_srna_sizes_stats_{analysis_name}_{env}.log"
