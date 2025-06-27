@@ -22,8 +22,8 @@ def define_final_srna_output(ref_genome):
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')        
         map_files.append(f"sRNA/reports/sizes_stats__{sname}.txt")
-        qc_files.append(f"RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-        qc_files.append(f"RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+        qc_files.append(f"sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+        qc_files.append(f"sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
         for size in range(srna_min, srna_max + 1):
             bigwig_files.append(f"sRNA/tracks/{sname}__{size}nt__plus.bw")
@@ -34,8 +34,8 @@ def define_final_srna_output(ref_genome):
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             for size in range(srna_min, srna_max + 1):
-                bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
-                bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
+                bigwig_files.append(f"sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
+                bigwig_files.append(f"sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
             
     results = map_files
     
@@ -184,7 +184,7 @@ rule merging_srna_replicates:
         bamfiles = lambda wildcards: [ f"sRNA/mapped/sized__{wildcards.size}nt__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
-        mergefile = "RNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+        mergefile = "sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         size = lambda wildcards: wildcards.size
@@ -210,8 +210,8 @@ rule make_srna_stranded_bigwigs:
     input: 
         bamfile = lambda wildcards: f"sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam"
     output:
-        bw_plus = "RNA/tracks/{sample_name}__{size}nt__plus.bw",
-        bw_minus = "RNA/tracks/{sample_name}__{size}nt__minus.bw"
+        bw_plus = "sRNA/tracks/{sample_name}__{size}nt__plus.bw",
+        bw_minus = "sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         size = lambda wildcards: wildcards.size,
