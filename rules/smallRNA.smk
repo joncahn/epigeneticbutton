@@ -99,7 +99,7 @@ rule shortstack_map:
         fastq = "sRNA/mapped/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
-        count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
+        count_file = "sRNA/mapped/{sample_name}/Results.txt",
         bam_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name}.bam"),
         bai_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai")
     params:
