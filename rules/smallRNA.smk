@@ -185,6 +185,7 @@ rule merging_srna_replicates:
         bamfiles = lambda wildcards: [ f"sRNA/mapped/sized__{wildcards.size}nt__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
+        tempfile = temp("sRNA/mapped/temp__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
         mergefile = "sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
@@ -199,10 +200,9 @@ rule merging_srna_replicates:
     shell:
         """
         {{
-        printf "\nMerging replicates of {params.sname}\n"
-		samtools merge -@ {threads} sRNA/mapped/temp_{params.size}_{params.sname}.bam {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} RNA/mapped/temp_{params.size}_{params.sname}.bam
-		rm -f RNA/mapped/temp_{params.size}_{params.sname}.bam
+        printf "\nMerging replicates of {params.sname} {params.size}\n"
+		samtools merge -@ {threads} {output.tempfile} {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} {output.tempfile}
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
