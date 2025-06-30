@@ -1,8 +1,0 @@
-name: bedtools-env
-channels:
-  - bioconda
-  - conda-forge
-  - defaults
-dependencies:
-  - bedtools=2.29.2
-  - ucsc-bedgraphtobigwig 

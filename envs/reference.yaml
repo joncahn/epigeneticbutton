@@ -1,9 +1,0 @@
-channels:
-  - conda-forge
-  - bioconda
-  - defaults
-dependencies:
-  - python>=3 #=3.8
-  - pigz #>=2.3
-  - samtools #=1.11
-  - bedtools #=2.29.2
