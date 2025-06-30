@@ -86,7 +86,7 @@ rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
     output:
-        fastq_file = temp("sRNA/mapped/clean_{sample_name}.fastq.gz")
+        fastq_file = temp("sRNA/mapped/clean__{sample_name}.fastq.gz")
     conda: CONDA_ENV
     localrule: True
     shell:
@@ -96,7 +96,7 @@ rule dispatch_srna_fastq:
 
 rule shortstack_map:
     input:
-        fastq = "sRNA/mapped/clean_{sample_name}.fastq.gz",
+        fastq = "sRNA/mapped/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
         count_file = "sRNA/mapped/{sample_name}/ShortStack_All.gff3",
