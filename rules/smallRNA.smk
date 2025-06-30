@@ -146,7 +146,7 @@ rule make_srna_size_stats:
         printf "\nGetting stats for {params.sample_name}\n"
         printf "Sample\tType\tSize\tCount\n" > sRNA/reports/sizes_stats__{params.sample_name}.txt
         zcat sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> sRNA/reports/sizes_stats__{params.sample_name}.txt
-        printf "\nGetting filtered stats for ${name}\n"
+        printf "\nGetting filtered stats for {params.sample_name}\n"
         if [[ -s sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz ]]; then
             zcat sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> sRNA/reports/sizes_stats__${name}.txt
         fi
@@ -175,8 +175,8 @@ rule filter_size_srna_sample:
         """
         {{
         printf "Filtering only {params.size} nucleotides sRNAs for {params.sample_name}\n"
-        samtools view -h {input.bamfile} | awk -v n={params.size} '(length($10) == n) || $1 ~ /^@/' | samtools view -bS - > sRNA/mapped/sized__${{nt}}nt__{params.sample_name}.bam
-        samtools index -@ {threads} sRNA/mapped/sized__${{nt}}nt__{params.sample_name}.bam
+        samtools view -h {input.bamfile} | awk -v n={params.size} '(length($10) == n) || $1 ~ /^@/' | samtools view -bS - > sRNA/mapped/sized__{params.size}nt__{params.sample_name}.bam
+        samtools index -@ {threads} sRNA/mapped/sized__{params.size}nt__{params.sample_name}.bam
         }} 2>&1 | tee -a "{log}"
         """
 
