@@ -144,13 +144,13 @@ rule make_srna_size_stats:
         """
         {{
         printf "\nGetting stats for {params.sample_name}\n"
-        printf "Sample\tType\tSize\tCount\n" > sRNA/reports/sizes_stats__{params.sample_name}.txt
-        zcat sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> sRNA/reports/sizes_stats__{params.sample_name}.txt
+        printf "Sample\tType\tSize\tCount\n" > {output.report}
+        zcat sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
         printf "\nGetting filtered stats for {params.sample_name}\n"
         if [[ -s sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz ]]; then
-            zcat sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> sRNA/reports/sizes_stats__${name}.txt
+            zcat sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
         fi
-        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> sRNA/reports/sizes_stats__${name}.txt
+        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> "{output.report}"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -228,8 +228,9 @@ rule make_srna_stranded_bigwigs:
         """
         {{
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-		bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
-		bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+		bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
+		bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+        bigwigToBedGraph
         }} 2>&1 | tee -a "{log}"
         """
 
