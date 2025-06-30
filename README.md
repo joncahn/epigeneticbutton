@@ -183,6 +183,7 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 - Assignment of IP to Input based on suffix (e.g. ChIP_A)
 - RAMPAGE
 - small RNAseq
+- Browser: create a hub/jbrowse session? invert minus stranded bigwigs.
 - Plotting
 - ATAC-seq
 

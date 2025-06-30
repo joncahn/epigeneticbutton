@@ -1,3 +1,5 @@
+CONDA_ENV_sRNA=os.path.join(REPO_FOLDER,"envs/epibutton_srna.yaml")
+
 # function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
@@ -108,7 +110,7 @@ rule shortstack_map:
         srna_params = config['srna_mapping_params']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_sRNA
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
         mem=config["resources"]["shortstack_map"]["mem"],
@@ -131,8 +133,7 @@ rule make_srna_size_stats:
     output:
         report = "sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
-        sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        sample_name = lambda wildcards: wildcards.sample_name
     log:
         temp(return_log_smallrna("{sample_name}", "make_srna_stats", "all"))
     conda: CONDA_ENV
@@ -175,8 +176,8 @@ rule filter_size_srna_sample:
         """
         {{
         printf "Filtering only {params.size} nucleotides sRNAs for {params.sample_name}\n"
-        samtools view -h {input.bamfile} | awk -v n={params.size} '(length($10) == n) || $1 ~ /^@/' | samtools view -bS - > sRNA/mapped/sized__{params.size}nt__{params.sample_name}.bam
-        samtools index -@ {threads} sRNA/mapped/sized__{params.size}nt__{params.sample_name}.bam
+        samtools view -h {input.bamfile} | awk -v n={params.size} '(length($10) == n) || $1 ~ /^@/' | samtools view -bS - > {output.filtered_file}
+        samtools index -@ {threads} {output.filtered_file}
         }} 2>&1 | tee -a "{log}"
         """
 

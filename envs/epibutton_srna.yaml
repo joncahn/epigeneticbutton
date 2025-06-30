@@ -1,0 +1,8 @@
+name: epibutton_srna
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - shortstack>=4.1
