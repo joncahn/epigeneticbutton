@@ -1,4 +1,4 @@
-CONDA_ENV_sRNA=os.path.join(REPO_FOLDER,"envs/epibutton_srna.yaml")
+# CONDA_ENV_sRNA=os.path.join(REPO_FOLDER,"envs/epibutton_srna.yaml")
 
 # function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
@@ -110,7 +110,7 @@ rule shortstack_map:
         srna_params = config['srna_mapping_params']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
-    conda: CONDA_ENV_sRNA
+    conda: CONDA_ENV
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
         mem=config["resources"]["shortstack_map"]["mem"],
