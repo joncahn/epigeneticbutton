@@ -492,6 +492,29 @@ rule plot_expression_levels:
         touch {output.touch}
         """
 
+rule perform_GO_on_target_file:
+    input:
+        target_file = config['plot_target_file'],
+        GOdatabase = config['go_database']
+    output:
+        touch = "combined/plots/TopGO__{target_name}__{ref_genome}.done"
+    params:
+        script = os.path.join(REPO_FOLDER,"scripts/R_plot_expression_level.R"),
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        filename = config['target_file_label']
+    conda: CONDA_ENV
+    threads: config["resources"]["plot_expression_levels"]["threads"]
+    resources:
+        mem=config["resources"]["plot_expression_levels"]["mem"],
+        tmp=config["resources"]["plot_expression_levels"]["tmp"]
+    shell:
+        """
+        printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
+        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.filename}"
+        touch {output.touch}
+        """
+
 rule all_rna:
     input:
         final = lambda wildcards: define_final_rna_output(wildcards.ref_genome)

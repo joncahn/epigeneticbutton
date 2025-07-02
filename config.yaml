@@ -122,11 +122,14 @@ mC_mapping:
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
 
 # small RNA parameters
-structural_rna_depletion: false # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
+structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
 structural_rna_fafile: "data/zm.structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
+
+# Gene Ontology parameters
+go_database: "data/org.Zmays.eg.db" # default to GO database from Zea mays present in data directory, prepared with Annotation Forge (see corresponding Help)
 
 # optional targets for extra output
 plot_target_file: "data/target_genes.txt" # default gene list format for plotting gene expression. Replace with actual file of target genes, and potentially update the label below too.
