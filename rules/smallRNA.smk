@@ -71,11 +71,13 @@ rule filter_structural_rna:
         if [[ ! -d genomes/structural_RNAs/{params.ref_genome}/bt2_index ]]; then
             if [[ {input.fasta} =~ \.gz$ ]]; then
                 printf "Generating bowtie2 index for structural RNAs of {params.ref_genome} using gzipped file: {input.fasta}\n"
-                mkdir genomes/structural_RNAs/{params.ref_genome}/bt2_index
-                gunzip {input.fasta} | bowtie2-build --threads {threads} -c "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
+                mkdir -p genomes/structural_RNAs/{params.ref_genome}/bt2_index
+                gunzip {input.fasta} -c > "genomes/structural_RNAs/{params.ref_genome}/temp.fa"
+                bowtie2-build --threads {threads} "genomes/structural_RNAs/{params.ref_genome}/temp.fa" "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
+                rm -f "genomes/structural_RNAs/{params.ref_genome}/temp.fa"
             else
                 printf "Generating bowtie2 index for structural RNAs of {params.ref_genome} using file: {input.fasta}\n"
-                mkdir genomes/structural_RNAs/{params.ref_genome}/bt2_index
+                mkdir -p genomes/structural_RNAs/{params.ref_genome}/bt2_index
                 bowtie2-build --threads {threads} "{input.fasta}" "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
             fi
         fi
