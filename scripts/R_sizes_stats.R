@@ -40,7 +40,7 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 				geom_bar(stat="identity", position="stack", color="black", linewidth=0.01) +
 				facet_wrap(~Sample, nrow = length(unique(count$Sample)), scales="free_y") +
 				scale_fill_manual(labels=c("trimmed"="post-trimming","filtered"="post-filtering","mapped"="mapped"), 
-						values = c("trimmed"="grey","filtered"="blue","mapped"="green")) +
+						values = c("trimmed"="grey","filtered"="blue","mapped"="darkgreen")) +
 				labs(y="Counts", x="Sizes", fill="") +
 				scale_x_continuous(breaks = breaksarray) +
 				theme(axis.title.y=element_text(size=15), 
