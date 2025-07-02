@@ -10,45 +10,45 @@ statfile<-args[1]
 analysisname<-args[2]
 
 summary_stats<-read.delim(statfile, header = TRUE)
+summary_stats$Count<-as.numeric(summary_stats$Count)
 minsize<-min(summary_stats$Size)
 maxsize<-max(summary_stats$Size)
 
 plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	
-	count<-filter(stattable, Count>=sizemin & Count<=sizemax) 
-	
-	rdvalue<-count$Size[1]
-	rdsample<-count$Sample[1]
-	if (! "filtered" %in% count$Type) {
-		count<-rbind(rdsample,"filtered",rdvalue,0)
+	count<-filter(stattable, Size>=minsize & Size<=maxsize)
+	count$Count<-as.numeric(count$Count)
+	count<-pivot_wider(count, names_from = Type, values_from = Count) 
+
+	if (! "filtered" %in% colnames(count)) {
+		count<-mutate(count, filtered=mapped)
 	}
-	count<-spread(count, key = Type, value=Count) %>%
-		mutate(trim=trimmed-filtered, filt=filtered-mapped) %>%
+
+	count<-mutate(count, trim=trimmed-filtered, filt=filtered-mapped) %>%
 		select(-trimmed, -filtered) %>%
 		rename(trimmed=trim, filtered=filt) %>%
-		gather(Type, Count, filtered, trimmed, mapped)
-	count$Count<-replace_na(count$Count, 0)
+		pivot_longer(cols = c(filtered, trimmed, mapped), names_to = "Type", values_to = "Count")
 	count$Type<-factor(count$Type, levels=c("trimmed","filtered","mapped"))
 
 	a<-seq(sizemin, sizemax, by = 10)
 	breaksarray<-sort(unique(c(a, 21, 24)))
-	
+
 	plot <- ggplot(count, aes(Size, Count, fill=Type)) +
-			geom_bar(stat="identity", position="stack", color="black", size=0.01) +
-			facet_wrap(~Sample, nrow = length(unique(count$Sample)), scales="free_y") +
-			scale_fill_manual(labels=c("trimmed"="post-trimming","filtered"="post-filtering","mapped"="mapped"), 
-                    values = c("trimmed"="grey","filtered"="blue","mapped"="green")) +
-			labs(y="Counts", x="Sizes", fill="") +
-			scale_x_continuous(breaks = breaksarray) +
-			theme(axis.title.y=element_text(size=15), 
-				axis.title.x=element_text(size=15),
-				axis.text.x=element_text(size=10),
-				panel.grid.major.y = element_line(colour="lightgrey"), 
-				panel.grid.minor.y = element_blank(),
-				panel.grid.major.x = element_line(colour="lightgrey",size=0.1),
-				panel.background = element_rect(fill = "white", colour = "black"),
-				strip.background = element_rect(fill = 'white', colour = 'black'),
-				legend.key=element_blank())
+				geom_bar(stat="identity", position="stack", color="black", linewidth=0.01) +
+				facet_wrap(~Sample, nrow = length(unique(count$Sample)), scales="free_y") +
+				scale_fill_manual(labels=c("trimmed"="post-trimming","filtered"="post-filtering","mapped"="mapped"), 
+						values = c("trimmed"="grey","filtered"="blue","mapped"="green")) +
+				labs(y="Counts", x="Sizes", fill="") +
+				scale_x_continuous(breaks = breaksarray) +
+				theme(axis.title.y=element_text(size=15), 
+					axis.title.x=element_text(size=15),
+					axis.text.x=element_text(size=10),
+					panel.grid.major.y = element_line(colour="lightgrey"), 
+					panel.grid.minor.y = element_blank(),
+					panel.grid.major.x = element_line(colour="lightgrey",linewidth=0.1),
+					panel.background = element_rect(fill = "white", colour = "black"),
+					strip.background = element_rect(fill = 'white', colour = 'black'),
+					legend.key=element_blank())
 	plot
 }  
 
