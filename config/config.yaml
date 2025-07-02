@@ -132,7 +132,7 @@ srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg 
 go_database: "data/org.Zmays.eg.db" # default to GO database from Zea mays present in data directory, prepared with Annotation Forge (see corresponding Help)
 
 # optional targets for extra output
-plot_target_file: "data/target_genes.txt" # default gene list format for plotting gene expression. Replace with actual file of target genes, and potentially update the label below too.
+plot_target_file: "config/target_genes.txt" # default gene list format for plotting gene expression. Replace with actual file of target genes, and potentially update the label below too.
 target_file_label: "" # When blank, it will use the name of the plot_target_file (i.e "target_genes")
 
 # Analysis parameters

@@ -1,6 +1,6 @@
 # function to access logs more easily
 def return_log_combined(analysis_name, genome, types):
-    return os.path.join(REPO_FOLDER,"combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
+    return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
 def define_input_bedfile(bedname):
     if bedname 

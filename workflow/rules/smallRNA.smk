@@ -2,7 +2,7 @@
 
 # function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
-    return os.path.join(REPO_FOLDER,"sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
+    return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
 
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
