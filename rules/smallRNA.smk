@@ -54,7 +54,8 @@ rule filter_structural_rna:
         fastq = "sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
         fasta = config['structural_rna_fafile']
     output:
-        filtered_fastq = "sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
+        filtered_fastq = temp("sRNA/fastq/filtered__{sample_name}__R0.fastq")
+        gzipped_fastq = "sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
