@@ -19,7 +19,7 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	
 	rdvalue<-count$Size[1]
 	rdsample<-count$Sample[1]
-	if (! "filtered" %in% Count$Type) {
+	if (! "filtered" %in% count$Type) {
 		count<-rbind(rdsample,"filtered",rdvalue,0)
 	}
 	count<-spread(count, key = Type, value=Count) %>%
