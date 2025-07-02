@@ -6,13 +6,16 @@ library(ggplot2)
 
 args = commandArgs(trailingOnly=TRUE)
 
-summary_stats<-args[1]
+statfile<-args[1]
 analysisname<-args[2]
+
+summary_stats<-read.delim(statfile, header = TRUE)
+minsize<-min(summary_stats$Size)
+maxsize<-max(summary_stats$Size)
 
 plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	
-	count<-read.delim(stattable, header = TRUE) %>%
-		filter(Count>=sizemin & Count<=sizemax) 
+	count<-filter(stattable, Count>=sizemin & Count<=sizemax) 
 	
 	rdvalue<-count$Size[1]
 	rdsample<-count$Sample[1]
@@ -49,8 +52,6 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	plot
 }  
 
-minsize<-min(summary_stats$Size)
-maxsize<-max(summary_stats$Size)
 pdf(paste0("combined/plots/srna_sizes_stats_",analysisname,"_sRNA.pdf"), height=10, width=12)
 plot.sRNA.sizes(summary_stats, minsize, maxsize)
 dev.off()
