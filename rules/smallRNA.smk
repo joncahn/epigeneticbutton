@@ -54,7 +54,7 @@ rule filter_structural_rna:
         fastq = "sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
         fasta = config['structural_rna_fafile']
     output:
-        filtered_fastq = temp("sRNA/fastq/filtered__{sample_name}__R0.fastq")
+        filtered_fastq = temp("sRNA/fastq/filtered__{sample_name}__R0.fastq"),
         gzipped_fastq = "sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -83,7 +83,7 @@ rule filter_structural_rna:
             fi
         fi
         bowtie2 --very-sensitive -p {threads} -x genomes/structural_RNAs/{params.ref_genome}/bt2_index -U {input.fastq} | samtools view -@ {threads} -f 0x4 | samtools fastq -@ {threads} > {output.filtered_fastq}
-        pigz -p {threads} {output.filtered_fastq}
+        pigz -p {threads} {output.filtered_fastq} -c > {output.gzipped_fastq}
         }} 2>&1 | tee -a "{log}"
         """
 
