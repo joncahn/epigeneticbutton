@@ -107,7 +107,7 @@ rule plotting_srna_sizes_stats:
         plot2 = "combined/plots/srna_sizes_stats_zoom_{analysis_name}_{env}.pdf"
     params:
         analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
-        script=os.path.join(REPO_FOLDER,"scripts/R_size_stats.R")
+        script=os.path.join(REPO_FOLDER,"scripts/R_sizes_stats.R")
     log:
         "sRNA/logs/plotting_srna_sizes_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
