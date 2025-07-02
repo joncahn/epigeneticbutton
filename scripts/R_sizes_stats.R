@@ -29,6 +29,7 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 		rename(trimmed=trim, filtered=filt) %>%
 		pivot_longer(cols = c(filtered, trimmed, mapped), names_to = "Type", values_to = "Count")
 	count$Type<-factor(count$Type, levels=c("trimmed","filtered","mapped"))
+	count$Sample <- factor(count$Sample, levels = sort(unique(count$Sample)))
 
 	if ( sizemin == 20 && sizemax == 25) {
 		breaksarray<-c(20, 21, 22, 23, 24, 25)
@@ -36,9 +37,10 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 		a<-seq(sizemin, sizemax, by = 10)
 		breaksarray<-sort(unique(c(a, 21, 24)))
 	}
+
 	plot <- ggplot(count, aes(Size, Count, fill=Type)) +
 				geom_bar(stat="identity", position="stack", color="black", linewidth=0.01) +
-				facet_wrap(~Sample, nrow = length(unique(count$Sample)), scales="free_y") +
+				facet_wrap(~Sample, ncol=1, scales="free_y") +
 				scale_fill_manual(labels=c("trimmed"="post-trimming","filtered"="post-filtering","mapped"="mapped"), 
 						values = c("trimmed"="grey","filtered"="blue","mapped"="darkgreen")) +
 				labs(y="Counts", x="Sizes", fill="") +
