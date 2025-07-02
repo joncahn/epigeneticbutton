@@ -113,5 +113,5 @@ rule plotting_srna_sizes_stats:
     conda: CONDA_ENV
     shell:
         """
-        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{params.srna_min}" "{params.srna_max}"
+        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
         """
