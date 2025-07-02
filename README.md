@@ -181,18 +181,6 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 2. ShortStack version 
 The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developper created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
 
-3. Rerunning an analysis
-If *EVERYTHING* should be rerun, including mapping, just add `--forceall` to the snakemake command. If only the analysis is to be performed after changing some parameters for example, chkpts must be deleted from each data type folder and from the main chkpts folder. Remove them individually, where `{analysis_name}` is similar to the config file and `{ref_genome}` the last column in the samplefile:
-```bash
-rm -f chkpts/combined_analysis_{analysis_name}.done
-rm -f {env}/chkpts/{data_type}_analysis__{analysis_name}__{ref_genome}.done
-``` 
-or to removel them all, including the ones from any previous runs:
-```bash
-rm -f chkpts/combined_analysis_*.done
-rm -f */chkpts/*_analysis_*.done
-```
-
 ### Features under development
 - Finishing ChIP-seq and RNA-seq
 - Assignment of IP to Input based on suffix (e.g. ChIP_A)
