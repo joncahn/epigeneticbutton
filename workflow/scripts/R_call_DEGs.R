@@ -92,12 +92,12 @@ for (i in 1:(length(genotypes)-1)) {
 	FCtable<-merge(ref_genes,FCtable,by=c("GID")) %>%
 		select(Chr,Start,Stop,GID,logFC,Strand,logCPM,PValue,FDR,Sample) %>%
 		arrange(Chr,Start)
-	write.table(FCtable,paste0("RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(FCtable,paste0("results/RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	DEGtable<-create.DEG.table(sample1,sample2,y)
 	DEGtable<-merge(ref_genes,DEGtable,by=c("GID")) %>%
 		select(Chr,Start,Stop,GID,logFC,Strand,logCPM,PValue,FDR,Sample,DEG) %>%
 		arrange(DEG,Chr,Start)
-	write.table(DEGtable,paste0("RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(DEGtable,paste0("results/RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
 				select(GID, DEG, firstsample, secondsample)
 	allDEG<-rbind(allDEG,temptable)
