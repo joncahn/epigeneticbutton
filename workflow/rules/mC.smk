@@ -145,7 +145,7 @@ rule bismark_map_se:
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
         mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_se'],
         process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_se'],
-        prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
+        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))

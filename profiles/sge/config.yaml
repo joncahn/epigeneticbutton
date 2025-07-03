@@ -3,7 +3,7 @@ jobs: 96
 use-conda: true
 conda-frontend: conda
 latency-wait: 60
-restart-times: 2
+restart-times: 1
 cluster-config: ../cluster.yaml
 cluster: >-
   qsub
