@@ -1,0 +1,17 @@
+# profiles/sge/config.yaml
+jobs: 96
+use-conda: true
+conda-frontend: conda
+latency-wait: 60
+restart-times: 2
+cluster-config: ../cluster.yaml
+cluster: >-
+  qsub
+  -V
+  -cwd
+  -pe threads {threads}
+  -l m_mem_free={cluster.mem_mb}M
+  -l tmp_free={cluster.tmp_mb}M
+  -N smk_{jobid}
+  -o results/hpclogs/{rule}
+  -e results/hpclogs/{rule}

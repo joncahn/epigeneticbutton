@@ -1,0 +1,16 @@
+# profiles/slurm/config.yaml
+jobs: 96
+use-conda: true
+conda-frontend: conda
+latency-wait: 60
+restart-times: 2
+
+cluster-config: ../cluster.yaml
+
+cluster: >-
+  sbatch
+  --job-name=smk_{jobid}
+  --cpus-per-task={threads}
+  --mem={cluster.mem_mb}
+  --output=results/hpclogs/{rule}.out
+  --error=results/hpclogs/{rule}.err

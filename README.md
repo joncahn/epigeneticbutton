@@ -75,31 +75,36 @@ conda install -c bioconda snakemake
    - Species-specific parameters (e.g. genome size)
    - Resource allocation
    
-3. If changing resource allocation for cluster submission, adjust also the `cluster.yaml`. Keep in mind that units in the snakemake rules and in the cluster file are in MB.
+3. If changing resource allocation for cluster submission, consider adjusting the `profiles/cluster.yaml` for job-specific resources, and the corresponding config file for your cluster scheduler (`profiles/sge/config.yaml` or `profiles/slurm/config.yaml` for SGE or SLURM, respectively). The default is to use 96 threads maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
-4. Create the `logs` folder for cluster logs:
+4. Create the `hpclogs` folder for cluster logs:
 ```bash
-mkdir logs
+mkdir hpclogs
 ```
 
 ### Running the Pipeline
 
-1. To run the pipeline:
+1. To run the pipeline locally:
 ```bash
 snakemake --use-conda --conda-frontend conda --cores 12
 ```
 
-2. To run the pipeline on a HPC using qsub:
+2. To run the pipeline on a HPC-SGE (using qsub):
 ```bash
-snakemake --jobs 48 --use-conda --conda-frontend conda --cluster-config cluster.yaml --latency-wait 60 --restart-times 2 --cluster "qsub -V -cwd -pe threads {threads} -l m_mem_free={cluster.mem_mb}M -l tmp_free={cluster.tmp_mb}M -N smk_{rule} -o logs -e logs"
+snakemake --profile profiles/sge
 ```
 
-3. Optional: consider prebuilding the environments to make sure no conflict arise (it should take ~5min):
+3. To run the pipeline on a HPC-slurm (using sbatch):
+```bash
+snakemake --profile profiles/slurm
+```
+
+4. Optional: consider prebuilding the environments to make sure no conflict arise (it should take ~5min):
 ```bash
 snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 ```
 
-4. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
+5. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
 ```bash
 snakemake --dag | dot -Tpng > dag.png
 ```
