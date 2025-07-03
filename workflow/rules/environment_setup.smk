@@ -1,20 +1,20 @@
 # function to access logs more easily
 def return_log_env(ref_genome, step):
-    return os.path.join(REPO_FOLDER,"logs",f"tmp_{step}_{ref_genome}.log")
+    return os.path.join(REPO_FOLDER,"results","logs",f"tmp_{step}_{ref_genome}.log")
 
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        setup = "chkpts/directories_setup.done",
+        setup = "results/combined/chkpts/directories_setup.done",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        region_files = ["combined/tracks/{ref_genome}__protein_coding_genes.bed", "combined/tracks/{ref_genome}__all_genes.bed"],
+        region_files = ["results/combined/tracks/{ref_genome}__protein_coding_genes.bed", "results/combined/tracks/{ref_genome}__all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
-        chkpt = "chkpts/ref__{ref_genome}.done",
-        log = os.path.join(REPO_FOLDER,"logs","ref_prep__{ref_genome}.log")
+        chkpt = "results/combined/chkpts/ref__{ref_genome}.done",
+        log = os.path.join(REPO_FOLDER,"results","logs","ref_prep__{ref_genome}.log")
     localrule: True
     shell:
         """
@@ -152,8 +152,8 @@ rule prep_region_file:
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
         gff = "genomes/{ref_genome}/{ref_genome}.gff"
     output:
-        region_file1 = "combined/tracks/{ref_genome}__protein_coding_genes.bed",
-        region_file2 = "combined/tracks/{ref_genome}__all_genes.bed"
+        region_file1 = "results/combined/tracks/{ref_genome}__protein_coding_genes.bed",
+        region_file2 = "results/combined/tracks/{ref_genome}__all_genes.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:

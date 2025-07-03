@@ -61,7 +61,7 @@ rule plotting_peaks_stats_chip_tf:
         env = lambda wildcards: f"{wildcards.env}",
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_peak_stats.R")
     log:
-        "{env}/logs/plotting_peaks_stats_{analysis_name}_{env}.log"
+        "results/{env}/logs/plotting_peaks_stats_{analysis_name}_{env}.log"
     conda: CONDA_ENV
     shell:
         """
