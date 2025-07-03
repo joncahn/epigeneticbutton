@@ -14,11 +14,11 @@ def define_refgenome_bedfile(bedname):
 rule get_annotations_for_bedfile:
     input:
         bedfile = lambda wildcard: define_input_bedfile(wildcards.bedname),
-        region_file = lambda wildcard: f"combined/tracks/{define_refgenome_bedfile(wildcards.bedname)}__all_genes.bed",
+        region_file = lambda wildcard: f"results/combined/tracks/{define_refgenome_bedfile(wildcards.bedname)}__all_genes.bed",
         chrom_sizes = lambda wildcard: f"genomes/{define_refgenome_bedfile(wildcards.bedname)}/chrom.sizes"
     output:
-        temp_bedfile = temp("combined/bedfiles/temp__{bedname}.bed")
-        annotated_file = "combined/bedfiles/annotated__{bedname}.bed"
+        temp_bedfile = temp("results/combined/bedfiles/temp__{bedname}.bed")
+        annotated_file = "results/combined/bedfiles/annotated__{bedname}.bed"
     params:
         bedname = lambda wildcards: wildcards.bedname
     log:
@@ -40,8 +40,8 @@ rule prep_files_for_differential_enrichment:
     input: 
         lambda wildcards: define_input_for_differential_enrichment(wildcards.env, wildcards.ref_genome)
     output:
-        rna_samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        rna_counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
+        rna_samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        rna_counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -64,7 +64,7 @@ rule prep_files_for_differential_enrichment:
         RNA_counts = None
         replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
         for sname, rep in replicates.values:
-            file_path = f"RNA/DEG/counts__{sname}.tab"
+            file_path = f"results/RNA/DEG/counts__{sname}.tab"
             temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
             temp.columns = ['GID', rep]
 

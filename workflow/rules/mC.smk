@@ -15,7 +15,7 @@ def define_DMR_samples(sample_name):
     ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
     replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
     
-    return [ f"mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
+    return [ f"results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
                     for replicate in replicates ]
 
 def define_final_mC_output(ref_genome):
@@ -30,30 +30,30 @@ def define_final_mC_output(ref_genome):
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
-        bigwig_files.append(f"mC/chkpts/bigwig__{sname}.done")
+        bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
         if paired == "PE":
-            map_files.append(f"mC/reports/final_report_pe__{sname}.html")
-            qc_files.append(f"mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
-            qc_files.append(f"mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
-            qc_files.append(f"mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+            map_files.append(f"results/mC/reports/final_report_pe__{sname}.html")
+            qc_files.append(f"results/mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"results/mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"results/mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"results/mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            map_files.append(f"mC/reports/final_report_se__{sname}.html")
-            qc_files.append(f"mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-            qc_files.append(f"mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            map_files.append(f"results/mC/reports/final_report_se__{sname}.html")
+            qc_files.append(f"results/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"results/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
     
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            bigwig_files.append(f"mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
+            bigwig_files.append(f"results/mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
     
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
         a_dict = a._asdict()
         b_dict = b._asdict()
         sample1 = sample_name_str(a_dict, 'analysis')
         sample2 = sample_name_str(b_dict, 'analysis')
-        dmr_files.append(f"mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
+        dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
     
     if qc_option == "all":
         results = map_files + qc_files
@@ -73,7 +73,7 @@ rule make_bismark_indices:
     params:
         limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
-        temp(os.path.join(REPO_FOLDER,"logs","bismark_index_{ref_genome}.log"))
+        temp(os.path.join(REPO_FOLDER,"results","logs","bismark_index_{ref_genome}.log"))
     conda: CONDA_ENV
     threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
@@ -93,21 +93,21 @@ rule make_bismark_indices:
         
 rule bismark_map_pe:
     input:
-        fastq1 = "mC/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "mC/fastq/trim__{sample_name}__R2.fastq.gz",
+        fastq1 = "results/mC/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "results/mC/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
-        temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
-        bamfile = "mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
-        cx_report = temp("mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        metrics_alignement = temp("mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
+        temp_bamfile = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
+        bamfile = "results/mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
+        cx_report = temp("results/mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        metrics_alignement = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
+        metrics_dedup = temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
         mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_pe'],
         process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_pe'],
-        prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}",
+        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
@@ -124,22 +124,22 @@ rule bismark_map_pe:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -p --comprehensive -o mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f mC/mapped/C*context_PE__{params.sample_name}*
-        rm -f mC/mapped/PE__{params.sample_name}*bismark.cov*
+        bismark_methylation_extractor -p --comprehensive -o results/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
+        rm -f results/mC/mapped/C*context_PE__{params.sample_name}*
+        rm -f results/mC/mapped/PE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
 
 rule bismark_map_se:
     input:
-        fastq0 = "mC/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq0 = "results/mC/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
-        temp_bamfile = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
-        bamfile = "mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
-        cx_report = temp("mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
-        metrics_map = temp("mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
-        metrics_dedup = temp("mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
+        temp_bamfile = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
+        bamfile = "results/mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
+        cx_report = temp("results/mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        metrics_map = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
+        metrics_dedup = temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -162,9 +162,9 @@ rule bismark_map_se:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix} -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -s --comprehensive -o mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f mC/mapped/C*context_SE__{params.sample_name}*
-        rm -f mC/mapped/SE__{params.sample_name}*bismark.cov*
+        bismark_methylation_extractor -s --comprehensive -o results/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
+        rm -f results/mC/mapped/C*context_SE__{params.sample_name}*
+        rm -f results/mC/mapped/SE__{params.sample_name}*bismark.cov*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -172,8 +172,8 @@ rule pe_or_se_mc_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "bismark_map", "cx_report")
     output:
-        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        touch = "mC/chkpts/map__{sample_name}.done"
+        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
+        touch = "results/mC/chkpts/map__{sample_name}.done"
     localrule: True
     shell:
         """
@@ -183,14 +183,14 @@ rule pe_or_se_mc_dispatch:
         
 rule make_mc_stats_pe:
     input:
-        metrics_trim = "mC/reports/trim_pe__{sample_name}.txt",
-        metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
-        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
+        metrics_trim = "results/mC/reports/trim_pe__{sample_name}.txt",
+        metrics_map = "results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
+        metrics_dedup = "results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
+        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        stat_file = "mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
-        reportfile = "mC/reports/final_report_pe__{sample_name}.html"
+        stat_file = "results/mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
+        reportfile = "results/mC/reports/final_report_pe__{sample_name}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -198,7 +198,7 @@ rule make_mc_stats_pe:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}"
+        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
     threads: config["resources"]["make_mc_stats_pe"]["threads"]
     resources:
         mem=config["resources"]["make_mc_stats_pe"]["mem"],
@@ -217,21 +217,21 @@ rule make_mc_stats_pe:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
-        cp mC/mapped/PE__"{params.sample_name}"*.txt mC/reports/
-        cp {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
+        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir results/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report results/mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report results/mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
+        cp results/mC/mapped/PE__"{params.sample_name}"*.txt results/mC/reports/
+        cp {params.prefix}/trim__"{params.sample_name}"*.txt results/mC/reports/
         """
         
 rule make_mc_stats_se:
     input:
-        metrics_trim = "mC/reports/trim_se__{sample_name}.txt",
-        metrics_map = "mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
-        metrics_dedup = "mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
-        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
+        metrics_trim = "results/mC/reports/trim_se__{sample_name}.txt",
+        metrics_map = "results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
+        metrics_dedup = "results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
+        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        stat_file = "mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
-        reportfile = "mC/reports/final_report_se__{sample_name}.html"
+        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
+        reportfile = "results/mC/reports/final_report_se__{sample_name}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -239,7 +239,7 @@ rule make_mc_stats_se:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"mC/mapped/{wildcards.sample_name}"
+        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
     threads: config["resources"]["make_mc_stats_se"]["threads"]
     resources:
         mem=config["resources"]["make_mc_stats_se"]["mem"],
@@ -258,19 +258,19 @@ rule make_mc_stats_se:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_se__{params.sample_name}.html" --dir mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
-        mv mC/mapped/SE__"{params.sample_name}"*.txt mC/reports/
-        mv {params.prefix}/trim__"{params.sample_name}"*.txt mC/reports/
+        bismark2report -o "final_report_se__{params.sample_name}.html" --dir results/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report results/mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report results/mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
+        mv results/mC/mapped/SE__"{params.sample_name}"*.txt results/mC/reports/
+        mv {params.prefix}/trim__"{params.sample_name}"*.txt results/mC/reports/
         """
 
 rule merging_mc_replicates:
     input:
-        report_files = lambda wildcards: [ f"mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz" 
+        report_files = lambda wildcards: [ f"results/mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
-        bedfile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
-        tempmergefile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt"),
-        mergefile = temp("mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt.gz")
+        bedfile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
+        tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt"),
+        mergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt.gz")
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
@@ -292,11 +292,11 @@ rule merging_mc_replicates:
 
 rule make_mc_bigwig_files:
     input:
-        cx_report = "mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
+        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bigwig = "mC/tracks/{sample_name}__CG.bw",
-        touch = "mC/chkpts/bigwig__{sample_name}.done"
+        bigwig = "results/mC/tracks/{sample_name}__CG.bw",
+        touch = "results/mC/chkpts/bigwig__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -312,26 +312,26 @@ rule make_mc_bigwig_files:
         """
         {{
         if [[ "{params.context}" == "all" ]]; then
-            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CG.bedGraph"}}'
+            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CG.bedGraph"}}'
             for strand in plus minus; do
                 case "${{strand}}" in 
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "mC/tracks/"s"__CG__"d".bedGraph"}}'
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CG__"d".bedGraph"}}'
             done
             for context in CG CHG CHH; do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}__${{context}}.bedGraph > mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
-                bedGraphToBigWig mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}__${{context}}.bw
+                LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
+                bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}.bw
                 for strand in plus minus
                 do
                     printf "\nMaking ${{strand}} strand bigwig files of ${{context}} context for {params.sample_name}\n"
-                    LC_COLLATE=C sort -k1,1 -k2,2n mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
-                    bedGraphToBigWig mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
+                    LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
+                    bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
                 done
             done
-            rm -f mC/tracks/*"{params.sample_name}"*bedGraph*
+            rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
         elif [[ "{params.context}" == "CG-only" ]]; then
             printf "Script for CG-only not ready yet\n" ## To update for CG-only!
         else
@@ -348,9 +348,9 @@ rule call_DMRs_pairwise:
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
         chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
-        dmr_summary = "mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+        dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
-        script = os.path.join(REPO_FOLDER,"scripts/R_call_DMRs.R"),
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R"),
         context = config['mC_context'],
         sample1 = lambda wildcards: wildcards.sample1,
         sample2 = lambda wildcards: wildcards.sample2,
@@ -373,7 +373,7 @@ rule all_mc:
     input:
         final = lambda wildcards: define_final_mC_output(wildcards.ref_genome)
     output:
-        touch = "mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
+        touch = "results/mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
     localrule: True
     shell:
         """

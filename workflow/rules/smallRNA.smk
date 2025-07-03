@@ -23,21 +23,21 @@ def define_final_srna_output(ref_genome):
     
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')        
-        map_files.append(f"sRNA/reports/sizes_stats__{sname}.txt")
-        qc_files.append(f"sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-        qc_files.append(f"sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+        map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
+        qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+        qc_files.append(f"results/sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
         for size in range(srna_min, srna_max + 1):
-            bigwig_files.append(f"sRNA/tracks/{sname}__{size}nt__plus.bw")
-            bigwig_files.append(f"sRNA/tracks/{sname}__{size}nt__minus.bw")
+            bigwig_files.append(f"results/sRNA/tracks/{sname}__{size}nt__plus.bw")
+            bigwig_files.append(f"results/sRNA/tracks/{sname}__{size}nt__minus.bw")
         
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             for size in range(srna_min, srna_max + 1):
-                bigwig_files.append(f"sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
-                bigwig_files.append(f"sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
+                bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
+                bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
             
     results = map_files
     
@@ -51,11 +51,11 @@ def define_final_srna_output(ref_genome):
 
 rule filter_structural_rna:
     input:
-        fastq = "sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
         fasta = config['structural_rna_fafile']
     output:
-        filtered_fastq = temp("sRNA/fastq/filtered__{sample_name}__R0.fastq"),
-        gzipped_fastq = "sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
+        filtered_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq"),
+        gzipped_fastq = "results/sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -89,9 +89,9 @@ rule filter_structural_rna:
 
 rule dispatch_srna_fastq:
     input:
-        fastq = lambda wildcards: f"sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
+        fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
     output:
-        fastq_file = temp("sRNA/mapped/clean__{sample_name}.fastq.gz")
+        fastq_file = temp("results/sRNA/mapped/clean__{sample_name}.fastq.gz")
     conda: CONDA_ENV
     localrule: True
     shell:
@@ -101,12 +101,12 @@ rule dispatch_srna_fastq:
 
 rule shortstack_map:
     input:
-        fastq = "sRNA/mapped/clean__{sample_name}.fastq.gz",
+        fastq = "results/sRNA/mapped/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
-        count_file = "sRNA/mapped/{sample_name}/Results.txt",
-        bam_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name}.bam"),
-        bai_file = temp("sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai")
+        count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
+        bam_file = temp("results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam"),
+        bai_file = temp("results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -124,17 +124,17 @@ rule shortstack_map:
         rm -rf sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir sRNA/mapped/{params.sample_name}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}
         samtools index -@ {threads} {output.bam_file}
         }} 2>&1 | tee -a "{log}"
         """
         
 rule make_srna_size_stats:
     input:
-        bamfile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        baifile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     output:
-        report = "sRNA/reports/sizes_stats__{sample_name}.txt"
+        report = "results/sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name
     log:
@@ -149,10 +149,10 @@ rule make_srna_size_stats:
         {{
         printf "\nGetting stats for {params.sample_name}\n"
         printf "Sample\tType\tSize\tCount\n" > {output.report}
-        zcat sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+        zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
         printf "\nGetting filtered stats for {params.sample_name}\n"
-        if [[ -s sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
-            zcat sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
+        if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
+            zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
         fi
         samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> "{output.report}"
         }} 2>&1 | tee -a "{log}"
@@ -160,10 +160,10 @@ rule make_srna_size_stats:
 
 rule filter_size_srna_sample:
     input:
-        bamfile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        baifile = "sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     output:
-        filtered_file = "sRNA/mapped/sized__{size}nt__{sample_name}.bam"
+        filtered_file = "results/sRNA/mapped/sized__{size}nt__{sample_name}.bam"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -186,11 +186,11 @@ rule filter_size_srna_sample:
 
 rule merging_srna_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"sRNA/mapped/sized__{wildcards.size}nt__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
+        bamfiles = lambda wildcards: [ f"results/sRNA/mapped/sized__{wildcards.size}nt__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
-        tempfile = temp("sRNA/mapped/temp__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
-        mergefile = "sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+        tempfile = temp("results/sRNA/mapped/temp__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
+        mergefile = "results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         size = lambda wildcards: wildcards.size
@@ -213,10 +213,10 @@ rule merging_srna_replicates:
 
 rule make_srna_stranded_bigwigs:
     input: 
-        bamfile = lambda wildcards: f"sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam"
+        bamfile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam"
     output:
-        bw_plus = "sRNA/tracks/{sample_name}__{size}nt__plus.bw",
-        bw_minus = "sRNA/tracks/{sample_name}__{size}nt__minus.bw"
+        bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
+        bw_minus = "results/sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         size = lambda wildcards: wildcards.size,
@@ -241,7 +241,7 @@ rule all_srna:
     input:
         final = lambda wildcards: define_final_srna_output(wildcards.ref_genome)
     output:
-        touch = "sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done"
+        touch = "results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done"
     localrule: True
     shell:
         """

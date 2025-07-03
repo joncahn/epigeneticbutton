@@ -5,7 +5,7 @@ def return_log_rna(sample_name, step, paired):
 def define_RNA_input_for_degs(ref_genome):
     file_paths = []
     filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
-    return [f"RNA/DEG/counts__{sname}.tab" for sname in filtered_samples['sample_name']]
+    return [f"results/RNA/DEG/counts__{sname}.tab" for sname in filtered_samples['sample_name']]
 
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -21,33 +21,33 @@ def define_final_rna_output(ref_genome):
         sname = sample_name_str(row, 'sample')        
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
-            map_files.append(f"RNA/logs/process_rna_pe_sample__{sname}.log")
-            qc_files.append(f"RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
-            qc_files.append(f"RNA/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
-            qc_files.append(f"RNA/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+            map_files.append(f"results/RNA/logs/process_rna_pe_sample__{sname}.log")
+            qc_files.append(f"results/RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+            qc_files.append(f"results/RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+            qc_files.append(f"results/RNA/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+            qc_files.append(f"results/RNA/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            map_files.append(f"RNA/logs/process_rna_se_sample__{sname}.log")
-            qc_files.append(f"RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-            qc_files.append(f"RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            map_files.append(f"results/RNA/logs/process_rna_se_sample__{sname}.log")
+            qc_files.append(f"results/RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"results/RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
         
-        bigwig_files.append(f"RNA/tracks/{sname}__plus.bw")
-        bigwig_files.append(f"RNA/tracks/{sname}__minus.bw")
+        bigwig_files.append(f"results/RNA/tracks/{sname}__plus.bw")
+        bigwig_files.append(f"results/RNA/tracks/{sname}__minus.bw")
         
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
-            bigwig_files.append(f"RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
+            bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
+            bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
     filtered_analysis_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
     filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
     if len(filtered_analysis_samples2['Sample'].drop_duplicates()) >= 2:   
-        deg_files.append(f"RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
-        deg_files.append(f"RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
+        deg_files.append(f"results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
+        deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
     elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
-        deg_files.append(f"RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
+        deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         
     results = map_files
     
@@ -68,7 +68,7 @@ rule make_STAR_indices:
     params:
         star_index = config[config['species']]['star_index']
     log:
-        temp(os.path.join(REPO_FOLDER,"logs","STAR_index_{ref_genome}.log"))
+        temp(os.path.join(REPO_FOLDER,"results","logs","STAR_index_{ref_genome}.log"))
     conda: CONDA_ENV
     threads: config["resources"]["make_STAR_indices"]["threads"]
     resources:
@@ -85,18 +85,18 @@ rule make_STAR_indices:
 
 rule STAR_map_pe:
     input:
-        fastq1 = "RNA/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "RNA/fastq/trim__{sample_name}__R2.fastq.gz",
+        fastq1 = "results/RNA/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "results/RNA/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = temp("RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"),
-        count_file = temp("RNA/mapped/star_pe__{sample_name}_ReadsPerGene.out.tab"),
-        metrics_map = "RNA/reports/star_pe__{sample_name}.txt"
+        bamfile = temp("results/RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"),
+        count_file = temp("results/RNA/mapped/star_pe__{sample_name}_ReadsPerGene.out.tab"),
+        metrics_map = "results/RNA/reports/star_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         file_order = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['file_order'],
-        prefix = lambda wildcards: f"RNA/mapped/star_pe__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"results/RNA/mapped/star_pe__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "PE"))
     conda: CONDA_ENV
@@ -117,23 +117,23 @@ rule STAR_map_pe:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
-        mv "RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
-        rm -f RNA/mapped/*"{params.sample_name}_Log"*
+        mv "results/RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
+        rm -f results/RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """    
 
 rule STAR_map_se:
     input:
-        fastq0 = "RNA/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq0 = "results/RNA/fastq/trim__{sample_name}__R0.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
-        bamfile = temp("RNA/mapped/star_se__{sample_name}_Aligned.out.bam"),
-        count_file = temp("RNA/mapped/star_se__{sample_name}_ReadsPerGene.out.tab"),
-        metrics_map = "RNA/reports/star_se__{sample_name}.txt"
+        bamfile = temp("results/RNA/mapped/star_se__{sample_name}_Aligned.out.bam"),
+        count_file = temp("results/RNA/mapped/star_se__{sample_name}_ReadsPerGene.out.tab"),
+        metrics_map = "results/RNA/reports/star_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"RNA/mapped/star_se__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"results/RNA/mapped/star_se__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
     conda: CONDA_ENV
@@ -147,18 +147,18 @@ rule STAR_map_se:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
-        mv "RNA/mapped/star_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
-        rm -f RNA/mapped/*"{params.sample_namparams.sample_name}_Log"*
+        mv "results/RNA/mapped/star_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
+        rm -f results/RNA/mapped/*"{params.sample_namparams.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
         
 rule filter_rna_pe:
     input:
-        bamfile = "RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"
+        bamfile = "results/RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"
     output:
-        mrkdup=temp("RNA/mapped/star_pe__{sample_name}_Processed.out.bam"),
-        sorted_file=temp("RNA/mapped/star_pe__{sample_name}_Processed.sorted.out.bam"),
-        metrics_flag = "RNA/reports/flagstat_pe__{sample_name}.txt"
+        mrkdup=temp("results/RNA/mapped/star_pe__{sample_name}_Processed.out.bam"),
+        sorted_file=temp("results/RNA/mapped/star_pe__{sample_name}_Processed.sorted.out.bam"),
+        metrics_flag = "results/RNA/reports/flagstat_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -175,7 +175,7 @@ rule filter_rna_pe:
         ### Marking duplicates
         ## Errors can happen because of limitBAMsortRAM, which seem to happen when bam files are sorted by coordinates (now removed from mapping step). Might want parameters from sorting duplicates too.
         printf "\nMarking duplicates\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "RNA/mapped/star_pe__{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "results/RNA/mapped/star_pe__{params.sample_name}_"
         #### Indexing bam file
         printf "\nSorting bam file\n"
         samtools sort -@ {threads} "{output.mrkdup}" -o "{output.sorted_file}"
@@ -189,11 +189,11 @@ rule filter_rna_pe:
 
 rule filter_rna_se:
     input:
-        bamfile = "RNA/mapped/star_se__{sample_name}_Aligned.out.bam"
+        bamfile = "results/RNA/mapped/star_se__{sample_name}_Aligned.out.bam"
     output:
-        sorted_file=temp("RNA/mapped/star_se__{sample_name}_Aligned.sorted.out.bam"),
-        metrics_flag = "RNA/reports/flagstat_se__{sample_name}.txt",
-        metrics_map = "RNA/reports/star_se__{sample_name}.txt"
+        sorted_file=temp("results/RNA/mapped/star_se__{sample_name}_Aligned.sorted.out.bam"),
+        metrics_flag = "results/RNA/reports/flagstat_se__{sample_name}.txt",
+        metrics_map = "results/RNA/reports/star_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -221,12 +221,12 @@ rule filter_rna_se:
 
 rule make_rna_stats_pe:
     input:
-        metrics_trim = "RNA/reports/trim_pe__{sample_name}.txt",
-        metrics_map = "RNA/reports/star_pe__{sample_name}.txt",
+        metrics_trim = "results/RNA/reports/trim_pe__{sample_name}.txt",
+        metrics_map = "results/RNA/reports/star_pe__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
-        stat_file = "RNA/reports/summary_RNA_PE_mapping_stats_{sample_name}.txt",
-        log = "RNA/logs/process_rna_pe_sample__{sample_name}.log"
+        stat_file = "results/RNA/reports/summary_RNA_PE_mapping_stats_{sample_name}.txt",
+        log = "results/RNA/logs/process_rna_pe_sample__{sample_name}.log"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
@@ -253,12 +253,12 @@ rule make_rna_stats_pe:
         
 rule make_rna_stats_se:
     input:
-        metrics_trim = "RNA/reports/trim_se__{sample_name}.txt",
-        metrics_map = "RNA/reports/star_se__{sample_name}.txt",
+        metrics_trim = "results/RNA/reports/trim_se__{sample_name}.txt",
+        metrics_map = "results/RNA/reports/star_se__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
-        stat_file = "RNA/reports/summary_RNA_SE_mapping_stats_{sample_name}.txt",
-        log = "RNA/logs/process_rna_se_sample__{sample_name}.log"
+        stat_file = "results/RNA/reports/summary_RNA_SE_mapping_stats_{sample_name}.txt",
+        log = "results/RNA/logs/process_rna_se_sample__{sample_name}.log"
     params:
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
@@ -288,9 +288,9 @@ rule pe_or_se_rna_dispatch:
         bamfile = lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file"),
         countfile = lambda wildcards: assign_mapping_paired(wildcards, "STAR_map", "count_file")
     output:
-        bam_file = "RNA/mapped/final__{sample_name}.bam",
-        count_file = "RNA/DEG/counts__{sample_name}.tab",
-        touch = "RNA/chkpts/map_rna__{sample_name}.done"
+        bam_file = "results/RNA/mapped/final__{sample_name}.bam",
+        count_file = "results/RNA/DEG/counts__{sample_name}.tab",
+        touch = "results/RNA/chkpts/map_rna__{sample_name}.done"
     localrule: True
     shell:
         """
@@ -302,10 +302,10 @@ rule pe_or_se_rna_dispatch:
 
 rule merging_rna_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"RNA/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
+        bamfiles = lambda wildcards: [ f"results/RNA/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
-        mergefile = "RNA/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+        mergefile = "results/RNA/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
@@ -319,20 +319,20 @@ rule merging_rna_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-		samtools merge -@ {threads} RNA/mapped/temp_{params.sname}.bam {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} RNA/mapped/temp_{params.sname}.bam
-		rm -f RNA/mapped/temp_{params.sname}.bam
+		samtools merge -@ {threads} results/RNA/mapped/temp_{params.sname}.bam {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} results/RNA/mapped/temp_{params.sname}.bam
+		rm -f results/RNA/mapped/temp_{params.sname}.bam
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_rna_stranded_bigwigs:
     input: 
-        bamfile = lambda wildcards: f"RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
+        bamfile = lambda wildcards: f"results/RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bw_plus = "RNA/tracks/{sample_name}__plus.bw",
-        bw_minus = "RNA/tracks/{sample_name}__minus.bw"
+        bw_plus = "results/RNA/tracks/{sample_name}__plus.bw",
+        bw_minus = "results/RNA/tracks/{sample_name}__minus.bw"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -351,27 +351,27 @@ rule make_rna_stranded_bigwigs:
         {{
         ### Making BedGraph files
         printf "\nMaking bedGraph files\n"
-        STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "RNA/tracks/bg_{params.sample_name}_"
+        STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "results/RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
         if [[ {params.multimap} == "multiple" ]]; then
-            bed1="RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg"
-            bed2="RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str2.out.bg"
+            bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg"
+            bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str2.out.bg"
         elif [[ {params.multimap} == "unique" ]]; then
-            bed1="RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
-            bed2="RNA/tracks/bg_{params.sample_name}_Signal.Unique.str2.out.bg"
+            bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
+            bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str2.out.bg"
         fi        
-        bedSort ${{bed1}} "RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg"
-        bedSort ${{bed2}} "RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg"
+        bedSort ${{bed1}} "results/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg"
+        bedSort ${{bed2}} "results/RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg"
         if [[ "{params.strandedness}" == "forward" ]]; then
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
+            bedGraphToBigWig "results/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
+            bedGraphToBigWig "results/RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
         elif [[ "{params.strandedness}" == "reverse" ]]; then
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
-            bedGraphToBigWig "RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
+            bedGraphToBigWig "results/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
+            bedGraphToBigWig "results/RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
         fi
-        rm -f RNA/tracks/*"{params.sample_name}_Signal"*
-        rm -f RNA/tracks/*"{params.sample_name}_Log"*
+        rm -f results/RNA/tracks/*"{params.sample_name}_Signal"*
+        rm -f results/RNA/tracks/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -379,8 +379,8 @@ rule prep_files_for_DEGs:
     input: 
         lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome)
     output:
-        rna_samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        rna_counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
+        rna_samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        rna_counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -403,7 +403,7 @@ rule prep_files_for_DEGs:
         RNA_counts = None
         replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
         for sname, rep in replicates.values:
-            file_path = f"RNA/DEG/counts__{sname}.tab"
+            file_path = f"results/RNA/DEG/counts__{sname}.tab"
             temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
             temp.columns = ['GID', rep]
 
@@ -419,14 +419,14 @@ rule prep_files_for_DEGs:
     
 rule call_all_DEGs:
     input:
-        samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
+        samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
+        region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
     output:
-        rdata = "RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
-        touch = "RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
+        rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
+        touch = "results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
-        script = os.path.join(REPO_FOLDER,"scripts/R_call_DEGs.R"),
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DEGs.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -445,13 +445,13 @@ rule call_all_DEGs:
 
 rule gather_gene_expression_rpkm:
     input:
-        samples = "RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        counts = "RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        region_file = "combined/tracks/{ref_genome}__all_genes.bed"
+        samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
+        counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
+        region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
     output:
-        rpkm = "RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
+        rpkm = "results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
     params:
-        script = os.path.join(REPO_FOLDER,"scripts/R_gene_expression_rpkm.R"),
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_gene_expression_rpkm.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -471,12 +471,12 @@ rule gather_gene_expression_rpkm:
 
 rule plot_expression_levels:
     input:
-        rdata = "RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
+        rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         target_file = config['plot_target_file']
     output:
-        touch = "combined/chkpts/plot_expression__{analysis_name}__{ref_genome}.done"
+        touch = "results/combined/chkpts/plot_expression__{analysis_name}__{ref_genome}.done"
     params:
-        script = os.path.join(REPO_FOLDER,"scripts/R_plot_expression_level.R"),
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_plot_expression_level.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         filename = config['target_file_label']
@@ -497,9 +497,9 @@ rule perform_GO_on_target_file:
         target_file = config['plot_target_file'],
         GOdatabase = config['go_database']
     output:
-        touch = "combined/plots/TopGO__{target_name}__{ref_genome}.done"
+        touch = "results/combined/plots/TopGO__{target_name}__{ref_genome}.done"
     params:
-        script = os.path.join(REPO_FOLDER,"scripts/R_plot_expression_level.R"),
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_plot_expression_level.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         filename = config['target_file_label']
@@ -519,7 +519,7 @@ rule all_rna:
     input:
         final = lambda wildcards: define_final_rna_output(wildcards.ref_genome)
     output:
-        touch = "RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done"
+        touch = "results/RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done"
     localrule: True
     shell:
         """

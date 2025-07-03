@@ -210,7 +210,7 @@ rule make_bt2_indices:
     output:
         indices = directory("genomes/{ref_genome}/bt2_index")
     log:
-        temp(os.path.join(REPO_FOLDER,"logs","bowtie_index_{ref_genome}.log"))
+        temp(os.path.join(REPO_FOLDER,"results","logs","bowtie_index_{ref_genome}.log"))
     conda: CONDA_ENV
     threads: config["resources"]["make_bt2_indices"]["threads"]
     resources:
