@@ -4,8 +4,8 @@ def return_log_sample(data_type, sample_name, step, paired):
     
 rule get_fastq_pe:
     output:
-        fastq1 = temp("{data_type}/fastq/raw__{sample_name}__R1.fastq.gz"),
-        fastq2 = temp("{data_type}/fastq/raw__{sample_name}__R2.fastq.gz")
+        fastq1 = temp("results/{data_type}/fastq/raw__{sample_name}__R1.fastq.gz"),
+        fastq2 = temp("results/{data_type}/fastq/raw__{sample_name}__R2.fastq.gz")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
@@ -23,12 +23,12 @@ rule get_fastq_pe:
         {{
         if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
-            fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
+            fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "{params.seq_id}"
             printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
-            pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_1.fastq"
-            mv "{params.data_type}/fastq/{params.seq_id}_1.fastq.gz" "{output.fastq1}"
-            pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}_2.fastq"
-            mv "{params.data_type}/fastq/{params.seq_id}_2.fastq.gz" "{output.fastq2}"
+            pigz -p {threads} "results/{params.data_type}/fastq/{params.seq_id}_1.fastq"
+            mv "results/{params.data_type}/fastq/{params.seq_id}_1.fastq.gz" "{output.fastq1}"
+            pigz -p {threads} "results/{params.data_type}/fastq/{params.seq_id}_2.fastq"
+            mv "results/{params.data_type}/fastq/{params.seq_id}_2.fastq.gz" "{output.fastq2}"
         elif ls "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz 1> /dev/null 2>&1 && ls "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz 1> /dev/null 2>&1; then
             printf "Copying PE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
@@ -45,7 +45,7 @@ rule get_fastq_pe:
 
 rule get_fastq_se:
     output:
-        fastq0 = temp("{data_type}/fastq/raw__{sample_name}__R0.fastq.gz")
+        fastq0 = temp("results/{data_type}/fastq/raw__{sample_name}__R0.fastq.gz")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
@@ -63,10 +63,10 @@ rule get_fastq_se:
         {{
         if [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
-            fasterq-dump -e {threads} --outdir "{params.data_type}/fastq" "{params.seq_id}"
+            fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "{params.seq_id}"
             printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
-            pigz -p {threads} "{params.data_type}/fastq/{params.seq_id}.fastq"
-            mv "{params.data_type}/fastq/{params.seq_id}.fastq.gz" "{output.fastq0}"
+            pigz -p {threads} "results/{params.data_type}/fastq/{params.seq_id}.fastq"
+            mv "results/{params.data_type}/fastq/{params.seq_id}.fastq.gz" "{output.fastq0}"
         elif ls "{params.fastq_path}"/*"{params.seq_id}"*q.gz 1> /dev/null 2>&1; then
             printf "\nCopying SE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*q.gz "{output.fastq0}"
@@ -81,9 +81,9 @@ rule get_fastq_se:
 
 rule run_fastqc:
     input:
-        fastq = "{data_type}/fastq/{step}__{sample_name}__{read}.fastq.gz"
+        fastq = "results/{data_type}/fastq/{step}__{sample_name}__{read}.fastq.gz"
     output:
-        fastqc = "{data_type}/reports/{step}__{sample_name}__{read}_fastqc.html"
+        fastqc = "results/{data_type}/reports/{step}__{sample_name}__{read}_fastqc.html"
     params:
         data_type = lambda wildcards: wildcards.data_type,
         step = lambda wildcards: wildcards.step,
@@ -96,17 +96,17 @@ rule run_fastqc:
         tmp=config["resources"]["run_fastqc"]["tmp"]
     shell:
         """
-        fastqc -o "{params.data_type}/reports/" "{input.fastq}"
+        fastqc -o "results/{params.data_type}/reports/" "{input.fastq}"
         """
 
 rule process_fastq_pe:
     input:
-        raw_fastq1 = "{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
-        raw_fastq2 = "{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
+        raw_fastq1 = "results/{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
+        raw_fastq2 = "results/{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
     output:
-        fastq1 = "{data_type}/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "{data_type}/fastq/trim__{sample_name}__R2.fastq.gz",
-        metrics = "{data_type}/reports/trim_pe__{sample_name}.txt"
+        fastq1 = "results/{data_type}/fastq/trim__{sample_name}__R1.fastq.gz",
+        fastq2 = "results/{data_type}/fastq/trim__{sample_name}__R2.fastq.gz",
+        metrics = "results/{data_type}/reports/trim_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
@@ -132,10 +132,10 @@ rule process_fastq_pe:
         
 rule process_fastq_se:
     input:
-        raw_fastq = "{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
+        raw_fastq = "results/{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
     output:
-        fastq = "{data_type}/fastq/trim__{sample_name}__R0.fastq.gz",
-        metrics = "{data_type}/reports/trim_se__{sample_name}.txt"
+        fastq = "results/{data_type}/fastq/trim__{sample_name}__R0.fastq.gz",
+        metrics = "results/{data_type}/reports/trim_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,

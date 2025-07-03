@@ -13,5 +13,5 @@ cluster: >-
   -l m_mem_free={cluster.mem_mb}M
   -l tmp_free={cluster.tmp_mb}M
   -N smk_{jobid}
-  -o hpclogs/{rule}
-  -e hpclogs/{rule}
+  -o hpclogs/{rule}/{jobid}.log
+  -e hpclogs/{rule}/{jobid}.log
