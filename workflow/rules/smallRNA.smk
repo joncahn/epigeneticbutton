@@ -72,13 +72,13 @@ rule filter_structural_rna:
         if [[ ! -d genomes/structural_RNAs/{params.ref_genome}/bt2_index ]]; then
             if [[ {input.fasta} =~ \.gz$ ]]; then
                 printf "Generating bowtie2 index for structural RNAs of {params.ref_genome} using gzipped file: {input.fasta}\n"
-                mkdir -p genomes/structural_RNAs/{params.ref_genome}/bt2_index
+                mkdir -p genomes/structural_RNAs/{params.ref_genome}
                 gunzip {input.fasta} -c > "genomes/structural_RNAs/{params.ref_genome}/temp.fa"
                 bowtie2-build --threads {threads} "genomes/structural_RNAs/{params.ref_genome}/temp.fa" "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
                 rm -f "genomes/structural_RNAs/{params.ref_genome}/temp.fa"
             else
                 printf "Generating bowtie2 index for structural RNAs of {params.ref_genome} using file: {input.fasta}\n"
-                mkdir -p genomes/structural_RNAs/{params.ref_genome}/bt2_index
+                mkdir -p genomes/structural_RNAs/{params.ref_genome}
                 bowtie2-build --threads {threads} "{input.fasta}" "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
             fi
         fi
@@ -121,7 +121,7 @@ rule shortstack_map:
     shell:
         """
         {{
-        rm -rf sRNA/mapped/{params.sample_name}
+        rm -rf results/sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}

@@ -73,7 +73,7 @@ conda install -c bioconda snakemake
    - Sample file path
    - Analysis parameters / options
    - Species-specific parameters (e.g. genome size)
-   - Resource allocation
+   - Resources allocation
    
 3. If changing resource allocation for cluster submission, consider adjusting the `profiles/cluster.yaml` for job-specific resources, and the corresponding config file for your cluster scheduler (`profiles/sge/config.yaml` or `profiles/slurm/config.yaml` for SGE or SLURM, respectively). The default is to use 96 threads maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
@@ -113,31 +113,48 @@ or to force all steps to be performed:
  snakemake --dag --forceall | dot -Tpng > dag.png
 ```
 
+*For full understanding of snakemake capabilities and option: https://snakemake.readthedocs.io/en/stable/*
+
 ## Input requirements
 
 ### Transcription factor ChIP
 - Set the sample_type to `IP` for transcription factors with narrow peaks (default); use `IPb` for broad peaks.
 
-
 ## Output Structure
 
 ```
 epigeneticbutton/
-├── chkpts/              # Checkpoint files
-├── combined/            # Combined analysis results
-│   ├── peaks/          # Peak calling results
-│   ├── DEG/            # Differential expression results
-│   ├── TSS/            # Transcription start site analysis
-│   ├── reports/        # Analysis reports
-│   ├── matrix/         # Data matrices
-│   └── plots/          # Visualization plots
-├── {data_type}/        # Data type specific directories
-│   ├── fastq/          # Processed FASTQ files
-│   ├── mapped/         # Mapped reads
-│   ├── tracks/         # Track files
-│   ├── reports/        # QC reports
-│   └── plots/          # Data type specific plots
-└── logs/               # Log files
+├── config/ 		   # Location for the main config file and recommended location for sample files and target files
+├── data/			   # Location for test material and examples (e.g. zm_structural_RNAs.fa.gz)
+├── Help/			   # Location for help files (e.g. Help_structural_RNAs_database_with_Rfam)
+├── profiles/
+│	├── sge/		   # Config file to run snakemake on a cluster managed by SGE
+│	├── slurm/		   # Config file to run snakemake on a cluster managed by SLURM
+│	└──	cluster.yaml   # Config file with job-specific resources for cluster submission (used by sge and slurm)
+├── workflow/
+│	├── envs/		   # Conda environment file for depencies
+│	├── rules/		   # Snakemake files with data type analysis rules
+│	├── scripts/	   # R scripts for plots
+│	└── snakefile	   # main snakefile
+├── genomes/		   # Genome directories created upon run
+│	└──	{ref_genome}/  # Genome-specific directories with sequence, annotation and indexes
+└── results/           # Results directories created upon run
+	├── combined/      # Combined analysis results
+	│	├── logs/      # Log files
+	│   ├── chkpts/    # Peak calling results
+	│   ├── peaks/     # Peak calling results
+	│   ├── DEG/       # Differential expression results
+	│   ├── TSS/       # Transcription start site analysis
+	│   ├── reports/   # Analysis reports
+	│   ├── matrix/    # Data matrices
+	│   └── plots/     # Visualization plots
+	└── {data_type}/   # Data type specific directories
+	    ├── fastq/     # Processed FASTQ files
+	    ├── mapped/    # Mapped reads (bam)
+	    ├── tracks/    # Track files (bigwigs)
+	    ├── reports/   # QC reports
+	    ├── */		   # data-specific directories (e.g. DMRs for mC)
+		└── plots/     # Data type specific plots
 ```
 
 ## Configuration Options
