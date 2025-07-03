@@ -12,5 +12,5 @@ cluster: >-
   --job-name=smk_{jobid}
   --cpus-per-task={threads}
   --mem={cluster.mem_mb}
-  --output=results/hpclogs/{rule}.out
-  --error=results/hpclogs/{rule}.err
+  --output=hpclogs/{rule}.out
+  --error=hpclogs/{rule}.err

@@ -79,7 +79,7 @@ conda install -c bioconda snakemake
 
 4. Create the `hpclogs` folder for cluster logs:
 ```bash
-mkdir hpclogs
+mkdir -p hpclogs
 ```
 
 ### Running the Pipeline

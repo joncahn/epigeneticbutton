@@ -9,7 +9,7 @@ analysis_name: "test_snakemake"
 full_analysis: true
 
 # Path to the sample metadata file
-sample_file: "samples.tsv"
+sample_file: "config/samples.tsv"
 
 # Path to the directory containing reference genomes
 ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
