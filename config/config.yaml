@@ -164,6 +164,11 @@ heavy_resources: &heavy
   mem: 8000
   tmp: 48000
 
+max_resources: &max
+  threads: 16
+  mem: 10000
+  tmp: 96000
+
 single_thread: &single
   threads: 1
   mem: 32000
@@ -198,8 +203,8 @@ resources:
   best_peaks_pseudoreps: *low
   make_peak_stats: *low
   make_bismark_indices: *heavy
-  bismark_map_pe: *heavy
-  bismark_map_se: *heavy
+  bismark_map_pe: *max
+  bismark_map_se: *max
   make_mc_stats_pe: *low
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy

@@ -35,4 +35,4 @@ for (sample1 in genotypes) {
 	all_rpkm<-rbind(all_rpkm,tmp2)
 }
 
-write.table(all_rpkm,paste0("RNA/DEG/genes_rpkm__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(all_rpkm,paste0("results/RNA/DEG/genes_rpkm__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)

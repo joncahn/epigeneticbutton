@@ -25,7 +25,7 @@ if ( length(DMRsCGpool) > 0 ) {
 	CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=elementMetadata(DMRsCGpool)[,3],secondsample=elementMetadata(DMRsCGpool)[,6], Pvalue=elementMetadata(DMRsCGpool)[,10]) %>%
 			mutate(Delta=firstsample-secondsample)
 
-	write.table(CGpool,paste0("mC/DMRs/",sample1,"__vs__",sample2,"__CG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(CGpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 	summary_file<-mutate(CGpool, Type=ifelse(Delta>0, "hyper", "hypo")) %>%
 				group_by(Type) %>%
@@ -39,7 +39,7 @@ if (context == "all") {
 	if ( length(DMRsCHHpool) > 0 ) {
 		CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),firstsample=elementMetadata(DMRsCHHpool)[,3],secondsample=elementMetadata(DMRsCHHpool)[,6], Pvalue=elementMetadata(DMRsCHHpool)[,10]) %>%
 				mutate(Delta=firstsample-secondsample)
-		write.table(CHHpool,paste0("mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(CHHpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	
 		summary_fileCHH<-mutate(CHHpool, Type=ifelse(Delta>0, "hyper", "hypo")) %>%
 						group_by(Type) %>%
@@ -52,7 +52,7 @@ if (context == "all") {
 	if ( length(DMRsCHGpool) > 0 ) {
 		CHGpool<-data.frame(Chr=seqnames(DMRsCHGpool),Start=start(DMRsCHGpool)-1,End=end(DMRsCHGpool),firstsample=elementMetadata(DMRsCHGpool)[,3],secondsample=elementMetadata(DMRsCHGpool)[,6], Pvalue=elementMetadata(DMRsCHGpool)[,10]) %>%
 				mutate(Delta=firstsample-secondsample)
-		write.table(CHGpool,paste0("mC/DMRs/",sample1,"__vs__",sample2,"__CHG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(CHGpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	
 		summary_fileCHG<-mutate(CHGpool, Type=ifelse(Delta>0, "hyper", "hypo")) %>%
 						group_by(Type) %>%
@@ -66,4 +66,4 @@ if (context == "all") {
 }
 
 summary_file<-mutate(summary_file, Sample=paste0(sample1,"_vs_",sample2)) %>% select(Sample, everything())
-write.table(summary_file,paste0("mC/DMRs/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(summary_file,paste0("results/mC/DMRs/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)

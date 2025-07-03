@@ -13,6 +13,10 @@ standard_resources: &standard
 heavy_resources: &heavy
   mem_mb: 8000
   tmp_mb: 48000
+  
+max_resources: &max
+  mem_mb: 10000
+  tmp_mb: 96000
 
 single_thread: &single
   mem_mb: 32000
@@ -46,8 +50,8 @@ making_pseudo_replicates: *heavy
 best_peaks_pseudoreps: *low
 make_peak_stats: *low
 make_bismark_indices: *heavy
-bismark_map_pe: *heavy
-bismark_map_se: *heavy
+bismark_map_pe: *max
+bismark_map_se: *max
 make_mc_stats_pe: *low
 make_mc_stats_se: *low
 merging_mc_replicates: *heavy
