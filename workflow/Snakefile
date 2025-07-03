@@ -10,8 +10,7 @@ from itertools import combinations
 min_version("6.0")
 
 # Configuration
-workflow:
-    workdir: ..
+workdir: ..
 
 configfile: "config/config.yaml"
 analysis = config['full_analysis']
