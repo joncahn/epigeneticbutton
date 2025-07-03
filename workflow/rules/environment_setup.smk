@@ -5,7 +5,6 @@ def return_log_env(ref_genome, step):
 # Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
-        setup = "results/combined/chkpts/directories_setup.done",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
