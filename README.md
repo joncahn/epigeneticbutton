@@ -1,6 +1,6 @@
 # EpigeneticButton
 
-A Snakemake-based pipeline for analyzing and integrating various types of genomics datasets, including ChIP-seq, RNA-seq, RAMPAGE, shRNA, mC, and TF ChIP-seq data.
+A Snakemake-based pipeline for analyzing and integrating various types of (epi)genomics datasets, including histone and transcription factor ChIP-seq, RNA-seq, RAMPAGE, small RNA-seq, and methylC-seq.
 
 ## Overview
 
@@ -9,17 +9,16 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 - Read mapping and alignment
 - Peak calling and differential expression analysis
 - Data integration and visualization
-- Transposable element analysis
 
 ## Features
 
 - **Multiple Data Types Support**:
-  - ChIP-seq
+  - Histone ChIP-seq
+  - Transcription Factor ChIP-seq
   - RNA-seq
   - RAMPAGE
-  - shRNA
+  - small RNA-seq
   - MethylC-seq (mC)
-  - Transcription Factor ChIP-seq (TF)
 
 - **Automated Analysis**:
   - Reference genome preparation
