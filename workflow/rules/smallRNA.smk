@@ -29,6 +29,7 @@ def define_final_srna_output(ref_genome):
     qc_files = []
     deg_files = []
     analysis_files = []
+    results = []
     
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
@@ -51,6 +52,8 @@ def define_final_srna_output(ref_genome):
     
     analysis_files.append(f"results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt")
     
+	results = map_files
+	
     if qc_option == "all":
         results += qc_files
         
