@@ -51,7 +51,7 @@ def define_final_srna_output(ref_genome):
     
     analysis_files.append(f"results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt")
     
-	results = map_files
+    results = map_files
 	
     if qc_option == "all":
         results += qc_files
