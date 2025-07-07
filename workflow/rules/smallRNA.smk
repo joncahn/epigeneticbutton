@@ -257,7 +257,7 @@ rule analyze_all_srna_samples:
         count_file = "results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt"
     params:
         analysis_name = config['analysis_name'],
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}", "all"))
     conda: CONDA_ENV
