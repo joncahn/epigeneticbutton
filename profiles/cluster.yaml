@@ -77,3 +77,4 @@ make_srna_size_stats: *standard
 filter_size_srna_sample: *standard
 merging_srna_replicates: *standard
 make_srna_stranded_bigwigs: *standard
+analyze_all_srna_samples: *heavy

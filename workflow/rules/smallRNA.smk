@@ -8,6 +8,15 @@ def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     if paired == "SE":
         return "filtered__{sample_name}__R0" if config['structural_rna_depletion'] else "trim__{sample_name}__R0"
+
+def define_input_for_grouped_analysis(ref_genome):
+    bamfiles = []
+    filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
+    for _, row in filtered_rep_samples.iterrows():
+        sname = sample_name_str(row, 'sample')
+        bamfiles.append(f"results/sRNA/mapped/{sname}/clean__{sname}.bam")
+    
+    return bamfiles
     
 def define_final_srna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -19,10 +28,11 @@ def define_final_srna_output(ref_genome):
     bigwig_files = []
     qc_files = []
     deg_files = []
-    filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
+    analysis_files = []
     
+    filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')        
+        sname = sample_name_str(row, 'sample')
         map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
         qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
         qc_files.append(f"results/sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
@@ -38,14 +48,14 @@ def define_final_srna_output(ref_genome):
             for size in range(srna_min, srna_max + 1):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
-            
-    results = map_files
+    
+    analysis_files.append(f"results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt")
     
     if qc_option == "all":
         results += qc_files
         
     if analysis:
-        results += bigwig_files
+        results += bigwig_files + analysis_files
 
     return results
 
@@ -105,8 +115,8 @@ rule shortstack_map:
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
-        bam_file = temp("results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam"),
-        bai_file = temp("results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai")
+        bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
+        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -163,7 +173,7 @@ rule filter_size_srna_sample:
         bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
         baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     output:
-        filtered_file = "results/sRNA/mapped/sized__{size}nt__{sample_name}.bam"
+        filtered_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -190,7 +200,7 @@ rule merging_srna_replicates:
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         tempfile = temp("results/sRNA/mapped/temp__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
-        mergefile = "results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+        mergefile = temp("results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam")
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         size = lambda wildcards: wildcards.size
@@ -234,6 +244,32 @@ rule make_srna_stranded_bigwigs:
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
 		bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
 		bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule analyze_all_srna_samples:
+    input:
+        bamfiles = lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
+        fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa"
+    output:
+        count_file = "results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt"
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+    log:
+        temp(return_log_smallrna("{ref_genome}", "{analysis_name}", "all"))
+    conda: CONDA_ENV
+    threads: config["resources"]["analyze_all_srna_samples"]["threads"]
+    resources:
+        mem=config["resources"]["analyze_all_srna_samples"]["mem"],
+        tmp=config["resources"]["analyze_all_srna_samples"]["tmp"]
+    shell:
+        """
+        {{
+        rm -rf results/sRNA/clusters/{params.analysis_name}_{params.ref_genome}
+        printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
+        ShortStack --version
+        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}_{params.ref_genome}
         }} 2>&1 | tee -a "{log}"
         """
 
