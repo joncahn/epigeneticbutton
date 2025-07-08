@@ -273,6 +273,8 @@ rule analyze_all_srna_samples:
         fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa"
     output:
         count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}/Results.txt"
+    wildcard_constraints:
+        ref_genome = r"[^/]+"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome
@@ -300,6 +302,8 @@ rule analyze_all_srna_samples_on_target_file:
         target_file = lambda wildcards: define_target_file(wildcards.target_name)
     output:
         count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}/{target_name}/Results.txt"
+    wildcard_constraints:
+        ref_genome = r"[^/]+"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
