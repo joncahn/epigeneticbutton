@@ -472,14 +472,14 @@ rule gather_gene_expression_rpkm:
 rule plot_expression_levels:
     input:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
-        target_file = config['rnaseq_target_file']
+        target_file = config['rnaseq_expression_target_file']
     output:
         touch = "results/combined/chkpts/plot_expression__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_plot_expression_level.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        filename = config['rnaseq_target_file_label']
+        filename = config['rnaseq_expression_target_file_label']
     conda: CONDA_ENV
     threads: config["resources"]["plot_expression_levels"]["threads"]
     resources:

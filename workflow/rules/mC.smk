@@ -53,7 +53,7 @@ def define_final_mC_output(ref_genome):
         b_dict = b._asdict()
         sample1 = sample_name_str(a_dict, 'analysis')
         sample2 = sample_name_str(b_dict, 'analysis')
-        dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
+        dmr_files.append(f"results/mC/dmrs/summary__{sample1}__vs__{sample2}__DMRs.txt")
     
     if qc_option == "all":
         results = map_files + qc_files
@@ -348,7 +348,7 @@ rule call_DMRs_pairwise:
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
         chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
-        dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+        dmr_summary = "results/mC/dmrs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R"),
         context = config['mC_context'],

@@ -152,7 +152,7 @@ epigeneticbutton/
 	    ├── mapped/    # Mapped reads (bam)
 	    ├── tracks/    # Track files (bigwigs)
 	    ├── reports/   # QC reports
-	    ├── */		   # data-specific directories (e.g. DMRs for mC)
+	    ├── */		   # data-specific directories (e.g. 'dmrs' for mC, 'clusters' for sRNA)
 		└── plots/     # Data type specific plots
 ```
 
