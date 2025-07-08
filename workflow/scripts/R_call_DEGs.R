@@ -22,7 +22,8 @@ genotypes<-unique(samples)
 
 targets$Color<-as.numeric(targets$Color)
 
-colors<-brewer.pal(9,"Set1") #limited to 9 different samples. Can change this to include more if needed.
+qual_col_pals<-brewer.pal.info[brewer.pal.info$category == 'qual',]
+colors<-unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals))) #limited to 74 different samples. Could change this to include more if needed.
 color_samples<-colors[targets$Color]
 
 analysisname<-args[3]

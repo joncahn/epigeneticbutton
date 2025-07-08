@@ -20,7 +20,9 @@ def define_input_for_grouped_analysis(ref_genome):
     
 def define_srna_target_file(wildcards):
     tname = config['srna_target_file_label']
-    if wildcards.target_name == "all_genes":
+    if wildcards.target_name == "new_clusters":
+        return f"results/sRNA/cluisters/{wildcards.analysis_name}__{wildcards.ref_genome}__on_new_clusters/Results.txt"  
+    elif wildcards.target_name == "all_genes":
         return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
     elif wildcards.target_name == "protein_coding_genes":
         return f"results/combined/tracks/{wildcards.ref_genome}__protein_coding_genes.bed"
@@ -64,8 +66,8 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
-    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}/Results.txt")
-    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}/all_genes/Results.txt")
+    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_new_clusters/Counts.txt")
+    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Counts.txt")
     
     results = map_files
 	
@@ -267,41 +269,13 @@ rule make_srna_stranded_bigwigs:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule analyze_all_srna_samples:
-    input:
-        bamfiles = lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
-        fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa"
-    output:
-        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}/Results.txt"
-    wildcard_constraints:
-        ref_genome = r"[^/]+"
-    params:
-        analysis_name = config['analysis_name'],
-        ref_genome = lambda wildcards: wildcards.ref_genome
-    log:
-        temp(return_log_smallrna("{ref_genome}", "{analysis_name}", "all"))
-    conda: CONDA_ENV
-    threads: config["resources"]["analyze_all_srna_samples"]["threads"]
-    resources:
-        mem=config["resources"]["analyze_all_srna_samples"]["mem"],
-        tmp=config["resources"]["analyze_all_srna_samples"]["tmp"]
-    shell:
-        """
-        {{
-        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}
-        printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
-        ShortStack --version
-        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}
-        }} 2>&1 | tee -a "{log}"
-        """
-
 rule analyze_all_srna_samples_on_target_file:
     input:
         bamfiles = lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
         fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa",
         target_file = lambda wildcards: define_srna_target_file(wildcards)
     output:
-        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}/{target_name}/Results.txt"
+        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/Counts.txt"
     wildcard_constraints:
         ref_genome = r"[^/]+"
     params:
@@ -309,7 +283,7 @@ rule analyze_all_srna_samples_on_target_file:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name
     log:
-        temp(return_log_smallrna("{ref_genome}", "{analysis_name}", "{target_name}"))
+        temp(return_log_smallrna("{ref_genome}", "{analysis_name}_analysis", "{target_name}"))
     conda: CONDA_ENV
     threads: config["resources"]["analyze_all_srna_samples_on_target_file"]["threads"]
     resources:
@@ -319,11 +293,84 @@ rule analyze_all_srna_samples_on_target_file:
         """
         {{
         rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}/{params.target_name}
-        printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
-        ShortStack --version
-        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}/{params.target_name}
+        if [[ "{params.target_name}" == "new_clusters" ]]; then
+            printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
+            ShortStack --version
+            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+        else
+            printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
+            ShortStack --version
+            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         }} 2>&1 | tee -a "{log}"
         """
+
+# rule prep_files_for_differential_srna_clusters:
+    # input: 
+        # lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
+        # count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/Counts.txt"
+    # output:
+        # srna_samples = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples.txt"),
+        # srna_counts = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts.txt")
+    # params:
+        # ref_genome = lambda wildcards: wildcards.ref_genome
+    # log:
+        # temp(return_log_smallrna("{ref_genome}", "{analysis_name}_prep", "{target_name}"))
+    # threads: config["resources"]["prep_files_for_differential_srna_clusters"]["threads"]
+    # resources:
+        # mem=config["resources"]["prep_files_for_differential_srna_clusters"]["mem"],
+        # tmp=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp"]
+    # run:
+        # filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == params.ref_genome) ].copy()
+        # filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
+        # filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
+        
+        # RNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()    
+        # RNA_samples = RNA_samples.sort_values(by=['Sample', 'Replicate'],ascending=[True, True]).reset_index(drop=True)
+        # RNA_samples['Color'] = pd.factorize(RNA_samples['Sample'])[0] + 1
+
+        # RNA_samples.to_csv(output.rna_samples, sep="\t", index=False)
+        
+        # RNA_counts = None
+        # replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
+        # for sname, rep in replicates.values:
+            # file_path = f"results/RNA/DEG/counts__{sname}.tab"
+            # temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
+            # temp.columns = ['GID', rep]
+
+            # if RNA_counts is None:
+                # RNA_counts = temp
+            # else:
+                # RNA_counts = pd.merge(RNA_counts, temp, on='GID', how='outer')
+            
+        # replicate_order = RNA_samples['Replicate'].tolist()
+        # column_order = ['GID'] + replicate_order
+        # RNA_counts = RNA_counts[column_order]
+        # RNA_counts.to_csv(output.rna_counts, sep="\t", index=False)
+
+# rule call_all_differential_srna_clusters:
+    # input:
+        # srna_samples = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples.txt",
+        # srna_counts = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts.txt",
+        
+    # output:
+        # touch = "results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_{target_name}.done"
+    # params:
+        # script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_srna_DEGs.R"),
+        # analysis_name = config['analysis_name'],
+        # ref_genome = lambda wildcards: wildcards.ref_genome
+    # log:
+        # temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
+    # conda: CONDA_ENV
+    # threads: config["resources"]["call_all_DEGs"]["threads"]
+    # resources:
+        # mem=config["resources"]["call_all_DEGs"]["mem"],
+        # tmp=config["resources"]["call_all_DEGs"]["tmp"]
+    # shell:
+        # """
+        # printf "running edgeR for all samples in {params.ref_genome}\n"
+        # Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
+        # touch {output.touch}
+        # """
 
 rule all_srna:
     input:
