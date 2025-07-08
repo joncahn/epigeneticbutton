@@ -65,7 +65,7 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
     analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}/Results.txt")
-    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}_on_all_genes/Results.txt")
+    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Results.txt")
     
     results = map_files
 	
@@ -272,7 +272,7 @@ rule analyze_all_srna_samples:
         bamfiles = lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
         fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa"
     output:
-        count_file = "results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt"
+        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}/Results.txt"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome
@@ -286,10 +286,10 @@ rule analyze_all_srna_samples:
     shell:
         """
         {{
-        rm -rf results/sRNA/clusters/{params.analysis_name}_{params.ref_genome}
+        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}
         printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}_{params.ref_genome}
+        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -299,7 +299,7 @@ rule analyze_all_srna_samples_on_target_file:
         fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa",
         target_file = lambda wildcards: define_target_file(wildcards.target_name)
     output:
-        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}_on_{target_name}/Results.txt"
+        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/Results.txt"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -314,10 +314,10 @@ rule analyze_all_srna_samples_on_target_file:
     shell:
         """
         {{
-        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}_on_{params.target_name}
+        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}_on_{params.target_name}
+        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         }} 2>&1 | tee -a "{log}"
         """
 
