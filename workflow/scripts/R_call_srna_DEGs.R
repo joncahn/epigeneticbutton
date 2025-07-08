@@ -41,22 +41,22 @@ if ( filename %in% c(paste0("results/combined/tracks/",refgenome,"__all_genes.be
 y<-DGEList(counts=filtered, group = samples)
 y<-calcNormFactors(y)
 
-pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"_v1.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_v1.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=samples)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"_v2.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_v2.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=reps)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"_v3.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_v3.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=samples, dim.plot=c(2,3))
 dev.off()
 
 y<-estimateCommonDisp(y, verbose = TRUE)
 y<-estimateTagwiseDisp(y)
 
-pdf(paste0("results/combined/plots/BCV_sRNA_",analysisname,"_",refgenome,".pdf"),10,8)
+pdf(paste0("results/combined/plots/BCV_sRNA_",analysisname,"_",refgenome,"__on_",targetname,".pdf"),10,8)
 plotBCV(y)
 dev.off()
 
@@ -90,10 +90,10 @@ for (i in 1:(length(genotypes)-1)) {
   for (j in (i+1):length(genotypes)) {
 	sample2<-genotypes[j]
 	FCtable<-create.FC.table(sample1,sample2,y)
-	FCtable<-merge(ref_genes,FCtable,by=c("Name"))
+	FCtable<-merge(region_file,FCtable,by=c("Name"))
 	write.table(FCtable,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/FC_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	DEGtable<-create.DEG.table(sample1,sample2,y)
-	DEGtable<-merge(ref_genes,DEGtable,by=c("Name"))
+	DEGtable<-merge(region_file,DEGtable,by=c("Name"))
 	write.table(DEGtable,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/DEG_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
 				select(Name, DEG, firstsample, secondsample)
