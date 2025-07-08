@@ -21,7 +21,7 @@ def define_input_for_grouped_analysis(ref_genome):
 def define_srna_target_file(wildcards):
     tname = config['srna_target_file_label']
     if wildcards.target_name == "new_clusters":
-        return f"results/sRNA/clusters/{wildcards.analysis_name}__{wildcards.ref_genome}__on_new_clusters/Results.txt"  
+        return ""
     elif wildcards.target_name == "all_genes":
         return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
     elif wildcards.target_name == "protein_coding_genes":
