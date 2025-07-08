@@ -494,7 +494,7 @@ rule plot_expression_levels:
 
 rule perform_GO_on_target_file:
     input:
-        target_file = config['rnaseq_target_file'],
+        target_file = config['rnaseq_expression_target_file'],
         GOdatabase = config['go_database']
     output:
         touch = "results/combined/plots/TopGO__{target_name}__{ref_genome}.done"
@@ -502,7 +502,7 @@ rule perform_GO_on_target_file:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_perform_GO_analysis.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        filename = config['rnaseq_target_file_label']
+        filename = config['rnaseq_expression_target_file_label']
     conda: CONDA_ENV
     threads: config["resources"]["plot_expression_levels"]["threads"]
     resources:
