@@ -41,22 +41,22 @@ ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
 y<-DGEList(counts=filtered, group = samples)
 y<-calcNormFactors(y)
 
-pdf(paste0("results/combined/plots/MDS_",analysisname,"_v1.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_v1.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=samples)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_",analysisname,"_v2.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_v2.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=reps)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_",analysisname,"_v3.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_v3.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=samples, dim.plot=c(2,3))
 dev.off()
 
 y<-estimateCommonDisp(y, verbose = TRUE)
 y<-estimateTagwiseDisp(y)
 
-pdf(paste0("results/combined/plots/BCV_",analysisname,".pdf"),10,8)
+pdf(paste0("results/combined/plots/BCV_RNAseq_",analysisname,"_",refgenome,".pdf"),10,8)
 plotBCV(y)
 dev.off()
 
@@ -164,16 +164,16 @@ if (length(keepDEG) >= 2) {
 	logcounts<-cpm(y, log=TRUE)
 	lcpm<-logcounts[keepDEG,]
 
-	pdf(paste0("results/combined/plots/Heatmap_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
+	pdf(paste0("results/combined/plots/Heatmap_RNAseq_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
 	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-			main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
+			main=paste0("Differentially expressed genes in ",refgenome," from ",analysisname),
 			margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45,
 			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
 	dev.off()
 
-	pdf(paste0("results/combined/plots/Heatmap_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
+	pdf(paste0("results/combined/plots/Heatmap_RNAseq_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
 	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-			main=paste0("Differentially expressed genes in all samples maaping to ",refgenome," from ",analysisname),
+			main=paste0("Differentially expressed genes in ",refgenome," from ",analysisname),
 			margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45, scale="row",
 			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
 	dev.off()

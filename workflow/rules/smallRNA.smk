@@ -66,8 +66,8 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
-    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_new_clusters/Counts.txt")
-    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Counts.txt")
+    analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
+    analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_genes.done")
     
     results = map_files
 	
@@ -305,73 +305,69 @@ rule analyze_all_srna_samples_on_target_file:
         }} 2>&1 | tee -a "{log}"
         """
 
-# rule prep_files_for_differential_srna_clusters:
-    # input: 
-        # lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
-        # count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/Counts.txt"
-    # output:
-        # srna_samples = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples.txt"),
-        # srna_counts = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts.txt")
-    # params:
-        # ref_genome = lambda wildcards: wildcards.ref_genome
-    # log:
-        # temp(return_log_smallrna("{ref_genome}", "{analysis_name}_prep", "{target_name}"))
-    # threads: config["resources"]["prep_files_for_differential_srna_clusters"]["threads"]
-    # resources:
-        # mem=config["resources"]["prep_files_for_differential_srna_clusters"]["mem"],
-        # tmp=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp"]
-    # run:
-        # filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == params.ref_genome) ].copy()
-        # filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
-        # filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
+rule prep_files_for_differential_srna_clusters:
+    input: 
+        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/Counts.txt"        
+    output:
+        srna_samples = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples_for_edgeR.txt"),
+        srna_counts = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts_for_edgeR.txt")
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name
+    log:
+        temp(return_log_smallrna("{ref_genome}", "{analysis_name}_prep", "{target_name}"))
+    threads: config["resources"]["prep_files_for_differential_srna_clusters"]["threads"]
+    resources:
+        mem=config["resources"]["prep_files_for_differential_srna_clusters"]["mem"],
+        tmp=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp"]
+    run:
+        filtered_samples = samples[ (samples['data_type'] == 'sRNA') & (samples['ref_genome'] == params.ref_genome) ].copy()
+        filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
+        filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
         
-        # RNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()    
-        # RNA_samples = RNA_samples.sort_values(by=['Sample', 'Replicate'],ascending=[True, True]).reset_index(drop=True)
-        # RNA_samples['Color'] = pd.factorize(RNA_samples['Sample'])[0] + 1
+        sRNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()    
+        sRNA_samples = sRNA_samples.sort_values(by=['Sample', 'Replicate'],ascending=[True, True]).reset_index(drop=True)
+        sRNA_samples['Color'] = pd.factorize(sRNA_samples['Sample'])[0] + 1
 
-        # RNA_samples.to_csv(output.rna_samples, sep="\t", index=False)
+        sRNA_samples.to_csv(output.srna_samples, sep="\t", index=False)
         
-        # RNA_counts = None
-        # replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
-        # for sname, rep in replicates.values:
-            # file_path = f"results/RNA/DEG/counts__{sname}.tab"
-            # temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
-            # temp.columns = ['GID', rep]
-
-            # if RNA_counts is None:
-                # RNA_counts = temp
-            # else:
-                # RNA_counts = pd.merge(RNA_counts, temp, on='GID', how='outer')
+        column_order = ['Name']
+        for _, row in sRNA_samples.iterrows():
+            ROW = filtered_samples.loc[filtered_samples["Sample"] == row["Sample"]].iloc[0]
+            sname = sample_name_str(ROW, 'sample')
+            column_order.append(sname)
             
-        # replicate_order = RNA_samples['Replicate'].tolist()
-        # column_order = ['GID'] + replicate_order
-        # RNA_counts = RNA_counts[column_order]
-        # RNA_counts.to_csv(output.rna_counts, sep="\t", index=False)
+        temp = pd.read_csv(input.count_file, sep="\t", header=0)
+        temp = temp.rename(columns=lambda x: x[7:] if x.startswith("clean__") else x)
+        sRNA_counts = temp[column_order]
+        sRNA_counts.to_csv(output.srna_counts, sep="\t", index=False)
 
-# rule call_all_differential_srna_clusters:
-    # input:
-        # srna_samples = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples.txt",
-        # srna_counts = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts.txt",
-        
-    # output:
-        # touch = "results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_{target_name}.done"
-    # params:
-        # script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_srna_DEGs.R"),
-        # analysis_name = config['analysis_name'],
-        # ref_genome = lambda wildcards: wildcards.ref_genome
-    # log:
-        # temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
-    # conda: CONDA_ENV
-    # threads: config["resources"]["call_all_DEGs"]["threads"]
-    # resources:
-        # mem=config["resources"]["call_all_DEGs"]["mem"],
-        # tmp=config["resources"]["call_all_DEGs"]["tmp"]
-    # shell:
-        # """
-        # printf "running edgeR for all samples in {params.ref_genome}\n"
-        # Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
-        # touch {output.touch}
-        # """
+rule call_all_differential_srna_clusters:
+    input:
+        srna_samples = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples_for_edgeR.txt",
+        srna_counts = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts_for_edgeR.txt"
+    output:
+        touch = "results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_{target_name}.done"
+    params:
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_srna_DEGs.R"),
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name,
+        region_file = lambda wildcards: f"results/sRNA/clusters/{analysis_name}__{wildcards.ref_genome}__on_{wildcards.target_name}/Results.txt" if define_srna_target_file(wildcards) == [] else define_srna_target_file(wildcards)
+    log:
+        temp(return_log_smallrna("{ref_genome}", "{analysis_name}_cluster_degs", "{target_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["call_all_DEGs"]["threads"]
+    resources:
+        mem=config["resources"]["call_all_DEGs"]["mem"],
+        tmp=config["resources"]["call_all_DEGs"]["tmp"]
+    shell:
+        """
+        printf "running edgeR for all samples in {params.ref_genome}\n"
+        Rscript "{params.script}" "{input.srna_counts}" "{input.srna_samples}" "{params.analysis_name}" "{params.ref_genome}" "{params.target_name}" "{params.region_file}"
+        touch {output.touch}
+        """
 
 rule all_srna:
     input:
