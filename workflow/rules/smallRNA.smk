@@ -292,7 +292,7 @@ rule analyze_all_srna_samples_on_target_file:
     shell:
         """
         {{
-        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}/{params.target_name}
+        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         if [[ "{params.target_name}" == "new_clusters" ]]; then
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
             ShortStack --version
@@ -301,6 +301,7 @@ rule analyze_all_srna_samples_on_target_file:
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
             ShortStack --version
             ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+        fi
         }} 2>&1 | tee -a "{log}"
         """
 
