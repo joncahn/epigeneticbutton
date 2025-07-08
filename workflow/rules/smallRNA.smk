@@ -299,7 +299,7 @@ rule analyze_all_srna_samples_on_target_file:
     input:
         bamfiles = lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
         fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa",
-        target_file = lambda wildcards: define_srna_target_file(wildcards.target_name)
+        target_file = lambda wildcards: define_srna_target_file(wildcards)
     output:
         count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}/{target_name}/Results.txt"
     wildcard_constraints:
