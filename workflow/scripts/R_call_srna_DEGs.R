@@ -30,7 +30,7 @@ refgenome<-args[4]
 targetname<-args[5]
 filename<-args[6]
 
-if ( filename %in% c(paste0("results/combined/tracks/",ref_genome,"__all_genes.bed"), paste0("results/combined/tracks/",ref_genome,"__protein_coding_genes.bed")) {
+if ( filename %in% c(paste0("results/combined/tracks/",refgenome,"__all_genes.bed"), paste0("results/combined/tracks/",refgenome,"__protein_coding_genes.bed")) {
 	region_file<-read.delim(filename, header = FALSE, col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 } else {
 	region_file<-read.delim(filename, header = TRUE)
