@@ -18,6 +18,21 @@ def define_input_for_grouped_analysis(ref_genome):
     
     return bamfiles
     
+def define_srna_target_file(wildcards):
+    tname = config['srna_target_file_label']
+    if wildcards.target_name == "all_genes":
+        return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+    elif wildcards.target_name == "protein_coding_genes":
+        return f"results/combined/tracks/{wildcards.ref_genome}__protein_coding_genes.bed"
+    elif wildcards.target_name == tname:
+        return config['srna_target_file']
+    else:
+        raise ValueError(   
+            f"{wildcards.target_name} does not match possible files." 
+            "It should be 'all_genes', 'protein_coding_genes' or the value of "
+            "'srna_target_file_name' in the config file"
+        )
+
 def define_final_srna_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
@@ -49,7 +64,8 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
-    analysis_files.append(f"results/sRNA/clusters/{analysis_name}_{ref_genome}/Results.txt")
+    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}/Results.txt")
+    analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}_on_all_genes/Results.txt")
     
     results = map_files
 	
@@ -175,7 +191,8 @@ rule filter_size_srna_sample:
         bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
         baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
     output:
-        filtered_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam")
+        filtered_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam"),
+        index_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam.bai")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -202,7 +219,8 @@ rule merging_srna_replicates:
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         tempfile = temp("results/sRNA/mapped/temp__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
-        mergefile = temp("results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam")
+        mergefile = temp("results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
+        indexfile = temp("results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam.bai")
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
         size = lambda wildcards: wildcards.size
@@ -272,6 +290,34 @@ rule analyze_all_srna_samples:
         printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}_{params.ref_genome}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule analyze_all_srna_samples_on_target_file:
+    input:
+        bamfiles = lambda wildcards: define_input_for_grouped_analysis(wildcards.ref_genome),
+        fasta = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.fa",
+        target_file = lambda wildcards: define_target_file(wildcards.target_file)
+    output:
+        count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}_on_{target_name}/Results.txt"
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name
+    log:
+        temp(return_log_smallrna("{ref_genome}", "{analysis_name}", "{target_file}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["analyze_all_srna_samples_on_target_file"]["threads"]
+    resources:
+        mem=config["resources"]["analyze_all_srna_samples_on_target_file"]["mem"],
+        tmp=config["resources"]["analyze_all_srna_samples_on_target_file"]["tmp"]
+    shell:
+        """
+        {{
+        rm -rf results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}_on_{params.target_name}
+        printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
+        ShortStack --version
+        ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}_on_{params.target_name}
         }} 2>&1 | tee -a "{log}"
         """
 
