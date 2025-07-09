@@ -334,7 +334,7 @@ rule prep_files_for_differential_srna_clusters:
         
         column_order = ['Name']
         for _, row in sRNA_samples.iterrows():
-            ROW = filtered_samples.loc[filtered_samples["Sample"] == row["Sample"]].iloc[0]
+            ROW = filtered_samples.loc[filtered_samples["Replicate"] == row["Replicate"]].iloc[0]
             sname = sample_name_str(ROW, 'sample')
             column_order.append(sname)
             
