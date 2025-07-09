@@ -18,7 +18,7 @@ genelist<-read.delim(targetfile, header = FALSE)
 
 if (name == "unique_DEGs") {
 	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
-	for (i in 1:(min(nrow(genelist),100)) {
+	for (i in 1:(min(nrow(genelist),100))) {
 		gene<-genelist[i,1]
 		if ( gene != "GID" ) {
 			label <- paste0("unique ",genelist[i,3]," in ",genelist[i,2])
@@ -28,7 +28,7 @@ if (name == "unique_DEGs") {
 	dev.off()
 } else {
 	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
-	for (i in 1:(nrow(genelist)) {
+	for (i in 1:(nrow(genelist))) {
 		gene<-genelist[i,1]
 		if ( gene != "GID" ) {
 			label <- if (ncol(genelist) >= 2) genelist[i,2] else "NoLabel"

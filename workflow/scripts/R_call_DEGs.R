@@ -162,7 +162,7 @@ write.table(stat_table,paste0("results/RNA/reports/summary_DEG_stats__",analysis
 
 #### To create heatmaps over all DEGs (by count per million and z-score)
 
-keepDEG<-unique(allDEG$GeneID)
+keepDEG<-unique(allDEG$GID)
 
 if (length(keepDEG) >= 2) {
 	logcounts<-cpm(y, log=TRUE)
