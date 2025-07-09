@@ -10,14 +10,13 @@ args = commandArgs(trailingOnly=TRUE)
 analysisname<-args[1]
 refgenome<-args[2]
 targetfile<-args[3]
-name<-str(args[4])
+name<-args[4]
 
 load(paste0("results/RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))
 
 genelist<-read.delim(targetfile, header = FALSE)
 
 if (name == "unique_DEGs") {
-	for 
 	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
 	for (i in 1:(min(nrow(genelist),100)) {
 		gene<-genelist[i,1]
