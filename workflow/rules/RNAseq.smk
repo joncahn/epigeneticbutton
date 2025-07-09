@@ -514,7 +514,7 @@ rule perform_GO_on_target_file:
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         GOdatabase = config['go_database']
     output:
-        touch = "results/combined/plots/TopGO__{target_name}__{ref_genome}__{target_name}.done"
+        touch = "results/combined/plots/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_perform_GO_analysis.R"),
         analysis_name = config['analysis_name'],
