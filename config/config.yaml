@@ -132,11 +132,11 @@ srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg 
 go_database: "data/org.Zmays.eg.db" # default to GO database from Zea mays present in data directory, prepared with Annotation Forge (see corresponding Help)
 
 # optional targets for extra output
-rnaseq_expression_target_file: "data/target_genes.txt" # default gene list format (based on Arabisopsis ColCEN) for plotting gene expression. Replace with actual file of target genes, and potentially update the label below too.
-rnaseq_expression_target_file_label: "" # When blank, it will use the name of the plot_target_file (i.e "target_genes")
+rnaseq_target_file: "data/target_genes.txt" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
+rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 
 srna_target_file: "config/ath.gff3" # Replace with another file of target genes if sRNA should be performed on other loci. It will be used as LOCIFILE in ShortStack (Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
-srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be the target of the rule
+srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
 
 # Analysis parameters
 analysis:
@@ -226,6 +226,7 @@ resources:
   call_all_DEGs: *single
   gather_gene_expression_rpkm: *single
   plot_expression_levels: *single
+  perform_GO_on_target_file: *single
   shortstack_map: *heavy
   filter_structural_rna: *heavy
   shortstack_map: *heavy

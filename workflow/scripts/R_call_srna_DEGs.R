@@ -41,16 +41,20 @@ if ( filename %in% c(paste0("results/combined/tracks/",refgenome,"__all_genes.be
 y<-DGEList(counts=filtered, group = samples)
 y<-calcNormFactors(y)
 
-pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_v1.pdf"),10,8)
-plotMDS(y, col=color_samples, labels=samples)
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_d12.pdf"),10,8)
+plotMDS(y, col=color_samples, pch=16)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_v2.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_d12_labs.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=reps)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_v3.pdf"),10,8)
-plotMDS(y, col=color_samples, labels=samples, dim.plot=c(2,3))
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_d23.pdf"),10,8)
+plotMDS(y, col=color_samples, pch=16, dim.plot=c(2,3))
+dev.off()
+
+pdf(paste0("results/combined/plots/MDS_sRNA_",analysisname,"_",refgenome,"__on_",targetname,"_d23_labs.pdf"),10,8)
+plotMDS(y, col=color_samples, labels=reps, dim.plot=c(2,3))
 dev.off()
 
 y<-estimateCommonDisp(y, verbose = TRUE)

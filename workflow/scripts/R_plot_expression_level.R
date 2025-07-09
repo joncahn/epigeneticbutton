@@ -10,22 +10,31 @@ args = commandArgs(trailingOnly=TRUE)
 analysisname<-args[1]
 refgenome<-args[2]
 targetfile<-args[3]
-filename<-args[4]
-
-if (filename == "") {
-	name<-tools::file_path_sans_ext(basename(targetfile))
-} else {
-	name<-c(filename)
-}
+name<-str(args[4])
 
 load(paste0("results/RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))
 
 genelist<-read.delim(targetfile, header = FALSE)
 
-pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
-for (i in 1:(nrow(genelist))) {
-	gene<-genelist[i,1]
-	label<-genelist[i,2]
-	print(plot.Expression(gene, label))
+if (name == "unique_DEGs") {
+	for 
+	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
+	for (i in 1:(min(nrow(genelist),100)) {
+		gene<-genelist[i,1]
+		if ( gene != "GID" ) {
+			label <- paste0("unique ",genelist[i,3]," in ",genelist[i,2])
+			print(plot.Expression(gene, label))
+		}
+	}
+	dev.off()
+} else {
+	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
+	for (i in 1:(nrow(genelist)) {
+		gene<-genelist[i,1]
+		if ( gene != "GID" ) {
+			label <- if (ncol(genelist) >= 2) genelist[i,2] else "NoLabel"
+			print(plot.Expression(gene, label))
+		}
+	}
+	dev.off()
 }
-dev.off()

@@ -41,16 +41,20 @@ ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
 y<-DGEList(counts=filtered, group = samples)
 y<-calcNormFactors(y)
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_v1.pdf"),10,8)
-plotMDS(y, col=color_samples, labels=samples)
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d12.pdf"),10,8)
+plotMDS(y, col=color_samples, pch=16)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_v2.pdf"),10,8)
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d12_labs.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=reps)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_v3.pdf"),10,8)
-plotMDS(y, col=color_samples, labels=samples, dim.plot=c(2,3))
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d23.pdf"),10,8)
+plotMDS(y, col=color_samples, pch=16, dim.plot=c(2,3))
+dev.off()
+
+pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d23_labs.pdf"),10,8)
+plotMDS(y, col=color_samples, labels=reps, dim.plot=c(2,3))
 dev.off()
 
 y<-estimateCommonDisp(y, verbose = TRUE)
@@ -199,13 +203,18 @@ plot.Expression <- function(gene, label) {
 			mutate(Average = mean(CountPerMillion))
 	dataline$Average[is.na(dataline$Average)]<-as.numeric(0)
 	dataline$DEG<-as.factor(dataline$DEG)
+	if ( label == "NoLabel" ) {
+		plottitle<-paste0(gene)
+	} else { 
+		plottitle<-paste0(label," (",gene,")")
+	}
   
 	plot<-ggplot(dataline, aes(Sample,DEG)) + 
 			geom_col(position="dodge", aes(y=Average, fill=DEG)) + 
 			scale_fill_manual(values = c("0"="grey", "UP"="pink", "DOWN"="lightblue"),
 							labels=c("0"="No", "UP"="Up", "DOWN"="Down")) +
 			geom_point(aes(y=CountPerMillion), size=2, shape=3) + 
-			labs(title = paste0(label, "(",gene,")"), y="cpm") + 
+			labs(title = plottitle, y="cpm") + 
 			theme(axis.title.y=element_text(size=10), axis.title.x=element_blank(),
 				plot.title=element_text(size=15), 
 				axis.text.x=element_text(size=10, angle = 90),

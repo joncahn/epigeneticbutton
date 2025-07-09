@@ -7,6 +7,19 @@ def define_RNA_input_for_degs(ref_genome):
     filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
     return [f"results/RNA/DEG/counts__{sname}.tab" for sname in filtered_samples['sample_name']]
 
+def define_rnaseq_target_file(wildcards):
+    tname = config['rnaseq_target_file_label']
+    if wildcards.target_name == tname:
+        return config['rnaseq_target_file']
+    elif wildcards.target_name == "unique_DEGs":
+        return f"results/RNA/DEG/unique_DEGs__{wildcards.analysis_name}__{wildcards.ref_genome}.txt"
+    else:
+        raise ValueError(   
+            f"{wildcards.target_name} does not match possible files." 
+            "It can be 'unique_DEGs', or the value of "
+            "'rnaseq_target_file_name' in the config file"
+        )
+        
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
@@ -46,6 +59,7 @@ def define_final_rna_output(ref_genome):
     if len(filtered_analysis_samples2['Sample'].drop_duplicates()) >= 2:   
         deg_files.append(f"results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
+        deg_files.append(f"results/RNA/DEG/plot_expression__{analysis_name}__{ref_genome}__unique_DEGs.done")
     elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         
@@ -424,6 +438,7 @@ rule call_all_DEGs:
         region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
     output:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
+        unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt"
         touch = "results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DEGs.R"),
@@ -472,14 +487,16 @@ rule gather_gene_expression_rpkm:
 rule plot_expression_levels:
     input:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
-        target_file = config['rnaseq_expression_target_file']
+        target_file = define_rnaseq_target_file(wildcards)
     output:
-        touch = "results/combined/chkpts/plot_expression__{analysis_name}__{ref_genome}.done"
+        touch = "results/RNA/DEG/plot_expression__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_plot_expression_level.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        filename = config['rnaseq_expression_target_file_label']
+        target_name = lambda wildcards: wildcards.target_name
+    log:
+        temp(return_log_rna("{ref_genome}", "plot_expression_{target_name}", "{analysis_name}"))
     conda: CONDA_ENV
     threads: config["resources"]["plot_expression_levels"]["threads"]
     resources:
@@ -488,30 +505,32 @@ rule plot_expression_levels:
     shell:
         """
         printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
-        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.filename}"
+        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.target_name}"
         touch {output.touch}
         """
 
 rule perform_GO_on_target_file:
     input:
-        target_file = config['rnaseq_expression_target_file'],
+        target_file = define_rnaseq_target_file(wildcards),
         GOdatabase = config['go_database']
     output:
-        touch = "results/combined/plots/TopGO__{target_name}__{ref_genome}.done"
+        touch = "results/combined/plots/TopGO__{target_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_perform_GO_analysis.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        filename = config['rnaseq_expression_target_file_label']
+        target_name = lambda wildcards: wildcards.target_name
+    log:
+        temp(return_log_rna("{ref_genome}", "GO_{target_name}", "{analysis_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["plot_expression_levels"]["threads"]
+    threads: config["resources"]["perform_GO_on_target_file"]["threads"]
     resources:
-        mem=config["resources"]["plot_expression_levels"]["mem"],
-        tmp=config["resources"]["plot_expression_levels"]["tmp"]
+        mem=config["resources"]["perform_GO_on_target_file"]["mem"],
+        tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
     shell:
         """
         printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
-        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.filename}"
+        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.target_name}"
         touch {output.touch}
         """
 
