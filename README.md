@@ -178,7 +178,7 @@ An example where {analysis_name}="test_smk" and {ref_genome}="TAIR10", while set
 ```bash 
 snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_genes_of_interests.pdf --config rnaseq_target_file="data/target_genes.txt" rnaseq_target_file_label="my_genes_of_interests"
 ```
-Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression_{analysis_name}_{ref_genome}_{rnaseq_target_file_label}.pdf`
+Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__{rnaseq_target_file_label}.pdf`
 
 2. Rerunning a specific analysis
 To rerun a specific analysis, simply force snakemake to recreate the target file, adding to the snakemake command: `{target_file} --force`
