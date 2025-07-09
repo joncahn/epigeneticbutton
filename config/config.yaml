@@ -1,9 +1,9 @@
 # Path to the working directory where the repository was cloned
-repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/epibutton"
+repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/epicbutton"
 repo_folder_rule: "path/to/epigeneticbutton/repo"
 
 # Name of the run
-analysis_name: "test_snakemake"
+analysis_name: "test_smk"
 
 # To perform the whole analysis
 full_analysis: true

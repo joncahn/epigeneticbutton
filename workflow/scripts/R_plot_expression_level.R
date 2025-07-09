@@ -17,17 +17,17 @@ load(paste0("results/RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"
 genelist<-read.delim(targetfile, header = FALSE)
 
 if (name == "unique_DEGs") {
-	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
+	pdf(paste0("results/RNA/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
 	for (i in 1:(min(nrow(genelist),100))) {
 		gene<-genelist[i,1]
 		if ( gene != "GID" ) {
-			label <- paste0("unique ",genelist[i,3]," in ",genelist[i,2])
+			label <- "NoLabel"
 			print(plot.Expression(gene, label))
 		}
 	}
 	dev.off()
 } else {
-	pdf(paste0("results/combined/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
+	pdf(paste0("results/RNA/plots/plot_expression_",analysisname,"_",refgenome,"_",name,".pdf"), height=8, width=8)
 	for (i in 1:(nrow(genelist))) {
 		gene<-genelist[i,1]
 		if ( gene != "GID" ) {
