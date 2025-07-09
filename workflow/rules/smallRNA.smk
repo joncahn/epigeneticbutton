@@ -309,8 +309,8 @@ rule prep_files_for_differential_srna_clusters:
     input: 
         count_file = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/Counts.txt"        
     output:
-        srna_samples = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples_for_edgeR.txt"),
-        srna_counts = temp("results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts_for_edgeR.txt")
+        srna_samples = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples_for_edgeR.txt",
+        srna_counts = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts_for_edgeR.txt"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
