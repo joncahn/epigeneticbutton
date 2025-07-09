@@ -438,7 +438,8 @@ rule call_all_DEGs:
         region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
     output:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
-        unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt"
+        unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt",
+        touch = "results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DEGs.R"),
         analysis_name = config['analysis_name'],
@@ -454,6 +455,7 @@ rule call_all_DEGs:
         """
         printf "running edgeR for all samples in {params.ref_genome}\n"
         Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
+        touch {output.touch}
         """
 
 rule gather_gene_expression_rpkm:
