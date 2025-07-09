@@ -487,7 +487,7 @@ rule gather_gene_expression_rpkm:
 rule plot_expression_levels:
     input:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
-        target_file = define_rnaseq_target_file(wildcards)
+        target_file = lambda wildcards: define_rnaseq_target_file(wildcards)
     output:
         touch = "results/RNA/DEG/plot_expression__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
@@ -511,7 +511,7 @@ rule plot_expression_levels:
 
 rule perform_GO_on_target_file:
     input:
-        target_file = define_rnaseq_target_file(wildcards),
+        target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         GOdatabase = config['go_database']
     output:
         touch = "results/combined/plots/TopGO__{target_name}__{ref_genome}__{target_name}.done"
