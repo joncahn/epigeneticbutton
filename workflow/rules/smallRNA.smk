@@ -245,7 +245,7 @@ rule merging_srna_replicates:
 
 rule make_srna_stranded_bigwigs:
     input: 
-        bamfile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam"
+        bamfile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam",
         baifile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam.bai"
     output:
         bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
