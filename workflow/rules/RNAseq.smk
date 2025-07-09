@@ -438,7 +438,7 @@ rule call_all_DEGs:
         region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
     output:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
-        unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt"
+        unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt",
         touch = "results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DEGs.R"),
