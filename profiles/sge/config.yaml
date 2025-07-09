@@ -1,5 +1,5 @@
 # profiles/sge/config.yaml
-jobs: 96
+jobs: 16
 use-conda: true
 conda-frontend: conda
 latency-wait: 60
