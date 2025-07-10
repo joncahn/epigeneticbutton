@@ -1,9 +1,23 @@
+def get_stat_input_samples(wildcards, plot):
+    files = []
+    env = wildcards.env
+    group = "ChIP" if env == "TF" else env
+    if plot == "mapping":
+        for sname in get_sample_names_by_env(env, samples):
+            paired = get_sample_info_from_name(sname, samples, 'paired')
+            files.append(f"results/{env}/reports/summary_{group}_{paired}_mapping_stats_{sname}.txt")
+    elif plot == "peaks":
+        for sname in get_sample_names_by_env(env, analysis_samples):
+            paired = get_sample_info_from_name(sname, samples, 'paired')
+            files.append(f"results/{env}/reports/summary_{group}_{paired}_peaks_stats_{sname}.txt")
+        
+    return files
+
 ###
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"results/{wildcards.env}/reports/summary_{wildcards.env}_{get_sample_info_from_name(sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
-                                                for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
+        sample_stat_files = get_stat_input_samples(wildcards, "mapping")
     output:
         temp_stat_file = temp("results/combined/reports/temp_summary_mapping_stats_{analysis_name}_{env}.txt"),
         stat_file = "results/combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
@@ -37,7 +51,7 @@ rule plotting_mapping_stats:
 # Rules to prep and then plot the peak stats
 rule prepping_chip_peak_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"results/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
+        sample_stat_files = get_stat_input_samples(wildcards, "peaks")
     output:
         temp_stat_file = temp("results/combined/reports/temp_summary_peak_stats_{analysis_name}_{env}.txt"),
         stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
