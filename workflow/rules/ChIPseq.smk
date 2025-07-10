@@ -365,7 +365,7 @@ rule make_chip_stats_pe:
         metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filteringChIP"] ]
     output:
-        stat_file = "results/{env}/reports/summary_ChIP_PE_mapping_stats_{sample_name}.txt",
+        stat_file = "results/{env}/reports/summary_{env}_PE_mapping_stats_{sample_name}.txt",
         log = "results/{env}/logs/process_chip_pe_sample__{sample_name}.log"        
     wildcard_constraints:
         env = "ChIP|TF"
@@ -399,7 +399,7 @@ rule make_chip_stats_se:
         metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filteringChIP"] ]
     output:
-        stat_file = "results/{env}/reports/summary_ChIP_SE_mapping_stats_{sample_name}.txt",
+        stat_file = "results/{env}/reports/summary_{env}_SE_mapping_stats_{sample_name}.txt",
         log = "results/{env}/logs/process_chip_se_sample__{sample_name}.log"
     wildcard_constraints:
         env = "ChIP|TF"
@@ -748,7 +748,7 @@ rule make_peak_stats:
         stats_pseudoreps = lambda wildcards: f"results/{wildcards.env}/reports/stats_pseudoreps__{wildcards.sample_name}.txt"
         ## maybe a better solution is to append a stat file with wc -l as they are generated, or to create a new stat file for each file, then accessible in bash by regex on the samplename
     output:
-        stat_file = "results/{env}/reports/summary_ChIP_peak_stats_{sample_name}.txt",
+        stat_file = "results/{env}/reports/summary_{env}_peak_stats_{sample_name}.txt",
         log = "results/{env}/logs/called_peaks__{sample_name}.log"
     wildcard_constraints:
         env = "ChIP|TF"
