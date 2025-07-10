@@ -17,7 +17,7 @@ def get_stat_input_samples(wildcards, plot):
 # Rules to prep and then plot the mapping stats
 rule prepping_mapping_stats:
     input:
-        sample_stat_files = get_stat_input_samples(wildcards, "mapping")
+        sample_stat_files = lambda wildcards: get_stat_input_samples(wildcards, "mapping")
     output:
         temp_stat_file = temp("results/combined/reports/temp_summary_mapping_stats_{analysis_name}_{env}.txt"),
         stat_file = "results/combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
@@ -51,7 +51,7 @@ rule plotting_mapping_stats:
 # Rules to prep and then plot the peak stats
 rule prepping_chip_peak_stats:
     input:
-        sample_stat_files = get_stat_input_samples(wildcards, "peaks")
+        sample_stat_files = lambda wildcards: get_stat_input_samples(wildcards, "peaks")
     output:
         temp_stat_file = temp("results/combined/reports/temp_summary_peak_stats_{analysis_name}_{env}.txt"),
         stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
