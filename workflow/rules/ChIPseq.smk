@@ -166,7 +166,7 @@ def define_final_chip_output(ref_genome):
             qc_files.append(f"results/{env}/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"results/{env}/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
         else:
-            map_files.append(f"results/{env}/logs/process_chip_pse_sample__{sname}.log") # mapping stats for each single-end replicate
+            map_files.append(f"results/{env}/logs/process_chip_se_sample__{sname}.log") # mapping stats for each single-end replicate
             qc_files.append(f"results/{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"results/{env}/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
             
