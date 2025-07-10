@@ -8,7 +8,7 @@ def get_stat_input_samples(wildcards, plot):
             files.append(f"results/{env}/reports/summary_{group}_{paired}_mapping_stats_{sname}.txt")
     elif plot == "peaks":
         for sname in get_sample_names_by_env(env, analysis_samples):
-            paired = get_sample_info_from_name(sname, samples, 'paired')
+            paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
             files.append(f"results/{env}/reports/summary_{group}_{paired}_peaks_stats_{sname}.txt")
         
     return files
