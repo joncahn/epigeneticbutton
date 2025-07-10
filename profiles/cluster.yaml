@@ -56,7 +56,7 @@ make_mc_stats_pe: *low
 make_mc_stats_se: *low
 merging_mc_replicates: *heavy
 make_mc_bigwig_files: *single
-call_DMRs_pairwise: *single # while technically it could be parallelized, if small scaffolds are present and do not report any DMRs, DMRcaller will crash.
+call_DMRs_pairwise: *max
 make_STAR_indices: *heavy
 STAR_map_pe: *heavy
 STAR_map_se: *heavy
