@@ -19,6 +19,15 @@ def define_rnaseq_target_file(wildcards):
             "It can be 'unique_DEGs', or the value of "
             "'rnaseq_target_file_name' in the config file"
         )
+
+def define_rnaseq_background_file(wildcards):
+    tname = config['rnaseq_target_file_label']
+    if wildcards.target_name == tname:
+        return config['rnaseq_background_file']
+    else wildcards.target_name == "unique_DEGs":
+        return f"results/RNA/DEG/counts__{wildcards.analysis_name}__{wildcards.ref_genome}.txt"
+    else:
+        return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
         
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -510,12 +519,13 @@ rule plot_expression_levels:
 
 rule perform_GO_on_target_file:
     input:
+        GOdatabase = config['go_database'],
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
-        GOdatabase = config['go_database']
+        background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
-        touch = "results/RNA/plots/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
+        touch = "results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
-        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_perform_GO_analysis.R"),
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_GO_analysis.R"),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name
@@ -528,8 +538,10 @@ rule perform_GO_on_target_file:
         tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
     shell:
         """
-        printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
-        Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.target_name}"
+        cp {input.GOdatabase} results/RNA/GO/
+        dbname==${{input.GOdatabase##*/}}
+        printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
+        Rscript "{params.script}" "${{dbname}}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}"
         touch {output.touch}
         """
 

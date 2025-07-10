@@ -132,8 +132,9 @@ srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg 
 go_database: "data/org.Zmays.eg.db" # default to GO database from Zea mays present in data directory, prepared with Annotation Forge (see corresponding Help)
 
 # optional targets for extra output
-rnaseq_target_file: "data/target_genes.txt" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
+rnaseq_target_file: "data/target_genes.txt" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
+rnaseq_background_file: "default" # should be a column of GID (matching the gene IDs in the reference genome gff). Other columns will be ignored. Will be used as background for GO enrichment analysis. Default is all genes.
 
 srna_target_file: "config/ath.gff3" # Replace with another file of target genes if sRNA should be performed on other loci. It will be used as LOCIFILE in ShortStack (Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
