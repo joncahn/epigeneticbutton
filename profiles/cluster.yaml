@@ -21,7 +21,7 @@ heavy_resources: &heavy
 max_resources: &max
   mem_mb: 10000
   tmp_mb: 96000
-  qos: "--qos='slow_nice'"
+  qos: "slow_nice"
 
 single_thread: &single
   mem_mb: 32000
