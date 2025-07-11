@@ -75,7 +75,7 @@ conda install -c bioconda snakemake
    - Species-specific parameters (e.g. genome size)
    - Resources allocation
    
-3. If changing resource allocation for cluster submission, consider adjusting the `profiles/cluster.yaml` for job-specific resources, and the corresponding config file for your cluster scheduler (`profiles/sge/config.yaml` or `profiles/slurm/config.yaml` for SGE or SLURM, respectively). The default is to use 96 threads maximum in parallel. Keep in mind that units in the cluster file are in MB.
+3. If changing resource allocation for cluster submission, consider adjusting the `profiles/cluster.yaml` for job-specific resources, and the corresponding config file for your cluster scheduler (`profiles/sge/config.yaml` or `profiles/slurm/config.yaml` for SGE or SLURM, respectively). The default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
 4. Create the `hpclogs` folder for cluster logs:
 ```bash

@@ -1,32 +1,26 @@
 __default__: &default
   mem_mb: 32
   tmp_mb: 32
-  time: ""
 
 low_resources: &low
   mem_mb: 1000
   tmp_mb: 1000
-  time: ""
 
 standard_resources: &standard
   mem_mb: 2000
   tmp_mb: 2000
-  time: ""
 
 heavy_resources: &heavy
   mem_mb: 8000
   tmp_mb: 48000
-  time: ""
   
 max_resources: &max
   mem_mb: 10000
   tmp_mb: 96000
-  time: "--time=48:00:00"
 
 single_thread: &single
   mem_mb: 32000
   tmp_mb: 48000
-  time: ""
 
 check_fasta: *standard
 check_gff: *standard

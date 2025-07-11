@@ -14,4 +14,3 @@ cluster: >-
   --mem={cluster.mem_mb}
   --output=hpclogs/{rule}/smk_{jobid}.log
   --error=hpclogs/{rule}/smk_{jobid}.log
-  {cluster.time}
