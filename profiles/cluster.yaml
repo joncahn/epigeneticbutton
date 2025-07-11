@@ -1,12 +1,12 @@
 __default__: &default
   mem_mb: 32
   tmp_mb: 32
-  qos: "--qos='fast'"
+  qos: ""
 
 low_resources: &low
   mem_mb: 1000
   tmp_mb: 1000
-  qos: "--qos='fast'"
+  qos: ""
 
 standard_resources: &standard
   mem_mb: 2000
