@@ -4,4 +4,4 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - shortstack>=4.1
+  - shortstack=4.0

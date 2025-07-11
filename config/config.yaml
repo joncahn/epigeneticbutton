@@ -16,14 +16,18 @@ ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
 ref_path_rule: "path/to/reference/genomes"
 
 # Species-dependent parameters:
-species: "arabidopsis"
+species: "thaliana" #options below or create a new entry with corresponding information
 
-arabidopsis:
+thaliana:
   star_index: "--genomeSAindexNbases 12"
   genomesize: 1.3e8
-maize: 
+  ncbiID: "3702" 
+  genus: "Arabidopsis
+mays: 
   star_index: "--genomeSAindexNbases 14"
   genomesize: 2.2e9
+  ncbiID: "4577"
+  genus: "Zea"
 
 # Trimming and processing parameters:
 trimming_quality:
@@ -227,6 +231,7 @@ resources:
   call_all_DEGs: *single
   gather_gene_expression_rpkm: *single
   plot_expression_levels: *single
+  create_GO_database: *single
   perform_GO_on_target_file: *single
   shortstack_map: *heavy
   filter_structural_rna: *heavy

@@ -70,6 +70,7 @@ prep_files_for_DEGs: *single
 call_all_DEGs: *single
 gather_gene_expression_rpkm: *single
 plot_expression_levels: *single
+create_GO_database: *single
 perform_GO_on_target_file: *single
 shortstack_map: *heavy
 filter_structural_rna: *heavy

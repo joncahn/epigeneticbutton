@@ -29,6 +29,11 @@ def define_rnaseq_background_file(wildcards):
     else:
         return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
         
+def get_go_database(ref_genome):
+    species=config['species']
+    genus=config[config['species']]['genus']
+    return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
+
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
@@ -517,9 +522,33 @@ rule plot_expression_levels:
         Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.target_name}"
         """
 
+rule create_GO_database:
+    output:
+        godb = "genome/{ref_genome}/GO/{dbname}"
+    params:
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        species = config['species'],
+        genus = config[config['species']]['genus'],
+        ncbiID = config[config['species']]['ncbiID']
+    log:
+        temp(return_log_rna("{ref_genome}", "GO_{target_name}", "{analysis_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["create_GO_database"]["threads"]
+    resources:
+        mem=config["resources"]["create_GO_database"]["mem"],
+        tmp=config["resources"]["create_GO_database"]["tmp"]
+    shell:
+        """
+        
+        printf "Creating GO database for {params.ref_genome}\n"
+        Rscript "{params.script}" "{{infofile}}" "{{genefile}}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        touch {output.touch}
+        """
+
 rule perform_GO_on_target_file:
     input:
-        GOdatabase = config['go_database'],
+        godb = config['GOdatabase'],
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:

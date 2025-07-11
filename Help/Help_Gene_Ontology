@@ -1,0 +1,15 @@
+## To create the files needed for building the GO database
+
+Two files are required, a file linking genes to GO (FILE1=<ref>_infoGO.tab) and a file with information about the genes (FILE2=<ref>_genes_info.tab)
+These files can usually be downloaded from NCBI, or from species-specific community resources (e.g. https://www.arabidopsis.org/ for Arabidopsis)
+Help to find the GAF file: https://geneontology.org/docs/download-go-annotations/ 
+
+
+Example for for W22 (v2 version from NRgene):
+
+awk '$1 !~ /^!/' maize.W22.AGPv2.aggregate.gaf.gz > W22_v2_infoGO.tab
+printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > W22_v2_genes_info.tab
+cat ChIP/tracks/W22_v2_all_genes.bed | awk -F"[:;=]" -v OFS="\t" '{print $1,$2,$4,$6}' | awk -v OFS="\t" '{print $1,$2,$3,$5,$7,$6}' >> W22_v2_genes_info.tab
+
+
+Rscript "{params.script}" "{{infofile}}" "{{genefile}}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"

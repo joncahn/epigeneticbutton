@@ -45,15 +45,14 @@ getGO<-function(genelist, target, ont, name) {
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
 		merge(geneid2GO, by="GO") %>%
-		merge(sampletable, by="GID") %>%
-		dplyr::select(Chr, Start, Stop, GID, GO, Term) %>%
+		merge(target, by="GID") %>%
 		arrange(GO) %>%
 		unique()
 	if (nrow(tab2) > 1) {
-		write.table(tab2,paste0(db,"/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(tab2,paste0("topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}
 	if (nrow(tab3) > 0) {
-		write.table(tab3,paste0(db,"/topGO_",name,"_",ont,"_GIDs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(tab3,paste0("topGO_",name,"_",ont,"_GIDs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}	
   
 	scores<-setNames(-log10(as.numeric(tab$classicFisher)), tab$GO.ID)
@@ -63,24 +62,24 @@ getGO<-function(genelist, target, ont, name) {
   
 	if (nrow(tab) > 1 ) {
 		simMatrix<-calculateSimMatrix(tab$GO.ID,
-									orgdb="org.Zmays.eg.db",
+									orgdb=dbname,
 									ont=ont,
 									method="Rel")
 		if (! is.null(nrow(simMatrix))) {
 			reducedTerms<-reduceSimMatrix(simMatrix,
 										scores,
 										threshold = 0.7,
-										orgdb="org.Zmays.eg.db")
+										orgdb=dbname)
 		}
 	}
-	pdf(paste0("combined/plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
+	pdf(paste0("../plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
 	treemapPlot(reducedTerms, size = "score")
 	dev.off()
 }
 
 if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	genecount<-read.delim(backgroundfile, header = TRUE, row.names = "GID")
-	sampletable<-read.delim(targetfile, header = TRUE)
+	target<-read.delim(targetfile, header = TRUE)
 
 	keep.exprs<-rowSums(cpm(genecount)>1)>=2
 	filtered<-genecount[keep.exprs,]
@@ -95,22 +94,22 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	names(gene2GO)<-rn1
 
 	allGenes<-unique(unlist(filtered$GID))
-	myInterestedGenes<-unique(unlist(sampletable$GID))
-	geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
-	names(geneList)<-allGenes
 	
-	for ( sample in unique() ) {
-		for DEG in c("UP","DOWN") {
-			samplename<-paste0()
+	for ( samp in unique(sampletable$Sample) ) {
+		for deg in c("UP","DOWN") {
+			samplename<-paste0(deg,"_in_",samp)
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
-				getGO(geneList, ont, samplename)
+				sampletable<-filter(target, Sample==samp, DEG==deg)
+				myInterestedGenes<-unique(unlist(sampletable$GID))
+				geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+				names(geneList)<-allGenes
+				getGO(geneList, target, ont, samplename)
 			}
 		}
 	}
 
 } else if (startsWith(backgroundfile, "results/combined/tracks/")) {
-	
 	
 } else {
 

@@ -34,5 +34,9 @@ dependencies:
   - bioconductor-edger
   - r-stringr
   - r-gplots
+  - bioconductor-annotationforge
+  - bioconductor-rrvgo
+  - bioconductor-topGO
+  - r-purrr
 
 

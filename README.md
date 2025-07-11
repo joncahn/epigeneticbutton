@@ -1,4 +1,4 @@
-# Epigenetic Pipeline for Integrative Characterization (EPIC) 
+# Epigenetic Pipeline for Integrative Chromatin Characterization (EPICC) 
 # aka Epigenetic Button
 
 A Snakemake-based pipeline for analyzing and integrating various types of (epi)genomics datasets, including histone and transcription factor ChIP-seq, RNA-seq, RAMPAGE, small RNA-seq, and methylC-seq.
