@@ -58,7 +58,7 @@ conda install -c bioconda snakemake
 ### Configuration
 
 1. Prepare your sample metadata file (default to `samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
-   - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (TF and RAMPAGE under development)
+   - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
    - `line`: Sample line (e.g., B73)
    - `tissue`: Tissue type
    - `sample`: Sample identifier
