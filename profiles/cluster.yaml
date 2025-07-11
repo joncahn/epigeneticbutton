@@ -1,22 +1,22 @@
 __default__: &default
   mem_mb: 32
   tmp_mb: 32
-  qos: ""
+  qos: "fast"
 
 low_resources: &low
   mem_mb: 1000
   tmp_mb: 1000
-  qos: ""
+  qos: "fast"
 
 standard_resources: &standard
   mem_mb: 2000
   tmp_mb: 2000
-  qos: ""
+  qos: "default"
 
 heavy_resources: &heavy
   mem_mb: 8000
   tmp_mb: 48000
-  qos: ""
+  qos: "default"
   
 max_resources: &max
   mem_mb: 10000
@@ -26,7 +26,7 @@ max_resources: &max
 single_thread: &single
   mem_mb: 32000
   tmp_mb: 48000
-  qos: ""
+  qos: "default"
 
 check_fasta: *standard
 check_gff: *standard
