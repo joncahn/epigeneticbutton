@@ -152,7 +152,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		myInterestedGenes<-unique(unlist(target$GID))
 		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 		names(geneList)<-allGenes
-		if (length(levels(geneList)) = 2) {
+		if (length(levels(geneList)) == 2) {
 			getGO(geneList, target, ont, targetname)
 		} else {
 			print("Target genes not in background list")
