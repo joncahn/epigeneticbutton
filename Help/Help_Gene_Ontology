@@ -14,7 +14,7 @@ Example for for B73 (NAM/v5 version):
 File1:
 awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab 
 # Importantly, this file should have gene IDs in the first column (e.g. AT1G00010), the GO terms in the 6th column (e.g GO:00001) and the evidence in the 10th column (i.e. IEA)
-# Otherwise, edit the R_build_GO_database.R for the fGO table to select the right columns
+# Otherwise, edit the R_build_GO_database.R for the fGO table to select the right columns, as well as the R_GO_analysis.
 
 File2:
 printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > data/B73_v5_genes_info.tab
