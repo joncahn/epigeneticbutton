@@ -136,13 +136,14 @@ srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg 
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 
 # Gene Ontology files to create a new database (make sure you match the reference genome(s) present in the samplefile)
+GO: true # If switching to true, make sure the database is created, or the required files below are edited
 gaf_file:
-  ColCEN: "data/ColCEN_infoGO.tab.gz"
-  B73_v5: "data/B73_v5_infoGO.tab.gz"
+  ColCEN: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not
+  B73_v5: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not
 
 gene_info_file:
-  ColCEN: "data/ColCEN_genes_info.tab.gz"
-  B73_v5: "data/B73_v5_genes_info.tab.gz"
+  ColCEN: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not
+  B73_v5: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not
 
 # optional targets for extra output
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
