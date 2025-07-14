@@ -524,7 +524,7 @@ rule plot_expression_levels:
 
 rule create_GO_database:
     output:
-        godb = "genomes/{ref_genome}/GO/{dbname}",
+        godb = directory("genomes/{ref_genome}/GO/{dbname}"),
         tempgaf = temp("genomes/{ref_genome}/GO/temp_{dbname}_{ref_genome}_gaf_file.tab"),
         tempgeneinfo = temp("genomes/{ref_genome}/GO/temp_{dbname}_{ref_genome}_gene_info.tab")
     params:
@@ -544,6 +544,7 @@ rule create_GO_database:
         tmp=config["resources"]["create_GO_database"]["tmp"]
     shell:
         """
+        rm -rf {output.godb}
         if file {params.gaffile} | grep -q 'gzip compressed'; then
             gunzip -c {params.gaffile} > {output.tempgaf}
         else
