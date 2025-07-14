@@ -16,7 +16,7 @@ refgenome<-args[3]
 targetfile<-args[4]
 backgroundfile<-args[5]
 
-db<-paste0("./genome/",refgenome,"/GO/")
+db<-paste0("./genomes/",refgenome,"/GO/")
 setwd(db)
 library(dbname, character.only = TRUE)
 setwd("../../..")
@@ -45,15 +45,14 @@ getGO<-function(genelist, target, ont, name) {
 		tidyr::unnest(genes), by = "GO.ID")
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
-		merge(geneid2GO, by="GO") %>%
 		merge(target, by="GID") %>%
 		arrange(GO) %>%
 		unique()
 	if (nrow(tab2) > 1) {
-		write.table(tab2,paste0("topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(tab2,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}
 	if (nrow(tab3) > 0) {
-		write.table(tab3,paste0("topGO_",name,"_",ont,"_GIDs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(tab3,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GIDs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}	
   
 	scores<-setNames(-log10(as.numeric(tab$classicFisher)), tab$GO.ID)
@@ -73,7 +72,7 @@ getGO<-function(genelist, target, ont, name) {
 										orgdb=dbname)
 		}
 	}
-	pdf(paste0("../plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
+	pdf(paste0("results/RNA/plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
 	treemapPlot(reducedTerms, size = "score")
 	dev.off()
 }
@@ -85,14 +84,6 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	keep.exprs<-rowSums(cpm(genecount)>1)>=2
 	filtered<-genecount[keep.exprs,]
 	filtered$GID<-row.names(filtered)
-
-	info<-read.delim(paste0(db,"/",line,"_infoGO.tab"), header=FALSE)
-	fGOzm<-info[,c(2,5,7)]
-	colnames(fGOzm)<-c("GID","GO","EVIDENCE")
-	geneid2GO<-fGOzm[,c(1,2)]
-	rn1<-paste(geneid2GO[,1], sep="")
-	gene2GO<-geneid2GO[,-1]
-	names(gene2GO)<-rn1
 
 	allGenes<-unique(unlist(filtered$GID))
 	
