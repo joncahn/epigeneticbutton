@@ -61,7 +61,7 @@ getGO<-function(genelist, target, ont, name) {
 		merge(target, by="GID") %>%
 		arrange(GO) %>%
 		unique()
-	if (nrow(tab2) > 0) {
+	if (nrow(tab2) > 1) {
 		write.table(tab2,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}
 	if (nrow(tab3) > 0) {
