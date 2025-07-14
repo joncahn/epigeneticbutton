@@ -581,7 +581,7 @@ rule perform_GO_on_target_file:
         tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
     shell:
         """
-        dbname==${{input.godb##*/}}
+        dbname=${{input.godb##*/}}
         printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
         Rscript "{params.script}" "${{dbname}}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}"
         touch {output.touch}
