@@ -22,12 +22,26 @@ if (!requireNamespace(dbname, quietly = TRUE)) {
 	install.packages(dbname, repos=NULL, type="source")
 }
 library(dbname, character.only = TRUE)
+info<-read.delim(paste0(dbname,"_",refgenome,"_gaf_file.tab"), header=FALSE)
 setwd("../../..")
+
+fGO<-info[,c(1,6,10)]
+colnames(fGO)<-c("GID","GO","EVIDENCE")
+geneid2GO<-fGO[,c(1,2)]
+rn1<-paste(geneid2GO[,1], sep="")
+gene2GO<-geneid2GO[,-1]
+names(gene2GO)<-rn1
+
+head(geneid2GO)
+head(rn1)
+head(gene2GO)
 
 getGO<-function(genelist, target, ont, name) {
 	GOdata<-new("topGOdata", 
 				ontology = ont, 
-				allGenes = genelist)
+				allGenes = genelist,
+				annot = annFUN.gene2GO, 
+				gene2GO = gene2GO)
 	resultFisher<-runTest(GOdata, algorithm = "weight01", statistic = "fisher")
 	resultFisherSummary <- summary(attributes(resultFisher)$score <= 0.01)
 	nSigTerms<-0

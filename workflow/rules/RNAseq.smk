@@ -530,8 +530,8 @@ rule plot_expression_levels:
 rule create_GO_database:
     output:
         godb = directory("genomes/{ref_genome}/GO/{dbname}"),
-        tempgaf = temp("genomes/{ref_genome}/GO/temp_{dbname}_{ref_genome}_gaf_file.tab"),
-        tempgeneinfo = temp("genomes/{ref_genome}/GO/temp_{dbname}_{ref_genome}_gene_info.tab")
+        tempgaf = "genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gaf_file.tab",
+        tempgeneinfo = "genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gene_info.tab"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
