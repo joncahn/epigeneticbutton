@@ -12,7 +12,9 @@ The basic gene information file can be generated from a gff file.
 Example for for B73 (NAM/v5 version):
 
 File1:
-awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab
+awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab 
+# Importantly, this file should have gene IDs in the first column (e.g. AT1G00010), the GO terms in the 5th column (e.g GO:00001) and the evidence in the 10th column (i.e. IEA)
+
 File2:
 printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > data/B73_v5_genes_info.tab
 awk -v OFS="\t" '$3=="gene" {print $1,$4-1,$5,$9,".",$7}' genomes/B73_v5/B73_v5.gff | awk -F"[:;=]" -v OFS="\t" '{print $1,$2,$4,$6}' | awk -v OFS="\t" '{print $1,$2,$3,$5,$6,$7}' >> data/B73_v5_genes_info.tab
