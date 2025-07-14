@@ -55,7 +55,6 @@ getGO<-function(genelist, target, ont, name) {
 	tab2<-tab %>% 
 		left_join(tibble(GO.ID = names(genesInTerms2), GID = genesInTerms2) %>% 
 		tidyr::unnest(GID), by = "GO.ID")
-	head(tab2)
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
 		merge(geneid2GO, by="GO") %>%
@@ -107,6 +106,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
 				sampletable<-filter(target, Sample==samp, DEG==deg)
+				head(sampletable)
 				if (nrow(sampletable) > 0) {
 					myInterestedGenes<-unique(unlist(sampletable$GID))
 					geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
