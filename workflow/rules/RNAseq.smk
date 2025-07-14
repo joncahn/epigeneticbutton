@@ -536,7 +536,7 @@ rule create_GO_database:
         gaffile = lambda wildcards: config['gaf_file'][wildcards.ref_genome],
         geneinfofile = lambda wildcards: config['gene_info_file'][wildcards.ref_genome]
     log:
-        temp(return_log_rna("{ref_genome}", "GO_{target_name}", "{analysis_name}"))
+        temp(return_log_rna("{ref_genome}", "build_GO", ""))
     conda: CONDA_ENV
     threads: config["resources"]["create_GO_database"]["threads"]
     resources:
