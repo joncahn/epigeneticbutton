@@ -550,7 +550,7 @@ rule create_GO_database:
             cp {params.gaffile} {output.tempgaf}
         fi
         if file {params.geneinfofile} | grep -q 'gzip compressed'; then
-            gunzip -c {params.geneinfofile} > {input.tempgeneinfo}
+            gunzip -c {params.geneinfofile} > {output.tempgeneinfo}
         else
             cp {params.geneinfofile} {output.tempgeneinfo}
         fi
