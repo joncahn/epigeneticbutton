@@ -97,6 +97,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	genecount<-genecount[!grepl("^N_", rownames(genecount)), ]
 	keep.exprs<-rowSums(cpm(genecount)>1)>=2
 	filtered<-genecount[keep.exprs,]
+	filtered$GID<-row.names(filtered)
 
 	allGenes<-unique(unlist(filtered$GID))
 	
@@ -107,14 +108,14 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 			myInterestedGenes<-unique(unlist(sampletable$GID))
 			geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 			names(geneList)<-allGenes
-			summary(geneList)
-			levels(geneList)
-			str(geneList)
-			head(names(geneList))
-			head(gene2GO)
-			for ( ont in c("BP","MF") ) {
-				print(paste0("Getting ",ont," for ",samplename))
-				getGO(geneList, sampletable, ont, samplename)
+			
+			if (length(levels(geneList)) == 2) {			
+				for ( ont in c("BP","MF") ) {
+					print(paste0("Getting ",ont," for ",samplename))
+					getGO(geneList, sampletable, ont, samplename)
+				}
+			} else {
+				print("Target genes empty or not in the background list")
 			}
 		}
 	}
@@ -132,10 +133,14 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 	names(geneList)<-allGenes
 	
-	for ( ont in c("BP","MF") ) {
-		print(paste0("Getting ",ont," for ",targetname))
-		getGO(geneList, target, ont, targetname)
-	}	
+	if (length(levels(geneList)) == 2) {
+		for ( ont in c("BP","MF") ) {
+			print(paste0("Getting ",ont," for ",targetname))
+			getGO(geneList, target, ont, targetname)
+		} else {
+			print("Target genes empty or not in the background list")
+		}
+	}
 	
 } else {
 
@@ -147,8 +152,12 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 	names(geneList)<-allGenes
 	
-	for ( ont in c("BP","MF") ) {
-		print(paste0("Getting ",ont," for ",targetname))
-		getGO(geneList, target, ont, targetname)
+	if (length(levels(geneList)) == 2) {
+		for ( ont in c("BP","MF") ) {
+			print(paste0("Getting ",ont," for ",targetname))
+			getGO(geneList, target, ont, targetname)
+		}
+	} else {
+		print("Target genes empty or not in the background list")
 	}
 }

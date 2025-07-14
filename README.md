@@ -181,8 +181,9 @@ Output is a single pdf file where each gene of the list is a page, named `result
 2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis. `GO` needs to be switched to `true` in the config file, and either the GO database need to be already made or the files to make it are defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database. Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
 
 3. Rerunning a specific analysis
-To rerun a specific analysis, simply force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
+To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
 e.g `snakemake --cores 1 results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force`
+If only the analysis is to be performed, and not the everything, delete the corresponding chkpts files in `results/combined/chkpts/combined_analysis__<analysis_name>.done` as well as in the desired environments `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
 
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
