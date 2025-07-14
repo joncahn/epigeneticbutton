@@ -35,6 +35,7 @@ dependencies:
   - r-stringr
   - r-gplots
   - bioconductor-annotationforge
+  - bioconductor-go.db
   - bioconductor-rrvgo
   - bioconductor-topGO
   - r-purrr

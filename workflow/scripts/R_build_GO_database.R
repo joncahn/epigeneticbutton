@@ -16,19 +16,19 @@ genes<-read.delim(args[2], header=TRUE) %>%
  select(-Description, -Type) %>%
  rename(Description=desc, Type=typ)
 
-ref_genome<-args[3]
+refgenome<-args[3]
 genus<-args[4]
 species<-args[5]
 ncbiID<-args[6]
 dbname<-paste0("org.",substr(genus,1,1),species,".eg.db")
 
-fGOzm<-unique(gaf[,c(2,5,7)])
+fGOzm<-unique(gaf[,c(1,6,10)])
 colnames(fGOzm)<-c("GID","GO","EVIDENCE")
 
-fSymzm<-select(genes, GID, Type, Description)
-fSymzm$ENTREZID <- paste0("ent",fSymzm$GID)
+fSymzm<-unique(select(genes, GID, Type, Description))
+fSymzm$ENTREZID<-paste0("ent",fSymzm$GID)
 
-fChrzm<-select(genes, GID, Chr)
+fChrzm<-unique(select(genes, GID, Chr))
 
 makeOrgPackage(gene_info=fSymzm, chromosome=fChrzm, go=fGOzm,
               version="0.1",
