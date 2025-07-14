@@ -31,7 +31,9 @@ Rscript {script} {infofile} {genefile} {ref_genome} {genus} {species} {ncbiID}
 and replace the GOdatabase in the config file of the corresponding species with: "org.Zmays.eg.db", where dbanme="org.{firstlettergenus}{species}.eg.db"
 
 Or fill the config file appropriately and run:
-snakemake --cores 1 "genomes/{ref_genome}/GO/{dbname}"
+snakemake --cores 1 genomes/{ref_genome}/GO/{dbname} 
+for example:
+snakemake --cores 1 genomes/ColCEN/GO/org.Athaliana.eg.db
 
 These steps are to be performed before the analysis run for the GO analysis to be performed automatically with the rest of the analysis.
 If created after, run snakemake with the GO file of interest as a target.
