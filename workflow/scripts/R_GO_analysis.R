@@ -18,9 +18,9 @@ backgroundfile<-args[5]
 
 db<-paste0("./genomes/",refgenome,"/GO/")
 setwd(db)
-getwd()
-cat("dbname argument is: [", dbname, "]\n")
-install.packages(dbname, repos=NULL, type="source")
+if (!requireNamespace(dbname, quietly = TRUE)) {
+	install.packages(dbname, repos=NULL, type="source")
+}
 library(dbname, character.only = TRUE)
 setwd("../../..")
 
@@ -90,8 +90,8 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 
 	allGenes<-unique(unlist(filtered$GID))
 	
-	for ( samp in unique(sampletable$Sample) ) {
-		for deg in c("UP","DOWN") {
+	for ( samp in unique(target$Sample) ) {
+		for ( deg in c("UP","DOWN") ) {
 			samplename<-paste0(deg,"_in_",samp)
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
