@@ -556,7 +556,6 @@ rule create_GO_database:
         fi
         printf "Creating GO database for {params.ref_genome}\n"
         Rscript "{params.script}" "{output.tempgaf}}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
-        touch {output.touch}
         """
 
 rule perform_GO_on_target_file:
