@@ -74,6 +74,7 @@ def define_final_rna_output(ref_genome):
         deg_files.append(f"results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         deg_files.append(f"results/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__unique_DEGs.pdf")
+        deg_files.append(f"results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__unique_DEGs.done")
     elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         
