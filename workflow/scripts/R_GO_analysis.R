@@ -15,6 +15,7 @@ analysisname<-args[2]
 refgenome<-args[3]
 targetfile<-args[4]
 backgroundfile<-args[5]
+targetname<-args[6]
 
 db<-paste0("./genomes/",refgenome,"/GO/")
 setwd(db)
@@ -53,14 +54,15 @@ getGO<-function(genelist, target, ont, name) {
 	genesInTerms2<-map(genesInTerms, ~ intersect(.x, myInterestedGenes) %>% paste(collapse = ","))
 	tab2<-tab %>% 
 		left_join(tibble(GO.ID = names(genesInTerms2), GID = genesInTerms2) %>% 
-		tidyr::unnest(GID), by = "GO.ID")
+		tidyr::unnest(GID), by = "GO.ID") %>%
+		rename(GO=GO.ID)
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
 		merge(geneid2GO, by="GO") %>%
 		merge(target, by="GID") %>%
 		arrange(GO) %>%
 		unique()
-	if (nrow(tab2) > 1) {
+	if (nrow(tab2) > 0) {
 		write.table(tab2,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}
 	if (nrow(tab3) > 0) {
@@ -105,16 +107,46 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
 				sampletable<-filter(target, Sample==samp, DEG==deg)
-				myInterestedGenes<-unique(unlist(sampletable$GID))
-				geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
-				names(geneList)<-allGenes
-				getGO(geneList, sampletable, ont, samplename)
+				if (nrow(sampletable) > 0) {
+					myInterestedGenes<-unique(unlist(sampletable$GID))
+					geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+					names(geneList)<-allGenes
+					getGO(geneList, sampletable, ont, samplename)
+				}
 			}
 		}
 	}
 
 } else if (startsWith(backgroundfile, "results/combined/tracks/")) {
+
+	ref_genes<-read.delim(backgroundfile, header = FALSE, col.names = c("Chr","Start","Stop","Name","Value","Strand"))
+	ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
+				select(-Name, -Value)
+	ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
+	allGenes<-unique(unlist(ref_genes$GID))
+	
+	target<-read.delim(targetfile, header = TRUE)
+	
+	for ( ont in c("BP","MF") ) {
+		print(paste0("Getting ",ont," for ",targetname))
+		myInterestedGenes<-unique(unlist(target$GID))
+		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+		names(geneList)<-allGenes
+		getGO(geneList, target, ont, targetname)
+	}	
 	
 } else {
 
+	background<-read.delim(backgroundfile, header = TRUE)
+	allGenes<-unique(unlist(background$GID))
+	
+	target<-read.delim(targetfile, header = TRUE)
+	
+	for ( ont in c("BP","MF") ) {
+		print(paste0("Getting ",ont," for ",targetname))
+		myInterestedGenes<-unique(unlist(target$GID))
+		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+		names(geneList)<-allGenes
+		getGO(geneList, target, ont, targetname)
+	}
 }

@@ -587,7 +587,7 @@ rule perform_GO_on_target_file:
     shell:
         """
         printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
-        Rscript "{params.script}" "{params.dbname}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}"
+        Rscript "{params.script}" "{params.dbname}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}" "{params.target_name}"
         touch {output.touch}
         """
 
