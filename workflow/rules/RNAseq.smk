@@ -524,13 +524,15 @@ rule plot_expression_levels:
 
 rule create_GO_database:
     output:
-        godb = "genome/{ref_genome}/GO/{dbname}"
+        godb = "genomes/{ref_genome}/GO/{dbname}"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
         species = config['species'],
         genus = config[config['species']]['genus'],
         ncbiID = config[config['species']]['ncbiID']
+        gaffile = lambda wildcards: config['gaf_file'][wildcards.ref_genome],
+        geneinfofile = lambda wildcards: config['gene_info_file'][wildcards.ref_genome]
     log:
         temp(return_log_rna("{ref_genome}", "GO_{target_name}", "{analysis_name}"))
     conda: CONDA_ENV
@@ -540,15 +542,14 @@ rule create_GO_database:
         tmp=config["resources"]["create_GO_database"]["tmp"]
     shell:
         """
-        
         printf "Creating GO database for {params.ref_genome}\n"
-        Rscript "{params.script}" "{{infofile}}" "{{genefile}}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        Rscript "{params.script}" "{params.gaffile}}" "{params.geneinfofile}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
         touch {output.touch}
         """
 
 rule perform_GO_on_target_file:
     input:
-        godb = config['GOdatabase'],
+        godb = lambda wildcards: f"genomes/{wildcards.ref_genome}/GO/{config[config['species']]['GOdatabase']}",
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:

@@ -8,7 +8,7 @@ library(purrr)
 
 args = commandArgs(trailingOnly=TRUE)
 
-info<-read.delim(args[1], header=FALSE)
+gaf<-read.delim(args[1], header=FALSE)
 genes<-read.delim(args[2], header=TRUE) %>%
  rowwise() %>%
  mutate(desc=ifelse(Description=="protein_coding",Type,Description),
@@ -22,7 +22,7 @@ species<-args[5]
 ncbiID<-args[6]
 dbname<-paste0("org.",substr(genus,1,1),species,".eg.db")
 
-fGOzm<-unique(info[,c(2,5,7)])
+fGOzm<-unique(gaf[,c(2,5,7)])
 colnames(fGOzm)<-c("GID","GO","EVIDENCE")
 
 fSymzm<-select(genes, GID, Type, Description)

@@ -23,11 +23,14 @@ thaliana:
   genomesize: 1.3e8
   ncbiID: "3702" 
   genus: "Arabidopsis
+  go_database: "org.Athaliana.eg.db"
+
 mays: 
   star_index: "--genomeSAindexNbases 14"
   genomesize: 2.2e9
   ncbiID: "4577"
   genus: "Zea"
+  go_database: "org.Zmays.eg.db"
 
 # Trimming and processing parameters:
 trimming_quality:
@@ -132,8 +135,14 @@ srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwi
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 
-# Gene Ontology parameters
-go_database: "data/org.Zmays.eg.db" # default to GO database from Zea mays present in data directory, prepared with Annotation Forge (see corresponding Help)
+# Gene Ontology parameters to create a new database (make sure you match the reference genome(s) present in the samplefile)
+gaf_file: 
+  ColCEN: "data/ColCEN_infoGO.tab"
+  B73_v5: "data/B73_v5_infoGO.tab"
+
+gene_info_file:
+  ColCEN: "data/ColCEN_genes_info.tab"
+  B73_v5: "data/B73_v5_genes_info.tab"
 
 # optional targets for extra output
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.

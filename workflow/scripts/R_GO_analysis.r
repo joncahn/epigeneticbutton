@@ -16,9 +16,10 @@ refgenome<-args[3]
 targetfile<-args[4]
 backgroundfile<-args[5]
 
-db<-paste0("./results/RNA/GO/")
+db<-paste0("./genome/",refgenome,"/GO/")
 setwd(db)
 library(dbname, character.only = TRUE)
+setwd("../../..")
 
 getGO<-function(genelist, target, ont, name) {
 	GOdata<-new("topGOdata", 

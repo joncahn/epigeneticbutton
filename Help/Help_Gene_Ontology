@@ -1,15 +1,37 @@
-## To create the files needed for building the GO database
+## To create the GO database
 
-Two files are required, a file linking genes to GO (FILE1=<ref>_infoGO.tab) and a file with information about the genes (FILE2=<ref>_genes_info.tab)
-These files can usually be downloaded from NCBI, or from species-specific community resources (e.g. https://www.arabidopsis.org/ for Arabidopsis)
+If you already have a database from AnnotationForge to use, copy the file in the "genomes/{ref_genome}/GO/" directory for the analysis to work automatically. 
+For some species, an annotation package can be created with AnnotationForge makeOrgPackageFromNCBI(). For help:
+https://bioconductor.org/packages/release/bioc/vignettes/AnnotationForge/inst/doc/MakingNewOrganismPackages.html
+
+To create a new package de novo, two files are required, a file linking genes to GO (FILE1=<ref>_infoGO.tab, originally GAF format) and a file with information about the genes (FILE2=<ref>_genes_info.tab)
+The GAF file can usually be downloaded from NCBI, or from species-specific community resources (e.g. https://www.arabidopsis.org/ for Arabidopsis).
 Help to find the GAF file: https://geneontology.org/docs/download-go-annotations/ 
+The basic gene information file can be generated from a gff file.
 
+Example for for B73 (NAM/v5 version):
 
-Example for for W22 (v2 version from NRgene):
+File1:
+awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab
+File2:
+printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > data/B73_v5_genes_info.tab
+awk -v OFS="\t" '$3=="gene" {print $1,$4-1,$5,$9,".",$7}' genomes/B73_v5/B73_v5.gff | awk -F"[:;=]" -v OFS="\t" '{print $1,$2,$4,$6}' | awk -v OFS="\t" '{print $1,$2,$3,$5,$6,$7}' >> data/B73_v5_genes_info.tab
 
-awk '$1 !~ /^!/' maize.W22.AGPv2.aggregate.gaf.gz > W22_v2_infoGO.tab
-printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > W22_v2_genes_info.tab
-cat ChIP/tracks/W22_v2_all_genes.bed | awk -F"[:;=]" -v OFS="\t" '{print $1,$2,$4,$6}' | awk -v OFS="\t" '{print $1,$2,$3,$5,$7,$6}' >> W22_v2_genes_info.tab
+Then, run the script: R_build_GO_database.R, with the following arguments:
+script="scripts/R_build_GO_database.R"
+ïnfofile="B73_v5_infoGO.tab" # replace with modified FILE1
+genefile="B73_v5_genes_info.tab # replace with modified FILE2
+ref_genome="B73_v5" # replace with corresponding genome reference (same than on the sample file)
+genus="Zea" # replace with corresponding genus (conventionally first letter is capitalized)
+species="mays" # replace with corresponding species (conventionally lowerscript)
+ncbiID="4577" # find correpsonding value at NCBI
 
+Rscript {script} {infofile} {genefile} {ref_genome} {genus} {species} {ncbiID}
 
-Rscript "{params.script}" "{{infofile}}" "{{genefile}}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+and replace the GOdatabase in the config file of the corresponding species with: "org.Zmays.eg.db", where dbanme="org.{firstlettergenus}{species}.eg.db"
+
+Or fill the config file appropriately and run:
+snakemake --cores 1 "genomes/{ref_genome}/GO/{dbname}"
+
+These steps are to be performed before the analysis run for the GO analysis to be performed automatically with the rest of the analysis.
+If created after, run snakemake with the GO file of interest as a target.
