@@ -54,8 +54,7 @@ getGO<-function(genelist, target, ont, name) {
 	genesInTerms2<-map(genesInTerms, ~ intersect(.x, myInterestedGenes) %>% paste(collapse = ","))
 	tab2<-tab %>% 
 		left_join(tibble(GO.ID = names(genesInTerms2), GID = genesInTerms2) %>% 
-		tidyr::unnest(GID), by = "GO.ID") %>%
-		rename(GO=GO.ID)
+		tidyr::unnest(GID), by = "GO.ID")
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
 		merge(geneid2GO, by="GO") %>%
