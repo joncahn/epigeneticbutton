@@ -137,10 +137,11 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		for ( ont in c("BP","MF") ) {
 			print(paste0("Getting ",ont," for ",targetname))
 			getGO(geneList, target, ont, targetname)
-		} else {
-			print("Target genes empty or not in the background list")
-		}
+		} 
+	} else {
+		print("Target genes empty or not in the background list")
 	}
+
 	
 } else {
 
