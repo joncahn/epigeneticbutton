@@ -106,11 +106,12 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
 				sampletable<-filter(target, Sample==samp, DEG==deg)
-				head(sampletable)
+				sampletable
 				if (nrow(sampletable) > 0) {
 					myInterestedGenes<-unique(unlist(sampletable$GID))
 					geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 					names(geneList)<-allGenes
+					geneList
 					getGO(geneList, sampletable, ont, samplename)
 				}
 			}
