@@ -22,15 +22,15 @@ species<-args[5]
 ncbiID<-args[6]
 dbname<-paste0("org.",substr(genus,1,1),species,".eg.db")
 
-fGOzm<-unique(gaf[,c(1,6,10)])
-colnames(fGOzm)<-c("GID","GO","EVIDENCE")
+fGO<-unique(gaf[,c(1,6,10)])
+colnames(fGO)<-c("GID","GO","EVIDENCE")
 
-fSymzm<-unique(select(genes, GID, Type, Description))
-fSymzm$ENTREZID<-paste0("ent",fSymzm$GID)
+fSym<-unique(select(genes, GID, Type, Description))
+fSym$ENTREZID<-paste0("ent",fSym$GID)
 
-fChrzm<-unique(select(genes, GID, Chr))
+fChr<-unique(select(genes, GID, Chr))
 
-makeOrgPackage(gene_info=fSymzm, chromosome=fChrzm, go=fGOzm,
+makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               version="0.1",
               maintainer="@epicbutton",
               author="@epicbutton",

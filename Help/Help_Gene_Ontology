@@ -13,7 +13,8 @@ Example for for B73 (NAM/v5 version):
 
 File1:
 awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab 
-# Importantly, this file should have gene IDs in the first column (e.g. AT1G00010), the GO terms in the 5th column (e.g GO:00001) and the evidence in the 10th column (i.e. IEA)
+# Importantly, this file should have gene IDs in the first column (e.g. AT1G00010), the GO terms in the 6th column (e.g GO:00001) and the evidence in the 10th column (i.e. IEA)
+# Otherwise, edit the R_build_GO_database.R for the fGO table to select the right columns
 
 File2:
 printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > data/B73_v5_genes_info.tab
@@ -35,7 +36,7 @@ and replace the GOdatabase in the config file of the corresponding species with:
 Or fill the config file appropriately and run:
 snakemake --cores 1 genomes/{ref_genome}/GO/{dbname} 
 for example:
-snakemake --cores 1 genomes/ColCEN/GO/org.Athaliana.eg.db
+snakemake --cores 1 genomes/ColCEN/GO/org.Zmays.eg.db
 
 These steps are to be performed before the analysis run for the GO analysis to be performed automatically with the rest of the analysis.
 If created after, run snakemake with the GO file of interest as a target.
