@@ -573,6 +573,7 @@ rule perform_GO_on_target_file:
         touch = "results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_GO_analysis.R"),
+        dbname = config[config['species']]['go_database'],
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name
@@ -585,9 +586,8 @@ rule perform_GO_on_target_file:
         tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
     shell:
         """
-        dbname=${{input.godb##*/}}
         printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
-        Rscript "{params.script}" "${{dbname}}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}"
+        Rscript "{params.script}" "{params.dbname}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}"
         touch {output.touch}
         """
 
