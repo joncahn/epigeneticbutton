@@ -555,7 +555,7 @@ rule create_GO_database:
             cp {params.geneinfofile} {output.tempgeneinfo}
         fi
         printf "Creating GO database for {params.ref_genome}\n"
-        Rscript "{params.script}" "{output.tempgaf}}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
         """
 
 rule perform_GO_on_target_file:
