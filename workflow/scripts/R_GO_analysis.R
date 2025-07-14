@@ -109,11 +109,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 				myInterestedGenes<-unique(unlist(sampletable$GID))
 				geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 				names(geneList)<-allGenes
-				if (length(levels(geneList)) == 2) {
-					getGO(geneList, sampletable, ont, samplename)
-				} else {
-					print("Target genes not in background list")
-				}
+				getGO(geneList, sampletable, ont, samplename)
 			}
 		}
 	}
@@ -133,11 +129,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		myInterestedGenes<-unique(unlist(target$GID))
 		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 		names(geneList)<-allGenes
-		if (length(levels(geneList)) == 2) {
-			getGO(geneList, target, ont, targetname)
-		} else {
-			print("Target genes not in background list")
-		}
+		getGO(geneList, target, ont, targetname)
 	}	
 	
 } else {
@@ -152,10 +144,6 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		myInterestedGenes<-unique(unlist(target$GID))
 		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 		names(geneList)<-allGenes
-		if (length(levels(geneList)) == 2) {
-			getGO(geneList, target, ont, targetname)
-		} else {
-			print("Target genes not in background list")
-		}
+		getGO(geneList, target, ont, targetname)
 	}
 }
