@@ -524,7 +524,9 @@ rule plot_expression_levels:
 
 rule create_GO_database:
     output:
-        godb = "genomes/{ref_genome}/GO/{dbname}"
+        godb = "genomes/{ref_genome}/GO/{dbname}",
+        tempgaf = temp("genomes/{ref_genome}/GO/temp_{ref_genome}_gaf_file.tab"),
+        tempgeneinfo = temp("genomes/{ref_genome}/GO/temp_{ref_genome}_gene_info.tab")
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -542,8 +544,18 @@ rule create_GO_database:
         tmp=config["resources"]["create_GO_database"]["tmp"]
     shell:
         """
+        if file {params.gaffile} | grep -q 'gzip compressed'; then
+            gunzip -c {params.gaffile} > {output.tempgaf}
+        else
+            cp {params.gaffile} {output.tempgaf}
+        fi
+        if file {params.geneinfofile} | grep -q 'gzip compressed'; then
+            gunzip -c {params.geneinfofile} > {input.tempgeneinfo}
+        else
+            cp {params.geneinfofile} {output.tempgeneinfo}
+        fi
         printf "Creating GO database for {params.ref_genome}\n"
-        Rscript "{params.script}" "{params.gaffile}}" "{params.geneinfofile}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        Rscript "{params.script}" "{output.tempgaf}}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
         touch {output.touch}
         """
 
