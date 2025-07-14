@@ -18,6 +18,8 @@ backgroundfile<-args[5]
 
 db<-paste0("./genomes/",refgenome,"/GO/")
 setwd(db)
+getwd()
+cat("dbname argument is: [", dbname, "]\n")
 install.packages(dbname, repos=NULL, type="source")
 library(dbname, character.only = TRUE)
 setwd("../../..")

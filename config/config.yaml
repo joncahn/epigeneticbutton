@@ -23,14 +23,14 @@ thaliana:
   genomesize: 1.3e8
   ncbiID: "3702" 
   genus: "Arabidopsis"
-  go_database: "org.Athaliana.eg.db"
+  go_database: org.Athaliana.eg.db
 
 mays: 
   star_index: "--genomeSAindexNbases 14"
   genomesize: 2.2e9
   ncbiID: "4577"
   genus: "Zea"
-  go_database: "org.Zmays.eg.db"
+  go_database: org.Zmays.eg.db
 
 # Trimming and processing parameters:
 trimming_quality:
