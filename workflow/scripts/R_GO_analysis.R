@@ -27,14 +27,10 @@ setwd("../../..")
 
 fGO<-info[,c(1,6,10)]
 colnames(fGO)<-c("GID","GO","EVIDENCE")
-geneid2GO<-fGO[,c(1,2)]
+geneid2GO<-unique(fGO[,c(1,2)])
 rn1<-paste(geneid2GO[,1], sep="")
 gene2GO<-geneid2GO[,-1]
 names(gene2GO)<-rn1
-
-head(geneid2GO)
-head(rn1)
-head(gene2GO)
 
 getGO<-function(genelist, target, ont, name) {
 	GOdata<-new("topGOdata", 
@@ -56,10 +52,11 @@ getGO<-function(genelist, target, ont, name) {
 	genesInTerms<-genesInTerm(GOdata, sigTerms)
 	genesInTerms2<-map(genesInTerms, ~ intersect(.x, myInterestedGenes) %>% paste(collapse = ","))
 	tab2<-tab %>% 
-		left_join(tibble(GO.ID = names(genesInTerms2), genes = genesInTerms2) %>% 
-		tidyr::unnest(genes), by = "GO.ID")
+		left_join(tibble(GO.ID = names(genesInTerms2), GID = genesInTerms2) %>% 
+		tidyr::unnest(GID), by = "GO.ID")
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
+		merge(geneid2GO, by="GO") %>%
 		merge(target, by="GID") %>%
 		arrange(GO) %>%
 		unique()
@@ -111,7 +108,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 				myInterestedGenes<-unique(unlist(sampletable$GID))
 				geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 				names(geneList)<-allGenes
-				getGO(geneList, target, ont, samplename)
+				getGO(geneList, sampletable, ont, samplename)
 			}
 		}
 	}
@@ -121,7 +118,3 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 } else {
 
 }
-
-
-
-
