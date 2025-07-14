@@ -55,13 +55,14 @@ getGO<-function(genelist, target, ont, name) {
 	tab2<-tab %>% 
 		left_join(tibble(GO.ID = names(genesInTerms2), GID = genesInTerms2) %>% 
 		tidyr::unnest(GID), by = "GO.ID")
+	head(tab2)
 	tab3<-tab %>%
 		rename(GO=GO.ID) %>%
 		merge(geneid2GO, by="GO") %>%
 		merge(target, by="GID") %>%
 		arrange(GO) %>%
 		unique()
-	if (nrow(tab2) > 1) {
+	if (nrow(tab2) > 0) {
 		write.table(tab2,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}
 	if (nrow(tab3) > 0) {
