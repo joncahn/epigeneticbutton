@@ -83,11 +83,12 @@ getGO<-function(genelist, target, ont, name) {
 										scores,
 										threshold = 0.7,
 										orgdb=dbname)
+										
+			pdf(paste0("results/RNA/plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
+			treemapPlot(reducedTerms, size = "score")
+			dev.off()
 		}
 	}
-	pdf(paste0("results/RNA/plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
-	treemapPlot(reducedTerms, size = "score")
-	dev.off()
 }
 
 if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
