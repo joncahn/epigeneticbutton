@@ -562,7 +562,7 @@ rule create_GO_database:
 
 rule perform_GO_on_target_file:
     input:
-        godb = lambda wildcards: f"genomes/{wildcards.ref_genome}/GO/{config[config['species']]['go_database']}",
+        godb = lambda wildcards: directory(f"genomes/{wildcards.ref_genome}/GO/{config[config['species']]['go_database']}"),
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
