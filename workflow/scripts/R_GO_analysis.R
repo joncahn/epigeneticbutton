@@ -113,7 +113,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 					getGO(geneList, sampletable, ont, samplename)
 				} else {
 					print("Target genes not in background list")
-				|
+				}
 			}
 		}
 	}
