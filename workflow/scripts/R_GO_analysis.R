@@ -27,9 +27,7 @@ setwd("../../..")
 getGO<-function(genelist, target, ont, name) {
 	GOdata<-new("topGOdata", 
 				ontology = ont, 
-				allGenes = genelist,
-				annot = annFUN.gene2GO, 
-				gene2GO = gene2GO)
+				allGenes = genelist)
 	resultFisher<-runTest(GOdata, algorithm = "weight01", statistic = "fisher")
 	resultFisherSummary <- summary(attributes(resultFisher)$score <= 0.01)
 	nSigTerms<-0
