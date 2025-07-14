@@ -94,9 +94,9 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	genecount<-read.delim(backgroundfile, header = TRUE, row.names = "GID")
 	target<-read.delim(targetfile, header = TRUE)
 
+	genecount<-genecount[!grepl("^N_", rownames(genecount)), ]
 	keep.exprs<-rowSums(cpm(genecount)>1)>=2
 	filtered<-genecount[keep.exprs,]
-	filtered$GID<-row.names(filtered)
 
 	allGenes<-unique(unlist(filtered$GID))
 	
@@ -106,13 +106,14 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
 				sampletable<-filter(target, Sample==samp, DEG==deg)
-				if (nrow(sampletable) > 1) {
-					myInterestedGenes<-unique(unlist(sampletable$GID))
-					geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
-					names(geneList)<-allGenes
-					print(summary(geneList))
+				myInterestedGenes<-unique(unlist(sampletable$GID))
+				geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+				names(geneList)<-allGenes
+				if (length(levels(geneList)) == 2) {
 					getGO(geneList, sampletable, ont, samplename)
-				}
+				} else )
+					print("Target genes not in background list")
+				|
 			}
 		}
 	}
@@ -132,7 +133,11 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		myInterestedGenes<-unique(unlist(target$GID))
 		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 		names(geneList)<-allGenes
-		getGO(geneList, target, ont, targetname)
+		if (length(levels(geneList)) == 2) {
+			getGO(geneList, target, ont, targetname)
+		} else {
+			print("Target genes not in background list")
+		}
 	}	
 	
 } else {
@@ -147,6 +152,10 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		myInterestedGenes<-unique(unlist(target$GID))
 		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
 		names(geneList)<-allGenes
-		getGO(geneList, target, ont, targetname)
+		if (length(levels(geneList)) = 2) {
+			getGO(geneList, target, ont, targetname)
+		} else {
+			print("Target genes not in background list")
+		}
 	}
 }
