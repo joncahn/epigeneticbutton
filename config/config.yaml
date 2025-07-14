@@ -219,6 +219,7 @@ resources:
   merging_chip_replicates: *heavy
   making_pseudo_replicates: *heavy
   best_peaks_pseudoreps: *low
+  find_motifs_in_peaks: *heavy
   make_peak_stats: *low
   make_bismark_indices: *heavy
   bismark_map_pe: *max

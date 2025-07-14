@@ -113,6 +113,21 @@ def get_replicate_pairs(wildcards):
             pairs.append(f"{rep_i} {rep_j}")
     return pairs
 
+def define_chipseq_target_file(wildcards):
+    select_peaks = f"results/{wildcards.env}/peaks/selected_peaks__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.ref_genome}.bed"
+    idr_peaks = f"results/{wildcards.env}/peaks/idr_peaks__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.ref_genome}.bed"
+    if wildcards.target_name == "selected_peaks":
+        return select_peaks
+    elif wildcards.target_name == "idr_peaks" and os.path.exists(idr_peaks):
+        return idr_peaks
+    elif wildcards.target_name == "idr_peaks":
+        raise ValueError("Not enough replicates for idr peaks.")
+    else:
+        raise ValueError(   
+            f"{wildcards.target_name} does not match possible files." 
+            "It can be 'selected_peaks', or 'idr_peaks'"
+        )
+
 def define_logs_final_input(wildcards):
     log_files = []
     sname = wildcards.sample_name
@@ -597,7 +612,9 @@ rule idr_analysis_replicates:
     input:
         peak_file = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
-        touch = "results/{env}/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done"
+        touch = "results/{env}/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done",
+        tmp_merged = temp("results/{env}/peaks/tmp_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"),
+        merged = "results/{env}/peaks/idr_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     wildcard_constraints:
         env = "ChIP|TF"
     params:
@@ -628,6 +645,11 @@ rule idr_analysis_replicates:
         else
             pre="se"
         fi
+        while read chr max; do
+            printf "${{chr}}\t1\t${{max}}\n" >> {output.tmp_merged}
+        done < "genomes/{params.ref_genome}/chrom.sizes"
+        
+        DOES NOT WORK AS IS, NO LOOPING # CHECK PAIR, THEN ITERATIVELY INTERSECT
         for pair in {params.replicate_pairs}; do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
@@ -638,6 +660,7 @@ rule idr_analysis_replicates:
             idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l results/{params.env}/reports/idr_{params.sname}.log --plot || true
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
             mv "${{outfile}}.png" results/{params.env}/plots/
+            bedtools intersect -a {output.tmp_merged} -b ${{outfile}} > "results/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
         done
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
@@ -784,6 +807,27 @@ rule make_peak_stats:
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; print l,t,m,r,a,b,c,d,e" ("e/x*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         """
+
+rule find_motifs_in_file:
+    input:
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
+        bestpeaks = "results/{env}/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
+    output:
+        stats_pseudoreps = temp("results/{env}/reports/stats_pseudoreps__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt")
+    wildcard_constraints:
+        env = "ChIP|TF"
+    params:
+        sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
+        env = lambda wildcards: wildcards.env,
+        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
+    log:
+        temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", ""))
+    conda: CONDA_ENV
+    threads: config["resources"]["find_motifs_in_peaks"]["threads"]
+    resources:
+        mem=config["resources"]["find_motifs_in_peaks"]["mem"],
+        tmp=config["resources"]["find_motifs_in_peaks"]["tmp"]
+    shell:
 
 rule all_chip:
     input:
