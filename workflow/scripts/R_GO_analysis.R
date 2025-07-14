@@ -111,7 +111,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 				names(geneList)<-allGenes
 				if (length(levels(geneList)) == 2) {
 					getGO(geneList, sampletable, ont, samplename)
-				} else )
+				} else {
 					print("Target genes not in background list")
 				|
 			}
