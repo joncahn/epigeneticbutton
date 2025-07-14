@@ -103,12 +103,12 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	for ( samp in unique(target$Sample) ) {
 		for ( deg in c("UP","DOWN") ) {
 			samplename<-paste0(deg,"_in_",samp)
+			sampletable<-filter(target, Sample==samp, DEG==deg)
+			myInterestedGenes<-unique(unlist(sampletable$GID))
+			geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+			names(geneList)<-allGenes
 			for ( ont in c("BP","MF") ) {
 				print(paste0("Getting ",ont," for ",samplename))
-				sampletable<-filter(target, Sample==samp, DEG==deg)
-				myInterestedGenes<-unique(unlist(sampletable$GID))
-				geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
-				names(geneList)<-allGenes
 				getGO(geneList, sampletable, ont, samplename)
 			}
 		}
@@ -123,12 +123,12 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	allGenes<-unique(unlist(ref_genes$GID))
 	
 	target<-read.delim(targetfile, header = TRUE)
+	myInterestedGenes<-unique(unlist(target$GID))
+	geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+	names(geneList)<-allGenes
 	
 	for ( ont in c("BP","MF") ) {
 		print(paste0("Getting ",ont," for ",targetname))
-		myInterestedGenes<-unique(unlist(target$GID))
-		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
-		names(geneList)<-allGenes
 		getGO(geneList, target, ont, targetname)
 	}	
 	
@@ -138,12 +138,12 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	allGenes<-unique(unlist(background$GID))
 	
 	target<-read.delim(targetfile, header = TRUE)
+	myInterestedGenes<-unique(unlist(target$GID))
+	geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
+	names(geneList)<-allGenes
 	
 	for ( ont in c("BP","MF") ) {
 		print(paste0("Getting ",ont," for ",targetname))
-		myInterestedGenes<-unique(unlist(target$GID))
-		geneList<-factor(as.integer(allGenes %in% myInterestedGenes))
-		names(geneList)<-allGenes
 		getGO(geneList, target, ont, targetname)
 	}
 }
