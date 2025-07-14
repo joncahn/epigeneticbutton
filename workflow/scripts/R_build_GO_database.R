@@ -32,8 +32,8 @@ fChr<-unique(select(genes, GID, Chr))
 
 makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               version="0.1",
-              maintainer="EPIC@epicbutton",
-              author="EPIC@epicbutton",
+              maintainer="user <user@epicbutton>",
+              author="user <user@epicbutton>",
               outputDir = paste0("./genomes/",refgenome,"/GO/"),
               tax_id = ncbiID,
               genus = genus,
