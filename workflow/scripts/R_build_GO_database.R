@@ -40,7 +40,7 @@ makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               species = species,
               goTable="go")
 
-db<-paste0("./genomes/",refgenome,"/GO/")
-setwd(db)
-install.packages(dbname, repos=NULL, type="source")
-setwd("../../..")
+# db<-paste0("./genomes/",refgenome,"/GO/")
+# setwd(db)
+# install.packages(dbname, repos=NULL, type="source")
+# setwd("../../..")

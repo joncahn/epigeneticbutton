@@ -1,6 +1,6 @@
 ## To create the GO database
 
-If you already have a database from AnnotationForge to use, copy the file in the "genomes/{ref_genome}/GO/" directory for the analysis to work automatically. 
+If you already have a database from AnnotationForge to use, copy the file in the "genomes/<ref_genome>/GO/" directory for the analysis to work automatically. 
 For some species, an annotation package can be created with AnnotationForge makeOrgPackageFromNCBI(). For help:
 https://bioconductor.org/packages/release/bioc/vignettes/AnnotationForge/inst/doc/MakingNewOrganismPackages.html
 
@@ -29,12 +29,12 @@ genus="Zea" # replace with corresponding genus (conventionally first letter is c
 species="mays" # replace with corresponding species (conventionally lowerscript)
 ncbiID="4577" # find correpsonding value at NCBI
 
-Rscript {script} {infofile} {genefile} {ref_genome} {genus} {species} {ncbiID}
+Rscript ${script} ${infofile} ${genefile} ${ref_genome} ${genus} ${species} ${ncbiID}
 
-and replace the GOdatabase in the config file of the corresponding species with: "org.Zmays.eg.db", where dbanme="org.{firstlettergenus}{species}.eg.db"
+and replace the GOdatabase in the config file of the corresponding species with: "org.Zmays.eg.db", where dbanme="org.<firstlettergenus><species>.eg.db"
 
 Or fill the config file appropriately and run:
-snakemake --cores 1 genomes/{ref_genome}/GO/{dbname} 
+snakemake --cores 1 genomes/<ref_genome>/GO/<dbname> 
 for example:
 snakemake --cores 1 genomes/ColCEN/GO/org.Zmays.eg.db
 

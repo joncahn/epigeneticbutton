@@ -36,6 +36,8 @@ def assign_chip_input(wildcards):
 def get_peaktype(sample_type, peaktype_config):
     if sample_type == "IP":
         return "narrow"
+    elif sample_type == "IPb":
+        return "broad"
     for pattern, peaktype in peaktype_config.items():
         if re.search(pattern, sample_type):
             return peaktype
