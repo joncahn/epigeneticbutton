@@ -178,7 +178,17 @@ snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_gene
 ```
 Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf`
 
-2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis. `GO` needs to be switched to `true` in the config file, and either the GO database need to be already made or the files to make it are defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database. Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
+2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis. `GO` needs to be switched to `true` in the config file, and either the GO database need to be already made or the files to make it are defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database. 
+To run the analysis:
+```bash 
+snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<target_name>.done
+```
+Note that the separator is two underscores next to each other `__`.
+An example where <analysis_name>="test_smk" and <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
+```bash 
+snakemake --cores 1 results/RNA/GO/TopGO__test_smk__ColCEN__my_genes_of_interests.done --config rnaseq_target_file="data/target_genes.txt" rnaseq_target_file_label="my_genes_of_interests"
+```
+Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
 
 3. Rerunning a specific analysis
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`

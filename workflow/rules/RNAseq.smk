@@ -22,10 +22,11 @@ def define_rnaseq_target_file(wildcards):
 
 def define_rnaseq_background_file(wildcards):
     tname = config['rnaseq_target_file_label']
-    if wildcards.target_name == tname:
-        return config['rnaseq_background_file']
-    elif wildcards.target_name == "unique_DEGs":
+    bgfile = config['rnaseq_background_file']
+    if wildcards.target_name == "unique_DEGs":
         return f"results/RNA/DEG/counts__{wildcards.analysis_name}__{wildcards.ref_genome}.txt"
+    elif wildcards.target_name == tname and exists(bgfile):
+        return config['rnaseq_background_file']
     else:
         return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
         
