@@ -532,7 +532,7 @@ rule create_GO_database:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         species = config['species'],
         genus = config[config['species']]['genus'],
-        ncbiID = config[config['species']]['ncbiID']
+        ncbiID = config[config['species']]['ncbiID'],
         gaffile = lambda wildcards: config['gaf_file'][wildcards.ref_genome],
         geneinfofile = lambda wildcards: config['gene_info_file'][wildcards.ref_genome]
     log:

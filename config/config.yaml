@@ -22,7 +22,7 @@ thaliana:
   star_index: "--genomeSAindexNbases 12"
   genomesize: 1.3e8
   ncbiID: "3702" 
-  genus: "Arabidopsis
+  genus: "Arabidopsis"
   go_database: "org.Athaliana.eg.db"
 
 mays: 
