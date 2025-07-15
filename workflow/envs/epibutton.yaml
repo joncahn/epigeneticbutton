@@ -7,7 +7,7 @@ dependencies:
   - python>=3
   - pyyaml
   - cutadapt
-  - sra-tools
+  - sra-tools>=3
   - pigz
   - fastqc
   - bowtie2
