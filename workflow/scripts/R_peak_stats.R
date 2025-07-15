@@ -22,7 +22,7 @@ plot.peak.stats<-function(stattable, name) {
   table$Tissue<-as.factor(table$Tissue)
   table$Sample<-as.factor(table$Sample)
   table$Selected<-as.numeric(table$Selected)
-  table<-gather(table, key="Peak_type",value="Number",Rep1,Rep2,Merged,Pseudoreps,Selected)
+  table<-gather(table, key="Peak_type",value="Number",Rep1,Rep2,Merged,Pseudoreps,IDR,Selected)
   table$Peak_type<-factor(table$Peak_type, levels=c("Rep1","Rep2","Merged","Pseudoreps","IDR","Selected"))
   table<-arrange(table, desc(Line), desc(Sample), desc(Tissue))
   
