@@ -110,7 +110,7 @@ def get_replicate_pairs(wildcards):
         for j in range(i+1, len(reps)):
             rep_i = reps[i]
             rep_j = reps[j]
-            pairs.append(f"{rep_i} {rep_j}")
+            pairs.append(f"{rep_i}:{rep_j}")
     return pairs
 
 def define_chipseq_target_file(wildcards):
