@@ -34,7 +34,7 @@ rule plotting_mapping_stats:
         """
         
 ###
-# Rules to prep and then plot the peak stats
+# Rules to prep and then plot the peak stats:
 rule prepping_chip_peak_stats:
     input:
         sample_stat_files = lambda wildcards: [ f"results/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
