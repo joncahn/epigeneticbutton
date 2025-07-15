@@ -630,7 +630,7 @@ rule idr_analysis_replicates:
         replicate_pairs = lambda wildcards: get_replicate_pairs(wildcards)
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", ""))
-    conda: CONDA_ENV
+    conda: os.path.join(REPO_FOLDER,"workflow","envs","epibutton_idr.yaml")
     threads: config["resources"]["idr_analysis_replicates"]["threads"]
     resources:
         mem=config["resources"]["idr_analysis_replicates"]["mem"],

@@ -1,0 +1,8 @@
+name: epibutton_idr
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - numpy<=1.19
+  - idr
