@@ -145,6 +145,10 @@ gene_info_file:
   ColCEN: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not
   B73_v5: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not
 
+# For Motifs analysis with meme.
+motifs: false 
+jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
+
 # optional targets for extra output
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 rnaseq_target_file: "data/target_genes.txt" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.

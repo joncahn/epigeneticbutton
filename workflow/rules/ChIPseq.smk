@@ -118,19 +118,39 @@ def get_replicate_pairs(wildcards):
     return pairs
 
 def define_chipseq_target_file(wildcards):
-    select_peaks = f"results/{wildcards.env}/peaks/selected_peaks__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.ref_genome}.bed"
-    idr_peaks = f"results/{wildcards.env}/peaks/idr_peaks__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.ref_genome}.bed"
-    if wildcards.target_name == "selected_peaks":
-        return select_peaks
-    elif wildcards.target_name == "idr_peaks" and os.path.exists(idr_peaks):
-        return idr_peaks
-    elif wildcards.target_name == "idr_peaks":
-        raise ValueError("Not enough replicates for idr peaks.")
+    env = wildcards.env
+    peak_file = wildcards.peak_file
+    parts = peak_file.split("__")
+    file_type = parts[0]
+    if file_type in ["selected_peaks", "idr_peaks"]:
+        data_type, line, tissue, sample_type, ref_genome = parts[1:]
+        spname = f"{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}"
+        peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
+        inputfile = f"results/{env}/peaks/{file_type}__{spname}.{peaktype}Peak"
+        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        if any(analysis_samples['Sample'] == spname):
+            return [inputfile, fasta]
+    elif file_type.startswith("idr_"):
+        data_type, line, tissue, sample_type, rep, ref_genome_plus = parts[1:]
+        peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
+        inputfile = f"results/{env}/peaks/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome_plus}.{peaktype}Peak"
+        ref_genome, rest = ref_genome_plus.rsplit("_",1)
+        rep1, rep2 = rep.split("_vs_")
+        sname = f"{data_type}__{line}__{tissue}__{sample_type}__{rep1}__{ref_genome}"
+        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        if any(samples['Sample'] == sname):
+            return [inputfile, fasta]
+    elif file_type.startswith("peaks_"):
+        filecat, data_type, line, tissue, sample_type, rep, ref_genome_plus = parts[1:]
+        peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
+        inputfile = f"results/{env}/peaks/{file_type}__{filecat}__{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome_plus}.{peaktype}Peak"
+        ref_genome, rest = ref_genome_plus.rsplit("_",1)
+        sname = f"{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}"
+        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        if any(samples['Sample'] == sname):
+            return [inputfile, fasta]
     else:
-        raise ValueError(   
-            f"{wildcards.target_name} does not match possible files." 
-            "It can be 'selected_peaks', or 'idr_peaks'"
-        )
+        return ValueError(f"{wildcards.peak_file} is unknown.")
 
 def define_logs_final_input(wildcards):
     log_files = []
@@ -668,7 +688,8 @@ rule idr_analysis_replicates:
             bedtools intersect -a ${{temp}} -b ${{filtered}} > "${{new}}"
             mv "${{new}}" "${{temp}}"
         done
-        cat ${{temp}} > {output.merged}
+        cat ${{temp}} > {output.merged}        
+        bedtools intersect -a ${{file2}} -b ${{temp}} -u > "results/{params.env}/idr_peaks__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__{params.ref_genome}.{params.peaktype}Peak"
         rm -f ${{temp}} ${{new}} ${{filtered}}
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
@@ -769,7 +790,7 @@ rule best_peaks_pseudoreps:
 		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[2]} | sort -k1,1 -k2,2n -u > "results/{params.env}/peaks/temp_{params.sname}_pseudo2.bed"
 		bedtools intersect -a results/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -b results/{params.env}/peaks/temp_{params.sname}_pseudo2.bed > "results/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
 		bedtools intersect -a results/{params.env}/peaks/temp_{params.sname}_merged.bed -b results/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -u > "results/{params.env}/peaks/temp_{params.sname}_selected.bed"
-		bedtools intersect -a {input.peakfiles[0]} -b results/{params.env}/peaks/temp_{params.sname}_selected.bed -u > "results/{params.env}/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak"
+		bedtools intersect -a {input.peakfiles[0]} -b results/{params.env}/peaks/temp_{params.sname}_selected.bed -u > "results/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak"
         printf "\nGetting best quality peaks peaks\n"
         ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its actual summit.
         sort -k1,1 -k2,2n -k5nr results/{params.env}/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" '{{print $1";"$2";"$3,$4,$5,$6,$7,$8,$9,$10}}' | awk 'BEGIN {{a=0}} {{b=$1; if (b!=a) print $0; a=$1}}' | awk -F"[;\t]" -v OFS="\t" -v t={params.peaktype} '{{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}}' | bedtools sort -g {input.chrom_sizes} > "{output.bestpeaks}"
@@ -784,7 +805,6 @@ rule best_peaks_pseudoreps:
         fi
 		printf "Merged=${{merged}}\nPseudos=${{pseudos}}\nIDR=${{idr}}\nSelected=${{selected}}\n" > "{output.stats_pseudoreps}"
         rm -f "results/{params.env}/peaks/temp_{params.sname}"*
-        rm -f "results/{params.env}/peaks/*pseudo*_{params.sname}"*
         }} 2>&1 | tee -a "{log}"
         """    
 
@@ -837,18 +857,16 @@ rule make_peak_stats:
 
 rule find_motifs_in_peaks:
     input:
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        bestpeaks = "results/{env}/peaks/{peak_method}_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
+        peakfile = lambda wildcards: define_chipseq_target_file(wildcards)
     output:
-        stats_pseudoreps = "results/{env}/motifs/motifs_{peak_method}_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt"
+        temp_summits = temp("results/{env}/motifs/temp_summits_{peak_file}.txt"),
+        stats_pseudoreps = "results/{env}/motifs/motifs__{peak_file}.txt"
     wildcard_constraints:
         env = "ChIP|TF"
     params:
-        sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
-        env = lambda wildcards: wildcards.env,
-        peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
+        env = lambda wildcards: wildcards.env
     log:
-        temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "motifs", "{peak_method}"))
+        temp(return_log_chip("{env}","{peak_file}", "motifs", ""))
     conda: CONDA_ENV
     threads: config["resources"]["find_motifs_in_peaks"]["threads"]
     resources:
@@ -857,7 +875,9 @@ rule find_motifs_in_peaks:
     shell:
         """
         {{
-        
+        ext="${{ {input.peakfile##*.} }}"
+        if [[ "${{ext}" == "narrowPeak" ]]; then
+            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{if ($4!=n) s=$2+$10; print $1,s-50,s+50,$4; n=$4}' >
         
         }} 2>&1 | tee -a "{log}"
         """
