@@ -43,7 +43,7 @@ rule prepping_chip_peak_stats:
         stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
     shell:
         """
-        printf "Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tSelected_peaks\n" > "{output.stat_file}"
+        printf "Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > "{output.stat_file}"
         for f in {input.sample_stat_files}
         do
             awk 'NR>1' $f >> "{output.temp_stat_file}"
