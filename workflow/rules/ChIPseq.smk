@@ -123,23 +123,19 @@ def define_chipseq_target_file(wildcards):
     peak_file = wildcards.peak_file
     parts = peak_file.split("__")
     file_type = parts[0]
-    if file_type in ["selected_peaks", "idr_peaks"]:
+    if file_type == "selected_peaks":
         data_type, line, tissue, sample_type, ref_genome = parts[1:]
         spname = f"{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}"
-        peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
-        inputfile = f"results/{env}/peaks/{file_type}__{spname}.{peaktype}Peak"
+        inputfile = f"results/{env}/peaks/{file_type}__{spname}.bedPeak"
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
         if any(analysis_samples['sample_name'] == spname):
             return [inputfile, fasta]
-    elif file_type.startswith("idr_"):
-        data_type, line, tissue, sample_type, rep, ref_genome_plus = parts[1:]
-        peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
-        inputfile = f"results/{env}/peaks/{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome_plus}.{peaktype}Peak"
-        ref_genome, rest = ref_genome_plus.rsplit("_",1)
-        rep1, rep2 = rep.split("_vs_")
-        sname = f"{data_type}__{line}__{tissue}__{sample_type}__{rep1}__{ref_genome}"
+    elif file_type == "idr_peaks":
+        data_type, line, tissue, sample_type, ref_genome = parts[1:]
+        spname = f"{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}"
+        inputfile = f"results/{env}/peaks/{file_type}__{spname}.bed"
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
-        if any(samples['sample_name'] == sname):
+        if any(analysis_samples['sample_name'] == spname):
             return [inputfile, fasta]
     elif file_type.startswith("peaks_"):
         filecat, data_type, line, tissue, sample_type, rep, ref_genome_plus = parts[1:]
@@ -150,7 +146,7 @@ def define_chipseq_target_file(wildcards):
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
         if any(samples['sample_name'] == sname):
             return [inputfile, fasta]
-    elif {peak_file} == tarname:
+    elif peak_file == tarname:
         ref_genome = config['motif_ref_genome']
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
         inputfile = config['motif_target_file']
@@ -242,7 +238,7 @@ def define_final_chip_output(ref_genome):
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         env = get_sample_info_from_name(spname, analysis_samples, 'env')
-        peak_files.append(f"results/{env}/peaks/selected_peaks__{spname}.bed") # best peak file for each analysis sample
+        peak_files.append(f"results/{env}/peaks/selected_peaks__{spname}.bedPeak") # best peak file for each analysis sample
         if len(analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])) >= 2:
             bigwig_files.append(f"results/{env}/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw") # bigiwig log2FC for merged replicates vs merged inputs
             stat_files.append(f"results/{env}/chkpts/idr__{spname}.done") # idr analyses between each pair of replicates
@@ -258,10 +254,6 @@ def define_final_chip_output(ref_genome):
         for i in range(0,len(reps)):
             rep_i = reps[i]
             allrep_files.append(f"results/TF/chkpts/motifs__peaks_{paired}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{rep_i}__{row.ref_genome}_peaks.done")
-            if len(reps) >= 2:
-                for j in range(i+1, len(reps)):
-                    rep_j = reps[j]
-                    allrep_files.append(f"results/TF/chkpts/motifs__idr_{paired}__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{rep_i}_vs_{rep_j}__{row.ref_genome}_peaks.done")
         
     if qc_option == "all":
         results = map_files + qc_files
@@ -802,7 +794,7 @@ rule best_peaks_pseudoreps:
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
         peakfiles = input_peak_files_for_best_peaks
     output:
-        bestpeaks = "results/{env}/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
+        bestpeaks = "results/{env}/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bedPeak",
         stats_pseudoreps = temp("results/{env}/reports/stats_pseudoreps__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt")
     wildcard_constraints:
         env = "ChIP|TF"
@@ -922,9 +914,9 @@ rule find_motifs_in_file:
         elif [[ "${{ext}" == "broadPeak" ]]; then
             printf "\nGetting peak fasta sequences around the middle for broadPeak file: {input[0]}\n"
             sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
-        elif [[ "${{ext}" == "bed" ]]; then 
+        elif [[ "${{ext}" == "bedPeak" ]]; then 
             printf "\nGetting peak fasta sequences for bed file: {input[0]}\n"
-            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); t=($3-$2); if (t<500) {{print $1,$2,$3,$4; else print $1,s-200,s+200,$4;}} n=$4}}}}' > {output.temp_bed}
+            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
         else
             printf "\nGetting peak fasta sequences for unknown file format: {input[0]}\n"
             sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); t=($3-$2); if (t<500) {{print $1,$2,$3,$4; else print $1,s-200,s+200,$4;}} n=$4}}}}' > {output.temp_bed}
