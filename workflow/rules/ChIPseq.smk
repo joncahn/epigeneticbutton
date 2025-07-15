@@ -104,7 +104,7 @@ def get_replicate_name(wildcards, pos):
 
 def get_replicate_pairs(wildcards):
     sname = sample_name_str(wildcards, 'analysis')
-    reps = analysis_to_replicates.get((wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+    reps = analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
     pairs = []
     for i in range(0,len(reps)):
         for j in range(i+1, len(reps)):
@@ -649,7 +649,6 @@ rule idr_analysis_replicates:
             printf "${{chr}}\t1\t${{max}}\n" >> {output.tmp_merged}
         done < "genomes/{params.ref_genome}/chrom.sizes"
         
-        DOES NOT WORK AS IS, NO LOOPING # CHECK PAIR, THEN ITERATIVELY INTERSECT
         for pair in {params.replicate_pairs}; do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
@@ -660,7 +659,8 @@ rule idr_analysis_replicates:
             idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l results/{params.env}/reports/idr_{params.sname}.log --plot || true
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
             mv "${{outfile}}.png" results/{params.env}/plots/
-            bedtools intersect -a {output.tmp_merged} -b ${{outfile}} > "results/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
+            head ${{outfile}}
+            # bedtools intersect -a {output.tmp_merged} -b ${{outfile}} > "results/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
         done
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
