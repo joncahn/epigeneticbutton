@@ -898,7 +898,7 @@ rule find_motifs_in_file:
         temp_bed = temp("results/{env}/motifs/temp_regions_{peak_file}.bed"),
         temp_fa = temp("results/{env}/motifs/temp_regions_{peak_file}.fa"),
         motifs = directory("results/{env}/motifs/{peak_file}"),
-        touch = f"results/TF/chkpts/motifs__{peak_files}.done"
+        touch = "results/TF/chkpts/motifs__{peak_file}.done"
     wildcard_constraints:
         env = "ChIP|TF"
     params:
