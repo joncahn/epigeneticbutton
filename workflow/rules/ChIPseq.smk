@@ -248,9 +248,10 @@ def define_final_chip_output(ref_genome):
         spname = sample_name_str(row, 'analysis')
         env = get_sample_info_from_name(spname, analysis_samples, 'env')        
         motif_files.append(f"results/TF/chkpts/motifs__selected_peaks__{spname}.done")
-        motif_files.append(f"results/TF/chkpts/motifs__idr_peaks__{spname}.done")
         paired = "pe" if get_sample_info_from_name(sname, samples, 'paired') == "PE" else "se"
         reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])       
+        if len(reps) >= 2:
+            motif_files.append(f"results/TF/chkpts/motifs__idr_peaks__{spname}.done")
         for i in range(0,len(reps)):
             rep_i = reps[i]
             allrep_files.append(f"results/TF/chkpts/motifs__peaks_{paired}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{rep_i}__{row.ref_genome}_peaks.done")
