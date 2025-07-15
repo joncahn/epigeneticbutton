@@ -771,7 +771,7 @@ rule best_peaks_pseudoreps:
 		pseudos=$(awk '{{print $1,$2,$3}}' results/{params.env}/peaks/temp_{params.sname}_pseudos.bed | sort -k1,1 -k2,2n -u | wc -l)
 		selected=$(cat results/{params.env}/peaks/temp_{params.sname}_selected.bed | sort -k1,1 -k2,2n -u | wc -l)
         if [[ "{input.peakfiles[3]}" == "no_idr" ]]; then
-            idr=0
+            idr="0"
         else
             idr=$(wc -l {input.peakfiles[3]} | cut -d" " -f1)
         fi
