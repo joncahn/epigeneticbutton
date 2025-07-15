@@ -136,7 +136,7 @@ UNIQUE_ENVS = samples["env"].unique().tolist()
 analysis_samples = (
     samples
     .query("sample_type != 'Input'") # filter Input samples
-    [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired"]]
+    [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]]
     .drop_duplicates()
 )
 # Add a sample_name column to the analysis_sample file
@@ -148,7 +148,7 @@ analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name
 # To assign all replicates to each sample
 analysis_to_replicates = (
     samples
-    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
+    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome", "extra_info"])["replicate"]
     .apply(list)
     .to_dict()
 )
