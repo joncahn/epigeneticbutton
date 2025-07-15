@@ -145,7 +145,7 @@ def define_logs_final_input(wildcards):
         log_files.append(return_log_chip(env, namerep, f"making_bigwig_final", ""))
         log_files.append(return_log_chip(env, namerep, f"making_fingerprint_final", ""))
     
-    if len(analysis_to_replicates[(data_type, line, tissue, sample_type, ref_genome)]) >= 2:
+    if len(analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])) >= 2:
         log_files.append(return_log_chip(env, sname, "IDR", ""))
         log_files.append(return_log_chip(env, sname, "merging_reps", ""))
         
@@ -205,8 +205,8 @@ def define_final_chip_output(ref_genome):
         spname = sample_name_str(row, 'analysis')
         env = get_sample_info_from_name(spname, analysis_samples, 'env')
         peak_files.append(f"results/{env}/peaks/selected_peaks__{spname}.bed") # best peak file for each analysis sample
-        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            stat_files.append(f"results/{env}/chkpts/idr__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.ref_genome}.done") # idr analyses between each pair of replicates
+        if len(analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])) >= 2:
+            stat_files.append(f"results/{env}/chkpts/idr__{spname}.done") # idr analyses between each pair of replicates
             bigwig_files.append(f"results/{env}/tracks/FC__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw") # bigiwig log2FC for merged replicates vs merged inputs
         
     if qc_option == "all":
@@ -756,7 +756,7 @@ rule best_peaks_pseudoreps:
 		bedtools intersect -a results/{params.env}/peaks/temp_{params.sname}_merged.bed -b results/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -u > "results/{params.env}/peaks/temp_{params.sname}_selected.bed"
 		bedtools intersect -a {input.peakfiles[0]} -b results/{params.env}/peaks/temp_{params.sname}_selected.bed -u > "results/{params.env}/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak"
         printf "\nGetting best quality peaks peaks\n"
-        ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its summit.
+        ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its actual summit.
         sort -k1,1 -k2,2n -k5nr results/{params.env}/peaks/selected_peaks_{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" '{{print $1";"$2";"$3,$4,$5,$6,$7,$8,$9,$10}}' | awk 'BEGIN {{a=0}} {{b=$1; if (b!=a) print $0; a=$1}}' | awk -F"[;\t]" -v OFS="\t" -v t={params.peaktype} '{{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}}' | bedtools sort -g {input.chrom_sizes} > "{output.bestpeaks}"
         printf "\nExtracting peak stats for {params.sname}\n"
         merged=$(wc -l results/{params.env}/peaks/temp_{params.sname}_merged.bed | cut -d" " -f1)
@@ -808,12 +808,12 @@ rule make_peak_stats:
         cat {input.logs} > "{output.log}"
         """
 
-rule find_motifs_in_file:
+rule find_motifs_in_peaks:
     input:
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        bestpeaks = "results/{env}/peaks/selected_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
+        bestpeaks = "results/{env}/peaks/{peak_method}_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed",
     output:
-        stats_pseudoreps = temp("results/{env}/reports/stats_pseudoreps__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt")
+        stats_pseudoreps = "results/{env}/motifs/motifs_{peak_method}_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.txt"
     wildcard_constraints:
         env = "ChIP|TF"
     params:
@@ -821,13 +821,19 @@ rule find_motifs_in_file:
         env = lambda wildcards: wildcards.env,
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     log:
-        temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", ""))
+        temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "motifs", "{peak_method}"))
     conda: CONDA_ENV
     threads: config["resources"]["find_motifs_in_peaks"]["threads"]
     resources:
         mem=config["resources"]["find_motifs_in_peaks"]["mem"],
         tmp=config["resources"]["find_motifs_in_peaks"]["tmp"]
     shell:
+        """
+        {{
+        
+        
+        }} 2>&1 | tee -a "{log}"
+        """
 
 rule all_chip:
     input:
