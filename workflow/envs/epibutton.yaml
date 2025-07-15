@@ -16,6 +16,7 @@ dependencies:
   - deeptools
   - macs2
   - idr
+  - meme
   - bismark
   - star
   - shortstack=4.0

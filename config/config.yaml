@@ -145,11 +145,16 @@ gene_info_file:
   ColCEN: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not
   B73_v5: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not
 
-# For Motifs analysis with meme.
-motifs: false 
+# For TF motifs analysis using meme
+motifs: true # change to false for motifs on final selected peaks
+allreps: false # change to true for motifs analysis on all single replicates
 jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
 
 # optional targets for extra output
+motif_target_file_label: "target_motifs" # This name will be used for the name of the results files and should used in the rule target.
+motif_target_file: "data/target_genes.bed" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
+motif_ref_genome: "ColCEN" # reference genome to use to extract fasta; safer if a run with this reference genome as already been created; will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path 
+
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 rnaseq_target_file: "data/target_genes.txt" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
 rnaseq_background_file: "default" # should be a column of GID (matching the gene IDs in the reference genome gff). Other columns will be ignored. Will be used as background for GO enrichment analysis. Default is all genes.
@@ -223,7 +228,7 @@ resources:
   merging_chip_replicates: *heavy
   making_pseudo_replicates: *heavy
   best_peaks_pseudoreps: *low
-  find_motifs_in_peaks: *heavy
+  find_motifs_in_file: *heavy
   make_peak_stats: *low
   make_bismark_indices: *heavy
   bismark_map_pe: *max

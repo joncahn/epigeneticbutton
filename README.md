@@ -150,16 +150,22 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 - Col4: *sample_type*: Either `Input` to be used as a control (even if it is actually H3 or IgG pull-down), or the histone mark IP (e.g. H3K9me2). If the mark is not already listed in the config file `chip_callpeaks: peaktype:`, add it to the desired category (either narrow or broad peaks).
 - Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `ChIP` data_type, using `MNase` for the light digest and `Input` for the heavy digest.
 
-### Transcription factor ChIP
+### Transcription factor ChIP-seq
 - Col1: *data_type*: `TF_<tf_name>` where `<tf_name>` is the name of the transcirption factor (e.g. for `TB1` data, use `TF_TB1`). This name should be identical for the IP and its input, and for all replicates. Multiple TFs can be analyzed in parallel, each having its own set of IP and Input samples e.g. `TF_<name1>` and `TF_<name2>`.
 - Col4: *sample_type*: Either `Input` or `IP`. This works for transcription factors with narrow peaks (default). Use `IPb` for broad peaks.
+
+### RNA-seq
+
+### small RNA-seq
+
+### Whole Genome Bisulfite Sequencing
 
 ## Configuration Options
 
 ### Mapping Parameters
 - `default`: Standard mapping parameters
-- `colcen`: Centromere-specific mapping (more sensitive)
-- `colcenall`: Centromere mapping with relaxed MAPQ
+- `repeat`: Centromere-specific mapping (more sensitive)
+- `repeatall`: Centromere mapping with relaxed MAPQ
 - `all`: Relaxed mapping parameters
 
 ###  Intermediate Target Rules
@@ -178,8 +184,9 @@ snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_gene
 ```
 Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf`
 
-2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis. `GO` needs to be switched to `true` in the config file, and either the GO database need to be already made or the files to make it are defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database. 
-To run the analysis:
+2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis. 
+By default, GO is not performed on DEGs since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database. 
+To run a GO analysis on any target file:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<target_name>.done
 ```
@@ -190,7 +197,22 @@ snakemake --cores 1 results/RNA/GO/TopGO__test_smk__ColCEN__my_genes_of_interest
 ```
 Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
 
-3. Rerunning a specific analysis
+3. `rule find_motifs_in_file`: Given a bed file containing different regions, it will perform a motifs analysis with memme. 
+By default motifs analysis is only done on the final selected TF peak files (`motifs = true` in config). Switch `allrep` to `true` in the config file for motifs analysis to be performed on all replicates and pairwise idr if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the config file `jaspar_db`. 
+To run the analysis:
+```bash 
+snakemake --cores 1 results/TF/chkpts/motifs_<target_name>.done
+```
+Note that the separator is two underscores next to each other `__`.
+An example running the pipeline on a slurm hpc, for regions from <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
+```bash 
+snakemake --profile profiles/slurm results/TF/chkpts/motifs__my_regions_of_interests.done --config motifs_target_file="data/target_peaks.txt" motifs_target_file_label="my_regions_of_interests" motifs_ref_genome="ColCEN"
+```
+Output is the folder `results/TF/<target_name>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html.
+
+4. `rule_srna_`
+
+5. Rerunning a specific analysis
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
 e.g `snakemake --cores 1 results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force`
 If only the analysis is to be performed, and not the everything, delete the corresponding chkpts files in `results/combined/chkpts/combined_analysis__<analysis_name>.done` as well as in the desired environments `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
