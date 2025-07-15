@@ -648,8 +648,6 @@ rule idr_analysis_replicates:
         while read chr max; do
             printf "${{chr}}\t1\t${{max}}\n" >> "${{temp}}"
         done < "genomes/{params.ref_genome}/chrom.sizes"
-        current="${{temp}}.current"
-        cp ${{temp}} ${{current}}
         for pair in {params.replicate_pairs}; do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
@@ -662,12 +660,12 @@ rule idr_analysis_replicates:
             mv "${{outfile}}.png" results/{params.env}/plots/
             filtered="${{outfile}}.filtered"
             awk -v OFS="\t" '$5>=540 {{print $1,$2,$3}}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
-            new="${{current}}.new"
-            bedtools intersect -a ${{current}} -b ${{filtered}} > "${{new}}"
-            mv "${{new}}" "${{current}}"
+            new="${{temp}}.new"
+            bedtools intersect -a ${{temp}} -b ${{filtered}} > "${{new}}"
+            mv "${{new}}" "${{temp}}"
         done
-        cat ${{current}} > {output.merged}
-        rm -f ${{current}} ${{new}} ${{filtered}} ${{temp}}
+        cat ${{temp}} > {output.merged}
+        rm -f ${{temp}} ${{new}} ${{filtered}}
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
