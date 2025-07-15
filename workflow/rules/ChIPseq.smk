@@ -646,7 +646,7 @@ rule idr_analysis_replicates:
         fi
         temp="results/{params.env}/peaks/temp_idr_peaks__{params.sname}.bed"
         while read chr max; do
-            printf "${{chr}}\t1\t${{max}}\n" >> ${{temp}}
+            printf "${{chr}}\t1\t${{max}}\n" >> "${{temp}}"
         done < "genomes/{params.ref_genome}/chrom.sizes"
         current="${{temp}}.current"
         cp ${{temp}} ${{current}}
@@ -661,7 +661,7 @@ rule idr_analysis_replicates:
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
             mv "${{outfile}}.png" results/{params.env}/plots/
             filtered="${{outfile}}.filtered"
-            awk -v OFS="\t" '$5>=540 {print $1,$2,$3}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
+            awk -v OFS="\t" '$5>=540 {{print $1,$2,$3}}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
             new="${{current}}.new"
             bedtools intersect -a ${{current}} -b ${{filtered}} > "${{new}}"
             mv "${{new}}" "${{current}}"
