@@ -210,7 +210,17 @@ snakemake --profile profiles/slurm results/TF/chkpts/motifs__my_regions_of_inter
 ```
 Output is the folder `results/TF/<target_name>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html.
 
-4. `rule_srna_`
+4. `rule call_all_differential_srna_clusters`: Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, all the samples from the sample file but limiting the mapping and counts to the loci in the target file. Edit `srna_target_file` and `srna_target_file_label` in the config file. To run the analysis: 
+```bash 
+snakemake --cores 1 results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<target_name>/Counts.txt
+```
+An example running the pipeline on a slurm hpc, <analysis_name>="test_smk" and <ref_genome>="ColCEN", while setting the target file and its label "miRNAs" directly in the snakemake command:
+```bash 
+snakemake --profile profiles/slurm results/sRNA/clusters/test_smk__ColCEN__on_miRNAs/Counts.txt --config sRNA_target_file="data/miRNA.gff" sRNA_target_file_label="miRNAs"
+```
+Output is the results folder from Shortstack limited to this loci file, followed by the differential cluster analysis with edgeR.
+
+If you only want the results of Shortstack and not the differential analysis, use `rule analyze_all_srna_samples_on_target_file` instead, targeting: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<target_name>/Counts.txt`
 
 5. Rerunning a specific analysis
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
