@@ -129,7 +129,7 @@ def define_chipseq_target_file(wildcards):
         peaktype = get_peaktype(sample_type, config["chip_callpeaks"]['peaktype'])
         inputfile = f"results/{env}/peaks/{file_type}__{spname}.{peaktype}Peak"
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
-        if any(analysis_samples['Sample'] == spname):
+        if any(analysis_samples['sample_name'] == spname):
             return [inputfile, fasta]
     elif file_type.startswith("idr_"):
         data_type, line, tissue, sample_type, rep, ref_genome_plus = parts[1:]
@@ -139,7 +139,7 @@ def define_chipseq_target_file(wildcards):
         rep1, rep2 = rep.split("_vs_")
         sname = f"{data_type}__{line}__{tissue}__{sample_type}__{rep1}__{ref_genome}"
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
-        if any(samples['Sample'] == sname):
+        if any(samples['sample_name'] == sname):
             return [inputfile, fasta]
     elif file_type.startswith("peaks_"):
         filecat, data_type, line, tissue, sample_type, rep, ref_genome_plus = parts[1:]
@@ -148,7 +148,7 @@ def define_chipseq_target_file(wildcards):
         ref_genome, rest = ref_genome_plus.rsplit("_",1)
         sname = f"{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}"
         fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
-        if any(samples['Sample'] == sname):
+        if any(samples['sample_name'] == sname):
             return [inputfile, fasta]
     elif {peak_file} == tarname:
         ref_genome = config['motif_ref_genome']
