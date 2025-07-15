@@ -148,7 +148,7 @@ analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name
 # To assign all replicates to each sample
 analysis_to_replicates = (
     samples
-    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome", "extra_info"])["replicate"]
+    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
     .apply(list)
     .to_dict()
 )
