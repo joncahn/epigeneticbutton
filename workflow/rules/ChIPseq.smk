@@ -613,7 +613,6 @@ rule idr_analysis_replicates:
         peak_file = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
         touch = "results/{env}/chkpts/idr__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.done",
-        tmp_merged = temp("results/{env}/peaks/tmp_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"),
         merged = "results/{env}/peaks/idr_peaks__{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}.bed"
     wildcard_constraints:
         env = "ChIP|TF"
@@ -645,10 +644,12 @@ rule idr_analysis_replicates:
         else
             pre="se"
         fi
+        temp="results/{params.env}/peaks/temp_idr_peaks__{params.sname}.bed"
         while read chr max; do
-            printf "${{chr}}\t1\t${{max}}\n" >> {output.tmp_merged}
+            printf "${{chr}}\t1\t${{max}}\n" >> ${{temp}}
         done < "genomes/{params.ref_genome}/chrom.sizes"
-        
+        current="${{temp}}.current"
+        cp ${{temp}} ${{current}}
         for pair in {params.replicate_pairs}; do
             rep1=$(echo ${{pair}} | cut -d":" -f1)
             rep2=$(echo ${{pair}} | cut -d":" -f2)
@@ -659,9 +660,14 @@ rule idr_analysis_replicates:
             idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l results/{params.env}/reports/idr_{params.sname}.log --plot || true
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
             mv "${{outfile}}.png" results/{params.env}/plots/
-            head ${{outfile}}
-            # bedtools intersect -a {output.tmp_merged} -b ${{outfile}} > "results/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
+            filtered="${{outfile}}.filtered"
+            awk -v OFS="\t" '$5>=540 {print $1,$2,$3}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
+            new="${{current}}.new"
+            bedtools intersect -a ${{current}} -b ${{filtered}} > "${{new}}"
+            mv "${{new}}" "${{current}}"
         done
+        cat ${{current}} > {output.merged}
+        rm -f ${{current}} ${{new}} ${{filtered}} ${{temp}}
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """

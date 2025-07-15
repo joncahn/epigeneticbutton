@@ -255,6 +255,9 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 2. ShortStack version 
 The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developper created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
 
+3. idr/numpy version
+IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
+
 ## Features under development
 - Finishing ChIP-seq and RNA-seq
 - Assignment of IP to Input based on suffix (e.g. ChIP_A)
