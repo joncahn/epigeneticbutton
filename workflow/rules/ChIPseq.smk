@@ -853,7 +853,7 @@ rule all_chip:
     input:
         final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
-        touch = "results/{env}/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done"
+        touch = "results/{env}/chkpts/{env}_analysis__{analysis_name}__{ref_genome}.done"
     wildcard_constraints:
         env = "ChIP|TF"
     localrule: True
