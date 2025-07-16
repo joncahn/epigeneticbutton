@@ -912,13 +912,13 @@ rule find_motifs_in_file:
         ext="${{peakfile##*.}}"
         if [[ "${{ext}}" == "narrowPeak" ]]; then
             printf "\nGetting peak fasta sequences around the summit for narrowPeak file: ${{peakfile}}\n"
-            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
+            sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
         elif [[ "${{ext}}" == "broadPeak" ]]; then
             printf "\nGetting peak fasta sequences around the middle for broadPeak file: ${{peakfile}}\n"
-            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
+            sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
         elif [[ "${{ext}}" == "bedPeak" ]]; then 
             printf "\nGetting peak fasta sequences for bed file: ${{peakfile}}\n"
-            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
+            cat ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
         else
             printf "\nGetting peak fasta sequences for unknown file format: ${{peakfile}}\n"
             sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); t=($3-$2); if (t<500) {{print $1,$2,$3,$4; else print $1,s-200,s+200,$4;}} n=$4}}}}' > {output.temp_bed}
@@ -927,7 +927,7 @@ rule find_motifs_in_file:
         bedtools getfasta -name -fi {input[1]} -bed {output.temp_bed} > {output.temp_fa}
         printf "\nGetting motifs for {params.peak_file} with meme version:\n"
         meme -version
-        meme-chip -oc {{output.motifs}}/meme -meme-p {threads} -meme-motifs 10 -streme-motifs 10 {output.temp_fa}
+        meme-chip -oc {{output.motifs}}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
         if [[ -s {output.motifs}/meme/combined.meme ]]; then
             printf "\nLooking for similar motifs in JASPAR database with tomotom\n"
             tomtom -oc {output.motifs}/tomtom/ {output.motifs}/meme/combined.meme {params.jaspar_db}
