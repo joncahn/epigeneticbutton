@@ -38,7 +38,7 @@ def define_final_combined_output(ref_genome):
     
     return results
 
-rule combined_peakfiles:
+rule combine_peakfiles:
     input:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         peakfiles = lambda wildcards: [ f"results/ChIP/peaks/selected_peaks__{names}.bedPeak" for names in define_peakfiles_for_combined(wildcards, "ChIP") ]
@@ -52,10 +52,10 @@ rule combined_peakfiles:
         analysis_name = config['analysis_name']
     log:
         temp(return_log_rna("{analysis_name}", "{ref_genome}", "annotate_bedfile"))
-    threads: config["resources"]["combined_peakfiles"]["threads"]
+    threads: config["resources"]["combine_peakfiles"]["threads"]
     resources:
-        mem=config["resources"]["combined_peakfiles"]["mem"],
-        tmp=config["resources"]["combined_peakfiles"]["tmp"]
+        mem=config["resources"]["combine_peakfiles"]["mem"],
+        tmp=config["resources"]["combine_peakfiles"]["tmp"]
     shell:
         """
         {{

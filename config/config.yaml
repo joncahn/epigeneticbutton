@@ -263,3 +263,5 @@ resources:
   analyze_all_srna_samples_on_target_file: *heavy
   prep_files_for_differential_srna_clusters: *single
   call_all_differential_srna_clusters: *single
+  combine_peakfiles: *low
+  get_annotations_for_bedfile: *low
