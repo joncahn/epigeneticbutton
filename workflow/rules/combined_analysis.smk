@@ -28,9 +28,13 @@ def define_final_combined_output(ref_genome):
     text_files = []
     plot_files = []
     
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ['ChIP','TF']) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     if len(filtered_analysis_samples) >=2:
-        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_{analysis_name}__{ref_genome}.bed")
+        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_ChIP_{analysis_name}__{ref_genome}.bed")
+    
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    if len(filtered_analysis_samples) >=2:
+        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_TF_{analysis_name}__{ref_genome}.bed")
         
     if analysis:
         results = plot_files + text_files
