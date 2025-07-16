@@ -33,7 +33,7 @@ def define_final_combined_output(ref_genome):
         
     if analysis:
         results = plot_files + text_files
-    else
+    else:
         results = []
     
     return results
