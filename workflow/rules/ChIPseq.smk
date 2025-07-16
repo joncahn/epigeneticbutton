@@ -929,7 +929,7 @@ rule find_motifs_in_file:
         head {output.temp_fa}
         printf "\nGetting motifs for {params.peak_file} with meme version:\n"
         meme -version
-        meme-chip -oc {{output.motifs}}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
+        meme-chip -oc {output.motifs}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
         if [[ -s {output.motifs}/meme/combined.meme ]]; then
             printf "\nLooking for similar motifs in JASPAR database with tomotom\n"
             tomtom -oc {output.motifs}/tomtom/ {output.motifs}/meme/combined.meme {params.jaspar_db}
