@@ -128,7 +128,7 @@ The combination line x tissue will be the base for all comparisons (e.g `WT_leaf
 - Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). It should be the name of a directory found at the path defined in the config file `ref_path` which contains a single fasta file, a single gff file and a single gtf file. If mapping to multiple references, these directory should be organized in the same `ref_path`. For example, the following structure:
 ```
 /home/
-└── genomes/		# ref_path: "/home/genomes"
+└── genomes/			# ref_path: "/home/genomes"
 	├── B73_NAM/		# ref_genome: "B73_NAM" (first ref genome)
 	│	├── B73.fasta	# can be .fa(.gz) or .fasta(.gz)
 	│	├── B73.gff	# can be .gff*(.gz)
