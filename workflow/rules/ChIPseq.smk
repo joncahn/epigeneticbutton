@@ -910,13 +910,13 @@ rule find_motifs_in_file:
         {{
         inputname="{input[0]}"
         ext="${{inputname##*.}}"
-        if [[ "${{ext}" == "narrowPeak" ]]; then
+        if [[ "${{ext}}" == "narrowPeak" ]]; then
             printf "\nGetting peak fasta sequences around the summit for narrowPeak file: {input[0]}\n"
             sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
-        elif [[ "${{ext}" == "broadPeak" ]]; then
+        elif [[ "${{ext}}" == "broadPeak" ]]; then
             printf "\nGetting peak fasta sequences around the middle for broadPeak file: {input[0]}\n"
             sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
-        elif [[ "${{ext}" == "bedPeak" ]]; then 
+        elif [[ "${{ext}}" == "bedPeak" ]]; then 
             printf "\nGetting peak fasta sequences for bed file: {input[0]}\n"
             sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
         else
