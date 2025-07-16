@@ -908,7 +908,7 @@ rule find_motifs_in_file:
     shell:
         """
         {{
-        inputname="{input[0]##*.}"
+        inputname="{input[0]}"
         ext="${{inputname##*.}}"
         if [[ "${{ext}" == "narrowPeak" ]]; then
             printf "\nGetting peak fasta sequences around the summit for narrowPeak file: {input[0]}\n"
