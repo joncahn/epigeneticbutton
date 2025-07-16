@@ -128,12 +128,12 @@ The combination line x tissue will be the base for all comparisons (e.g `WT_leaf
 - Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). It should be the name of a directory found at the path defined in the config file `ref_path` which contains a single fasta file, a single gff file and a single gtf file. If mapping to multiple references, these directory should be organized in the same `ref_path`. For example, the following structure:
 ```
 /home/
-└── genomes/ 		# ref_path: "/home/genomes"
- 	├── B73_NAM/	# ref_genome: "B73_NAM" (first ref genome)
+└── genomes/			# ref_path: "/home/genomes"
+ 	├── B73_NAM/		# ref_genome: "B73_NAM" (first ref genome)
 	│	├──	B73.fasta	# can be .fa(.gz) or .fasta(.gz)
 	│	├──	B73.gff		# can be .gff*(.gz)
 	│	└──	B73.gtf		# can be .gtf(.gz)	
- 	└── tair10/		# ref_genome: "tair10" (second ref genome)
+ 	└── tair10/			# ref_genome: "tair10" (second ref genome)
 	 	├──	Ath.fasta	# can be .fa(.gz) or .fasta(.gz)
 	 	├──	Ath.gff		# can be .gff*(.gz)
 	 	└──	Ath.gtf		# can be .gtf(.gz)
@@ -246,37 +246,37 @@ If only the analysis is to be performed, and not the everything, delete the corr
 
 ```
 epigeneticbutton/
-├── config/ 		   # Location for the main config file and recommended location for sample files and target files
-├── data/			   # Location for test material and examples (e.g. zm_structural_RNAs.fa.gz)
-├── Help/			   # Location for help files (e.g. Help_structural_RNAs_database_with_Rfam)
+├── config/				# Location for the main config file and recommended location for sample files and target files
+├── data/				# Location for test material and examples (e.g. zm_structural_RNAs.fa.gz)
+├── Help/				# Location for help files (e.g. Help_structural_RNAs_database_with_Rfam)
 ├── profiles/
-│	├── sge/		   # Config file to run snakemake on a cluster managed by SGE
-│	├── slurm/		   # Config file to run snakemake on a cluster managed by SLURM
-│	└──	cluster.yaml   # Config file with job-specific resources for cluster submission (used by sge and slurm)
+│	├── sge/			# Config file to run snakemake on a cluster managed by SGE
+│	├── slurm/			# Config file to run snakemake on a cluster managed by SLURM
+│	└── cluster.yaml	# Config file with job-specific resources for cluster submission (used by sge and slurm)
 ├── workflow/
-│	├── envs/		   # Conda environment file for depencies
-│	├── rules/		   # Snakemake files with data type analysis rules
-│	├── scripts/	   # R scripts for plots
-│	└── snakefile	   # main snakefile
-├── genomes/		   # Genome directories created upon run
-│	└──	{ref_genome}/  # Genome-specific directories with sequence, annotation and indexes
-└── results/           # Results directories created upon run
-	├── combined/      # Combined analysis results
-	│	├── logs/      # Log files
-	│   ├── chkpts/    # Peak calling results
-	│   ├── peaks/     # Peak calling results
-	│   ├── DEG/       # Differential expression results
-	│   ├── TSS/       # Transcription start site analysis
-	│   ├── reports/   # Analysis reports
-	│   ├── matrix/    # Data matrices
-	│   └── plots/     # Visualization plots
-	└── {data_type}/   # Data type specific directories
-	    ├── fastq/     # Processed FASTQ files
-	    ├── mapped/    # Mapped reads (bam)
-	    ├── tracks/    # Track files (bigwigs)
-	    ├── reports/   # QC reports
-	    ├── */		   # data-specific directories (e.g. 'dmrs' for mC, 'clusters' for sRNA)
-		└── plots/     # Data type specific plots
+│	├── envs/			# Conda environment file for depencies
+│	├── rules/			# Snakemake files with data type analysis rules
+│	├── scripts/		# R scripts for plots
+│	└── snakefile		# main snakefile
+├── genomes/			# Genome directories created upon run
+│	└── {ref_genome}/	# Genome-specific directories with sequence, annotation and indexes
+└── results/			# Results directories created upon run
+	├── combined/		# Combined analysis results
+	│	├── logs/		# Log files
+	│   ├── chkpts/		# Peak calling results
+	│   ├── peaks/		# Peak calling results
+	│   ├── DEG/		# Differential expression results
+	│   ├── TSS/		# Transcription start site analysis
+	│   ├── reports/	# Analysis reports
+	│   ├── matrix/		# Data matrices
+	│   └── plots/		# Visualization plots
+	└── {data_type}/	# Data type specific directories
+	    ├── fastq/		# Processed FASTQ files
+	    ├── mapped/		# Mapped reads (bam)
+	    ├── tracks/		# Track files (bigwigs)
+	    ├── reports/	# QC reports
+	    ├── */			# data-specific directories (e.g. 'dmrs' for mC, 'clusters' for sRNA)
+		└── plots/		# Data type specific plots
 ```
 
 ## Known potential issues
