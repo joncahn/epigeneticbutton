@@ -128,15 +128,15 @@ The combination line x tissue will be the base for all comparisons (e.g `WT_leaf
 - Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). It should be the name of a directory found at the path defined in the config file `ref_path` which contains a single fasta file, a single gff file and a single gtf file. If mapping to multiple references, these directory should be organized in the same `ref_path`. For example, the following structure:
 ```
 /home/
-└── genomes/			# ref_path: "/home/genomes"
- 	├── B73_NAM/		# ref_genome: "B73_NAM" (first ref genome)
-	│	├──	B73.fasta	# can be .fa(.gz) or .fasta(.gz)
-	│	├──	B73.gff		# can be .gff*(.gz)
-	│	└──	B73.gtf		# can be .gtf(.gz)	
+└── genomes/		# ref_path: "/home/genomes"
+	├── B73_NAM/		# ref_genome: "B73_NAM" (first ref genome)
+	│	├── B73.fasta	# can be .fa(.gz) or .fasta(.gz)
+	│	├── B73.gff	# can be .gff*(.gz)
+	│	└── B73.gtf	# can be .gtf(.gz)	
  	└── tair10/		# ref_genome: "tair10" (second ref genome)
-	 	├──	Ath.fasta	# can be .fa(.gz) or .fasta(.gz)
-	 	├──	Ath.gff		# can be .gff*(.gz)
-	 	└──	Ath.gtf		# can be .gtf(.gz)
+		├── Ath.fasta	# can be .fa(.gz) or .fasta(.gz)
+		├── Ath.gff	# can be .gff*(.gz)
+		└── Ath.gtf	# can be .gtf(.gz)
 ```
 The GTF file can be created from a GFF file with cufflinks `gffread -T <gff_file> -o <gtf_file>` and check that `transcript_id` and `gene_id` are correctly assigned in the 9th column. The GFF file should have `gene` in the 3rd column. All files can be gzipped (.gz extension).
 
@@ -262,18 +262,18 @@ epigeneticbutton/
 │	└── {ref_genome}/	# Genome-specific directories with sequence, annotation and indexes
 └── results/			# Results directories created upon run
 	├── combined/		# Combined analysis results
-	│	├── logs/		# Log files
-	│	├── chkpts/		# Peak calling results
-	│	├── peaks/		# Peak calling results
-	│	├── DEG/		# Differential expression results
-	│	├── TSS/		# Transcription start site analysis
+	│	├── logs/	# Log files
+	│	├── chkpts/	# Peak calling results
+	│	├── peaks/	# Peak calling results
+	│	├── DEG/	# Differential expression results
+	│	├── TSS/	# Transcription start site analysis
 	│	├── reports/	# Analysis reports
-	│	├── matrix/		# Data matrices
-	│	└── plots/		# Visualization plots
-	└── {data_type}/	# Data type specific directories
-		├── fastq/		# Processed FASTQ files
-		├── mapped/		# Mapped reads (bam)
-		├── tracks/		# Track files (bigwigs)
+	│	├── matrix/	# Data matrices
+	│	└── plots/	# Visualization plots
+	└── <env>/	# Data type specific directories
+		├── fastq/	# Processed FASTQ files
+		├── mapped/	# Mapped reads (bam)
+		├── tracks/	# Track files (bigwigs)
 		├── reports/	# QC reports
 		├── */		# data-specific directories (e.g. 'dmrs' for mC, 'clusters' for sRNA)
 		└── plots/	# Data type specific plots
