@@ -910,7 +910,7 @@ rule find_motifs_in_file:
         """
         {{
         peakfile="{input[0]}"
-        ext="${{peakfile##*.}}"
+        ext=${{peakfile##*.}}
         if [[ "${{ext}}" == "narrowPeak" ]]; then
             printf "\nGetting peak fasta sequences around the summit for narrowPeak file: ${{peakfile}}\n"
             sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{a=$1":"$2":"$3; if (a!=n) {{s=$2+$10; print $1,s-200,s+200,$4;}} n=$1":"$2":"$3}}' > {output.temp_bed}
@@ -924,8 +924,9 @@ rule find_motifs_in_file:
             printf "\nGetting peak fasta sequences for unknown file format: ${{peakfile}}\n"
             cat ${{peakfile}} | awk -v OFS="\t" '{{s=int(($2+$3)/2); t=($3-$2); if (t<500) print $1,$2,$3,$4; else print $1,s-200,s+200,$4}}' > {output.temp_bed}
         fi
-        
+        head {output.temp_bed}
         bedtools getfasta -name -fi {input[1]} -bed {output.temp_bed} > {output.temp_fa}
+        head {output.temp_fa}
         printf "\nGetting motifs for {params.peak_file} with meme version:\n"
         meme -version
         meme-chip -oc {{output.motifs}}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
