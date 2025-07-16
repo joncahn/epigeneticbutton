@@ -142,10 +142,10 @@ The GTF file can be created from a GFF file with cufflinks `gffread -T <gff_file
 
 ### Histone ChIP-seq
 - Col1: *data_type*: `ChIP` or `ChIP_<id>` where `<id>` is an identifier to relate an IP sample to its corresponding input. Only necessary in case there are different inputs to be used for different IP samples that otherwise share the same `line` and `tissue` values.
-For example: If you have H3K27meac IP samples which you want compared to an H3 sample, and H4K16ac to be compared to H4 samples. Both H3 and H4 samples should be labeled `Input` in sample_type, so to differentiate them, use `ChIP_H3` and `ChIP_H4` for their data_type and the ones of H3K27ac and H4K16ac, respectively. Example:
-`ChIP_H3	Col0	WT	H3K27ac	Rep1	wt_k27	./fastq/	PE	Tair10`
-`ChIP_H3	Col0	WT	IP	Rep1	wt_h3_ctrl	./fastq/	PE	Tair10`
-`ChIP_H4	Col0	WT	H3K27ac	Rep1	wt_h4k16	./fastq/	PE	Tair10`
+For example: If you have H3K27meac IP samples which you want compared to an H3 sample, and H4K16ac to be compared to H4 samples. Both H3 and H4 samples should be labeled `Input` in sample_type, so to differentiate them, use `ChIP_H3` and `ChIP_H4` for their data_type and the ones of H3K27ac and H4K16ac, respectively. Example:\
+`ChIP_H3	Col0	WT	H3K27ac	Rep1	wt_k27	./fastq/	PE	Tair10`\
+`ChIP_H3	Col0	WT	IP	Rep1	wt_h3_ctrl	./fastq/	PE	Tair10`\
+`ChIP_H4	Col0	WT	H3K27ac	Rep1	wt_h4k16	./fastq/	PE	Tair10`\
 `ChIP_H4	Col0	WT	IP	Rep1	wt_h4_ctrl	./fastq/	PE	Tair10`
 - Col4: *sample_type*: Either `Input` to be used as a control (even if it is actually H3 or IgG pull-down), or the histone mark IP (e.g. H3K9me2). If the mark is not already listed in the config file `chip_callpeaks: peaktype:`, add it to the desired category (either narrow or broad peaks).
 - Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `ChIP` data_type, using `MNase` for the light digest and `Input` for the heavy digest.
