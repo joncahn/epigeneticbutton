@@ -248,13 +248,14 @@ def define_final_chip_output(ref_genome):
         spname = sample_name_str(row, 'analysis')
         env = get_sample_info_from_name(spname, analysis_samples, 'env')        
         motif_files.append(f"results/TF/chkpts/motifs__selected_peaks__{spname}.done")
-        paired = "pe" if get_sample_info_from_name(sname, samples, 'paired') == "PE" else "se"
         reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])       
         if len(reps) >= 2:
             motif_files.append(f"results/TF/chkpts/motifs__idr_peaks__{spname}.done")
         for i in range(0,len(reps)):
             rep_i = reps[i]
-            allrep_files.append(f"results/TF/chkpts/motifs__peaks_{paired}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{rep_i}__{row.ref_genome}_peaks.done")
+            sname = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{rep_i}__{row.ref_genome}"
+            paired = "pe" if get_sample_info_from_name(sname, samples, 'paired') == "PE" else "se"
+            allrep_files.append(f"results/TF/chkpts/motifs__peaks_{paired}__final__{sname}_peaks.done")
         
     if qc_option == "all":
         results = map_files + qc_files
@@ -822,7 +823,7 @@ rule best_peaks_pseudoreps:
 		bedtools intersect -a {input.peakfiles[0]} -b results/{params.env}/peaks/temp_{params.sname}_selected.bed -u > "results/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak"
         printf "\nGetting best quality peaks peaks\n"
         ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its actual summit.
-        sort -k1,1 -k2,2n -k5nr results/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" '{{print $1";"$2";"$3,$4,$5,$6,$7,$8,$9,$10}}' | awk 'BEGIN {{a=0}} {{b=$1; if (b!=a) print $0; a=$1}}' | awk -F"[;\t]" -v OFS="\t" -v t={params.peaktype} '{{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}}' | bedtools sort -g {input.chrom_sizes} > "{output.bestpeaks}"
+        sort -k1,1 -k2,2n -k5nr results/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" -v t={params.peaktype} '{{a=$1":"$2":"$3; if (a!=n) {{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}} n=$1":"$2":"$3}}' | bedtools sort -g {input.chrom_sizes} > "{output.bestpeaks}"
         printf "\nExtracting peak stats for {params.sname}\n"
         merged=$(wc -l results/{params.env}/peaks/temp_{params.sname}_merged.bed | cut -d" " -f1)
 		pseudos=$(awk '{{print $1,$2,$3}}' results/{params.env}/peaks/temp_{params.sname}_pseudos.bed | sort -k1,1 -k2,2n -u | wc -l)
@@ -912,16 +913,16 @@ rule find_motifs_in_file:
         ext="${{peakfile##*.}}"
         if [[ "${{ext}}" == "narrowPeak" ]]; then
             printf "\nGetting peak fasta sequences around the summit for narrowPeak file: ${{peakfile}}\n"
-            sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
+            sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{a=$1":"$2":"$3; if (a!=n) {{s=$2+$10; print $1,s-200,s+200,$4;}} n=$1":"$2":"$3}}' > {output.temp_bed}
         elif [[ "${{ext}}" == "broadPeak" ]]; then
             printf "\nGetting peak fasta sequences around the middle for broadPeak file: ${{peakfile}}\n"
-            sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
+            sort -k1,1 -k2,2n -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{a=$1":"$2":"$3; if (a!=n) {{s=$2+$10; print $1,s-200,s+200,$4;}} n=$1":"$2":"$3}}' > {output.temp_bed}
         elif [[ "${{ext}}" == "bedPeak" ]]; then 
             printf "\nGetting peak fasta sequences for bed file: ${{peakfile}}\n"
-            cat ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
+            cat ${{peakfile}} | awk -v OFS="\t" '{{s=$2+$10; print $1,s-200,s+200,$4}}' > {output.temp_bed}
         else
             printf "\nGetting peak fasta sequences for unknown file format: ${{peakfile}}\n"
-            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); t=($3-$2); if (t<500) {{print $1,$2,$3,$4; else print $1,s-200,s+200,$4;}} n=$4}}}}' > {output.temp_bed}
+            cat ${{peakfile}} | awk -v OFS="\t" '{{s=int(($2+$3)/2); t=($3-$2); if (t<500) print $1,$2,$3,$4; else print $1,s-200,s+200,$4}}' > {output.temp_bed}
         fi
         
         bedtools getfasta -name -fi {input[1]} -bed {output.temp_bed} > {output.temp_fa}
