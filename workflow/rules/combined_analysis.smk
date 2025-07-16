@@ -32,7 +32,9 @@ def define_final_combined_output(ref_genome):
         text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_{analysis_name}__{ref_genome}.bed")
         
     if analysis:
-        results += plot_files + text_files
+        results = plot_files + text_files
+    else
+        results = []
     
     return results
 
