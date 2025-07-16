@@ -165,7 +165,7 @@ include: "rules/plotting_with_R.smk"
 # Rule all to specify final target
 rule all:
     input:
-	    expand(f"results/combined/chkpts/combined_analysis__{analysis_name}.done", analysis_name = analysis_name)
+	    expand(f"results/combined/chkpts/final_analysis__{analysis_name}.done", analysis_name = analysis_name)
     localrule: True
 
 ### Intermediate target rules
@@ -189,6 +189,7 @@ rule coverage_chip:
 rule combined_analysis:
     input:
         expand("results/combined/chkpts/ref__{ref_genome}.done", ref_genome=REF_GENOMES),
+        expand("results/combined/chkpts/combined_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES),
         expand("results/ChIP/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
         expand("results/TF/chkpts/TF_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
         expand("results/RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
@@ -198,7 +199,7 @@ rule combined_analysis:
         expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]]),
         expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
     output:
-        chkpt = f"results/combined/chkpts/combined_analysis__{analysis_name}.done"
+        chkpt = f"results/combined/chkpts/final_analysis__{analysis_name}.done"
     localrule: True
     shell:
         """
