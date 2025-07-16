@@ -27,6 +27,7 @@ env_patterns = [
 samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
                       names=["data_type", "line", "tissue", "sample_type", "replicate", 
                              "seq_id", "fastq_path", "paired", "ref_genome"])
+samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).rest_index(drop=True)
 
 # Create an "env" column based on the string patterns in data_type
 conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]

@@ -23,7 +23,7 @@ rule plotting_mapping_stats:
     output:
         plot = "results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
     params:
-        analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
+        analysis_name = lambda wildcards: wildcards.analysis_name,
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_mapping_stats.R")
     log:
         "results/{env}/logs/plotting_mapping_stats_{analysis_name}_{env}.log"
@@ -57,8 +57,8 @@ rule plotting_peaks_stats_chip_tf:
     output:
         plot = "results/combined/plots/peak_stats_{analysis_name}_{env}.pdf"
     params:
-        analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
-        env = lambda wildcards: f"{wildcards.env}",
+        analysis_name = lambda wildcards: wildcards.analysis_name,
+        env = lambda wildcards: wildcards.env,
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_peak_stats.R")
     log:
         "results/{env}/logs/plotting_peaks_stats_{analysis_name}_{env}.log"
@@ -94,7 +94,7 @@ rule plotting_srna_sizes_stats:
         plot1 = "results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf",
         plot2 = "results/combined/plots/srna_sizes_stats_zoom_{analysis_name}_{env}.pdf"
     params:
-        analysis_name = lambda wildcards: f"{wildcards.analysis_name}",
+        analysis_name = lambda wildcards: wildcards.analysis_name,
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_sizes_stats.R")
     log:
         "results/sRNA/logs/plotting_srna_sizes_stats_{analysis_name}_{env}.log"
