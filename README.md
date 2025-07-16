@@ -133,7 +133,7 @@ The combination line x tissue will be the base for all comparisons (e.g `WT_leaf
 	│	├──	B73.fasta	# can be .fa(.gz) or .fasta(.gz)
 	│	├──	B73.gff		# can be .gff*(.gz)
 	│	└──	B73.gtf		# can be .gtf(.gz)	
- 	└── tair10/			# ref_genome: "tair10" (second ref genome)
+ 	└── tair10/		# ref_genome: "tair10" (second ref genome)
 	 	├──	Ath.fasta	# can be .fa(.gz) or .fasta(.gz)
 	 	├──	Ath.gff		# can be .gff*(.gz)
 	 	└──	Ath.gtf		# can be .gtf(.gz)
