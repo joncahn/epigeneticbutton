@@ -7,3 +7,4 @@ dependencies:
   - numpy<=1.19
   - idr
   - bedtools
+  - meme>=5

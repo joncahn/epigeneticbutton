@@ -15,8 +15,6 @@ dependencies:
   - bedtools
   - deeptools
   - macs2
-  - idr
-  - meme>=5
   - bismark
   - star
   - shortstack=4.0
