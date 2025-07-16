@@ -908,7 +908,8 @@ rule find_motifs_in_file:
     shell:
         """
         {{
-        ext="${{ {input[0]##*.} }}"
+        inputname="{input[0]##*.}"
+        ext="${{inputname##*.}}"
         if [[ "${{ext}" == "narrowPeak" ]]; then
             printf "\nGetting peak fasta sequences around the summit for narrowPeak file: {input[0]}\n"
             sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
