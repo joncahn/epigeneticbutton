@@ -719,7 +719,7 @@ rule idr_analysis_replicates:
             mv "${{new}}" "${{temp}}"
         done
         cat ${{temp}} > {output.merged}        
-        bedtools intersect -a ${{file2}} -b ${{temp}} -u > "results/{params.env}/idr_peaks__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__{params.ref_genome}.{params.peaktype}Peak"
+        bedtools intersect -a ${{file2}} -b ${{temp}} -u > "results/{params.env}/peaks/idr_peaks__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__{params.ref_genome}.{params.peaktype}Peak"
         rm -f ${{temp}} ${{new}} ${{filtered}}
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
