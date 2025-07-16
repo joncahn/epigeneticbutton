@@ -908,20 +908,20 @@ rule find_motifs_in_file:
     shell:
         """
         {{
-        inputname="{input[0]}"
-        ext="${{inputname##*.}}"
+        peakfile="{input[0]}"
+        ext="${{peakfile##*.}}"
         if [[ "${{ext}}" == "narrowPeak" ]]; then
-            printf "\nGetting peak fasta sequences around the summit for narrowPeak file: {input[0]}\n"
-            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
+            printf "\nGetting peak fasta sequences around the summit for narrowPeak file: ${{peakfile}}\n"
+            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
         elif [[ "${{ext}}" == "broadPeak" ]]; then
-            printf "\nGetting peak fasta sequences around the middle for broadPeak file: {input[0]}\n"
-            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
+            printf "\nGetting peak fasta sequences around the middle for broadPeak file: ${{peakfile}}\n"
+            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); print $1,s-200,s+200,$4; n=$4;}}}}' > {output.temp_bed}
         elif [[ "${{ext}}" == "bedPeak" ]]; then 
-            printf "\nGetting peak fasta sequences for bed file: {input[0]}\n"
-            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
+            printf "\nGetting peak fasta sequences for bed file: ${{peakfile}}\n"
+            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=$2+$10; print $1,s-100,s+100,$4; n=$4;}}}}' > {output.temp_bed}
         else
-            printf "\nGetting peak fasta sequences for unknown file format: {input[0]}\n"
-            sort -k5,5nr {input.peakfile} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); t=($3-$2); if (t<500) {{print $1,$2,$3,$4; else print $1,s-200,s+200,$4;}} n=$4}}}}' > {output.temp_bed}
+            printf "\nGetting peak fasta sequences for unknown file format: ${{peakfile}}\n"
+            sort -k5,5nr ${{peakfile}} | awk -v OFS="\t" '{{if ($4!=n) {{s=($2+$3/2); t=($3-$2); if (t<500) {{print $1,$2,$3,$4; else print $1,s-200,s+200,$4;}} n=$4}}}}' > {output.temp_bed}
         fi
         
         bedtools getfasta -name -fi {input[1]} -bed {output.temp_bed} > {output.temp_fa}
