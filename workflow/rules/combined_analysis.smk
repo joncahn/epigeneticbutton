@@ -2,9 +2,10 @@
 def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
-def define_samplenames_per_env(wildcards, env):
+def define_samplenames_per_env(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
+    env = wildcards.env
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         names.append(sample_name_str(row, 'analysis'))
@@ -27,7 +28,7 @@ def define_final_combined_output(ref_genome):
     text_files = []
     plot_files = []
     
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ['ChIP','TF']) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     if len(filtered_analysis_samples) >=2:
         text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_{analysis_name}__{ref_genome}.bed")
         
@@ -41,17 +42,18 @@ def define_final_combined_output(ref_genome):
 rule combine_peakfiles:
     input:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
-        peakfiles = lambda wildcards: [ f"results/ChIP/peaks/selected_peaks__{names}.bedPeak" for names in define_peakfiles_for_combined(wildcards, "ChIP") ]
+        peakfiles = lambda wildcards: [ f"results/{env}/peaks/selected_peaks__{names}.bedPeak" for names in define_peakfiles_for_combined(wildcards) ]
     output:
-        temp1_file = "results/combined/bedfiles/temp1_combined_peakfiles_{analysis_name}__{ref_genome}.bed",
-        temp2_file = "results/combined/bedfiles/temp2_combined_peakfiles_{analysis_name}__{ref_genome}.bed",
-        merged_file = "results/combined/bedfiles/combined_peakfiles_{analysis_name}__{ref_genome}.bed"
+        temp1_file = "results/combined/bedfiles/temp1_combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed",
+        temp2_file = "results/combined/bedfiles/temp2_combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed",
+        merged_file = "results/combined/bedfiles/combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        names = lambda wildcards: define_peakfiles_for_combined(wildcards, "ChIP"),
+        env = lambda wildcards: wildcards.env,
+        names = lambda wildcards: define_peakfiles_for_combined(wildcards),
         analysis_name = config['analysis_name']
     log:
-        temp(return_log_rna("{analysis_name}", "{ref_genome}", "annotate_bedfile"))
+        temp(return_log_rna("{analysis_name}", "{ref_genome}", "combined_peaks_{env}"))
     threads: config["resources"]["combine_peakfiles"]["threads"]
     resources:
         mem=config["resources"]["combine_peakfiles"]["mem"],
@@ -60,7 +62,7 @@ rule combine_peakfiles:
         """
         {{
         for sample in {params.names}; do
-            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' results/ChIP/peaks/selected_peaks__${{sample}}.bedPeak >> {output.temp_file}
+            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' results/{params.env}/peaks/selected_peaks__${{sample}}.bedPeak >> {output.temp_file}
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
         bedtools merge -i {output.temp2_file} -c 4 -o distinct | bedtools sort -g {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,$2,$3,"Peak_"NR,$4}}' > {output.merged_file}
