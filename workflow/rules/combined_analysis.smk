@@ -6,7 +6,10 @@ def define_env_samplenames_per_ref(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
     env = wildcards.env
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    if env == "all_chip":
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         names.append(sample_name_str(row, 'analysis'))
     
@@ -16,7 +19,10 @@ def define_env_samplelabels_per_ref(wildcards):
     labels = []
     ref_genome = wildcards.ref_genome
     env = wildcards.env
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    if env == "all_chip":
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         if env == "TF":
             label=f"{row.line}_{row.tissue}_{row.extra_info}"
@@ -37,13 +43,16 @@ def define_input_bedfile(wildcards):
 
 def define_sample_types_for_upset(wildcards):
     types = []
-    env = wildcards.env
     ref_genome = wildcards.ref_genome
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    env = wildcards.env
+    if env == "all_chip":
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        if env == "ChIP":
+        if row.env == "ChIP":
             types.append(row.sample_type)
-        elif env == "TF":
+        elif row.env == "TF":
             types.append(row.extra_info)
         
     return types
@@ -55,14 +64,17 @@ def define_final_combined_output(ref_genome):
     text_files = []
     plot_files = []
     
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    if len(filtered_analysis_samples) >=2:
-        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles__ChIP__{analysis_name}__{ref_genome}.bed")
+    chip_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    if len(chip_analysis_samples) >=2:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
     
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    if len(filtered_analysis_samples) >=2:
-        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles__TF__{analysis_name}__{ref_genome}.bed")
-        
+    tf_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    if len(tf_analysis_samples) >=2:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
+    
+    if len(tf_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
+    
     if analysis:
         results = plot_files + text_files
     else:
