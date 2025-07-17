@@ -5,15 +5,16 @@ repo_folder_rule: "path/to/epigeneticbutton/repo"
 # Name of the run
 analysis_name: "test_smk"
 
-# To perform the whole analysis
-full_analysis: true
-
 # Path to the sample metadata file
 sample_file: "config/RNA_samples.tsv"
 
 # Path to the directory containing reference genomes
 ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
 ref_path_rule: "path/to/reference/genomes"
+
+# Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
+full_analysis: true
+QC_option: "none" # options: ["none"|"all"]
 
 # Species-dependent parameters:
 species: "thaliana" #options below or create a new entry with corresponding information
@@ -41,11 +42,11 @@ trimming_quality:
   sRNA: "-q 10 -m 15"
 
 adapter1:
-  ChIP: "AGATCGGAAGAGCACACGTCTGAAC"
-  RNA: "AGATCGGAAGAGCACACGTCTGAAC"
-  TF: "AGATCGGAAGAGCACACGTCTGAAC"
-  mC: "AGATCGGAAGAGCACACGTCTGAAC"
-  sRNA: "TGGAATTCTCGGGTGCCAAGG"
+  ChIP: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
+  RNA: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
+  TF: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
+  mC: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
+  sRNA: "TGGAATTCTCGGGTGCCAAGG" # default nextflex
 
 # Mapping option default
 chip_mapping_option: "default"
@@ -74,10 +75,6 @@ chip_mapping:
 chip_tracks:
   binsize: 1
   params: "--scaleFactorsMethod 'None' --normalizeUsing CPM --extendReads 300"
-
-# Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
-# QC_option: "all"
-QC_option: "none"
 
 # For peaks
 chip_callpeaks:
@@ -161,14 +158,6 @@ rnaseq_background_file: "default" # should be a column of GID (matching the gene
 
 srna_target_file: "config/ath.gff3" # Replace with another file of target genes if sRNA should be performed on other loci. It will be used as LOCIFILE in ShortStack (Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
-
-# Analysis parameters
-analysis:
-  mark_of_interest: "H3K27ac"  # Default histone mark to focus on
-  perform_analysis: true       # Whether to perform the complete analysis
-  perform_combined: true       # Whether to perform combined analysis per line
-  perform_heatmaps: true       # Whether to generate heatmaps with deeptools
-  perform_te_analysis: false   # Whether to perform TE analysis (takes long time)
 
 # Resource allocation
 minimal_resources: &default
