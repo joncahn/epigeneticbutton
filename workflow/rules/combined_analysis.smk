@@ -2,7 +2,7 @@
 def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
-def define_env_samplenames_per_ref(wildcards):
+def define_samplenames_per_env_and_ref(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
     env = wildcards.env
@@ -15,7 +15,21 @@ def define_env_samplenames_per_ref(wildcards):
     
     return names
 
-def define_env_samplelabels_per_ref(wildcards):
+def define_peakfiles_per_env_and_ref(wildcards):
+    files = []
+    ref_genome = wildcards.ref_genome
+    env = wildcards.env
+    if env == "all_chip":
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    for _, row in filtered_analysis_samples.iterrows():
+        spname = sample_name_str(row, 'analysis')
+        files.append(f"results/{row..env}/peaks/selected_peaks__{spname}.bedPeak")
+    
+    return files
+
+def define_samplelabels_per_env_and_ref(wildcards):
     labels = []
     ref_genome = wildcards.ref_genome
     env = wildcards.env
@@ -227,7 +241,7 @@ rule plotting_srna_sizes_stats:
 rule combine_peakfiles:
     input:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
-        peakfiles = lambda wildcards: [ f"results/{wildcards.env}/peaks/selected_peaks__{names}.bedPeak" for names in define_env_samplenames_per_ref(wildcards) ]
+        peakfiles = lambda wildcards: define_peakfiles_per_env_and_ref(wildcards)
     output:
         temp1_file = temp("results/combined/bedfiles/temp1_combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed"),
         temp2_file = temp("results/combined/bedfiles/temp2_combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed"),
@@ -235,7 +249,7 @@ rule combine_peakfiles:
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
-        names = lambda wildcards: define_env_samplenames_per_ref(wildcards),
+        names = lambda wildcards: define_samplenames_per_env_and_ref(wildcards),
         analysis_name = config['analysis_name']
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "combined_peaks_{env}"))
@@ -316,7 +330,7 @@ rule plotting_upset_peaks:
 # # rule to plot heatmaps
 # rule making_deeptools_matrix_on_targetfile:
     # input:
-        # bigwigs = lambda wildcards: define_bigwigs_per_genome(wildcards),
+        # bigwigs = lambda wildcards: define_bigwigs_per_env_and_ref(wildcards),
         # target_file = lambda wildcards: define_rnaseq_target_file(wildcards)
     # output:
         # plot = "results/RNA/plots/Heatmap__{analysis_name}__{ref_genome}__{target_name}.pdf"
@@ -324,7 +338,7 @@ rule plotting_upset_peaks:
         # analysis_name = config['analysis_name'],
         # ref_genome = lambda wildcards: wildcards.ref_genome,
         # target_name = lambda wildcards: wildcards.target_name,
-        # labels = lambda wildcards: define_env_samplelabels_per_ref(wildcards)
+        # labels = lambda wildcards: define_labels_per_env_and_ref(wildcards)
     # log:
         # temp(return_log_rna("{ref_genome}", "plot_expression_{target_name}", "{analysis_name}"))
     # conda: CONDA_ENV
