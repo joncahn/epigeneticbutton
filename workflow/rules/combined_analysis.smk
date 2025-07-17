@@ -5,13 +5,21 @@ def return_log_combined(analysis_name, genome, types):
 def define_samplenames_per_env_and_ref(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
-    env = wildcards.env
-    if env == "all_chip":
+    globenv = wildcards.env
+    if globenv == "all_chip":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        names.append(sample_name_str(row, 'analysis'))
+        spname = sample_name_str(row, 'analysis')
+        env2 = row.env
+        file = f"results/{env2}/peaks/selected_peaks__{spname}.bedPeak"
+        if env2 == "TF":
+            label=f"{row.line}_{row.tissue}_{row.extra_info}"
+        else:
+            label=f"{row.line}_{row.tissue}_{row.sample_type}"
+        
+        names.append(f"{label}::{file}")
     
     return names
 
@@ -263,8 +271,10 @@ rule combine_peakfiles:
         """
         {{
         printf "Merging peakfiles for {params.env} {params.analysis_name} {params.ref_genome}\n"
-        for sample in {params.names}; do
-            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' results/{params.env}/peaks/selected_peaks__${{sample}}.bedPeak >> {output.temp1_file}
+        for pair in {params.names}; do
+            label=$(echo ${{pair}} | cut -d"::" -f1)
+            file=$(echo ${{pair}} | cut -d"::" -f2)
+            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' ${{file}} >> {output.temp1_file}
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
         printf "Chr\tStart\tStop\tPeakID\tSamples\n" > {output.merged_file}

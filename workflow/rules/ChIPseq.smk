@@ -114,7 +114,7 @@ def get_replicate_pairs(wildcards):
         for j in range(i+1, len(reps)):
             rep_i = reps[i]
             rep_j = reps[j]
-            pairs.append(f"{rep_i}:{rep_j}")
+            pairs.append(f"{rep_i}::{rep_j}")
     return pairs
 
 def define_chipseq_target_file(wildcards):
@@ -703,8 +703,8 @@ rule idr_analysis_replicates:
             printf "${{chr}}\t1\t${{max}}\n" >> "${{temp}}"
         done < "genomes/{params.ref_genome}/chrom.sizes"
         for pair in {params.replicate_pairs}; do
-            rep1=$(echo ${{pair}} | cut -d":" -f1)
-            rep2=$(echo ${{pair}} | cut -d":" -f2)
+            rep1=$(echo ${{pair}} | cut -d"::" -f1)
+            rep2=$(echo ${{pair}} | cut -d"::" -f2)
             file1="results/{params.env}/peaks/peaks_${{pre}}__final__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
             file2="results/{params.env}/peaks/peaks_${{pre}}__final__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
             outfile="results/{params.env}/peaks/idr_${{pre}}__{params.data_type}__{params.line}__{params.tissue}__{params.sample_type}__${{rep1}}_vs_${{rep2}}__{params.ref_genome}_peaks.{params.peaktype}Peak"
