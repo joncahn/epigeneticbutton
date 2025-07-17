@@ -25,7 +25,7 @@ def define_peakfiles_per_env_and_ref(wildcards):
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
-        files.append(f"results/{row..env}/peaks/selected_peaks__{spname}.bedPeak")
+        files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
     
     return files
 
