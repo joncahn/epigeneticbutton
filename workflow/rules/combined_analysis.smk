@@ -66,7 +66,7 @@ rule combine_peakfiles:
         """
         {{
         for sample in {params.names}; do
-            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' results/{params.env}/peaks/selected_peaks__${{sample}}.bedPeak >> {output.temp_file}
+            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' results/{params.env}/peaks/selected_peaks__${{sample}}.bedPeak >> {output.temp1_file}
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
         bedtools merge -i {output.temp2_file} -c 4 -o distinct | bedtools sort -g {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,$2,$3,"Peak_"NR,$4}}' > {output.merged_file}
