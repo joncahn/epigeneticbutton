@@ -7,7 +7,7 @@ def define_samplenames_per_env_and_ref(wildcards):
     ref_genome = wildcards.ref_genome
     env = wildcards.env
     if env == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -20,7 +20,7 @@ def define_peakfiles_per_env_and_ref(wildcards):
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -35,7 +35,7 @@ def define_samplelabels_per_env_and_ref(wildcards):
     ref_genome = wildcards.ref_genome
     env = wildcards.env
     if env == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -61,7 +61,7 @@ def define_sample_types_for_upset(wildcards):
     ref_genome = wildcards.ref_genome
     env = wildcards.env
     if env == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
