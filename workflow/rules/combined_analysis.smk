@@ -274,7 +274,7 @@ rule combine_peakfiles:
         for pair in {params.names}; do
             label=$(echo ${{pair}} | cut -d":" -f1)
             file=$(echo ${{pair}} | cut -d":" -f2)
-            awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' ${{file}} >> {output.temp1_file}
+            awk -v OFS="\t" -v l=${{label}} '{{print $1,$2,$3,l}}' ${{file}} >> {output.temp1_file}
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
         printf "Chr\tStart\tStop\tPeakID\tSamples\n" > {output.merged_file}
