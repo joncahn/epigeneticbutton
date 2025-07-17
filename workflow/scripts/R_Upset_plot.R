@@ -46,9 +46,12 @@ for (sampletype in types) {
 }
 colmarks<-setNames(listcolor, types)
 
+print(queries)
+
 type_cols <- lapply(types, function(t) { grep(t, colnames(mat), value = TRUE) })
 names(type_cols) <- types
 
+print(type_cols)
 ## To add a exclusive_mark column when all the sample of a the set contains the same mark in the violin plot
 mat$exclusive_mark <- "Mix"
 for (type in types) {
@@ -58,6 +61,8 @@ for (type in types) {
 }
 mat <- mat %>% relocate(exclusive_mark, .after = Category)
 colmarks["Mix"] <- "black"
+
+print(colmarks)
 
 plot<-upset(mat, sampleslist, name="Peaks", 
       mode='exclusive_intersection',
