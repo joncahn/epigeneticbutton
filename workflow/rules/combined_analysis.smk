@@ -18,14 +18,15 @@ def define_samplenames_per_env_and_ref(wildcards):
 def define_peakfiles_per_env_and_ref(wildcards):
     files = []
     ref_genome = wildcards.ref_genome
-    env = wildcards.env
-    if env == "all_chip":
+    globenv = wildcards.env
+    if globenv == "all_chip":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] in ["ChIP","TF"]) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
-        files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
+        env2 = row.env
+        files.append(f"results/{env2}/peaks/selected_peaks__{spname}.bedPeak")
     
     return files
 
