@@ -49,13 +49,11 @@ colmarks<-setNames(listcolor, types)
 type_cols <- lapply(types, function(t) { grep(t, colnames(mat), value = TRUE) })
 names(type_cols) <- types
 
-print(type_cols)
-
 ## To add a exclusive_mark column when all the sample of a the set contains the same mark in the violin plot
 
 for (type in types) {
   type_cols_subset<-colnames(mat)[grep(sampletype, colnames(mat))]
-  is_exclusive <- rowSums(mat[, type_cols_subset]) == rowSums(mat[, sampleslist])
+  is_exclusive <- rowSums(mat[, type_cols_subset, drop=FALSE]) == rowSums(mat[, sampleslist, drop=FALSE])
   mat$exclusive_mark[is_exclusive] <- type
 }
 mat <- mat %>% relocate(exclusive_mark, .after = Category)
