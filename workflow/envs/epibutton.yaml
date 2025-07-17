@@ -38,5 +38,6 @@ dependencies:
   - bioconductor-rrvgo
   - bioconductor-topGO
   - r-purrr
+  - r-complexupset
 
 

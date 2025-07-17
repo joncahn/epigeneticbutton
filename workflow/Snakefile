@@ -161,7 +161,6 @@ include: "rules/ChIPseq.smk"
 include: "rules/RNAseq.smk"
 include: "rules/mC.smk"
 include: "rules/smallRNA.smk"
-include: "rules/plotting_with_R.smk"
 include: "rules/combined_analysis.smk"
 
 # Rule all to specify final target
@@ -195,10 +194,7 @@ rule combined_analysis:
         expand("results/TF/chkpts/TF_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
         expand("results/RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
         expand("results/mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
-        expand("results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
-        expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","RNA","mC"]]),
-        expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]]),
-        expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
+        expand("results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else [])
     output:
         chkpt = f"results/combined/chkpts/final_analysis__{analysis_name}.done"
     localrule: True

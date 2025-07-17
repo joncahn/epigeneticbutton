@@ -202,16 +202,19 @@ single_thread: &single
   tmp: 48000
   
 resources:
+  # environment_setup
   check_fasta: *standard
   check_gff: *standard
   check_gtf: *standard
   check_chrom_sizes: *single
   prep_region_file: *low
+  # sample_download
   get_fastq_pe: *heavy
   get_fastq_se: *heavy
   run_fastqc: *single
   process_fastq_pe: *heavy
   process_fastq_se: *heavy
+  # ChIPseq
   make_bt2_indices: *heavy
   bowtie2_map_pe: *heavy
   bowtie2_map_se: *heavy
@@ -230,6 +233,7 @@ resources:
   best_peaks_pseudoreps: *low
   find_motifs_in_file: *heavy
   make_peak_stats: *low
+  # mC
   make_bismark_indices: *heavy
   bismark_map_pe: *max
   bismark_map_se: *max
@@ -238,6 +242,7 @@ resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
+  # RNAseq
   make_STAR_indices: *heavy
   STAR_map_pe: *heavy
   STAR_map_se: *heavy
@@ -253,6 +258,7 @@ resources:
   plot_expression_levels: *single
   create_GO_database: *single
   perform_GO_on_target_file: *single
+  # smallRNA
   shortstack_map: *heavy
   filter_structural_rna: *heavy
   shortstack_map: *heavy
@@ -263,5 +269,13 @@ resources:
   analyze_all_srna_samples_on_target_file: *heavy
   prep_files_for_differential_srna_clusters: *single
   call_all_differential_srna_clusters: *single
+  # combined_analysis
+  prepping_mapping_stats: *low
+  plotting_mapping_stats: *low
+  prepping_chip_peak_stats: *low
+  plotting_peaks_stats_chip_tf: *low
+  prepping_srna_sizes_stats: *low
+  plotting_srna_sizes_stats: *low
   combine_peakfiles: *low
   get_annotations_for_bedfile: *low
+  plotting_upset_peaks: *low
