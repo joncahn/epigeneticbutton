@@ -49,7 +49,7 @@ colmarks["Mix"] <- "black"
 type_cols <- lapply(types, function(t) { grep(t, colnames(mat), value = TRUE) })
 names(type_cols) <- types
 
-inputable <- inputable %>% 
+mat <- mat %>% 
   mutate(
     exclusive_mark = case_when(
       !!!setNames(lapply(types, function(t) {
