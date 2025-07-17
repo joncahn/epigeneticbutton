@@ -6,7 +6,7 @@ repo_folder_rule: "path/to/epigeneticbutton/repo"
 analysis_name: "test_smk"
 
 # Path to the sample metadata file
-sample_file: "config/RNA_samples.tsv"
+sample_file: "config/tf_samples.tsv"
 
 # Path to the directory containing reference genomes
 ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
