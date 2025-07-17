@@ -268,3 +268,5 @@ resources:
   combine_peakfiles: *low
   get_annotations_for_bedfile: *low
   plotting_upset_peaks: *low
+  making_deeptools_matrix_on_targetfile: *heavy
+  plotting_heatmap_on_targetfile: *single

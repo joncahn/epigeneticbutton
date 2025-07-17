@@ -287,7 +287,21 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 2. ShortStack version\
 The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developper created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
 
-3. idr/numpy version\
+3. small RNA-seq libraries\
+Different small RNAseq libraries have different chemistry and might need to be trimmed differently. If using nextflex v3 for example, you need to trim an extra 4bp at both ends of your reads. The following code snippet would need to be applied to these samples to further process the adapter-trimmed files and add these 2 steps: 
+```
+### 1) Collapse the PCR-duplicated reads
+seqcluster collapse -f results/sRNA/fastq/clipped_${name}.fastq -o results/sRNA/fastq/collapsed
+mv results/sRNA/fastq/collapsed/clipped_${name}_trimmed.fastq results/sRNA/fastq/collapsed_${name}.fastq
+rm -rf results/sRNA/fastq/collapsed/
+
+### 2) Trimming the read-specific UMIs (first and last 4bp)
+seqtk trimfq -Q -b 4 -e 4 results/sRNA/fastq/collapsed_${name}.fastq > results/sRNA/fastq/trimmed_${name}.fastq
+gzip results/sRNA/fastq/trimmed_${name}.fastq
+```
+This should be done manually, until an option with a specific rule is potentially created in a future release.
+
+4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
 ## Features under development

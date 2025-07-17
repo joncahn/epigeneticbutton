@@ -12,6 +12,20 @@ def define_env_samplenames_per_ref(wildcards):
     
     return names
 
+def define_env_samplelabels_per_ref(wildcards):
+    labels = []
+    ref_genome = wildcards.ref_genome
+    env = wildcards.env
+    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    for _, row in filtered_analysis_samples.iterrows():
+        if env == "TF":
+            label=f"{row.line}_{row.tissue}_{row.extra_info}"
+        else
+            label=f"{row.line}_{row.tissue}_{row.sample_type}"
+        labels.append(label)
+    
+    return labels
+
 def define_input_bedfile(wildcards):
     bedname = wildcards.bedname
     ref_genome = wildcards.ref_genome
@@ -252,8 +266,14 @@ rule get_annotations_for_bedfile:
         """
         {{
         printf "Annotating {params.bedname} to the closest genes\n"
+        # checking for presence of header
+        read -r chrom start end _ < {input.bedfile}
+        if [[ "${{start}}" =~ ^[0-9]+$ ]] && [[ "${{end}}" =~ ^[0-9]+$ ]]; then
+            awk -v OFS="\t" -v n={params.bedname} '{{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
+        else
+            awk -v OFS="\t" -v n={params.bedname} 'NR>1 {{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
+        fi
         printf "Chr\tStart\tStop\tPeakID\tDistance\tGene_strand\tGID\tCategory\n" > {output.annotated_file}
-        awk -v OFS="\t" -v n={params.bedname} 'NR>1 {{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
         bedtools closest -a {output.temp_bedfile} -b {input.region_file} -g {input.chrom_sizes} -D ref | awk -v OFS="\t" '{{if ($10=="+") print $1,$2,$3,$4,$11,$10,$8; else print $1,$2,$3,$4,-$11,$10,$8}}' | awk -F"[=;]" -v OFS="\t" '{{print $1,$2}}' | sed 's/gene://' | awk -v OFS="\t" '{{if ($5<-2000) {{d="Distal_downstream"}} else if ($5<0) {{d="Terminator"}} else if ($5==0) {{d="Gene_body"}} else if ($5>2000) {{d="Distal_upstream"}} else {{d="Promoter"}}; print $1,$2,$3,$4,$5,$6,$8,d}}' >> {output.annotated_file}
         }} 2>&1 | tee -a "{log}"
         """
@@ -279,6 +299,54 @@ rule plotting_upset_peaks:
         """
         Rscript "{params.script}" "{input.mergedfile}" "{input.annotatedfile}" "{params.env}" "{params.types}" "{output.plot}"
         """
+
+###
+# # rule to plot heatmaps
+# rule making_deeptools_matrix_on_targetfile:
+    # input:
+        # bigwigs = lambda wildcards: define_bigwigs_per_genome(wildcards),
+        # target_file = lambda wildcards: define_rnaseq_target_file(wildcards)
+    # output:
+        # plot = "results/RNA/plots/Heatmap__{analysis_name}__{ref_genome}__{target_name}.pdf"
+    # params:
+        # analysis_name = config['analysis_name'],
+        # ref_genome = lambda wildcards: wildcards.ref_genome,
+        # target_name = lambda wildcards: wildcards.target_name,
+        # labels = lambda wildcards: define_env_samplelabels_per_ref(wildcards)
+    # log:
+        # temp(return_log_rna("{ref_genome}", "plot_expression_{target_name}", "{analysis_name}"))
+    # conda: CONDA_ENV
+    # threads: config["resources"]["making_deeptools_matrix_on_targetfile"]["threads"]
+    # resources:
+        # mem=config["resources"]["making_deeptools_matrix_on_targetfile"]["mem"],
+        # tmp=config["resources"]["making_deeptools_matrix_on_targetfile"]["tmp"]
+    # shell:
+        # """
+        # printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
+        # """
+        
+# rule plotting_heatmap_on_targetfile:
+    # input:
+        # bigwigs = lambda wildcards: define_bigwigs_per_genome(wildcards),
+        # target_file = lambda wildcards: define_rnaseq_target_file(wildcards)
+    # output:
+        # plot = "results/RNA/plots/Heatmap__{analysis_name}__{ref_genome}__{target_name}.pdf"
+    # params:
+        # analysis_name = config['analysis_name'],
+        # ref_genome = lambda wildcards: wildcards.ref_genome,
+        # target_name = lambda wildcards: wildcards.target_name,
+        # labels = lambda wildcards: define_env_samplelabels_per_ref(wildcards)
+    # log:
+        # temp(return_log_rna("{ref_genome}", "plot_expression_{target_name}", "{analysis_name}"))
+    # conda: CONDA_ENV
+    # threads: config["resources"]["plotting_heatmap_on_targetfile"]["threads"]
+    # resources:
+        # mem=config["resources"]["plotting_heatmap_on_targetfile"]["mem"],
+        # tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
+    # shell:
+        # """
+        # printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"        
+        # """
 
 ###
 # final rule
