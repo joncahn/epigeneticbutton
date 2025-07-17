@@ -928,10 +928,10 @@ rule find_motifs_in_file:
         head {output.temp_fa}
         printf "\nGetting motifs for {params.peak_file} with meme version:\n"
         meme -version
-        meme-chip -oc results/{env}/motifs/{peak_file}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
-        if [[ -s results/{env}/{peak_file}/meme/combined.meme ]]; then
+        meme-chip -oc results/{params.env}/motifs/{params.peak_file}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
+        if [[ -s results/{params.env}/{params.peak_file}/meme/combined.meme ]]; then
             printf "\nLooking for similar motifs in JASPAR database with tomotom\n"
-            tomtom -oc results/{env}/motifs/{peak_file}/tomtom/ results/{env}/motifs/{peak_file}/meme/combined.meme {params.jaspar_db}
+            tomtom -oc results/{params.env}/motifs/{params.peak_file}/tomtom/ results/{params.env}/motifs/{params.peak_file}/meme/combined.meme {params.jaspar_db}
         fi
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
