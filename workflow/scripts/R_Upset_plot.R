@@ -26,7 +26,7 @@ mat<-separate_rows(merged, Samples, sep = ",") %>%
 	
 mat$Category<-factor(mat$Category, levels=c("Distal_downstream","Terminator","Gene_body","Promoter","Distal_upstream"))
 
-#
+## To create queries to color when the same mark is shared in the intersection matrix
 qual_col_pals<-brewer.pal.info[brewer.pal.info$category == 'qual',]
 colorlist<-unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
 i<-1
@@ -44,21 +44,19 @@ for (sampletype in types) {
 	i<-i+1
 }
 colmarks<-setNames(listcolor, types)
-colmarks["Mix"] <- "black"
 
 type_cols <- lapply(types, function(t) { grep(t, colnames(mat), value = TRUE) })
 names(type_cols) <- types
 
-mat <- mat %>% 
-  mutate(
-    exclusive_mark = case_when(
-      !!!setNames(lapply(types, function(t) {
-			rowSums(across(all_of(type_cols[[t]]))) == rowSums(across(all_of(sampleslist)))
-		}), types),
-		TRUE ~ as.character("Mix")
-    )
-  ) %>% 
-  relocate(exclusive_mark, .after = Category)
+## To add a exclusive_mark column when all the sample of a the set contains the same mark in the violin plot
+mat$exclusive_mark <- "Mix"
+for (type in types) {
+  type_cols_subset <- type_cols[[type]]
+  is_exclusive <- rowSums(mat[, type_cols_subset]) == rowSums(mat[, sampleslist])
+  mat$exclusive_mark[is_exclusive] <- type
+}
+mat <- mat %>% relocate(exclusive_mark, .after = Category)
+colmarks["Mix"] <- "black"
 
 plot<-upset(mat, sampleslist, name="Peaks", 
       mode='exclusive_intersection',
