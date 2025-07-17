@@ -77,8 +77,8 @@ def define_sample_types_for_upset(wildcards):
             types.append(row.sample_type)
         elif row.env == "TF":
             types.append(row.extra_info)
-        
-    return types
+    result = ":".join(types)     
+    return result
 
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
