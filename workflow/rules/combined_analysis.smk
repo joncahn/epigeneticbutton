@@ -313,7 +313,7 @@ rule plotting_upset_peaks:
         plot = "results/combined/plots/Upset_combined_peaks__{env}__{analysis_name}__{ref_genome}.pdf"
     params:
         env = lambda wildcards: wildcards.env,
-        types = lambda wildcards: define_sample_types_for_upset(wildcards.env),
+        types = lambda wildcards: define_sample_types_for_upset(wildcards),
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot.R")
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_upset_{env}"))
