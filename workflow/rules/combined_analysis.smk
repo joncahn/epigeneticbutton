@@ -59,11 +59,11 @@ def define_input_bedfile(wildcards):
 def define_sample_types_for_upset(wildcards):
     types = []
     ref_genome = wildcards.ref_genome
-    env = wildcards.env
-    if env == "all_chip":
+    globenv = wildcards.env
+    if globenv == "all_chip":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == env) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         if row.env == "ChIP":
             types.append(row.sample_type)
@@ -87,7 +87,7 @@ def define_final_combined_output(ref_genome):
     if len(tf_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
     
-    if len(tf_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
+    if len(chip_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
     if analysis:
