@@ -19,7 +19,7 @@ def define_samplenames_per_env_and_ref(wildcards):
         else:
             label=f"{row.line}_{row.tissue}_{row.sample_type}"
         
-        names.append(f"{label}::{file}")
+        names.append(f"{label}:{file}")
     
     return names
 
@@ -272,8 +272,8 @@ rule combine_peakfiles:
         {{
         printf "Merging peakfiles for {params.env} {params.analysis_name} {params.ref_genome}\n"
         for pair in {params.names}; do
-            label=$(echo ${{pair}} | cut -d"::" -f1)
-            file=$(echo ${{pair}} | cut -d"::" -f2)
+            label=$(echo ${{pair}} | cut -d":" -f1)
+            file=$(echo ${{pair}} | cut -d":" -f2)
             awk -v OFS="\t" -v s=${{sample}} '{{print $1,$2,$3,s}}' ${{file}} >> {output.temp1_file}
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
