@@ -46,7 +46,7 @@ def define_final_combined_output(ref_genome):
 rule combine_peakfiles:
     input:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
-        peakfiles = lambda wildcards: [ f"results/{env}/peaks/selected_peaks__{names}.bedPeak" for names in define_peakfiles_for_combined(wildcards) ]
+        peakfiles = lambda wildcards: [ f"results/{env}/peaks/selected_peaks__{names}.bedPeak" for names in define_samplenames_per_env(wildcards) ]
     output:
         temp1_file = "results/combined/bedfiles/temp1_combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed",
         temp2_file = "results/combined/bedfiles/temp2_combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed",
@@ -54,7 +54,7 @@ rule combine_peakfiles:
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
-        names = lambda wildcards: define_peakfiles_for_combined(wildcards),
+        names = lambda wildcards: define_samplenames_per_env(wildcards),
         analysis_name = config['analysis_name']
     log:
         temp(return_log_rna("{analysis_name}", "{ref_genome}", "combined_peaks_{env}"))
