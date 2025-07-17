@@ -20,7 +20,7 @@ def define_env_samplelabels_per_ref(wildcards):
     for _, row in filtered_analysis_samples.iterrows():
         if env == "TF":
             label=f"{row.line}_{row.tissue}_{row.extra_info}"
-        else
+        else:
             label=f"{row.line}_{row.tissue}_{row.sample_type}"
         labels.append(label)
     
