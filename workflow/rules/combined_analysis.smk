@@ -30,11 +30,11 @@ def define_final_combined_output(ref_genome):
     
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     if len(filtered_analysis_samples) >=2:
-        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_ChIP_{analysis_name}__{ref_genome}.bed")
+        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles__ChIP__{analysis_name}__{ref_genome}.bed")
     
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     if len(filtered_analysis_samples) >=2:
-        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles_TF_{analysis_name}__{ref_genome}.bed")
+        text_files.append(f"results/combined/bedfiles/annotated__combined_peakfiles__TF__{analysis_name}__{ref_genome}.bed")
         
     if analysis:
         results = plot_files + text_files
@@ -48,9 +48,9 @@ rule combine_peakfiles:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         peakfiles = lambda wildcards: [ f"results/{env}/peaks/selected_peaks__{names}.bedPeak" for names in define_env_samplenames_per_ref(wildcards) ]
     output:
-        temp1_file = "results/combined/bedfiles/temp1_combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed",
-        temp2_file = "results/combined/bedfiles/temp2_combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed",
-        merged_file = "results/combined/bedfiles/combined_peakfiles_{env}_{analysis_name}__{ref_genome}.bed"
+        temp1_file = "results/combined/bedfiles/temp1_combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed",
+        temp2_file = "results/combined/bedfiles/temp2_combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed",
+        merged_file = "results/combined/bedfiles/combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
