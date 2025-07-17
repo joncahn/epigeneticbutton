@@ -27,6 +27,7 @@ mat<-separate_rows(merged, Samples, sep = ",") %>%
 mat$Category<-factor(mat$Category, levels=c("Distal_downstream","Terminator","Gene_body","Promoter","Distal_upstream"))
 
 #
+qual_col_pals<-brewer.pal.info[brewer.pal.info$category == 'qual',]
 colorlist<-unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
 i<-1
 queries<-c()
