@@ -75,9 +75,9 @@ rule combine_peakfiles:
         
 rule get_annotations_for_bedfile:
     input:
-        bedfile = lambda wildcard: define_input_bedfile(wildcards),
-        region_file = lambda wildcard: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed",
-        chrom_sizes = lambda wildcard: f"genomes/{wildcards.ref_genome}/chrom.sizes"
+        bedfile = lambda wildcards: define_input_bedfile(wildcards),
+        region_file = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed",
+        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
     output:
         temp_bedfile = temp("results/combined/bedfiles/temp__{bedname}__{ref_genome}.bed"),
         annotated_file = "results/combined/bedfiles/annotated__{bedname}__{ref_genome}.bed"
