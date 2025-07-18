@@ -537,7 +537,7 @@ rule merging_matrix:
         """
         {{
         count=$(echo {input.matrix} | wc -w)
-        if [[ ${{count}} -eq 2]]; then
+        if [[ ${{count}} -eq 2 ]]; then
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
 			computeMatrixOperations rbind -m {input.matrix[0]} {input.matrix[1]} -o {output.matrix}
         else
@@ -573,7 +573,7 @@ rule computing_matrix_scales:
     shell:
         """
         {{        
-        regionlabel=$((wc -l {input.target_file} | awk -v n={params.target_name} '{{print n"("$1")"}}))
+        regionlabel=$((wc -l {input.target_file} | awk -v n={params.target_name} '{{print n"("$1")"}}'))
                 
         if [[ {params.scales} == "default" ]]; then
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
