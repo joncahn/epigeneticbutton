@@ -59,7 +59,7 @@ for (type in types) {
 mat <- mat %>% relocate(exclusive_mark, .after = Category)
 colmarks["Mix"] <- "black"
 
-print(colmarks)
+head(mat)
 
 plot<-upset(mat, sampleslist, name="Peaks", 
       mode='exclusive_intersection',
@@ -84,13 +84,13 @@ plot<-upset(mat, sampleslist, name="Peaks",
       queries = queries,
       set_sizes = (upset_set_size() + ylab("Total peaks") +
         theme(axis.text.x = element_text(angle = 45))),
-      matrix = (intersection_matrix(geom = geom_point(shape = "circle",size = 3),
-          segment = geom_segment(size = 1.5),
+      matrix = (intersection_matrix(geom = geom_point(shape = "circle", size = 3),
+          segment = geom_segment(linewidth = 1.5),
           outline_color = list(active = alpha("white", 0),inactive = alpha("white", 0))) +
           scale_color_manual(values = c("TRUE" = "black", "FALSE" = alpha("white", 0)),
             labels = c("TRUE" = "yes", "FALSE" = "no"),
             breaks = c("TRUE", "FALSE"),
-            guide = FALSE) +
+            guide = "none") +
           theme(axis.ticks = element_blank(),
             panel.grid = element_blank())
       ),
@@ -98,18 +98,18 @@ plot<-upset(mat, sampleslist, name="Peaks",
         list(
           "default" = theme(
             panel.grid.major.x = element_blank(),
-            axis.ticks.y = element_line(size = 0.25, color = "#2e2e2e")
+            axis.ticks.y = element_line(linewidth = 0.25, color = "#2e2e2e")
           ),
           "intersections_matrix" = theme(
             panel.grid = element_blank(),
-            panel.grid.major.y = element_line(color = c("#CFCCCF", "white"), size = 5)
+            panel.grid.major.y = element_line(color = c("#CFCCCF", "white"), linewidth = 5)
           ),
           "Intersection size" = theme(
             panel.grid = element_blank(),
           ),
           "overall_sizes" = theme(
             panel.grid = element_blank(),
-            axis.ticks.x = element_line(size = 0.25, color = "#2e2e2e")
+            axis.ticks.x = element_line(linewidth = 0.25, color = "#2e2e2e")
           )
         )
       ),
