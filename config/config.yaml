@@ -161,13 +161,13 @@ heatmaps:
     middle: "-m 5000"
     after: 2000
   tss:
-    base: "reference-point --referencePoint "TSS" -q --missingDataAsZero --skipZeros"
+    base: "reference-point --referencePoint 'TSS' -q --missingDataAsZero --skipZeros"
     bs: 50
     before: 2000
     middle: ""
     after: 6000
   tes:
-    base: "reference-point --referencePoint "TES" -q --missingDataAsZero --skipZeros"
+    base: "reference-point --referencePoint 'TES' -q --missingDataAsZero --skipZeros"
     bs: 50
     before: 6000
     middle: ""
