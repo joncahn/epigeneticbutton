@@ -509,7 +509,7 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
-        printf "Making {strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
+        printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} -bs {params.bs} -b {params.before} -a {params.bs} {params.middle} -p {threads} -o {output.matrix}
         }} 2>&1 | tee -a "{log}"
         """
