@@ -154,19 +154,19 @@ heatmaps:
     RNAseq: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
     sRNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
     mC: "--colorMap 'Oranges' --missingDataColor 'grey' --interpolationMethod 'nearest'"
-  regions: 
+  regions:
     base: "scale-regions -q --missingDataAsZero --skipZeros"
     bs: 50
     before: 2000
     middle: "-m 5000"
     after: 2000
-  tss: 
+  tss:
     base: "reference-point --referencePoint "TSS" -q --missingDataAsZero --skipZeros"
     bs: 50
     before: 2000
     middle: ""
     after: 6000
-  tes: 
+  tes:
     base: "reference-point --referencePoint "TES" -q --missingDataAsZero --skipZeros"
     bs: 50
     before: 6000
