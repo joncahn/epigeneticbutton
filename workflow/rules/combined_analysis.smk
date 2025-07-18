@@ -59,7 +59,7 @@ def define_matrix_per_target_file(wildcards):
     
     if stranded_heatmaps and is_tranded(file):
         return [f"{prefix}__plus.gz", f"{prefix}__minus.gz"]
-    else
+    else:
         return [f"{prefix}__unstranded.gz"]
 
 def define_sort_options(wildcards):
@@ -75,8 +75,11 @@ def define_sort_options(wildcards):
             return "--sortRegions keep"
     elif sort_options == "mean":
         return "--sortRegions descend --sortUsing mean"
-    elif sort_options == "mean":
-        return "--sortRegions descend --sortUsing mean"
+    elif sort_options == "median":
+        return "--sortRegions descend --sortUsing median"
+    else:
+        print("unclear option: no sorting done")
+        return "--sortRegions keep"
 
 
 def define_samplenames_per_env_and_ref(wildcards):
