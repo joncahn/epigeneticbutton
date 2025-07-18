@@ -177,38 +177,40 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 ```bash 
 snakemake --cores 1 results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf
 ```
-Note that the separator is two underscores next to each other `__`.
+Note that the separator is two underscores next to each other `__`.\
 An example where <analysis_name>="test_smk" and <ref_genome>="TAIR10", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
 ```bash 
 snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_genes_of_interests.pdf --config rnaseq_target_file="data/target_genes.txt" rnaseq_target_file_label="my_genes_of_interests"
 ```
 Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf`
 
-2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis. 
-By default, GO is not performed on DEGs since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database. 
+2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
+By default, GO is not performed on DEGs since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database.\
 To run a GO analysis on any target file:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<target_name>.done
 ```
-Note that the separator is two underscores next to each other `__`.
+Note that the separator is two underscores next to each other `__`.\
 An example where <analysis_name>="test_smk" and <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__test_smk__ColCEN__my_genes_of_interests.done --config rnaseq_target_file="data/target_genes.txt" rnaseq_target_file_label="my_genes_of_interests"
 ```
 Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
 
-3. `rule find_motifs_in_file`: Given a bed file containing different regions, it will perform a motifs analysis with memme. 
-By default motifs analysis is only done on the final selected TF peak files (`motifs = true` in config). Switch `allrep` to `true` in the config file for motifs analysis to be performed on all replicates and pairwise idr if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the config file `jaspar_db`. 
+3. `rule find_motifs_in_file`: Given a bed file containing different regions, it will perform a motifs analysis with memme.\
+By default motifs analysis is only done on the final selected TF peak files (`motifs = true` in config). Switch `allrep` to `true` in the config file for motifs analysis to be performed on all replicates and pairwise idr if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the config file `jaspar_db`.\
 To run the analysis:
 ```bash 
 snakemake --cores 1 results/TF/chkpts/motifs_<target_name>.done
 ```
-Note that the separator is two underscores next to each other `__`.
+Note that the separator is two underscores next to each other `__`.\
 An example running the pipeline on a slurm hpc, for regions from <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
 ```bash 
 snakemake --profile profiles/slurm results/TF/chkpts/motifs__my_regions_of_interests.done --config motifs_target_file="data/target_peaks.txt" motifs_target_file_label="my_regions_of_interests" motifs_ref_genome="ColCEN"
 ```
-Output is the folder `results/TF/<target_name>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html.
+Output is the folder `results/TF/<target_name>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html.\
+When setting `motif_ref_genome:`, it is  safer to use a reference genome that has already been used in a run. Otherwise, it will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path.\
+For the target file chosen `motif_target_file:`, if the regions are over 500bp, only the middle 400bp will be used.
 
 4. `rule call_all_differential_srna_clusters`: Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, all the samples from the sample file but limiting the mapping and counts to the loci in the target file. Edit `srna_target_file` and `srna_target_file_label` in the config file. To run the analysis: 
 ```bash 

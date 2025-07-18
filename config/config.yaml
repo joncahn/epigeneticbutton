@@ -142,22 +142,52 @@ gene_info_file:
   ColCEN: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not
   B73_v5: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not
 
+# For deeptools heatmaps
+heatmaps:
+  scales: "default" #options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
+  stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
+  plot_params: 
+    all: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+    ChIP: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+    TF: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+    RNAseq: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+    sRNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+    mC: "--colorMap 'Oranges' --missingDataColor 'grey' --interpolationMethod 'nearest'"
+  regions: "scale-regions -q --missingDataAsZero --skipZeros"
+    bs: 50
+    before: 2000
+    middle: "-m 5000"
+    after: 2000
+  tss: "reference-point --referencePoint "TSS" -q --missingDataAsZero --skipZeros"
+    bs: 50
+    before: 2000
+    middle: ""
+    after: 6000
+  tes: "reference-point --referencePoint "TES" -q --missingDataAsZero --skipZeros"
+    bs: 50
+    before: 6000
+    middle: ""
+    after: 2000
+
 # For TF motifs analysis using meme
 motifs: true # change to false for motifs on final selected peaks
 allreps: false # change to true for motifs analysis on all single replicates
 jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
 
 # optional targets for extra output
-motif_target_file_label: "target_motifs" # This name will be used for the name of the results files and should used in the rule target.
-motif_target_file: "data/target_genes.bed" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
-motif_ref_genome: "ColCEN" # reference genome to use to extract fasta; safer if a run with this reference genome as already been created; will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path 
+motif_target_file_label: "target_motifs" # This name will be used for the name of the results files and should used in the rule target
+motif_target_file: "data/target_genes.bed" # bed file containing the regions to use for motifs analysis
+motif_ref_genome: "ColCEN" # reference genome to use to extract fasta
 
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
-rnaseq_target_file: "data/target_genes.txt" # should be a tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored. Replace with actual file of target genes, and potentially update the label below too.
-rnaseq_background_file: "default" # should be a column of GID (matching the gene IDs in the reference genome gff). Other columns will be ignored. Will be used as background for GO enrichment analysis. Default is all genes.
+rnaseq_target_file: "data/target_genes.txt" # tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored.
+rnaseq_background_file: "default" # tab-delimited file with a column of GID (matching the gene IDs in the reference genome gff). Other columns will be ignored. Will be used as background for GO enrichment analysis. Default is all genes.
 
-srna_target_file: "config/ath.gff3" # Replace with another file of target genes if sRNA should be performed on other loci. It will be used as LOCIFILE in ShortStack (Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
+srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. It will be used as LOCIFILE in ShortStack (from ShortStack: Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
+
+combined_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
+combined_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
 
 # Resource allocation
 minimal_resources: &default
@@ -268,5 +298,7 @@ resources:
   combine_peakfiles: *low
   get_annotations_for_bedfile: *low
   plotting_upset_peaks: *low
-  making_deeptools_matrix_on_targetfile: *heavy
+  making_stranded_matrix_on_targetfile: *heavy
+  merging_matrix: *single
+  computing_matrix_scales: *single
   plotting_heatmap_on_targetfile: *single
