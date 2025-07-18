@@ -478,6 +478,7 @@ rule making_stranded_matrix_on_targetfile:
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_labels_per_env_and_ref(wildcards),
         matrix = lambda wildcards: wildcards.matrix_param,
+        strand = lambda wildcards: wildcards.strand,
         params = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['base'],
         bs = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['bs'],
         before = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['before'],
