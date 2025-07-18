@@ -43,7 +43,7 @@ def is_stranded(bedfile):
                 strand_values.add(cols[5])
     if strand_values.issubset({"+","-"}):
         return True
-    elif:
+    else:
         return False
 
 def define_matrix_per_target_file(wildcards):
