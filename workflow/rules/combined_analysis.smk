@@ -552,7 +552,9 @@ rule computing_matrix_scales:
         target_file = lambda wildcards: define_combined_target_file(wildcards)
     output:
         params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
+        temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
+        temp_profile = temp("results/combined/matrix/temp_profile_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf")
+        temp_profile_values = temp("results/combined/matrix/temp_profile_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -575,20 +577,29 @@ rule computing_matrix_scales:
                 
         if [[ {params.scales} == "default" ]]; then
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
-        
+            touch {output.temp_values}
+            touch {output.temp_profile}
+            touch {output.temp_profile_values}
         elif [[ {params.scales} == "type" ]]; then
             printf "Getting scales for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
-            computeMatrixOperations dataRange -m {input.matrix} > combined/matrix/temp_values_${matrix}_${analysisname}.txt
-            plotProfile -m combined/matrix/all_genes_${matrix}_${analysisname}.gz -out combined/plots/temp_${matrix}_${analysisname}_profile.pdf --samplesLabel ${all_labels[@]} --averageType mean --outFileNameData combined/matrix/temp_values_profile_${matrix}_${analysisname}.txt
+            computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
+            plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
             
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
             
         elif [[ {params.scales} == "sample" ]]; then
             
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
+            computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
+            plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
+            
+            printf "--regionsLabel ${{regionlabel}}" > {output.params}
         else
             printf "{params.scales} unknown. Returning default\n"
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
+            touch {output.temp_values}
+            touch {output.temp_profile}
+            touch {output.temp_profile_values}
         fi
         }} 2>&1 | tee -a "{log}"
         """
