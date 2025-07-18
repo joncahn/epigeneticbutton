@@ -57,7 +57,7 @@ def define_matrix_per_target_name(wildcards):
     prefix = f"results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}"
     file = define_combined_target_file(wildcards)
     
-    if stranded_heatmaps and is_tranded(file):
+    if stranded_heatmaps and is_stranded(file):
         return [f"{prefix}__plus.gz", f"{prefix}__minus.gz"]
     else:
         return [f"{prefix}__unstranded.gz"]
