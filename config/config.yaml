@@ -151,7 +151,7 @@ heatmaps:
     all: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
     ChIP: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
     TF: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-    RNAseq: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+    RNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
     sRNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
     mC: "--colorMap 'Oranges' --missingDataColor 'grey' --interpolationMethod 'nearest'"
   regions:
