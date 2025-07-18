@@ -548,9 +548,11 @@ rule merging_matrix:
         
 rule computing_matrix_scales:
     input:
-        matrix = lambda wildcards: define_matrix_per_target_name(wildcards)
+        matrix = lambda wildcards: define_matrix_per_target_name(wildcards),
+        target_file = lambda wildcards: define_combined_target_file(wildcards)
     output:
-        params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+        params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
+        temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -569,14 +571,14 @@ rule computing_matrix_scales:
     shell:
         """
         {{        
-        regionlabel=$((wc -l {input.temp} | awk -v n={params.target_name} '{{print n"("$1")"}}))
+        regionlabel=$((wc -l {input.target_file} | awk -v n={params.target_name} '{{print n"("$1")"}}))
                 
         if [[ {params.scales} == "default" ]]; then
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
         
         elif [[ {params.scales} == "type" ]]; then
             printf "Getting scales for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
-            computeMatrixOperations dataRange -m combined/matrix/all_genes_${matrix}_${analysisname}.gz > combined/matrix/temp_values_${matrix}_${analysisname}.txt
+            computeMatrixOperations dataRange -m {input.matrix} > combined/matrix/temp_values_${matrix}_${analysisname}.txt
             plotProfile -m combined/matrix/all_genes_${matrix}_${analysisname}.gz -out combined/plots/temp_${matrix}_${analysisname}_profile.pdf --samplesLabel ${all_labels[@]} --averageType mean --outFileNameData combined/matrix/temp_values_profile_${matrix}_${analysisname}.txt
             
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
