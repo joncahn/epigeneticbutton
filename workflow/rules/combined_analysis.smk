@@ -496,7 +496,7 @@ rule making_stranded_matrix_on_targetfile:
         {{
         if [[ {params.strand} == "unstranded" ]]; then
             # checking for presence of header
-            read -r chrom start end _ < {input.bedfile}
+            read -r chrom start end _ < {input.target_file}
             if [[ "${{start}}" =~ ^[0-9]+$ ]] && [[ "${{end}}" =~ ^[0-9]+$ ]]; then
                 cat {input.target_file} > {output.temp}
             else
