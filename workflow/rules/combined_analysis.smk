@@ -46,7 +46,7 @@ def is_stranded(bedfile):
     else:
         return False
 
-def define_matrix_per_target_file(wildcards):
+def define_matrix_per_target_name(wildcards):
     tname = config['combined_target_file_label']
     stranded_heatmaps = config['heatmaps']['stranded_heatmaps']
     matrix_param = wildcards.matrix_param
