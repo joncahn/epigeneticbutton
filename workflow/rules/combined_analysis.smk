@@ -62,6 +62,23 @@ def define_matrix_per_target_file(wildcards):
     else
         return [f"{prefix}__unstranded.gz"]
 
+def define_sort_options(wildcards):
+    sort_options = config['heatmaps']['sort_options']
+    matrix_param = wildcards.matrix_param
+    env = wildcards.env
+    analysis_name=config['analysis_name']
+    ref_genome = wildcards.ref_genome
+    if sort_options == "no":
+        return "--sortRegions keep"
+    elif env == "mC":
+        if target_name.endswith("sorted_regions"):
+            return "--sortRegions keep"
+    elif sort_options == "mean":
+        return "--sortRegions descend --sortUsing mean"
+    elif sort_options == "mean":
+        return "--sortRegions descend --sortUsing mean"
+
+
 def define_samplenames_per_env_and_ref(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
@@ -144,7 +161,7 @@ def define_bigwigs_per_env_and_ref(wildcards):
             reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
             bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/FC__final__{reps[0]}.bw"
             bigwigs.append(bw)
-        else:
+        elif row.env in ["RNA","sRNA"]:
             if strand == "unstranded":
                 merged = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}"
                 reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
@@ -157,6 +174,16 @@ def define_bigwigs_per_env_and_ref(wildcards):
                 reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
                 bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{reps[0]}__{strand}.bw"
                 bigwigs.append(bw)
+        elif row.env == "mC":
+            merged = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}"
+            reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
+            for context in ["CG","CHG","CHH"]:
+                if strand == "unstranded":
+                    bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{reps[0]}__{context}.bw"
+                    bigwigs.append(bw)
+                else:            
+                    bw = f"results/{row.env}/tracks/{merged}__{context}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{reps[0]}__{context}__{strand}.bw"
+                    bigwigs.append(bw2)
     
     return bigwigs
 
@@ -167,11 +194,16 @@ def define_final_combined_output(ref_genome):
     text_files = []
     plot_files = []
     
+    all_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
     chip_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    tf_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    mc_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    srna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    
     if len(chip_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
     
-    tf_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     if len(tf_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
     
@@ -557,13 +589,14 @@ rule plotting_heatmap_on_targetfile:
         params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
     output:
         plot = "results/combined/plots/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf",
-        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__sorted_regions_{target_name}.bed"
+        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
-        labels = lambda wildcards: define_env_samplelabels_per_ref(wildcards),
-        params = config['heatmaps']['plot_params']['env']
+        env = lambda wildcards: wildcards.env,
+        plot_params = config['heatmaps']['plot_params']['env'],
+        sort = define_sort_options(wildcards)
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -575,7 +608,7 @@ rule plotting_heatmap_on_targetfile:
         """
         new_params="$(cat {input.params})"
         printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
-        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} ${{new_params}} --outFileSortedRegions {output.sorted_regions}
+        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} --outFileSortedRegions {output.sorted_regions}
         """
 
 ###
