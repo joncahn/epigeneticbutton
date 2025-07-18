@@ -53,16 +53,12 @@ names(type_cols) <- types
 
 mat$exclusive_mark<-"Mix"
 for (type in types) {
-	print(type)
-	type_cols_subset<-colnames(mat)[grep(sampletype, colnames(mat))]
-	print(type_cols_subset)
+	type_cols_subset<-colnames(mat)[grep(type, colnames(mat))]
 	exclu<-rowSums(mat[, type_cols_subset, drop=FALSE]) == rowSums(mat[, sampleslist, drop=FALSE])
 	mat$exclusive_mark[exclu]<-type
 }
 mat <- mat %>% relocate(exclusive_mark, .after = Category)
 colmarks["Mix"] <- "black"
-
-head(mat)
 
 plot<-upset(mat, sampleslist, name="Peaks", 
       mode='exclusive_intersection',
