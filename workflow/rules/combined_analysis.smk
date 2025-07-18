@@ -598,7 +598,7 @@ rule plotting_heatmap_on_targetfile:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         env = lambda wildcards: wildcards.env,
-        plot_params = config['heatmaps']['plot_params']['env'],
+        plot_params = lambda wildcards: config['heatmaps']['plot_params'][wildcards.env],
         sort = define_sort_options(wildcards)
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
