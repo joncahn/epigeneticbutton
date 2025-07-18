@@ -599,7 +599,7 @@ rule plotting_heatmap_on_targetfile:
         target_name = lambda wildcards: wildcards.target_name,
         env = lambda wildcards: wildcards.env,
         plot_params = lambda wildcards: config['heatmaps']['plot_params'][wildcards.env],
-        sort = define_sort_options(wildcards)
+        sort = lambda wildcards: define_sort_options(wildcards)
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
