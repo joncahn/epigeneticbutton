@@ -53,8 +53,8 @@ names(type_cols) <- types
 
 for (type in types) {
   type_cols_subset<-colnames(mat)[grep(sampletype, colnames(mat))]
-  is_exclusive <- rowSums(mat[, type_cols_subset, drop=FALSE]) == rowSums(mat[, sampleslist, drop=FALSE])
-  mat$exclusive_mark[is_exclusive] <- type
+  exclu<-rowSums(mat[, type_cols_subset, drop=FALSE]) == rowSums(mat[, sampleslist, drop=FALSE])
+  mat$exclusive_mark[exclu]<-type
 }
 mat <- mat %>% relocate(exclusive_mark, .after = Category)
 colmarks["Mix"] <- "black"
