@@ -560,7 +560,7 @@ rule computing_matrix_scales:
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_labels_per_env_and_ref(wildcards),
         matrix = lambda wildcards: wildcards.matrix_param,
-        scale = config['heatmaps']['scales']
+        scales = config['heatmaps']['scales']
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
