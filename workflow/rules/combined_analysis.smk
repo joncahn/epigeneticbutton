@@ -574,7 +574,7 @@ rule computing_matrix_scales:
     shell:
         """
         {{        
-        count=$(wc -l {input.target_file} | | cut -d' ' -f 1)
+        count=$(wc -l {input.target_file} | cut -d' ' -f 1)
         if [[ {params.header} == "yes" ]]; then
             count=$((count-1))
         fi
