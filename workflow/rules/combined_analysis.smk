@@ -68,6 +68,7 @@ def define_sort_options(wildcards):
     env = wildcards.env
     analysis_name=config['analysis_name']
     ref_genome = wildcards.ref_genome
+    target_name = wildcards.target_name
     if sort_options == "no":
         return "--sortRegions keep"
     elif env == "mC":
