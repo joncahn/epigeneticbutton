@@ -134,6 +134,7 @@ def define_sample_types_for_upset(wildcards):
 
 def define_labels_per_env_and_ref(wildcards):
     labels = []
+    strand = wildcards.strand
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     if globenv == "all_chip":
@@ -143,10 +144,24 @@ def define_labels_per_env_and_ref(wildcards):
     for _, row in filtered_analysis_samples.iterrows():
         if row.env == "TF":
             label=f"{row.line}_{row.tissue}_{row.extra_info}"
-        else:
+            labels.append(label)
+        elif row.env == "ChIP":
             label=f"{row.line}_{row.tissue}_{row.sample_type}"
-        labels.append(label)
-    
+            labels.append(label)
+        elif row.env == "mC":
+            for context in ["CG","CHG","CHH"]:
+                label=f"{row.line}_{row.tissue}_{context}"
+                labels.append(label)
+        else:
+            if strand == "unstranded":
+                label1=f"{row.line}_{row.tissue}_{row.sample_type}_plus"
+                label2=f"{row.line}_{row.tissue}_{row.sample_type}_minus"
+                labels.append(label1)
+                labels.append(label2)
+            else:
+                label=f"{row.line}_{row.tissue}_{row.sample_type}"
+                labels.append(label)
+            
     return labels
 
 def define_bigwigs_per_env_and_ref(wildcards):
@@ -219,7 +234,7 @@ def define_final_combined_output(ref_genome):
     
     plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Heatmap__tss__ChIP__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Heatmap__tes__ChIP__{analysis_name}__{ref_genome}__all_genes.pdf")
     
     if analysis:
         results = plot_files + text_files
@@ -479,6 +494,7 @@ rule making_stranded_matrix_on_targetfile:
         labels = lambda wildcards: define_labels_per_env_and_ref(wildcards),
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
+        header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no",
         params = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['base'],
         bs = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['bs'],
         before = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['before'],
@@ -494,10 +510,8 @@ rule making_stranded_matrix_on_targetfile:
     shell:
         """
         {{
-        if [[ {params.strand} == "unstranded" ]]; then
-            # checking for presence of header
-            read -r chrom start end _ < {input.target_file}
-            if [[ "${{start}}" =~ ^[0-9]+$ ]] && [[ "${{end}}" =~ ^[0-9]+$ ]]; then
+        if [[ "{params.strand}" == "unstranded" ]]; then
+            if [[ "{params.header}" == "no" ]]; then
                 cat {input.target_file} > {output.temp}
             else
                 awk 'NR>1' {input.target_file} > {output.temp}
@@ -510,7 +524,7 @@ rule making_stranded_matrix_on_targetfile:
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
-        computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} -bs {params.bs} -b {params.before} -a {params.bs} {params.middle} -p {threads} -o {output.matrix}
+        computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -633,8 +647,10 @@ rule plotting_heatmap_on_targetfile:
     shell:
         """
         new_params="$(cat {input.params})"
+        if [[ "{params.matrix}" == "tes" ]]; then
+            add='--refPointLabel "TES"'
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} --outFileSortedRegions {output.sorted_regions}
+        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} ${{add}} --outFileSortedRegions {output.sorted_regions}
         """
 
 ###
