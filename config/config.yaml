@@ -131,7 +131,7 @@ structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural R
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
-srna_heatmap_sizes: 21 24 # these sizes in nucleotide will be used for plotting heatmaps (can add as many as need within the range above)
+srna_heatmap_sizes: [21, 24] # these sizes in nucleotide will be used for plotting heatmaps (can add as many as desired as a list, for sizes within the range above)
 
 # Gene Ontology files to create a new database (make sure you match the reference genome(s) present in the samplefile)
 GO: false # If switching to true, make sure the database is created, or the required files below are edited
