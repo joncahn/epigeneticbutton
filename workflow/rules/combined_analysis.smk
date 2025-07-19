@@ -73,6 +73,8 @@ def define_sort_options(wildcards):
     elif env == "mC":
         if target_name.endswith("sorted_regions"):
             return "--sortRegions keep"
+        else
+            return "--sortRegions descend --sortUsing mean"
     elif sort_options == "mean":
         return "--sortRegions descend --sortUsing mean"
     elif sort_options == "median":
