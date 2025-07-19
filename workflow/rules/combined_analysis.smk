@@ -153,7 +153,7 @@ def define_labels_per_env_and_ref(wildcards):
             for context in ["CG","CHG","CHH"]:
                 label=f"{row.line}_{row.tissue}_{context}"
                 labels.append(label)
-        elif row.env = "RNA":
+        elif row.env == "RNA":
             if strand == "unstranded":
                 label1=f"{row.line}_{row.tissue}_{row.sample_type}_plus"
                 label2=f"{row.line}_{row.tissue}_{row.sample_type}_minus"
@@ -162,7 +162,7 @@ def define_labels_per_env_and_ref(wildcards):
             else:
                 label=f"{row.line}_{row.tissue}_{row.sample_type}"
                 labels.append(label)
-        elif row.env = "sRNA":
+        elif row.env == "sRNA":
             for size in srna_sizes:
                 if strand == "unstranded":
                     label1=f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt_plus"
