@@ -655,7 +655,7 @@ rule plotting_heatmap_on_targetfile:
         """
         new_params="$(cat {input.params})"
         if [[ "{params.matrix}" == "tes" ]]; then
-            add='--refPointLabel "TES"'
+            add='--refPointLabel TES'
         else
             add=""
         fi
