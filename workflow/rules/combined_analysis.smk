@@ -595,7 +595,7 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
-        cat {params.labels} | sed 's/ /\n' > {output.labels}
+        cat {params.labels} | sed 's/:/\n' > {output.labels}
         cat {params.marks} | sed 's/:/\n' > {output.marks}
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
@@ -637,7 +637,8 @@ rule computing_matrix_scales:
     input:
         matrix = lambda wildcards: define_matrix_per_target_name(wildcards),
         target_file = lambda wildcards: define_combined_target_file(wildcards),
-        labels = "results/combined/matrix/temp_labels_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed"
+        labels = "results/combined/matrix/temp_labels_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed",
+        marks = "results/combined/matrix/temp_marks_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed"
     output:
         params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
         temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
@@ -650,6 +651,7 @@ rule computing_matrix_scales:
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
         scales = config['heatmaps']['scales'],
+        profile = config['heatmaps']['profile_scale'],
         header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
@@ -671,20 +673,81 @@ rule computing_matrix_scales:
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
-        elif [[ "{params.scales}" == "type" ]]; then
-            printf "Getting scales for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
-            computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
-            plotProfile -m {input.matrix} -out {output.temp_profile} --averageType mean --outFileNameData {output.temp_profile}
             
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
+        elif [[ "{params.scales}" == "type" ]]; then
+            printf "Getting scales per type for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
+            computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
+            plotProfile -m {input.matrix} -out {output.temp_profile} --averageType {params.profile} --outFileNameData {output.temp_profile}
+            
+            mins=()
+			maxs=()
+			ymins=()
+			ymaxs=()
+			while read mark
+			do
+				zmini=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=999999}} {{a=$5; if (a<m) m=a;}} END {{print m}}')
+				zmaxi=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=-999999}} {{a=$6; if (a>m) m=a;}} END {{print m}}')			
+				test1=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+				if [[ "${{test1}}" == "yes" ]]; then
+					zmini="0"
+					zmaxi="0.005"
+				fi
+				
+                ymini=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
+				ymaxi=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
+				test2=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+                if [[ ${test2} == "yes" ]]; then
+					ymini=("0")
+					ymaxi=("0.01")
+				fi
+				num=$(grep "${{mark}}" {output.temp_values} | wc -l)
+				for i in $(seq 1 ${{num}})
+				do
+					zmins+=("$zmini")
+					zmaxs+=("$zmaxi")
+					ymins+=("$ymini")
+					ymaxs+=("$ymaxi")
+				done		
+			done < {input.marks}
+            
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a=${{zmins}} -v b=${{zmaxs}} -v c=${{ymins}} -v d=${{ymaxs}} 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
             
         elif [[ "{params.scales}" == "sample" ]]; then
-            
-            printf "--regionsLabel ${{regionlabel}}" > {output.params}
+            printf "Getting scales per sample for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
-            plotProfile -m {input.matrix} -out {output.temp_profile} --averageType mean --outFileNameData {output.temp_profile}
+            plotProfile -m {input.matrix} -out {output.temp_profile} --averageType {params.profile} --outFileNameData {output.temp_profile}
             
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
+            zmins=()
+			zmaxs=()
+			ymins=()
+			ymaxs=()
+			while read sample
+			do
+				zmini=$(grep "${{sample}}" {output.temp_values} | awk '{{print $5}}')
+				zmaxi=$(grep "${{sample}}" {output.temp_values} | awk '{{print $6}}')
+				test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+				if [[ "${{test}}" == "yes" ]]; then
+					zmins+=("0")
+					zmaxs+=("0.005")
+				else
+					zmins+=("$zmini")
+					zmaxs+=("$zmaxi")
+				fi
+                
+				ymini=$(grep "${{sample}}" {output.temp_profile_values} | awk '{{m=$3; for(i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
+				ymaxi=$(grep "${{sample}}" {output.temp_profile_values} | awk '{{m=$3; for(i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
+				test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+				if [[ "${{test}}" == "yes" ]]; then
+					ymins+=("0")
+					ymaxs+=("0.01")
+				else
+					ymins+=("$ymini")
+					ymaxs+=("$ymaxi")
+				fi
+			done < {input.marks}
+            
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a=${{zmins}} -v b=${{zmaxs}} -v c=${{ymins}} -v d=${{ymaxs}} 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
+            
         else
             printf "{params.scales} unknown. Returning default\n"
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
