@@ -608,7 +608,7 @@ rule computing_matrix_scales:
         elif [[ "{params.scales}" == "type" ]]; then
             printf "Getting scales for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
-            plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
+            plotProfile -m {input.matrix} -out {output.temp_profile} --averageType mean --outFileNameData {output.temp_profile}
             
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
             
@@ -616,7 +616,7 @@ rule computing_matrix_scales:
             
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
-            plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
+            plotProfile -m {input.matrix} -out {output.temp_profile} --averageType mean --outFileNameData {output.temp_profile}
             
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
         else
