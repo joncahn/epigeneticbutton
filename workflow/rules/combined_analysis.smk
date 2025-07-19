@@ -134,6 +134,7 @@ def define_sample_types_for_upset(wildcards):
 
 def define_labels_per_env_and_ref(wildcards):
     labels = []
+    srna_sizes = config['srna_heatmap_sizes']
     strand = wildcards.strand
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
@@ -152,7 +153,7 @@ def define_labels_per_env_and_ref(wildcards):
             for context in ["CG","CHG","CHH"]:
                 label=f"{row.line}_{row.tissue}_{context}"
                 labels.append(label)
-        else:
+        elif row.env = "RNA":
             if strand == "unstranded":
                 label1=f"{row.line}_{row.tissue}_{row.sample_type}_plus"
                 label2=f"{row.line}_{row.tissue}_{row.sample_type}_minus"
@@ -161,11 +162,22 @@ def define_labels_per_env_and_ref(wildcards):
             else:
                 label=f"{row.line}_{row.tissue}_{row.sample_type}"
                 labels.append(label)
+        elif row.env = "sRNA":
+            for size in srna_sizes:
+                if strand == "unstranded":
+                    label1=f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt_plus"
+                    label2=f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt_minus"
+                    labels.append(label1)
+                    labels.append(label2)
+                else:
+                    label=f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt"
+                    labels.append(label)
             
     return labels
 
 def define_bigwigs_per_env_and_ref(wildcards):
     bigwigs = []
+    srna_sizes = config['srna_heatmap_sizes']
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     strand = wildcards.strand
@@ -180,7 +192,7 @@ def define_bigwigs_per_env_and_ref(wildcards):
             onerep = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{reps[0]}__{row.ref_genome}"
             bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/FC__final__{onerep}.bw"
             bigwigs.append(bw)
-        elif row.env in ["RNA","sRNA"]:
+        elif row.env == "RNA":
             if strand == "unstranded":
                 merged = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}"
                 reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
@@ -195,6 +207,22 @@ def define_bigwigs_per_env_and_ref(wildcards):
                 onerep = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{reps[0]}__{row.ref_genome}"
                 bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
                 bigwigs.append(bw)
+        elif row.env == "sRNA":
+            for size in srna_sizes:
+                if strand == "unstranded":
+                    merged = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}"
+                    reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
+                    onerep = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{reps[0]}__{row.ref_genome}"
+                    bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
+                    bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
+                    bigwigs.append(bw1)
+                    bigwigs.append(bw2)
+                else:
+                    merged = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}"
+                    reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
+                    onerep = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{reps[0]}__{row.ref_genome}"
+                    bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
+                    bigwigs.append(bw)
         elif row.env == "mC":
             merged = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}"
             reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
