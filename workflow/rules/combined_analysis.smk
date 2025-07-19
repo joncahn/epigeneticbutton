@@ -578,7 +578,7 @@ rule computing_matrix_scales:
         if [[ {params.header} == "yes" ]]; then
             count=$((count-1))
         fi
-        regionlabel="{target_name}(${{count}})"
+        regionlabel="{params.target_name}(${{count}})"
         cat ${{regionlabel}}
         if [[ {params.scales} == "default" ]]; then
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
