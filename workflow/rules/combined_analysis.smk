@@ -575,11 +575,11 @@ rule computing_matrix_scales:
         """
         {{        
         count=$(wc -l {input.target_file} | cut -d' ' -f 1)
-        if [[ {params.header} == "yes" ]]; then
+        if [[ "{params.header}" == "yes" ]]; then
             count=$((count-1))
         fi
         regionlabel="{params.target_name}(${{count}})"
-        cat ${{regionlabel}}
+
         if [[ {params.scales} == "default" ]]; then
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
             touch {output.temp_values}
