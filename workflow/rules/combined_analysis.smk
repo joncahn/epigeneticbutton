@@ -9,14 +9,14 @@ def define_combined_target_file(wildcards):
     
     if target_name == tname:
         return config['combined_target_file']
-    elif target_name.startswith("combined_peakfiles"):
+    elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name in ["all_genes","protein_coding_genes"]:
         file = f"results/combined/tracks/{ref_genome}__{target_name}.bed"
     else:
         raise ValueError(   
             f"{target_name} does not match possible files." 
-            "It can be 'combined_peakfiles', or the value of "
+            "It can be 'combined_peaks', or the value of "
             "'combined_target_file_name' in the config file"
         )
     
