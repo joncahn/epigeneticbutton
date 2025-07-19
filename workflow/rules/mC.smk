@@ -295,7 +295,9 @@ rule make_mc_bigwig_files:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bigwig = "results/mC/tracks/{sample_name}__CG.bw",
+        bigwigcg = "results/mC/tracks/{sample_name}__CG.bw",
+        bigwigchg = "results/mC/tracks/{sample_name}__CHG.bw",
+        bigwigchh = "results/mC/tracks/{sample_name}__CHH.bw",
         touch = "results/mC/chkpts/bigwig__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -334,6 +336,8 @@ rule make_mc_bigwig_files:
             rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
         elif [[ "{params.context}" == "CG-only" ]]; then
             printf "Script for CG-only not ready yet\n" ## To update for CG-only!
+            touch {output.bigwigchg} # they are required for downstream rules
+            touch {output.bigwigchh} # they are required for downstream rules
         else
             printf "Unknown sequence context selection! Check the config file and set 'mC_context' to either 'all' or 'CG-only'\n"
             exit 1
