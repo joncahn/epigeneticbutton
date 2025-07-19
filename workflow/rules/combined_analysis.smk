@@ -233,7 +233,7 @@ def define_bigwigs_per_env_and_ref(wildcards):
                     bigwigs.append(bw)
                 else:            
                     bw = f"results/{row.env}/tracks/{merged}__{context}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}__{strand}.bw"
-                    bigwigs.append(bw2)
+                    bigwigs.append(bw)
     
     return bigwigs
 
