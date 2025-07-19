@@ -13,6 +13,8 @@ def define_combined_target_file(wildcards):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name in ["all_genes","protein_coding_genes"]:
         file = f"results/combined/tracks/{ref_genome}__{target_name}.bed"
+    elif target_name.endswith("sorted_regions"):
+        file = f"results/combined/matrix/Heatmap__{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{ref_genome}__{target_name}.bed"
     else:
         raise ValueError(   
             f"{target_name} does not match possible files." 
