@@ -578,10 +578,9 @@ rule computing_matrix_scales:
         if [[ "{params.header}" == "yes" ]]; then
             count=$((count-1))
         fi
-        regionlabel="{params.target_name}(${{count}})"
 
         if [[ "{params.scales}" == "default" ]]; then
-            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
@@ -590,7 +589,7 @@ rule computing_matrix_scales:
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
             plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
             
-            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
             
         elif [[ "{params.scales}" == "sample" ]]; then
             
@@ -598,10 +597,10 @@ rule computing_matrix_scales:
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
             plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
             
-            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
         else
             printf "{params.scales} unknown. Returning default\n"
-            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
@@ -633,7 +632,7 @@ rule plotting_heatmap_on_targetfile:
         tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
     shell:
         """
-        new_params=$(cat {input.params})
+        new_params="$(cat {input.params})"
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} --outFileSortedRegions {output.sorted_regions}
         """
