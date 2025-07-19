@@ -633,7 +633,7 @@ rule plotting_heatmap_on_targetfile:
         tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
     shell:
         """
-        new_params="$(cat {input.params})"
+        new_params=$(cat {input.params})
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} --outFileSortedRegions {output.sorted_regions}
         """
