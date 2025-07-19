@@ -399,9 +399,9 @@ rule combine_peakfiles:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         peakfiles = lambda wildcards: define_peakfiles_per_env_and_ref(wildcards)
     output:
-        temp1_file = temp("results/combined/bedfiles/temp1_combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed"),
-        temp2_file = temp("results/combined/bedfiles/temp2_combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed"),
-        merged_file = "results/combined/bedfiles/combined_peakfiles__{env}__{analysis_name}__{ref_genome}.bed"
+        temp1_file = temp("results/combined/bedfiles/temp1_combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"),
+        temp2_file = temp("results/combined/bedfiles/temp2_combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"),
+        merged_file = "results/combined/bedfiles/combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
