@@ -562,7 +562,8 @@ rule computing_matrix_scales:
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_labels_per_env_and_ref(wildcards),
         matrix = lambda wildcards: wildcards.matrix_param,
-        scales = config['heatmaps']['scales']
+        scales = config['heatmaps']['scales'],
+        header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -573,8 +574,12 @@ rule computing_matrix_scales:
     shell:
         """
         {{        
-        regionlabel=$((wc -l {input.target_file} | awk -v n={params.target_name} '{{print n"("$1")"}}'))
-                
+        count=$(wc -l {input.target_file} | | cut -d' ' -f 1)
+        if [[ {params.header} == "yes" ]]; then
+            count=$((count-1))
+        fi
+        regionlabel="{target_name}(${{count}})"
+        cat ${{regionlabel}}
         if [[ {params.scales} == "default" ]]; then
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
             touch {output.temp_values}
