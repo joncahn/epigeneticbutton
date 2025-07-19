@@ -137,8 +137,8 @@ def define_labels_per_env_and_ref(wildcards):
     strand = wildcards.strand
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
-    if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    if globenv == "all":
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] != "mC") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:    
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -234,7 +234,16 @@ def define_final_combined_output(ref_genome):
     
     plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Heatmap__tes__ChIP__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Heatmap__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+    if len(mc_analysis_samples) >=1: 
+        if len(all_analysis_samples) > len(mc_analysis_samples):
+            plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes_sorted_regions.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes_sorted_regions.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes_sorted_regions.pdf")
+        else
+            plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
     
     if analysis:
         results = plot_files + text_files
