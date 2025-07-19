@@ -580,28 +580,28 @@ rule computing_matrix_scales:
         fi
         regionlabel="{params.target_name}(${{count}})"
 
-        if [[ {params.scales} == "default" ]]; then
-            printf "--regionsLabel ${{regionlabel}}" > {output.params}
+        if [[ "{params.scales}" == "default" ]]; then
+            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
-        elif [[ {params.scales} == "type" ]]; then
+        elif [[ "{params.scales}" == "type" ]]; then
             printf "Getting scales for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
             plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
             
-            printf "--regionsLabel ${{regionlabel}}" > {output.params}
+            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
             
-        elif [[ {params.scales} == "sample" ]]; then
+        elif [[ "{params.scales}" == "sample" ]]; then
             
             printf "--regionsLabel ${{regionlabel}}" > {output.params}
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
             plotProfile -m {input.matrix} -out {output.temp_profile} --samplesLabel {params.labels} --averageType mean --outFileNameData {output.temp_profile}
             
-            printf "--regionsLabel ${{regionlabel}}" > {output.params}
+            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
         else
             printf "{params.scales} unknown. Returning default\n"
-            printf "--regionsLabel ${{regionlabel}}" > {output.params}
+            printf "'--regionsLabel ${{regionlabel}}'" > {output.params}
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
