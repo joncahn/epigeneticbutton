@@ -48,7 +48,7 @@ def is_stranded(bedfile):
 
 def define_matrix_per_target_name(wildcards):
     tname = config['combined_target_file_label']
-    stranded_heatmaps = config['heatmaps']['stranded_heatmaps']
+    stranded_heatmaps = config['stranded_heatmaps']
     matrix_param = wildcards.matrix_param
     env = wildcards.env
     analysis_name=config['analysis_name']
@@ -63,7 +63,7 @@ def define_matrix_per_target_name(wildcards):
         return [f"{prefix}__unstranded.gz"]
 
 def define_sort_options(wildcards):
-    sort_options = config['heatmaps']['sort_options']
+    sort_options = config['heatmaps_sort_options']
     matrix_param = wildcards.matrix_param
     env = wildcards.env
     analysis_name=config['analysis_name']
@@ -83,7 +83,6 @@ def define_sort_options(wildcards):
     else:
         print("unclear option: no sorting done")
         return "--sortRegions keep"
-
 
 def define_samplenames_per_env_and_ref(wildcards):
     names = []
@@ -650,8 +649,8 @@ rule computing_matrix_scales:
         env = lambda wildcards: wildcards.env,
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
-        scales = config['heatmaps']['scales'],
-        profile = config['heatmaps']['profile_scale'],
+        scales = config['heatmaps_scales'],
+        profile = config['profiles_scale'],
         header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
@@ -771,7 +770,7 @@ rule plotting_heatmap_on_targetfile:
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
         env = lambda wildcards: wildcards.env,
-        plot_params = lambda wildcards: config['heatmaps']['plot_params'][wildcards.env],
+        plot_params = lambda wildcards: config['heatmaps_plot_params'][wildcards.env],
         sort = lambda wildcards: define_sort_options(wildcards)
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
