@@ -228,12 +228,8 @@ def define_bigwigs_per_env_and_ref(wildcards):
             reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
             onerep = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{reps[0]}__{row.ref_genome}"
             for context in ["CG","CHG","CHH"]:
-                if strand == "unstranded":
-                    bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}.bw"
-                    bigwigs.append(bw)
-                else:            
-                    bw = f"results/{row.env}/tracks/{merged}__{context}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}__{strand}.bw"
-                    bigwigs.append(bw)
+                bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}.bw"
+                bigwigs.append(bw)
     
     return bigwigs
 
