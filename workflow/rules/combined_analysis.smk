@@ -655,9 +655,11 @@ rule plotting_heatmap_on_targetfile:
         """
         new_params="$(cat {input.params})"
         if [[ "{params.matrix}" == "tes" ]]; then
-            add='--refPointLabel TES'
+            add="--refPointLabel 5'"
+        if [[ "{params.matrix}" == "tss" ]]; then
+            add="--refPointLabel 3'"
         else
-            add=""
+            add="--startLabel 5' --endLabel 3'"
         fi
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} ${{add}} --outFileSortedRegions {output.sorted_regions}
