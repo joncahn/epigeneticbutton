@@ -11,10 +11,8 @@ def define_combined_target_file(wildcards):
         return config['combined_target_file']
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
-    elif target_name in ["all_genes","protein_coding_genes"]:
+    elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
         file = f"results/combined/tracks/{ref_genome}__{target_name}.bed"
-    elif target_name.endswith("sorted_regions"):
-        file = f"results/combined/matrix/Heatmap__{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{ref_genome}__{target_name}.bed"
     else:
         raise ValueError(   
             f"{target_name} does not match possible files." 
@@ -265,15 +263,14 @@ def define_final_combined_output(ref_genome):
     plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Heatmap__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    if len(mc_analysis_samples) >=1: 
-        if len(all_analysis_samples) > len(mc_analysis_samples):
-            plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes_sorted_regions.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes_sorted_regions.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes_sorted_regions.pdf")
-        else:
-            plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+    # need a way to run mC after the rest to set the regions order. potentially extracting the regions from all genes and reordering based on sorted_regions
+    # if len(mc_analysis_samples) >=1: 
+        # if len(all_analysis_samples) > len(mc_analysis_samples):
+    
+        # else:
+    plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
     
     if analysis:
         results = plot_files + text_files
