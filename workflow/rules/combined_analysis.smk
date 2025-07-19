@@ -135,6 +135,41 @@ def define_sample_types_for_upset(wildcards):
     result = ":".join(types)     
     return result
 
+def define_marks_per_env_and_ref(wildcards):
+    types = []
+    ref_genome = wildcards.ref_genome
+    globenv = wildcards.env
+    srna_sizes = config['srna_heatmap_sizes']
+    strand = wildcards.strand
+    if globenv == "all":
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] != "mC") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    for _, row in filtered_analysis_samples.iterrows():
+        if row.env == "ChIP":
+            types.append(row.sample_type)
+        elif row.env == "TF":
+            types.append(row.extra_info)
+        elif row.env == "mC":
+            for context in ["CG","CHG","CHH"]:
+                types.append(f"m{type_context}")
+        elif row.env == "RNA":
+            if strand == "unstranded":
+                types.append(f"{row.sample_type}_plus")
+                types.append(f"{row.sample_type}_minus")
+            else:
+                types.append(f"{row.sample_type}")
+        elif row.env == "sRNA":
+            for size in srna_sizes:
+                if strand == "unstranded":
+                    types.append(f"{row.sample_type}_{size}nt_plus")
+                    types.append(f"{row.sample_type}_{size}nt_minus")
+                else:
+                    types.append(f"{row.sample_type}_{size}nt")
+        
+    result = ":".join(types)     
+    return result
+
 def define_labels_per_env_and_ref(wildcards):
     labels = []
     srna_sizes = config['srna_heatmap_sizes']
@@ -154,7 +189,7 @@ def define_labels_per_env_and_ref(wildcards):
             labels.append(label)
         elif row.env == "mC":
             for context in ["CG","CHG","CHH"]:
-                label=f"{row.line}_{row.tissue}_{context}"
+                label=f"{row.line}_{row.tissue}_m{context}"
                 labels.append(label)
         elif row.env == "RNA":
             if strand == "unstranded":
@@ -518,7 +553,9 @@ rule making_stranded_matrix_on_targetfile:
         target_file = lambda wildcards: define_combined_target_file(wildcards)
     output:
         matrix = temp("results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.gz"),
-        temp = temp("results/combined/matrix/temp_region_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed")
+        temp = temp("results/combined/matrix/temp_region_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed"),
+        labels = temp("results/combined/matrix/temp_labels_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed"),
+        marks = temp("results/combined/matrix/temp_marks_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed")
     wildcard_constraints:
         strand = "plus|minus"
     params:
@@ -527,6 +564,7 @@ rule making_stranded_matrix_on_targetfile:
         env = lambda wildcards: wildcards.env,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_labels_per_env_and_ref(wildcards),
+        marks = lambda wildcards: define_marks_per_env_and_ref(wildcards),
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
         header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no",
@@ -558,6 +596,8 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
+        cat {params.labels} | sed 's/ /\n' > {output.labels}
+        cat {params.marks} | sed 's/:/\n' > {output.marks}
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         }} 2>&1 | tee -a "{log}"
@@ -597,7 +637,8 @@ rule merging_matrix:
 rule computing_matrix_scales:
     input:
         matrix = lambda wildcards: define_matrix_per_target_name(wildcards),
-        target_file = lambda wildcards: define_combined_target_file(wildcards)
+        target_file = lambda wildcards: define_combined_target_file(wildcards),
+        labels = "results/combined/matrix/temp_labels_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed"
     output:
         params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
         temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
