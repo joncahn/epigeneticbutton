@@ -656,7 +656,7 @@ rule plotting_heatmap_on_targetfile:
         new_params="$(cat {input.params})"
         if [[ "{params.matrix}" == "tes" ]]; then
             add="--refPointLabel 5'"
-        if [[ "{params.matrix}" == "tss" ]]; then
+        elif [[ "{params.matrix}" == "tss" ]]; then
             add="--refPointLabel 3'"
         else
             add="--startLabel 5' --endLabel 3'"
