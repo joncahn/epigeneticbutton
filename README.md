@@ -224,10 +224,12 @@ Output is the results folder from Shortstack limited to this loci file, followed
 
 If you only want the results of Shortstack and not the differential analysis, use `rule analyze_all_srna_samples_on_target_file` instead, targeting: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<target_name>/Counts.txt`
 
-5. Rerunning a specific analysis
+5. `rule plotting_heatmap_on_targetfile`: Given a bed file, it will plot a heatmap using deeptools.
+
+6. Rerunning a specific analysis
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
 e.g `snakemake --cores 1 results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force`
-If only the analysis is to be performed, and not the everything, delete the corresponding chkpts files in `results/combined/chkpts/combined_analysis__<analysis_name>.done` as well as in the desired environments `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
+If only the combined analysis is to be performed, and not everything else, delete all the chkpts files in `results/combined/chkpts/` as well as in the chkpt of each relevant environment `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
 
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
