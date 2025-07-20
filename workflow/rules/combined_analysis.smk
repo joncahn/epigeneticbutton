@@ -46,6 +46,13 @@ def is_stranded(bedfile):
     else:
         return False
 
+def get_heatmap_param(matrix, key):
+    override = config.get(key)
+    if override is not None:
+        return override
+
+    return config['heatmaps'][matrix][key]
+
 def define_matrix_per_target_name(wildcards):
     tname = config['combined_target_file_label']
     stranded_heatmaps = config['stranded_heatmaps']
@@ -569,11 +576,11 @@ rule making_stranded_matrix_on_targetfile:
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
         header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no",
-        params = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['base'],
-        bs = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['bs'],
-        before = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['before'],
-        after = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['after'],
-        middle = lambda wildcards: config['heatmaps'][wildcards.matrix_param]['middle']
+        params = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base'),
+        bs = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'bs'),
+        before = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'before'),
+        after = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'after'),
+        middle = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'middle')
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "making_matrix_{matrix_param}_{target_name}_{strand}"))
     conda: CONDA_ENV
