@@ -58,7 +58,7 @@ def define_matrix_per_target_name(wildcards):
     stranded_heatmaps = config['stranded_heatmaps']
     matrix_param = wildcards.matrix_param
     env = wildcards.env
-    analysis_name=config['analysis_name']
+    analysis_name = wildcards.analysis_name
     ref_genome = wildcards.ref_genome
     target_name = wildcards.target_name
     prefix = f"results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}"
