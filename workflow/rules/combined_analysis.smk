@@ -592,13 +592,13 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
-        printf "{params.labels}" | tr ':' '\n' > "results/combined/matrix/temp_labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
-        printf "{params.marks}" | tr ':' '\n' > "results/combined/matrix/temp_marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
+        printf "{params.labels}" | tr ':' '\n' > "results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
+        printf "{params.marks}" | tr ':' '\n' > "results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         }} 2>&1 | tee -a "{log}"
         """
-        
+
 rule merging_matrix:
     input:
         matrix = lambda wildcards: define_matrix_per_target_name(wildcards)
@@ -629,7 +629,7 @@ rule merging_matrix:
         fi
         }} 2>&1 | tee -a "{log}"
         """
-        
+
 rule computing_matrix_scales:
     input:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
@@ -703,7 +703,7 @@ rule computing_matrix_scales:
                     ymins+=("$ymini")
                     ymaxs+=("$ymaxi")
                 done
-            done < results/combined/matrix/temp_marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
+            done < results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
         
@@ -739,7 +739,7 @@ rule computing_matrix_scales:
                     ymins+=("$ymini")
                     ymaxs+=("$ymaxi")
                 fi
-            done < results/combined/matrix/temp_labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
+            done < results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
         else
