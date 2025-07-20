@@ -215,8 +215,7 @@ def define_labels_per_env_and_ref(wildcards):
                     label=f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt"
                     labels.append(label)
     
-    result = ":".join(labels)     
-    return result
+    return labels
 
 def define_bigwigs_per_env_and_ref(wildcards):
     bigwigs = []
@@ -598,7 +597,7 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
-        printf "{params.labels}" | tr ':' '\n' > "results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
+        printf "{params.labels}" | tr ' ' '\n' > "results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         printf "{params.marks}" | tr ':' '\n' > "results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
