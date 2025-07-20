@@ -705,7 +705,7 @@ rule computing_matrix_scales:
                 done
             done < results/combined/matrix/temp_marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a=${{zmins[*]}} -v b=${{zmaxs[*]}} -v c=${{ymins[*]}} -v d=${{ymaxs[*]}} 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
         
         elif [[ "{params.scales}" == "sample" ]]; then
             printf "Getting scales per sample for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
@@ -741,7 +741,7 @@ rule computing_matrix_scales:
                 fi
             done < results/combined/matrix/temp_labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a=${{zmins[*]}} -v b=${{zmaxs[*]}} -v c=${{ymins[*]}} -v d=${{ymaxs[*]}} 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
         else
             printf "{params.scales} unknown. Returning default\n"
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
