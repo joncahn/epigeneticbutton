@@ -632,7 +632,7 @@ rule merging_matrix:
         
 rule computing_matrix_scales:
     input:
-        matrix = lambda wildcards: define_matrix_per_target_name(wildcards),
+        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
         target_file = lambda wildcards: define_combined_target_file(wildcards)
     output:
         params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
@@ -675,74 +675,73 @@ rule computing_matrix_scales:
             plotProfile -m {input.matrix} -out {output.temp_profile} --averageType {params.profile} --outFileNameData {output.temp_profile}
             
             mins=()
-			maxs=()
-			ymins=()
-			ymaxs=()
-			while read mark
-			do
-				zmini=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=999999}} {{a=$5; if (a<m) m=a;}} END {{print m}}')
-				zmaxi=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=-999999}} {{a=$6; if (a>m) m=a;}} END {{print m}}')			
-				test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-				if [[ "${{test}}" == "yes" ]]; then
-					zmini="0"
-					zmaxi="0.005"
-				fi
-				
+            maxs=()
+            ymins=()
+            ymaxs=()
+            while read mark
+            do
+                zmini=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=999999}} {{a=$5; if (a<m) m=a;}} END {{print m}}')
+                zmaxi=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=-999999}} {{a=$6; if (a>m) m=a;}} END {{print m}}')
+                test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+                if [[ "${{test}}" == "yes" ]]; then
+                    zmini="0"
+                    zmaxi="0.005"
+                fi
+                
                 ymini=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
-				ymaxi=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
-				test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+                ymaxi=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
+                test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
                 if [[ ${{test}} == "yes" ]]; then
-					ymini=("0")
-					ymaxi=("0.01")
-				fi
-				num=$(grep "${{mark}}" {output.temp_values} | wc -l)
-				for i in $(seq 1 ${{num}})
-				do
-					zmins+=("$zmini")
-					zmaxs+=("$zmaxi")
-					ymins+=("$ymini")
-					ymaxs+=("$ymaxi")
-				done		
-			done < results/combined/matrix/temp_marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
+                    ymini=("0")
+                    ymaxi=("0.01")
+                fi
+                num=$(grep "${{mark}}" {output.temp_values} | wc -l)
+                for i in $(seq 1 ${{num}})
+                do
+                    zmins+=("$zmini")
+                    zmaxs+=("$zmaxi")
+                    ymins+=("$ymini")
+                    ymaxs+=("$ymaxi")
+                done
+            done < results/combined/matrix/temp_marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a=${{zmins}} -v b=${{zmaxs}} -v c=${{ymins}} -v d=${{ymaxs}} 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
-            
+        
         elif [[ "{params.scales}" == "sample" ]]; then
             printf "Getting scales per sample for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations dataRange -m {input.matrix} > {output.temp_values}
             plotProfile -m {input.matrix} -out {output.temp_profile} --averageType {params.profile} --outFileNameData {output.temp_profile}
             
             zmins=()
-			zmaxs=()
-			ymins=()
-			ymaxs=()
-			while read sample
-			do
-				zmini=$(grep "${{sample}}" {output.temp_values} | awk '{{print $5}}')
-				zmaxi=$(grep "${{sample}}" {output.temp_values} | awk '{{print $6}}')
-				test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-				if [[ "${{test}}" == "yes" ]]; then
-					zmins+=("0")
-					zmaxs+=("0.005")
-				else
-					zmins+=("$zmini")
-					zmaxs+=("$zmaxi")
-				fi
+            zmaxs=()
+            ymins=()
+            ymaxs=()
+            while read sample
+            do
+                zmini=$(grep "${{sample}}" {output.temp_values} | awk '{{print $5}}')
+                zmaxi=$(grep "${{sample}}" {output.temp_values} | awk '{{print $6}}')
+                test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+                if [[ "${{test}}" == "yes" ]]; then
+                    zmins+=("0")
+                    zmaxs+=("0.005")
+                else
+                    zmins+=("$zmini")
+                    zmaxs+=("$zmaxi")
+                fi
                 
-				ymini=$(grep "${{sample}}" {output.temp_profile_values} | awk '{{m=$3; for(i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
-				ymaxi=$(grep "${{sample}}" {output.temp_profile_values} | awk '{{m=$3; for(i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
-				test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-				if [[ "${{test}}" == "yes" ]]; then
-					ymins+=("0")
-					ymaxs+=("0.01")
-				else
-					ymins+=("$ymini")
-					ymaxs+=("$ymaxi")
-				fi
-			done < results/combined/matrix/temp_labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
+                ymini=$(grep "${{sample}}" {output.temp_profile_values} | awk '{{m=$3; for(i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
+                ymaxi=$(grep "${{sample}}" {output.temp_profile_values} | awk '{{m=$3; for(i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
+                test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+                if [[ "${{test}}" == "yes" ]]; then
+                    ymins+=("0")
+                    ymaxs+=("0.01")
+                else
+                    ymins+=("$ymini")
+                    ymaxs+=("$ymaxi")
+                fi
+            done < results/combined/matrix/temp_labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a=${{zmins}} -v b=${{zmaxs}} -v c=${{ymins}} -v d=${{ymaxs}} 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
-            
         else
             printf "{params.scales} unknown. Returning default\n"
             awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
