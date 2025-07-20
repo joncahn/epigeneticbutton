@@ -682,16 +682,16 @@ rule computing_matrix_scales:
 			do
 				zmini=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=999999}} {{a=$5; if (a<m) m=a;}} END {{print m}}')
 				zmaxi=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=-999999}} {{a=$6; if (a>m) m=a;}} END {{print m}}')			
-				test1=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-				if [[ "${{test1}}" == "yes" ]]; then
+				test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+				if [[ "${{test}}" == "yes" ]]; then
 					zmini="0"
 					zmaxi="0.005"
 				fi
 				
                 ymini=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
 				ymaxi=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
-				test2=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-                if [[ ${test2} == "yes" ]]; then
+				test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
+                if [[ ${{test}} == "yes" ]]; then
 					ymini=("0")
 					ymaxi=("0.01")
 				fi
