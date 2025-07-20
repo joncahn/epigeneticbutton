@@ -146,25 +146,30 @@ def define_marks_per_env_and_ref(wildcards):
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         if row.env == "ChIP":
-            types.append(row.sample_type)
+            if row.sample_type not in types:
+                types.append(row.sample_type)
         elif row.env == "TF":
-            types.append(row.extra_info)
+            if row.extra_info not in types:
+                types.append(row.extra_info)
         elif row.env == "mC":
-            for context in ["CG","CHG","CHH"]:
-                types.append(f"m{type_context}")
+            if "mCG" not in types:
+                for context in ["CG","CHG","CHH"]:
+                    types.append(f"m{type_context}")
         elif row.env == "RNA":
-            if strand == "unstranded":
-                types.append(f"{row.sample_type}_plus")
-                types.append(f"{row.sample_type}_minus")
-            else:
-                types.append(f"{row.sample_type}")
-        elif row.env == "sRNA":
-            for size in srna_sizes:
+            if not any(t.startswith("RNA") for t in types):
                 if strand == "unstranded":
-                    types.append(f"{row.sample_type}_{size}nt_plus")
-                    types.append(f"{row.sample_type}_{size}nt_minus")
+                    types.append(f"{row.sample_type}_plus")
+                    types.append(f"{row.sample_type}_minus")
                 else:
-                    types.append(f"{row.sample_type}_{size}nt")
+                    types.append(f"{row.sample_type}")
+        elif row.env == "sRNA":
+            if not any(t.startswith("sRNA") for t in types):
+                for size in srna_sizes:
+                    if strand == "unstranded":
+                        types.append(f"{row.sample_type}_{size}nt_plus")
+                        types.append(f"{row.sample_type}_{size}nt_minus")
+                    else:
+                        types.append(f"{row.sample_type}_{size}nt")
         
     result = ":".join(types)     
     return result
@@ -209,8 +214,9 @@ def define_labels_per_env_and_ref(wildcards):
                 else:
                     label=f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt"
                     labels.append(label)
-            
-    return labels
+    
+    result = ":".join(labels)     
+    return result
 
 def define_bigwigs_per_env_and_ref(wildcards):
     bigwigs = []
