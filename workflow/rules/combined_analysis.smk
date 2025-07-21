@@ -510,7 +510,7 @@ rule get_annotations_for_bedfile:
     input:
         bedfile = lambda wildcards: define_combined_target_file(wildcards),
         region_file = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed",
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
         temp_bedfile = temp("results/combined/bedfiles/temp__{target_name}__{ref_genome}.bed"),
