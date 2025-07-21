@@ -1,12 +1,12 @@
 # Path to the working directory where the repository was cloned
-repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/fpicbutton"
+repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/picbutton"
 repo_folder_rule: "path/to/epigeneticbutton/repo"
 
 # Name of the run
-analysis_name: "test_smk"
+analysis_name: "devel"
 
 # Path to the sample metadata file
-sample_file: "config/tf_samples.tsv"
+sample_file: "config/all_samples.tsv"
 
 # Path to the directory containing reference genomes
 ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
