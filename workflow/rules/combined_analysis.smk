@@ -22,52 +22,12 @@ def define_combined_target_file(wildcards):
     
     return file
 
-def has_header(bedfile):
-    with open(bedfile) as f:
-        first_line = f.readline().strip().split('\t')
-        try:
-            return not (int(first_line[1]) >=0 and int(first_line[2]) >=0)
-        except (ValueError, IndexError):
-            return true
-           
-def is_stranded(bedfile):
-    strand_values = set()
-    with open(bedfile) as f:
-        if has_header(bedfile):
-            next(f)
-        for line in f:
-            cols = line.strip().split('\t')
-            if len(cols) < 6:
-                return False
-            else:
-                strand_values.add(cols[5])
-    if strand_values.issubset({"+","-"}):
-        return True
-    else:
-        return False
-
 def get_heatmap_param(matrix, key):
     override = config.get(key)
     if override is not None:
         return override
 
     return config['heatmaps'][matrix][key]
-
-def define_matrix_per_target_name(wildcards):
-    tname = config['combined_target_file_label']
-    stranded_heatmaps = config['stranded_heatmaps']
-    matrix_param = wildcards.matrix_param
-    env = wildcards.env
-    analysis_name = wildcards.analysis_name
-    ref_genome = wildcards.ref_genome
-    target_name = wildcards.target_name
-    prefix = f"results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}"
-    file = define_combined_target_file(wildcards)
-    
-    if stranded_heatmaps and is_stranded(file):
-        return [f"{prefix}__plus.gz", f"{prefix}__minus.gz"]
-    else:
-        return [f"{prefix}__unstranded.gz"]
 
 def define_sort_options(wildcards):
     sort_options = config['heatmaps_sort_options']
@@ -78,11 +38,6 @@ def define_sort_options(wildcards):
     target_name = wildcards.target_name
     if sort_options == "no":
         return "--sortRegions keep"
-    elif env == "mC":
-        if target_name.endswith("sorted_regions"):
-            return "--sortRegions keep"
-        else:
-            return "--sortRegions descend --sortUsing mean"
     elif sort_options == "mean":
         return "--sortRegions descend --sortUsing mean"
     elif sort_options == "median":
@@ -327,6 +282,54 @@ def define_final_combined_output(ref_genome):
     return results
 
 ###
+# rules to look for header or strandedness of bedfile
+rule has_header:
+    input:
+        bedfile = "{bedfile}"
+    output:
+        file = temp("{bedfile}.header")
+    localrule: True
+    run:
+        with open(input.bedfile) as f:
+            first_line = f.readline().strip().split('\t')
+            try:
+                res = "no" if (int(first_line[1]) >=0 and int(first_line[2]) >=0) else "yes"
+            except (ValueError, IndexError):
+                res = "yes"
+        
+        with open(output.file, "w") as out:
+            out.write(res + "\n")
+              
+rule is_stranded:
+    input:
+        bedfile = "{bedfile}",
+        header = "{bedfile}.header"
+    output:
+        file = temp("{bedfile}.stranded")
+    localrule: True
+    run:
+        with open(input.header) as h:
+            header = h.read().strip()
+        
+        strand_values = set()
+        with open(input.bedfile) as f:
+            if header == "yes":
+                next(f)
+            for line in f:
+                cols = line.strip().split('\t')
+                if len(cols) < 6:
+                    return False
+                else:
+                    strand_values.add(cols[5])
+                    
+        with open(output.file, "w") as out:
+            if strand_values.issubset({"+","-"}):
+                out.write("stranded" + "\n")
+            else:
+                out.write("unstranded" + "\n")
+
+            
+###
 # Rules to prep and then plot the mapping stats:
 rule prepping_mapping_stats:
     input:
@@ -562,10 +565,10 @@ rule plotting_upset_peaks:
 rule making_stranded_matrix_on_targetfile:
     input:
         bigwigs = lambda wildcards: define_bigwigs_per_env_and_ref(wildcards),
-        target_file = lambda wildcards: define_combined_target_file(wildcards)
+        target_file = lambda wildcards: define_combined_target_file(wildcards),
+        header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
-        matrix = temp("results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.gz"),
-        temp = temp("results/combined/matrix/temp_region_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.bed")
+        matrix = temp("results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.gz")
     wildcard_constraints:
         strand = "plus|minus|unstranded"
     params:
@@ -577,7 +580,6 @@ rule making_stranded_matrix_on_targetfile:
         marks = lambda wildcards: define_marks_per_env_and_ref(wildcards),
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
-        header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no",
         params = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base'),
         bs = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'bs'),
         before = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'before'),
@@ -593,8 +595,9 @@ rule making_stranded_matrix_on_targetfile:
     shell:
         """
         {{
+        header="$(cat {input.header})"
         if [[ "{params.strand}" == "unstranded" ]]; then
-            if [[ "{params.header}" == "no" ]]; then
+            if [[ "${{header}}" == "no" ]]; then
                 cat {input.target_file} > {output.temp}
             else
                 awk 'NR>1' {input.target_file} > {output.temp}
@@ -613,9 +616,36 @@ rule making_stranded_matrix_on_targetfile:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule dispatch_matrix:
+    input:
+        stranded = lambda wildcards: f"{define_combined_target_file(wildcards)}.stranded"
+    output:
+        matrix_inputs = temp("results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        env = lambda wildcards: wildcards.env,
+        target_name = lambda wildcards: wildcards.target_name,
+        matrix = lambda wildcards: wildcards.matrix_param,
+        stranded_heatmaps = config['stranded_heatmaps']
+    conda: CONDA_ENV
+    localrule: True
+    run:
+        with open(input.stranded) as f:
+            stranded_file = f.read().strip()
+        
+        prefix = f"results/combined/matrix/matrix_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}"
+        with open(output.matrix_inputs, "w") as out:
+            if stranded_file == "stranded" and stranded_heatmaps:
+                out.write(f"{prefix}__plus.gz"\n)
+                out.write(f"{prefix}__minus.gz"\n)
+            else:
+                out.write(f"{prefix}__unstranded.gz\n")
+                
 rule merging_matrix:
     input:
-        matrix = lambda wildcards: define_matrix_per_target_name(wildcards)
+        matrix_inputs = "results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
+        stranded = lambda wildcards: f"{define_combined_target_file(wildcards)}.stranded"
     output:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
     params:
@@ -634,12 +664,13 @@ rule merging_matrix:
     shell:
         """
         {{
-        count=$(echo {input.matrix} | wc -w)
-        if [[ ${{count}} -eq 2 ]]; then
+        strand="$(cat {input.stranded})"
+        input = $(cat {input.matrix_inputs})
+        if [[ ${{strand}} == "stranded" ]]; then
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-			computeMatrixOperations rbind -m {input.matrix[0]} {input.matrix[1]} -o {output.matrix}
+            computeMatrixOperations rbind -m ${{input}} -o {output.matrix}
         else
-            cp {input.matrix} {output.matrix}
+            cp {{input}} {output.matrix}
         fi
         }} 2>&1 | tee -a "{log}"
         """
@@ -647,7 +678,7 @@ rule merging_matrix:
 rule computing_matrix_scales:
     input:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
-        target_file = lambda wildcards: define_combined_target_file(wildcards)
+        header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
         params_heatmap = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
         params_profile = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
@@ -661,8 +692,7 @@ rule computing_matrix_scales:
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
         scales = config['heatmaps_scales'],
-        profile = config['profiles_scale'],
-        header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no"
+        profile = config['profiles_scale']
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -673,8 +703,9 @@ rule computing_matrix_scales:
     shell:
         """
         {{        
+        header="$(cat {input.header})"
         count=$(wc -l {input.target_file} | cut -d' ' -f 1)
-        if [[ "{params.header}" == "yes" ]]; then
+        if [[ "${{header}}" == "yes" ]]; then
             count=$((count-1))
         fi
 
@@ -843,8 +874,7 @@ rule plotting_sorted_heatmap_on_targetfile:
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
         env = lambda wildcards: wildcards.env,
-        plot_params = lambda wildcards: config['heatmaps_plot_params'][wildcards.env],
-        sort = lambda wildcards: define_sort_options(wildcards)
+        plot_params = lambda wildcards: config['heatmaps_plot_params'][wildcards.env]
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_sorted_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -863,7 +893,7 @@ rule plotting_sorted_heatmap_on_targetfile:
             add="--startLabel start --endLabel end"
         fi
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} ${{add}}
+        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} --sortRegions 'keep' ${{new_params}} ${{add}}
         """
 
 rule plotting_profile_on_targetfile:
