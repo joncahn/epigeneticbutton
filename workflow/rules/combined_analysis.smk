@@ -637,8 +637,8 @@ rule dispatch_matrix:
         prefix = f"results/combined/matrix/matrix_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}"
         with open(output.matrix_inputs, "w") as out:
             if stranded_file == "stranded" and stranded_heatmaps:
-                out.write(f"{prefix}__plus.gz"\n)
-                out.write(f"{prefix}__minus.gz"\n)
+                out.write(f"{prefix}__plus.gz\n")
+                out.write(f"{prefix}__minus.gz\n")
             else:
                 out.write(f"{prefix}__unstranded.gz\n")
                 
