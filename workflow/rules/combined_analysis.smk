@@ -305,17 +305,19 @@ def define_final_combined_output(ref_genome):
     if len(chip_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
-    plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Heatmap__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    # need a way to run mC after the rest to set the regions order. potentially extracting the regions from all genes and reordering based on sorted_regions
-    # if len(mc_analysis_samples) >=1: 
-        # if len(all_analysis_samples) > len(mc_analysis_samples):
-    
-        # else:
-    plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+    if len(mc_analysis_samples) >=1:
+        if len(all_analysis_samples) > len(mc_analysis_samples):
+            plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+        else:
+            plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+    else:
+        plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     
     if analysis:
         results = plot_files + text_files
@@ -647,7 +649,8 @@ rule computing_matrix_scales:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
         target_file = lambda wildcards: define_combined_target_file(wildcards)
     output:
-        params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
+        params_heatmap = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
+        params_profile = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
         temp_values = "results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
         temp_profile = temp("results/combined/matrix/temp_profile_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf"),
         temp_profile_values = "results/combined/matrix/temp_profile_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
@@ -676,7 +679,8 @@ rule computing_matrix_scales:
         fi
 
         if [[ "{params.scales}" == "default" ]]; then
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params_heatmap}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params_profile}
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
@@ -717,7 +721,8 @@ rule computing_matrix_scales:
                 done
             done < results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params_heatmap}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --yMin "c" --yMax "d}}' > {output.params_profile}
         
         elif [[ "{params.scales}" == "sample" ]]; then
             printf "Getting scales per sample for {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
@@ -753,10 +758,12 @@ rule computing_matrix_scales:
                 fi
             done < results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --zMin "a" --zMax "b" --yMin "c" --yMax "d}}' > {output.params_heatmap}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--regionsLabel "n"("r") --yMin "c" --yMax "d}}' > {output.params_profile}
         else
             printf "{params.scales} unknown. Returning default\n"
-            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params_heatmap}
+            awk -v ORS="" -v r=${{count}} -v n={params.target_name} 'BEGIN {{print "--regionsLabel "n"("r")"}}' > {output.params_profile}
             touch {output.temp_values}
             touch {output.temp_profile}
             touch {output.temp_profile_values}
@@ -767,7 +774,7 @@ rule computing_matrix_scales:
 rule plotting_heatmap_on_targetfile:
     input:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
-        params = "results/combined/matrix/params_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+        params = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
     output:
         plot = "results/combined/plots/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf",
         sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed"
@@ -798,6 +805,99 @@ rule plotting_heatmap_on_targetfile:
         fi
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} ${{add}} --outFileSortedRegions {output.sorted_regions}
+        """
+
+rule sort_heatmap:
+    input: 
+        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
+        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed"
+    output:
+        matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
+    params:
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name,
+        matrix = lambda wildcards: wildcards.matrix_param,
+        env = lambda wildcards: wildcards.env
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "sort_heatmap_{matrix_param}_{target_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["sort_heatmap"]["threads"]
+    resources:
+        mem=config["resources"]["sort_heatmap"]["mem"],
+        tmp=config["resources"]["sort_heatmap"]["tmp"]
+    shell:
+        """
+        printf "Sorting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
+        computeMatrixOperations sort -m {input.matrix} -R {input.sorted_regions} -o {output.matrix}
+        """
+
+rule plotting_heatmap_on_targetfile:
+    input:
+        matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
+        params = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+    output:
+        plot = "results/combined/plots/Heatmap_sorted__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf"
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name,
+        matrix = lambda wildcards: wildcards.matrix_param,
+        env = lambda wildcards: wildcards.env,
+        plot_params = lambda wildcards: config['heatmaps_plot_params'][wildcards.env],
+        sort = lambda wildcards: define_sort_options(wildcards)
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["plotting_heatmap_on_targetfile"]["threads"]
+    resources:
+        mem=config["resources"]["plotting_heatmap_on_targetfile"]["mem"],
+        tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
+    shell:
+        """
+        new_params="$(cat {input.params})"
+        if [[ "{params.matrix}" == "tes" ]]; then
+            add="--refPointLabel end"
+        elif [[ "{params.matrix}" == "tss" ]]; then
+            add="--refPointLabel start"
+        else
+            add="--startLabel start --endLabel end"
+        fi
+        printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
+        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} ${{add}}
+        """
+
+rule plotting_profile_on_targetfile:
+    input:
+        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
+        params = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+    output:
+        plot = "results/combined/plots/Profile__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf"
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name,
+        matrix = lambda wildcards: wildcards.matrix_param,
+        env = lambda wildcards: wildcards.env,
+        plot_params = config['profiles_plot_params']
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_profile_{matrix_param}_{target_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["plotting_profile_on_targetfile"]["threads"]
+    resources:
+        mem=config["resources"]["plotting_profile_on_targetfile"]["mem"],
+        tmp=config["resources"]["plotting_profile_on_targetfile"]["tmp"]
+    shell:
+        """
+        new_params="$(cat {input.params})"
+        if [[ "{params.matrix}" == "tes" ]]; then
+            add="--refPointLabel end"
+        elif [[ "{params.matrix}" == "tss" ]]; then
+            add="--refPointLabel start"
+        else
+            add="--startLabel start --endLabel end"
+        fi
+        printf "Plotting profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
+        plotProfile -m {input.matrix} -out {output.plot} {params.plot_params} ${{new_params}} ${{add}}
         """
 
 ###

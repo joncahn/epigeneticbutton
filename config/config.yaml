@@ -148,6 +148,7 @@ heatmaps_scales: "default" # options: [ 'default' = default scaling from deeptoo
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
 profiles_scale: "mean" # options: [ 'mean' | median' ] 
+profiles_plot_params: "--plotType 'lines'"
 heatmaps_plot_params:
   all: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
   ChIP: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
@@ -307,4 +308,6 @@ resources:
   making_stranded_matrix_on_targetfile: *heavy
   merging_matrix: *single
   computing_matrix_scales: *single
+  sort_heatmap: *single
   plotting_heatmap_on_targetfile: *single
+  plotting_profile_on_targetfile: *single

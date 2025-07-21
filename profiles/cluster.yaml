@@ -102,4 +102,6 @@ plotting_upset_peaks: *low
 making_stranded_matrix_on_targetfile: *heavy
 merging_matrix: *single
 computing_matrix_scales: *single
+sort_heatmap: *single
 plotting_heatmap_on_targetfile: *single
+plotting_profile_on_targetfile: *single
