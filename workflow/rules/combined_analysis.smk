@@ -831,7 +831,7 @@ rule sort_heatmap:
         computeMatrixOperations sort -m {input.matrix} -R {input.sorted_regions} -o {output.matrix}
         """
 
-rule plotting_heatmap_on_targetfile:
+rule plotting_sorted_heatmap_on_targetfile:
     input:
         matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
         params = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
@@ -846,12 +846,12 @@ rule plotting_heatmap_on_targetfile:
         plot_params = lambda wildcards: config['heatmaps_plot_params'][wildcards.env],
         sort = lambda wildcards: define_sort_options(wildcards)
     log:
-        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_sorted_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_heatmap_on_targetfile"]["threads"]
+    threads: config["resources"]["plotting_sorted_heatmap_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_heatmap_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
+        mem=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["mem"],
+        tmp=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp"]
     shell:
         """
         new_params="$(cat {input.params})"
