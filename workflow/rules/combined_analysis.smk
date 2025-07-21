@@ -628,7 +628,6 @@ rule dispatch_matrix:
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
         stranded_heatmaps = config['stranded_heatmaps']
-    conda: CONDA_ENV
     localrule: True
     run:
         with open(input.stranded) as f:
