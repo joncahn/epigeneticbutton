@@ -511,12 +511,12 @@ rule get_annotations_for_bedfile:
         bedfile = lambda wildcards: define_combined_target_file(wildcards),
         region_file = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed",
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
+        header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
         temp_bedfile = temp("results/combined/bedfiles/temp__{target_name}__{ref_genome}.bed"),
         annotated_file = "results/combined/bedfiles/annotated__{target_name}__{ref_genome}.bed"
     params:
         target_name = lambda wildcards: wildcards.target_name,
-        header = lambda wildcards: "yes" if has_header(define_combined_target_file(wildcards)) else "no"
     log:
         temp(return_log_combined("{target_name}", "{ref_genome}", "annotate_bedfile"))
     conda: CONDA_ENV
@@ -528,7 +528,8 @@ rule get_annotations_for_bedfile:
         """
         {{
         printf "Annotating {params.target_name} to the closest genes\n"
-        if [[ "{params.header}" == "no" ]]; then
+        header=$(cat {input.header})
+        if [[ "${header}}" == "no" ]]; then
             awk -v OFS="\t" -v n={params.target_name} '{{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
         else
             awk -v OFS="\t" -v n={params.target_name} 'NR>1 {{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
