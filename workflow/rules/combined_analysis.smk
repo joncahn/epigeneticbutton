@@ -620,7 +620,7 @@ rule making_stranded_matrix_on_targetfile:
 
 rule dispatch_matrix:
     input:
-        stranded = lambda wildcards: checkpoints.is_stranded.get(sample={define_combined_target_file(wildcards)}).output
+        stranded = lambda wildcards: checkpoints.is_stranded.get(bedfile={define_combined_target_file(wildcards)}).output
     output:
         matrix_inputs = temp("results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
     params:
@@ -646,7 +646,7 @@ rule dispatch_matrix:
 rule merging_matrix:
     input:
         matrix_inputs = "results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        stranded = lambda wildcards: checkpoints.is_stranded.get(sample={define_combined_target_file(wildcards)}).output
+        stranded = lambda wildcards: checkpoints.is_stranded.get(bedfile={define_combined_target_file(wildcards)}).output
     output:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
     params:
