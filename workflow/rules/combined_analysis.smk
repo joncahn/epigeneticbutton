@@ -34,7 +34,7 @@ def get_matrix_inputs(wildcards):
     bedfile = define_combined_target_file(wildcards)
     prefix = f"results/combined/matrix/matrix_{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}__{wildcards.target_name}"
     with checkpoints.is_stranded.get(bedfile=bedfile).output[0].open() as f:
-        if stranded_file == "stranded" and stranded_heatmaps:
+        if f.read().strip() == "stranded" and stranded_heatmaps:
             return [ f"{prefix}__plus.gz", f"{prefix}__minus.gz" ]
         else:
             return [ f"{prefix}__unstranded.gz" ]
