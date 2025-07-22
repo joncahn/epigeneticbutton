@@ -120,7 +120,7 @@ def define_marks_per_env_and_ref(wildcards):
         elif row.env == "mC":
             if "mCG" not in types:
                 for context in ["CG","CHG","CHH"]:
-                    types.append(f"m{type_context}")
+                    types.append(f"m{context}")
         elif row.env == "RNA":
             if not any(t.startswith("RNA") for t in types):
                 if strand == "unstranded":
