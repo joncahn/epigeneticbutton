@@ -15,9 +15,10 @@ ref_path_rule: "path/to/reference/genomes"
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
 QC_option: "none" # options: ["none"|"all"]
+te_analysis: false
 
 # Species-dependent parameters:
-species: "thaliana" #options below or create a new entry with corresponding information
+species: "thaliana" # choose one option below or create a new entry with all the corresponding information
 
 thaliana:
   star_index: "--genomeSAindexNbases 12"
@@ -49,7 +50,7 @@ adapter1:
   sRNA: "TGGAATTCTCGGGTGCCAAGG" # default nextflex
 
 # Mapping option default
-chip_mapping_option: "default"
+chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
 
 # ChIP-seq parameters
 # For mapping
@@ -126,7 +127,7 @@ mC_mapping:
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
 
 # small RNA parameters
-structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
+structural_rna_depletion: false # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
 structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)

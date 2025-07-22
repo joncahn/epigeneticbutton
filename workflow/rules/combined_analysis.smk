@@ -665,7 +665,7 @@ rule merging_matrix:
         """
         {{
         strand="$(cat {input.stranded})"
-        input = $(cat {input.matrix_inputs})
+        input=$(cat {input.matrix_inputs})
         if [[ ${{strand}} == "stranded" ]]; then
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations rbind -m ${{input}} -o {output.matrix}
