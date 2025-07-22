@@ -649,8 +649,8 @@ rule merging_matrix:
     shell:
         """
         {{
-        strand="$(cat {input.stranded})"
-        if [[ ${{strand}} == "stranded" ]]; then
+        nfile=$(echo {input} | wc -w)
+        if [[ ${{nfile}} -eq 2 ]]; then
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations rbind -m {input} -o {output}
         else
