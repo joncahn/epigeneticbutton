@@ -682,6 +682,7 @@ rule merging_matrix:
 rule computing_matrix_scales:
     input:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
+        target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
         params_heatmap = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
