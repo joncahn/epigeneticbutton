@@ -573,6 +573,7 @@ rule making_stranded_matrix_on_targetfile:
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
+        temp = temp("results/combined/matrix/temp_file_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}_{strand}.bed"),
         matrix = temp("results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.gz")
     wildcard_constraints:
         strand = "plus|minus|unstranded"
