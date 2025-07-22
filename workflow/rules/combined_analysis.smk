@@ -29,6 +29,16 @@ def get_heatmap_param(matrix, key):
 
     return config['heatmaps'][matrix][key]
 
+def get_matrix_inputs(wildcards):
+    stranded_heatmaps = config['stranded_heatmaps']
+    bedfile = define_combined_target_file(wildcards)
+    prefix = f"results/combined/matrix/matrix_{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}__{wildcards.target_name}"
+    with checkpoints.is_stranded.get(bedfile=bedfile).output[0].open() as f:
+        if stranded_file == "stranded" and stranded_heatmaps:
+            return [ f"{prefix}__plus.gz", f"{prefix}__minus.gz" ]
+        else:
+            return [ f"{prefix}__unstranded.gz" ]
+
 def define_sort_options(wildcards):
     sort_options = config['heatmaps_sort_options']
     matrix_param = wildcards.matrix_param
@@ -283,7 +293,7 @@ def define_final_combined_output(ref_genome):
 
 ###
 # rules to look for header or strandedness of bedfile
-checkpoint has_header:
+rule has_header:
     input:
         bedfile = "{bedfile}"
     output:
@@ -617,38 +627,12 @@ rule making_stranded_matrix_on_targetfile:
         computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         }} 2>&1 | tee -a "{log}"
         """
-
-rule dispatch_matrix:
-    input:
-        stranded = lambda wildcards: checkpoints.is_stranded.get(bedfile=define_combined_target_file(wildcards)).output
-    output:
-        matrix_inputs = temp("results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
-    params:
-        analysis_name = config['analysis_name'],
-        ref_genome = lambda wildcards: wildcards.ref_genome,
-        env = lambda wildcards: wildcards.env,
-        target_name = lambda wildcards: wildcards.target_name,
-        matrix = lambda wildcards: wildcards.matrix_param,
-        stranded_heatmaps = config['stranded_heatmaps']
-    localrule: True
-    run:
-        with open(input.stranded) as f:
-            stranded_file = f.read().strip()
-        
-        prefix = f"results/combined/matrix/matrix_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}"
-        with open(output.matrix_inputs, "w") as out:
-            if stranded_file == "stranded" and params.stranded_heatmaps:
-                out.write(f"{prefix}__plus.gz\n")
-                out.write(f"{prefix}__minus.gz\n")
-            else:
-                out.write(f"{prefix}__unstranded.gz\n")
                 
 rule merging_matrix:
     input:
-        matrix_inputs = "results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        stranded = lambda wildcards: checkpoints.is_stranded.get(bedfile=define_combined_target_file(wildcards)).output
+        get_matrix_inputs
     output:
-        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
+        "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -666,12 +650,11 @@ rule merging_matrix:
         """
         {{
         strand="$(cat {input.stranded})"
-        input=$(cat {input.matrix_inputs})
         if [[ ${{strand}} == "stranded" ]]; then
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-            computeMatrixOperations rbind -m ${{input}} -o {output.matrix}
+            computeMatrixOperations rbind -m {input} -o {output}
         else
-            cp ${{input}} {output.matrix}
+            cp {input} {output}
         fi
         }} 2>&1 | tee -a "{log}"
         """
