@@ -17,7 +17,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Histone ChIP-seq
   - Transcription Factor ChIP-seq
   - RNA-seq
-  - RAMPAGE
+  - RAMPAGE *in development
   - small RNA-seq
   - MethylC-seq (mC)
 
@@ -314,12 +314,11 @@ This should be done manually, until an option with a specific rule is potentiall
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
 ## Features under development
-- Finishing ChIP-seq and RNA-seq
-- Assignment of IP to Input based on suffix (e.g. ChIP_A)
 - RAMPAGE
 - Browser: create a hub/jbrowse session? invert minus stranded bigwigs.
-- Plotting
+- Additional combined analysis output
 - ATAC-seq
+- ONT for direct methylation calling
 
 ## FAQ
 
