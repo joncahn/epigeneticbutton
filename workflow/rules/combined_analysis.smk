@@ -46,6 +46,10 @@ def define_sort_options(wildcards):
         print("unclear option: no sorting done")
         return "--sortRegions keep"
 
+def get_matrix_inputs(wildcards):
+    with open(f"results/combined/matrix/input_matrix_{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}__{wildcards.target_name}.txt") as f:
+        return [line.strip() for line in f if line.strip()]
+
 def define_samplenames_per_env_and_ref(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
@@ -644,7 +648,7 @@ rule dispatch_matrix:
                 
 rule merging_matrix:
     input:
-        matrix_inputs = "results/combined/matrix/input_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
+        matrix_inputs = lambda wildcards: get_matrix_inputs(wildcards),
         stranded = lambda wildcards: f"{define_combined_target_file(wildcards)}.stranded"
     output:
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
@@ -665,12 +669,11 @@ rule merging_matrix:
         """
         {{
         strand="$(cat {input.stranded})"
-        input=$(cat {input.matrix_inputs})
         if [[ ${{strand}} == "stranded" ]]; then
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-            computeMatrixOperations rbind -m ${{input}} -o {output.matrix}
+            computeMatrixOperations rbind -m {input.matrix_inputs} -o {output.matrix}
         else
-            cp ${{input}} {output.matrix}
+            cp {input.matrix_inputs} {output.matrix}
         fi
         }} 2>&1 | tee -a "{log}"
         """
