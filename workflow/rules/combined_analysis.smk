@@ -864,7 +864,6 @@ rule sort_heatmap:
         tmp=config["resources"]["sort_heatmap"]["tmp"]
     shell:
         """
-        
         printf "Sorting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
         label="$(cat {input.params_regions})"
         computeMatrixOperations relabel -m {input.matrix} --groupLabels ${{label}} -o {output.temp_matrix}
