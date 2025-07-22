@@ -533,7 +533,7 @@ rule get_annotations_for_bedfile:
         {{
         printf "Annotating {params.target_name} to the closest genes\n"
         header=$(cat {input.header})
-        if [[ "${header}}" == "no" ]]; then
+        if [[ "${{header}}" == "no" ]]; then
             awk -v OFS="\t" -v n={params.target_name} '{{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
         else
             awk -v OFS="\t" -v n={params.target_name} 'NR>1 {{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
