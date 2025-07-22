@@ -670,7 +670,7 @@ rule merging_matrix:
             printf "\nMerging stranded matrices aligned by {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
             computeMatrixOperations rbind -m ${{input}} -o {output.matrix}
         else
-            cp {{input}} {output.matrix}
+            cp ${{input}} {output.matrix}
         fi
         }} 2>&1 | tee -a "{log}"
         """
