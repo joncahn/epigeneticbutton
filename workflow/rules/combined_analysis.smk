@@ -854,8 +854,7 @@ rule sort_heatmap:
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
-        matrix = lambda wildcards: wildcards.matrix_param,
-        env = lambda wildcards: wildcards.env
+        matrix = lambda wildcards: wildcards.matrix_param
     log:
         temp(return_log_combined("{analysis_name}", "mC_{ref_genome}", "sort_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -866,7 +865,7 @@ rule sort_heatmap:
     shell:
         """
         
-        printf "Sorting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
+        printf "Sorting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
         label="$(cat {input.params_regions})"
         computeMatrixOperations relabel -m {input.matrix} --groupLabels ${{label}} -o {output.temp_matrix}
         computeMatrixOperations sort -m {output.temp_matrix} -R {input.sorted_regions} -o {output.matrix}
