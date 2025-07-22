@@ -884,8 +884,7 @@ rule plotting_sorted_heatmap_on_targetfile:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
-        env = lambda wildcards: wildcards.env,
-        plot_params = lambda wildcards: config['heatmaps_plot_params'][wildcards.env]
+        plot_params = lambda wildcards: config['heatmaps_plot_params']['mC']
     log:
         temp(return_log_combined("{analysis_name}", "mC_{ref_genome}", "plot_sorted_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -903,7 +902,7 @@ rule plotting_sorted_heatmap_on_targetfile:
         else
             add="--startLabel start --endLabel end"
         fi
-        printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
+        printf "Plotting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
         plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} --sortRegions 'keep' ${{new_params}} ${{add}}
         """
 
