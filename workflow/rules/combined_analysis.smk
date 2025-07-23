@@ -833,6 +833,7 @@ rule sort_heatmap:
         sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__all__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed",
         params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__all__{analysis_name}__{ref_genome}__{target_name}.txt"
     output:
+        temp_matrix = temp("results/combined/matrix/temp_sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"),
         matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
