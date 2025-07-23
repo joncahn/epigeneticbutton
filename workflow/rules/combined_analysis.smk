@@ -892,6 +892,7 @@ rule plotting_profile_on_targetfile:
         tmp=config["resources"]["plotting_profile_on_targetfile"]["tmp"]
     shell:
         """
+        {{
         if [[ "{params.matrix}" == "tes" ]]; then
             add="--refPointLabel end"
         elif [[ "{params.matrix}" == "tss" ]]; then
@@ -901,14 +902,15 @@ rule plotting_profile_on_targetfile:
         fi
         printf "Plotting profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         new_params="$(cat {input.params_regions} {input.params_profile})"
-        cat ${{new_params}}
+        printf "${{new_params}}"
         plotProfile -m {input.matrix} -out {output.plot1} {params.plot_params} ${{new_params}} ${{add}}
         
         printf "Plotting per group profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-        ymin=$(echo "$params" | awk 'BEGIN {{y=99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMin") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j<y) y=$j}} break}} }} }} END {{print y}}' )
-        ymax=$(echo "$params" | awk 'BEGIN {{y=-99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMax") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j>y) y=$j}} break}} }} }} END {{print y}}' )
+        ymin=$(echo {input.params_profile} | awk 'BEGIN {{y=99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMin") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j<y) y=$j}} break}} }} }} END {{print y}}' )
+        ymax=$(echo {input.params_profile} | awk 'BEGIN {{y=-99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMax") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j>y) y=$j}} break}} }} }} END {{print y}}' )
         new_params="$(cat {input.params_regions})"
         plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{new_params}} --yMin ${{ymin}} --yMax ${{ymax}} ${{add}} --perGroup
+        }} 2>&1 | tee -a "{log}"
         """
 
 ###
