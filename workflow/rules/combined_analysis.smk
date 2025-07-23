@@ -113,9 +113,10 @@ def define_key_for_heatmaps(wildcards, string):
     unique_tf = set()
     unique_chip = set()
     unique_rna = set()
+    unique_srna = set()
+    unique_mc = set()
     grouped_bw = defaultdict(list)
     grouped_labs = defaultdict(list)
-    grouped_marks = defaultdict(list)
     srna_sizes = config['srna_heatmap_sizes']
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
@@ -135,17 +136,15 @@ def define_key_for_heatmaps(wildcards, string):
             label = f"{row.line}_{row.tissue}_{row.sample_type}"
             grouped_bw[f"chip_{row.sample_type}"].append(bw)
             grouped_labs[f"chip_{row.sample_type}"].append(label)
-            grouped_marks[f"chip_{row.sample_type}"].append(f"{row.sample_type}")
             unique_chip.add(row.sample_type)
         elif row.env == "TF":
             merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
             onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
             bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
             label = f"{row.line}_{row.tissue}_{row.extra_info}"
-            grouped_bw[f"tf_{row.data_type}"].append(bw)
-            grouped_labs[f"tf_{row.data_type}"].append(label)
-            grouped_marks[f"tf_{row.data_type}"].append(f"{row.extra_info}")
-            unique_tf.add(row.data_type)
+            grouped_bw[f"tf_{row.extra_info}"].append(bw)
+            grouped_labs[f"tf_{row.extra_info}"].append(label)
+            unique_tf.add(row.extra_info)
         elif row.env == "RNA":
             if strand == "unstranded":
                 merged = f"{prefix}__merged__{row.ref_genome}"
@@ -157,8 +156,6 @@ def define_key_for_heatmaps(wildcards, string):
                 grouped_bw[f"{row.data_type}_minus"].append(bw2)
                 grouped_labs[f"{row.data_type}_plus"].append(f"{label}_plus")
                 grouped_labs[f"{row.data_type}_minus"].append(f"{label}_minus")
-                grouped_marks[f"{row.data_type}_plus"].append(f"{row.data_type}_plus")
-                grouped_marks[f"{row.data_type}_minus"].append(f"{row.data_type}_minus")
                 unique_rna.add(row.data_type)
             else:
                 merged = f"{prefix}__merged__{row.ref_genome}"
@@ -167,7 +164,6 @@ def define_key_for_heatmaps(wildcards, string):
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
                 grouped_bw[f"{row.data_type}_stranded"].append(bw)
                 grouped_labs[f"{row.data_type}_stranded"].append(f"{label}")
-                grouped_marks[f"{row.data_type}_stranded"].append(f"{row.data_type}")
                 unique_rna.add(row.data_type)
         elif row.env == "sRNA":
             for size in srna_sizes:
@@ -176,21 +172,20 @@ def define_key_for_heatmaps(wildcards, string):
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                     bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
                     bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt"
+                    label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
                     grouped_bw[f"sRNA_{size}_plus"].append(bw1)
                     grouped_bw[f"sRNA_{size}_minus"].append(bw2)
                     grouped_labs[f"sRNA_{size}_plus"].append(f"{label}_plus")
                     grouped_labs[f"sRNA_{size}_minus"].append(f"{label}_minus")
-                    grouped_marks[f"sRNA_{size}_plus"].append(f"{row.sample_type}_{size}_plus")
-                    grouped_marks[f"sRNA_{size}_minus"].append(f"{row.sample_type}_{size}_minus")
+                    unique_srna.add(f"sRNA_{size}")
                 else:
                     merged = f"{prefix}__merged__{row.ref_genome}"
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                     bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{size}nt"
+                    label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
                     grouped_bw[f"sRNA_{size}_stranded"].append(bw)
                     grouped_labs[f"sRNA_{size}_stranded"].append(f"{label}")
-                    grouped_marks[f"sRNA_{size}_stranded"].append(f"{row.sample_type}_{size}")
+                    unique_srna.add(f"sRNA_{size}")
         elif row.env == "mC":
             merged = f"{prefix}__merged__{row.ref_genome}"
             onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
@@ -199,29 +194,23 @@ def define_key_for_heatmaps(wildcards, string):
                 label = f"{row.line}_{row.tissue}_m{context}"
                 grouped_bw[f"m{context}"].append(bw)
                 grouped_labs[f"m{context}"].append(f"{label}")
-                grouped_marks[f"m{context}"].append(f"m{context}")
+                unique_mc.add(f"m{context}")
                     
     bigwigs = (
-        sum([grouped_bw[f"chip_{chip}"] for chip in sorted(unique_chip)], []) + 
-        sum([grouped_bw[f"tf_{tf}"] for tf in sorted(unique_tf)], []) + 
-        sum([grouped_bw[f"{rna}_plus"] + grouped_bw[f"{rna}_minus"] + grouped_bw[f"{rna}_stranded"] for rna in sorted(unique_rna)], []) + 
-        sum([grouped_bw[f"sRNA_{size}_plus"] + grouped_bw[f"sRNA_{size}_minus"] + grouped_bw[f"sRNA_{size}_stranded"] for size in srna_sizes], []) +
-        grouped_bw["mCG"] + grouped_bw["mCHG"] + grouped_bw["mCHH"]
+        sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
+        sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
+        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{arna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        grouped_bw.get("mCG", []) + grouped_bw.get("mCHG", []) + grouped_bw.get("mCHH", [])
     )
     labels = (
-        sum([grouped_labs[f"chip_{chip}"] for chip in sorted(unique_chip)], []) + 
-        sum([grouped_labs[f"tf_{tf}"] for tf in sorted(unique_tf)], []) + 
-        sum([grouped_labs[f"{rna}_plus"] + grouped_labs[f"{rna}_minus"] + grouped_labs[f"{rna}_stranded"] for rna in sorted(unique_rna)], []) + 
-        sum([grouped_labs[f"sRNA_{size}_plus"] + grouped_labs[f"sRNA_{size}_minus"] + grouped_labs[f"sRNA_{size}_stranded"] for size in srna_sizes], []) +
-        grouped_labs["mCG"] + grouped_labs["mCHG"] + grouped_labs["mCHH"]
+        sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
+        sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
+        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{arna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        grouped_labs.get("mCG", []) + grouped_labs.get("mCHG", []) + grouped_labs.get("mCHH", [])
     )
-    marks = (
-        sum([grouped_marks[f"chip_{chip}"] for chip in sorted(unique_chip)], []) + 
-        sum([grouped_marks[f"tf_{tf}"] for tf in sorted(unique_tf)], []) + 
-        sum([grouped_marks[f"{rna}_plus"] + grouped_marks[f"{rna}_minus"] + grouped_marks[f"{rna}_stranded"] for rna in sorted(unique_rna)], []) + 
-        sum([grouped_marks[f"sRNA_{size}_plus"] + grouped_marks[f"sRNA_{size}_minus"] + grouped_marks[f"sRNA_{size}_stranded"] for size in srna_sizes], []) +
-        grouped_marks["mCG"] + grouped_marks["mCHG"] + grouped_marks["mCHH"]
-    )
+    marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
     if string == "bigwigs":
         return bigwigs
