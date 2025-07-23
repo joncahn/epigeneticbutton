@@ -80,10 +80,10 @@ conda install -c bioconda snakemake
 4. Default options: 
    - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file. Other options are listed below and in the config file.
    - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the config file. Other options are listed below and in the config file.
-   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and the `Help/Help_Gene_Ontology` before setting it to `true` as it requires 2 other files.
+   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Help_Gene_Ontology) before setting it to `true` as it requires 2 other files.
    - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file. No other option yet.
    - For ChIP-seq: the default mapping parameters are bowtie2 `--end-to-end` default parameters. Other options are available in the config file `chip_mapping_option`.
-   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to Additional output options #2 below and the `Help/Help_structural_RNAs_database_with_Rfam` before setting it to `true`.
+   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to Additional output options #2 below and the [Help structural RNAs](Help/Help_structural_RNAs_database_with_Rfam) before setting it to `true`.
 
 ### Running the Pipeline
 
@@ -190,7 +190,7 @@ snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_gene
 Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf`
 
 2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and optionally a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
-By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database.\
+By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Help_Gene_Ontology](Help/Help_Gene_Ontology) for more details on how to create the GO database.\
 To run a GO analysis on any target file:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<target_name>.done
