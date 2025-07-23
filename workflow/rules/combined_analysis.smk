@@ -912,8 +912,8 @@ rule plotting_profile_on_targetfile:
             add="--startLabel start --endLabel end"
         fi
         printf "Plotting profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-        plotProfile -m {input.matrix} -out {output.plot} {params.plot_params} ${{new_params}} ${{add}}
-        plotProfile -m {input.matrix} -out {output.plot} {params.plot_params} ${{new_params}} ${{add}} --perGroup
+        plotProfile -m {input.matrix} -out {output.plot1} {params.plot_params} ${{new_params}} ${{add}}
+        plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{new_params}} ${{add}} --perGroup
         """
 
 ###
