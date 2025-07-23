@@ -795,7 +795,6 @@ rule plotting_heatmap_on_targetfile:
         tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
     shell:
         """
-        new_params="$(cat {input.params_regions} {input.params_heatmap} {input.params_profile})"
         if [[ "{params.matrix}" == "tes" ]]; then
             add="--refPointLabel end"
         elif [[ "{params.matrix}" == "tss" ]]; then
@@ -803,8 +802,11 @@ rule plotting_heatmap_on_targetfile:
         else
             add="--startLabel start --endLabel end"
         fi
+        reg="$(cat {input.params_regions})"
+        heat="$(cat {input.params_heatmap})"
+        prof="$(cat {input.params_profile})"
         printf "Plotting heatmap {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{new_params}} ${{add}} --outFileSortedRegions {output.sorted_regions}
+        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} {params.sort} ${{reg}} ${{heat}} ${{prof}} ${{add}} --outFileSortedRegions {output.sorted_regions}
         """
 
 rule sort_heatmap:
@@ -856,7 +858,6 @@ rule plotting_sorted_heatmap_on_targetfile:
         tmp=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp"]
     shell:
         """
-        new_params="$(cat {input.params_heatmap} {input.params_profile})"
         if [[ "{params.matrix}" == "tes" ]]; then
             add="--refPointLabel end"
         elif [[ "{params.matrix}" == "tss" ]]; then
@@ -864,8 +865,10 @@ rule plotting_sorted_heatmap_on_targetfile:
         else
             add="--startLabel start --endLabel end"
         fi
+        heat="$(cat {input.params_heatmap})"
+        prof="$(cat {input.params_profile})"
         printf "Plotting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
-        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} --sortRegions 'keep' ${{new_params}} ${{add}}
+        plotHeatmap -m {input.matrix} -out {output.plot} {params.plot_params} --sortRegions 'keep' ${{heat}} ${{prof}} ${{add}}
         """
 
 rule plotting_profile_on_targetfile:
@@ -901,16 +904,14 @@ rule plotting_profile_on_targetfile:
             add="--startLabel start --endLabel end"
         fi
         printf "Plotting profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
-        regions="$(cat {input.params_regions})"
-        new_params="$(cat {input.params_profile})"
-        echo "${{new_params}}"
-        plotProfile -m {input.matrix} -out {output.plot1} {params.plot_params} ${{regions}} ${{new_params}} ${{add}}
+        reg="$(cat {input.params_regions})"
+        prof="$(cat {input.params_profile})"
+        plotProfile -m {input.matrix} -out {output.plot1} {params.plot_params} ${{reg}} ${{prof}} ${{add}}
         
         printf "Plotting per group profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         ymin=$(cat {input.params_profile} | awk 'BEGIN {{y=99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMin") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j<y) y=$j}} break}} }} }} END {{print y}}' )
         ymax=$(cat {input.params_profile} | awk 'BEGIN {{y=-99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMax") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j>y) y=$j}} break}} }} }} END {{print y}}' )
-        new_params="$(cat {input.params_regions})"
-        plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{regions}} ${{new_params}} --yMin ${{ymin}} --yMax ${{ymax}} ${{add}} --perGroup
+        plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{reg}} --yMin ${{ymin}} --yMax ${{ymax}} ${{add}} --perGroup
         }} 2>&1 | tee -a "{log}"
         """
 
