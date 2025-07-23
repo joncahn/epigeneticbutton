@@ -902,7 +902,7 @@ rule plotting_profile_on_targetfile:
         fi
         printf "Plotting profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
         new_params="$(cat {input.params_regions} {input.params_profile})"
-        printf "${{new_params}}"
+        echo "${{new_params}}"
         plotProfile -m {input.matrix} -out {output.plot1} {params.plot_params} ${{new_params}} ${{add}}
         
         printf "Plotting per group profile {params.matrix} for {params.env} {params.target_name} on {params.ref_genome}\n"
