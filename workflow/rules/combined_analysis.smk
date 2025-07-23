@@ -908,7 +908,7 @@ rule plotting_profile_on_targetfile:
         ymin=$(echo "$params" | awk 'BEGIN {{y=99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMin") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j<y) y=$j}} break}} }} }} END {{print y}}' )
         ymax=$(echo "$params" | awk 'BEGIN {{y=-99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMax") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j>y) y=$j}} break}} }} }} END {{print y}}' )
         new_params="$(cat {input.params_regions})"
-        plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{new_params}} --yMin ${{ymin}} --yMax {{ymax}} ${{add}} --perGroup
+        plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{new_params}} --yMin ${{ymin}} --yMax ${{ymax}} ${{add}} --perGroup
         """
 
 ###
