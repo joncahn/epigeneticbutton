@@ -201,7 +201,7 @@ def define_key_for_heatmaps(wildcards, string):
                 grouped_labs[f"m{context}"].append(f"{label}")
                 grouped_marks[f"m{context}"].append(f"m{context}")
                     
-     bigwigs = (
+    bigwigs = (
         sum([grouped_bw[f"chip_{chip}"] for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw[f"tf_{tf}"] for tf in sorted(unique_tf)], []) + 
         sum([grouped_bw[f"{rna}_plus"] + grouped_bw[f"{rna}_minus"] + grouped_bw[f"{rna}_stranded"] for rna in sorted(unique_rna)], []) + 
