@@ -145,7 +145,7 @@ gene_info_file:
   B73_v5: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not
 
 # For deeptools heatmaps
-heatmaps_scales: "default" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
+heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
 profiles_scale: "mean" # options: [ 'mean' | median' ] 
