@@ -849,7 +849,7 @@ rule sort_heatmap:
     shell:
         """
         printf "Sorting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
-        label="$(cat {input.params_regions})"
+        label="$(cat {input.params_regions} | cut -d" " -f 2)"
         computeMatrixOperations relabel -m {input.matrix} --groupLabels ${{label}} -o {output.temp_matrix}
         computeMatrixOperations sort -m {output.temp_matrix} -R {input.sorted_regions} -o {output.matrix}
         """
