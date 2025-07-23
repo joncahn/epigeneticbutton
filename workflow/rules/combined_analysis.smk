@@ -200,14 +200,14 @@ def define_key_for_heatmaps(wildcards, string):
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
         sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{arna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}_stranded", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_bw.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
         sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{arna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}_stranded", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
