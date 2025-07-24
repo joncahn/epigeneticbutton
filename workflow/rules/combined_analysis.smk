@@ -263,7 +263,7 @@ def define_final_combined_output(ref_genome):
     plot_files.append(f"results/combined/plots/Profile__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Profile__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Profile__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    
+
     if analysis:
         results = plot_files + text_files
     else:
