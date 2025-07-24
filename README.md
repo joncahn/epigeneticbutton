@@ -58,7 +58,8 @@ conda install -c bioconda snakemake
 
 ### Configuration
 
-For new users, consider using the configuration app to validate your sample metadata file https://epicc-builder.streamlit.app/
+For new users, consider using the configuration app to validate your sample metadata file and choose analysis options:\
+https://epicc-builder.streamlit.app/
 
 1. Prepare your sample metadata file (default to `samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
