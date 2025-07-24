@@ -29,6 +29,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Quality control and reporting
 
 - **Flexible Configuration**:
+  - App to validate configuration options
   - Customizable mapping parameters
   - Configurable analysis options
   - Resource management
@@ -56,6 +57,8 @@ conda install -c bioconda snakemake
 ## Usage
 
 ### Configuration
+
+For new users, consider using the configuration app to validate your sample metadata file https://epicc-builder.streamlit.app/
 
 1. Prepare your sample metadata file (default to `samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
@@ -120,7 +123,7 @@ snakemake --dag | dot -Tpng > dag.png
 - Col2: *line*: Can be any information you want, such as `Col0` or `WT` to annotate and label samples
 - Col3: *tissue*: Can be any information you want, such as `leaf` or `mutant` or `6h_stress` to annotate and label samples
 The combination line x tissue will be the base for all comparisons (e.g `WT_leaf` vs `WT_roots` or `Col0_control` vs `Ler_stress`)
-- Col5: *replicate*: Any value to match the different replicates (e.g Rep1, RepA, 1). All the different replicates are merged for 
+- Col5: *replicate*: Any value to match the different replicates (e.g Rep1, RepA, 1). All the different replicates are merged for samples with the same line, tissue and sample_type.
 - Col6: *seq_id*: Unique identifier to identify the raw data. Can be an SRR number (e.g. SRR27821931) if the data is deposited in SRA, or a unique identifier of the file if the data is local (e.g. `wt_k27`). This identifier should be shared by both 'R1' and 'R2' fastq files for paired-end data.
 - Col7: *fastq_path*: Either `SRA` if raw data to be downloaded from SRA (the SRR number should be used as `seq-id`), or the path to the directory containing the fastq file (e.g. `/archive/fastq`), in which case the `seq_id` should be a unique identifier of the corresponding file in this folder (e.g. `/archive/fastq/raw.reads.wt_k27.fastq.gz`)
 - Col8: *paired*: `PE` for paired-end data or `SE` for single-end data. PE samples should have two fastq files R1 and R2 at the location defined above, sharing the same identifier in Col6 (e.g. `/archive/fastq/raw.reads.wt_k27_R1.fastq.gz` and `/archive/fastq/raw.reads.wt_k27_R2.fastq.gz`)
