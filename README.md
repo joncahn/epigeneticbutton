@@ -17,7 +17,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Histone ChIP-seq
   - Transcription Factor ChIP-seq
   - RNA-seq
-  - RAMPAGE
+  - RAMPAGE *in development
   - small RNA-seq
   - MethylC-seq (mC)
 
@@ -29,6 +29,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Quality control and reporting
 
 - **Flexible Configuration**:
+  - App to validate configuration options
   - Customizable mapping parameters
   - Configurable analysis options
   - Resource management
@@ -57,6 +58,9 @@ conda install -c bioconda snakemake
 
 ### Configuration
 
+For new users, consider using the configuration app to validate your sample metadata file and choose analysis options:\
+https://epicc-builder.streamlit.app/
+
 1. Prepare your sample metadata file (default to `samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
    - `line`: Sample line (e.g., B73)
@@ -68,19 +72,22 @@ conda install -c bioconda snakemake
    - `paired`: [PE | SE]
    - `ref_genome`: Reference genome name
 
-2. Update `config.yaml` with your paths and parameters:
-   - Reference genome path
-   - Sample file path
+2. Update `config/config.yaml` with your paths and parameters:
+   - Sample file: this is the full path to the file detailed above which contain your samples metadata. 
+   - Reference genome path: this is the path leading to the directories that are called exactly like `ref_genome` above and that contain only 1 fasta file, 1 gff file and 1 gtf file
    - Analysis parameters / options
    - Species-specific parameters
    - Resources allocation
    
 3. If changing resource allocation for cluster submission, consider adjusting the `profiles/cluster.yaml` for job-specific resources, and the corresponding config file for your cluster scheduler (`profiles/sge/config.yaml` or `profiles/slurm/config.yaml` for SGE or SLURM, respectively). The default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
-4. Create the `hpclogs` folder for cluster logs if submitting to a hpc:
-```bash
-mkdir -p hpclogs
-```
+4. Default options: 
+   - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file. Other options are listed below and in the config file.
+   - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the config file. Other options are listed below and in the config file.
+   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Help_Gene_Ontology) before setting it to `true` as it requires 2 other files.
+   - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file. No other option yet.
+   - For ChIP-seq: the default mapping parameters are bowtie2 `--end-to-end` default parameters. Other options are available in the config file `chip_mapping_option`.
+   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to Additional output options #2 below and the [Help structural RNAs](Help/Help_structural_RNAs_database_with_Rfam) before setting it to `true`.
 
 ### Running the Pipeline
 
@@ -108,10 +115,6 @@ snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 ```bash
 snakemake --dag | dot -Tpng > dag.png
 ```
-or to force all steps to be performed:
-```bash
- snakemake --dag --forceall | dot -Tpng > dag.png
-```
 
 *For full understanding of snakemake capabilities and option: https://snakemake.readthedocs.io/en/stable/*
 
@@ -121,11 +124,11 @@ or to force all steps to be performed:
 - Col2: *line*: Can be any information you want, such as `Col0` or `WT` to annotate and label samples
 - Col3: *tissue*: Can be any information you want, such as `leaf` or `mutant` or `6h_stress` to annotate and label samples
 The combination line x tissue will be the base for all comparisons (e.g `WT_leaf` vs `WT_roots` or `Col0_control` vs `Ler_stress`)
-- Col5: *replicate*: Any value to match the different replicates (e.g Rep1, RepA, 1). All the different replicates are merged for 
-- Col6: *seq_id*: Unique identifier to identify the raw data. Can be an SRR number (e.g. SRR27821931) if the data is deposited in SRA, or a unique identifier if the data is local (e.g. `wt_k27`).
-- Col7: *fastq_path*: Either `SRA` if raw data to be downloaded from SRA (the SRR number should be used as `seq-id`), or the path to the directory containing the fastq file (e.g. `/archive/fastq`), in which case the `seq_id` should be a unique identifier of the corresponding file in this folder (e.g. `/archive/fastq/raw.reads.wt_k27_R1.fastq.gz`)
-- Col8: *paired*: `PE` for paired-end data or `SE` for single-end data. PE samples should have two fastq files R1 and R2 at the location defined above.
-- Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). It should be the name of a directory found at the path defined in the config file `ref_path` which contains a single fasta file, a single gff file and a single gtf file. If mapping to multiple references, these directory should be organized in the same `ref_path`. For example, the following structure:
+- Col5: *replicate*: Any value to match the different replicates (e.g Rep1, RepA, 1). All the different replicates are merged for samples with the same line, tissue and sample_type.
+- Col6: *seq_id*: Unique identifier to identify the raw data. Can be an SRR number (e.g. SRR27821931) if the data is deposited in SRA, or a unique identifier of the file if the data is local (e.g. `wt_k27`). This identifier should be shared by both 'R1' and 'R2' fastq files for paired-end data.
+- Col7: *fastq_path*: Either `SRA` if raw data to be downloaded from SRA (the SRR number should be used as `seq-id`), or the path to the directory containing the fastq file (e.g. `/archive/fastq`), in which case the `seq_id` should be a unique identifier of the corresponding file in this folder (e.g. `/archive/fastq/raw.reads.wt_k27.fastq.gz`)
+- Col8: *paired*: `PE` for paired-end data or `SE` for single-end data. PE samples should have two fastq files R1 and R2 at the location defined above, sharing the same identifier in Col6 (e.g. `/archive/fastq/raw.reads.wt_k27_R1.fastq.gz` and `/archive/fastq/raw.reads.wt_k27_R2.fastq.gz`)
+- Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). It should be the name of a directory found at the path defined in the config file `ref_path` and it must contain a single fasta file, a single gff file and a single gtf file. If mapping to multiple references, these directory should be organized in the same `ref_path` directory. For example, the following structure:
 ```
 /home/
 └── genomes/			# ref_path: "/home/genomes"
@@ -155,10 +158,16 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 - Col4: *sample_type*: Either `Input` or `IP`. This works for transcription factors with narrow peaks (default). Use `IPb` for broad peaks.
 
 ### RNA-seq
+- Col1: *data_type*: `RNAseq`. No other options.
+- Col4: *sample_type*: `RNAseq`. Does not really matter however, could be used for additional details, but will be used in file names.
 
 ### small RNA-seq
+- Col1: *data_type*: `sRNA`. No other options.
+- Col4: *sample_type*: `sRNA`. Does not really matter however, could be used for additional details, but will be used in file names.
 
 ### Whole Genome Bisulfite Sequencing
+- Col1: *data_type*: `mC`. No other options.
+- Col4: *sample_type*: `mC`. Does not really matter however, could be used for additional details, but will be used in file names. Might be used in the future do define the analysis method (WGBS, EM-seq, or ONT).
 
 ## Configuration Options
 
@@ -184,8 +193,8 @@ snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_gene
 ```
 Output is a single pdf file where each gene of the list is a page, named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf`
 
-2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
-By default, GO is not performed on DEGs since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See `Help_Gene_Ontology` for more details on how to create the GO database.\
+2. `rule perform_GO_on_target_file`: Given a file containing a list of genes to do GO analysis on, and optionally a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
+By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Help_Gene_Ontology](Help/Help_Gene_Ontology) for more details on how to create the GO database.\
 To run a GO analysis on any target file:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<target_name>.done
@@ -309,12 +318,11 @@ This should be done manually, until an option with a specific rule is potentiall
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
 ## Features under development
-- Finishing ChIP-seq and RNA-seq
-- Assignment of IP to Input based on suffix (e.g. ChIP_A)
 - RAMPAGE
 - Browser: create a hub/jbrowse session? invert minus stranded bigwigs.
-- Plotting
+- Additional combined analysis output
 - ATAC-seq
+- ONT for direct methylation calling
 
 ## FAQ
 
