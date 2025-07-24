@@ -220,7 +220,7 @@ An example running the pipeline on a slurm hpc, for regions from <ref_genome>="C
 ```bash 
 snakemake --profile profiles/slurm results/TF/chkpts/motifs__my_regions_of_interests.done --config motifs_target_file="data/target_peaks.txt" motifs_target_file_label="my_regions_of_interests" motifs_ref_genome="ColCEN"
 ```
-Output is the folder `results/TF/<target_name>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html.\
+Output is the folder `results/TF/<target_name>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html. \
 When setting `motif_ref_genome:`, it is  safer to use a reference genome that has already been used in a run. Otherwise, it will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path.\
 For the target file chosen `motif_target_file:`, if the regions are over 500bp, only the middle 400bp will be used.
 
@@ -250,10 +250,10 @@ If only the combined analysis is to be performed, and not everything else, delet
 
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
-- DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG, CHG and CHH and the following (stringent) parameters:\
-	- CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`\
-	- CHG: `method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`\
-	- CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`\
+- DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG, CHG and CHH and the following (stringent) parameters:
+	- CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
+	- CHG: `method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
+	- CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
 - Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the `call_DMRs_pairwise` rule in the `mC.smk` file.
 
 ## Output Structure
