@@ -29,7 +29,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Quality control and reporting
 
 - **Flexible Configuration**:
-  - App to validate configuration options
+  - [App](https://epicc-builder.streamlit.app/) to validate configuration options
   - Customizable mapping parameters
   - Configurable analysis options
   - Resource management
