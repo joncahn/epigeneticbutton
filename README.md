@@ -74,7 +74,7 @@ https://epicc-builder.streamlit.app/
 
 2. Update `config/config.yaml` with your paths and parameters:
    - Sample file: this is the full path to the file detailed above which contain your samples metadata. 
-   - Reference genome path: this is the path leading to the directories that are called exactly like `ref_genome` above and that contain only 1 fasta file, 1 gff file and 1 gtf file
+   - Reference genome path: this is the path leading to the directories that are called exactly like `ref_genome` above and that contain only 1 fasta file, 1 gff file and 1 gtf file. (See [below](#common-to-all-types-of-samples) for more details)
    - Analysis parameters / options
    - Species-specific parameters
    - Resources allocation
@@ -119,6 +119,10 @@ snakemake --dag | dot -Tpng > dag.png
 *For full understanding of snakemake capabilities and option: https://snakemake.readthedocs.io/en/stable/*
 
 ## Sample file configuration
+
+A template and more details can be found on the epicc-builder app:
+https://epicc-builder.streamlit.app/
+You can also use it to validate your entries.
 
 ### Common to all types of samples:
 - Col2: *line*: Can be any information you want, such as `Col0` or `WT` to annotate and label samples
@@ -170,6 +174,9 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 - Col4: *sample_type*: `mC`. Does not really matter however, could be used for additional details, but will be used in file names. Might be used in the future do define the analysis method (WGBS, EM-seq, or ONT).
 
 ## Configuration Options
+
+More details can be found on the epicc-builder app:
+https://epicc-builder.streamlit.app/
 
 ### Mapping Parameters
 - `default`: Standard mapping parameters
