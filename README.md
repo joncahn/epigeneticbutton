@@ -116,7 +116,7 @@ snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 snakemake --dag | dot -Tpng > dag.png
 ```
 
-*For full understanding of snakemake capabilities and option: https://snakemake.readthedocs.io/en/stable/*
+*For full understanding of snakemake capabilities and options: https://snakemake.readthedocs.io/en/stable/*
 
 ## Sample file configuration
 
@@ -362,6 +362,34 @@ If you use EpigeneticButton in your research, please cite:
 ```
 Cahn, J., Regulski, M., Lynn, J. et al. MaizeCODE reveals bi-directionally expressed enhancers that harbor molecular signatures of maize domestication. Nat Commun 15, 10854 (2024). https://doi.org/10.1038/s41467-024-55195-w
 ```
+
+## References 
+
+This pipeline is only a combination of great tools developped by others. A non-exhaustive list of packages used are listed below. Please refer to them for more details.
+- [AnnotationForge](https://bioconductor.org/packages/release/bioc/html/AnnotationForge.html)
+- [bedtools](https://bedtools.readthedocs.io/en/latest/)
+- [Bismark](https://www.bioinformatics.babraham.ac.uk/projects/bismark/)
+- [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
+- [ComplexUpset](https://krassowski.github.io/complex-upset/index.html)
+- [Conda](https://anaconda.org/anaconda/conda)
+- [Cutadapt](https://cutadapt.readthedocs.io/en/stable/)
+- [deepTools](https://deeptools.readthedocs.io/en/develop/index.html)
+- [DMRcaller](https://bioconductor.org/packages/release/bioc/html/DMRcaller.html)
+- [edgeR](https://www.bioconductor.org/packages/release/bioc/html/edgeR.html)
+- [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
+- [ggplot2](https://ggplot2.tidyverse.org/)
+- [IDR](https://github.com/nboley/idr)
+- [MACS2](https://pypi.org/project/MACS2/#description)
+- [Python](https://www.python.org/)
+- [R](https://www.r-project.org/)
+- [Samtools](https://www.htslib.org/)
+- [ShortStack](https://github.com/MikeAxtell/ShortStack)
+- [Snakemake](https://snakemake.readthedocs.io/en/stable/)
+- [SRA-Toolkit](https://github.com/ncbi/sra-tools)
+- [STAR](https://github.com/alexdobin/STAR)
+- [The MEME suite](https://meme-suite.org/meme/doc/meme-chip.html?man_type=web)
+- [topGO](https://bioconductor.org/packages/release/bioc/html/topGO.html)
+- [UCSC-GenomeBrowser-kent](https://github.com/ucscGenomeBrowser/kent/)
 
 ## Contact
 
