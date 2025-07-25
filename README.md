@@ -17,9 +17,9 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Histone ChIP-seq
   - Transcription Factor ChIP-seq
   - RNA-seq
-  - RAMPAGE *in development
   - small RNA-seq
   - MethylC-seq (mC)
+  - RAMPAGE *in development*
 
 - **Automated Analysis**:
   - Reference genome preparation
@@ -61,7 +61,7 @@ conda install -c bioconda snakemake
 For new users, it is recommended to use the configuration app to validate your sample metadata file and choose analysis options:\
 https://epicc-builder.streamlit.app/
 
-1. Prepare your sample metadata file (default to `samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
+1. Prepare your sample metadata file (default to `config/all_samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
    - `line`: Sample line (e.g., B73)
    - `tissue`: Tissue type
