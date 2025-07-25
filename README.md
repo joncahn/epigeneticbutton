@@ -19,7 +19,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - RNA-seq
   - small RNA-seq
   - MethylC-seq (mC)
-  - RAMPAGE *in development*
+  - RAMPAGE *\*in development*
 
 - **Automated Analysis**:
   - Reference genome preparation
