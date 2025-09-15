@@ -288,7 +288,6 @@ resources:
   # smallRNA
   shortstack_map: *heavy
   filter_structural_rna: *heavy
-  shortstack_map: *heavy
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
   merging_srna_replicates: *standard
