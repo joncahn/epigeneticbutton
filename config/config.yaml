@@ -152,6 +152,7 @@ profiles_scale: "mean" # options: [ 'mean' | median' ]
 profiles_plot_params: "--plotType 'lines'"
 heatmaps_plot_params:
   all: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
+  most: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
   ChIP: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
   TF: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
   RNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
