@@ -123,6 +123,8 @@ def define_key_for_heatmaps(wildcards, string):
     strand = wildcards.strand
     
     if globenv == "all":
+        filtered_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
+    elif globenv == "most":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] != "mC") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -256,13 +258,13 @@ def define_final_combined_output(ref_genome):
         plot_files.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
     else:
-        plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Heatmap__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
     
-    plot_files.append(f"results/combined/plots/Profile__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Profile__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Profile__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
 
     if analysis:
         results = plot_files + text_files
@@ -812,8 +814,8 @@ rule plotting_heatmap_on_targetfile:
 rule sort_heatmap:
     input: 
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz",
-        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__all__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed",
-        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__all__{analysis_name}__{ref_genome}__{target_name}.txt"
+        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__most__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed",
+        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__most__{analysis_name}__{ref_genome}__{target_name}.txt"
     output:
         temp_matrix = temp("results/combined/matrix/temp_sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"),
         matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"
