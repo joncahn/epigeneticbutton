@@ -23,7 +23,7 @@ dependencies:
   - r-base
   - r-plyr
   - r-dplyr
-  - r-ggplot2
+  - r-ggplot2=3.5.2
   - r-readr
   - r-tidyr
   - r-cowplot

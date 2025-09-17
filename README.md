@@ -325,6 +325,8 @@ This should be done manually, until an option with a specific rule is potentiall
 4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
+5. Editing the theme in ComplexUpset does not work with ggplot2 4.0.0 (switch from S3 to S7 elements), which is why the ggplot2 is set to 3.5.2.
+
 ## Features under development
 - RAMPAGE
 - Browser: create a hub/jbrowse session? invert minus stranded bigwigs.
