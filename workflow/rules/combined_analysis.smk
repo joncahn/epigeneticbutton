@@ -3,12 +3,15 @@ def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
 def define_combined_target_file(wildcards):
-    tname = config['combined_target_file_label']
+    heatname = config['heatmap_target_file_label']
+    browsername = config['browser_target_file_label']
     target_name = wildcards.target_name
     ref_genome = wildcards.ref_genome
     
-    if target_name == tname:
-        return config['combined_target_file']
+    if target_name == heatname:
+        return config['heatmap_target_file']
+    elif target_name == browsername:
+        return config['browser_target_file']
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
@@ -106,7 +109,7 @@ def define_sample_types_for_upset(wildcards):
     result = ":".join(types)     
     return result
 
-def define_key_for_heatmaps(wildcards, string):
+def define_key_for_plots(wildcards, string):
     bigwigs = []
     labels = []
     marks = []
@@ -197,7 +200,7 @@ def define_key_for_heatmaps(wildcards, string):
                 grouped_bw[f"m{context}"].append(bw)
                 grouped_labs[f"m{context}"].append(f"{label}")
                 unique_mc.add(f"m{context}")
-                    
+
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
@@ -214,17 +217,22 @@ def define_key_for_heatmaps(wildcards, string):
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
+    types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
+    
     if string == "bigwigs":
         return bigwigs
     elif string == "labels":
         return labels
     elif string == "marks":
         return marks
+    elif string == "types":
+        return types
 
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
     analysis_name = config['analysis_name']
+    mc_sort = config['heatmap_sort_mc_after_others']
     text_files = []
     plot_files = []
     
@@ -245,7 +253,7 @@ def define_final_combined_output(ref_genome):
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
     if len(mc_analysis_samples) >=1:
-        if len(all_analysis_samples) > len(mc_analysis_samples):
+        if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
             plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
@@ -557,7 +565,7 @@ rule plotting_upset_peaks:
 # rule to plot heatmaps
 rule making_stranded_matrix_on_targetfile:
     input:
-        bigwigs = lambda wildcards: define_key_for_heatmaps(wildcards, "bigwigs"),
+        bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
@@ -570,8 +578,8 @@ rule making_stranded_matrix_on_targetfile:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
         target_name = lambda wildcards: wildcards.target_name,
-        labels = lambda wildcards: define_key_for_heatmaps(wildcards, "labels"),
-        marks = lambda wildcards: define_key_for_heatmaps(wildcards, "marks"),
+        labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
+        marks = lambda wildcards: define_key_for_plots(wildcards, "marks"),
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
         params = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base'),
@@ -915,6 +923,199 @@ rule plotting_profile_on_targetfile:
         ymax=$(cat {input.params_profile} | awk 'BEGIN {{y=-99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMax") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j>y) y=$j}} break}} }} }} END {{print y}}' )
         plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{reg}} --yMin ${{ymin}} --yMax ${{ymax}} ${{add}} --perGroup
         }} 2>&1 | tee -a "{log}"
+        """
+
+###
+# rules to plot browser shots
+def define_individual_browser_plots(wildcards, string):
+    files = []
+    ref_genome = wildcards.ref_genome
+    analysis_name = wildcards.analysis_name    
+    env = wildcards.env
+    target_file = define_combined_target_file(wildcards)
+    header = has_header(target_file)
+
+    regions = [r.strip() for r in open(target_file)]
+    
+    for _, row in regions.iterrows():
+        if header = "yes":
+            next
+
+        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")
+    
+    return files
+    
+rule prep_browser_on_region:
+    input:
+        bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
+        target_file = lambda wildcards: define_combined_target_file(wildcards),
+        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
+        all_genes = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+    output:
+        filenames = temp("results/combined/matrix/filenames__{target_name}__{regionID}.txt"),
+        genes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}.gff"),
+        tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}.txt"),
+        htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}.txt"),
+        htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}.txt"),
+        trackfolder = temp(directory("results/combined/matrix/tracks_{target_name}__{regionID}")),
+        tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}.txt"),
+        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}.bed",
+        temparray = temp("results/combined/matrix/array__{target_name}__{regionID}.npz"),
+        tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}.tab")
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name,
+        labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
+        marks = lambda wildcards: define_key_for_plots(wildcards, "marks"),
+        types = lambda wildcards: define_key_for_plots(wildcards, "types"),
+        regionID = lambda wildcards: wildcards.regionID,
+        TEfile = config['browser_TE_file'],
+        extend = config['extend_browser']
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "prep_files_{target_name}_{regionID}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["prep_browser_on_region"]["threads"]
+    resources:
+        mem=config["resources"]["prep_browser_on_region"]["mem"],
+        tmp=config["resources"]["prep_browser_on_region"]["tmp"]
+    shell:
+        """
+        {{
+        chr=$(awk -v r={{params.regionID}} '$4==r {{print $1}}')
+        start=$(awk -v r={{params.regionID}} '$4==r {{print $2}}')
+        end=$(awk -v r={{params.regionID}} '$4==r {{print $3}}')
+        printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
+        binsize=$(awk -v r={{params.regionID}} '$4==r {{print $5}}')
+        ### To get genes in the region
+        bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
+        if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend}" == "True" ]]; then
+            printf "Getting gene track and extending to include full length genes"
+            grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
+            region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
+        elif [ -s data/genes_in_locus_${ID}.txt ]; then
+            printf "Getting gene track and without extension"
+            bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
+            region="${{chr}}:${{start}}:${{end}}"
+        else
+            printf "No genes in this region"
+            region="${{chr}}:${{start}}:${{end}}"
+        fi
+        
+        ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
+        if [[ {params.TEfile} == "none" ]]; then
+            printf "No TE file provided"
+            touch {output.tes}
+        else
+            printf "Getting TE track"
+            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{if ($6!="+" && $6!="-") $6="*"; print $0}' > {output.tes}
+        fi
+        
+        printf "Testing if all bw have data on the chromosome\n"
+        filelist2=()
+        i=0
+        for file in {input.bigwigs}
+        do
+            lab = "{params.labels[$i]}"
+            path = "{output.trackfolder}/${{lab}}_empty"
+            bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{file}} ${{path}}.bg
+            if [[ -s "${{path}}.bg" ]]; then
+                printf "${{lab}} has data on ${{chr}}\n"
+                filelist2+=("${{file}}")
+            else
+                printf "${{lab}} is empty on ${{chr}}\n"
+                grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
+                bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
+                filelist2+=("${{path}}.bw")
+            fi
+            i=$((i+1))
+            rm -f "${{path}}.bg"
+        done
+        printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
+        multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
+
+        # printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolor1\tFillcolor2\tYmin\tYmax\n" > {output.filenames}
+        printf "Name\tMark\tType\tPath\n" > {output.filenames}
+        
+        backcolorspalette("green","red","black","orange","#a3514b","#a667a5","pink","blue","purple","grey")
+        
+        i=0
+        for file in {input.bigwigs}
+        do
+            lab = "{params.labels[$i]}"
+            mark = "{params.marks[$i]}"
+            path = "{output.trackfolder}/${{lab}}_empty"
+            
+                
+            printf "Making bw for ${{lab}}\n"
+            col=($(awk -v ORS=" " -v t=${{namelab}} 'NR==1 {for(i=1;i<=NF;i++) if ($i~t) print i}' {output.tempvalues}))
+            if [[ "${{lab}}" ~ "minus" ]]; then
+                awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
+            else
+                awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
+            fi
+            bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
+            
+            
+            
+            ## To potential add backcolor, trackcolor, fillcolors and limits
+            # ylimmin=$(cat data/${ID}_*${group}.bedGraph | awk 'BEGIN {a=9999} {if ($4<a) a=$4;} END {if (a<0) b=a*1.2; else b=a*0.8; print b}' )
+            # ylimmax=$(cat data/${ID}_*${group}.bedGraph | awk 'BEGIN {a=-9999} {if ($4>a) a=$4;} END {if (a>0) b=a*1.2; else b=a*0.8; print b}' )
+            # printf "${{lab}}\t${{mark}}\t${path}.bw\t${backcolor}\t${trackcolor}\t${fillcolor1}\t${fillcolor2}\t${ylimmin}\t${ylimmax}\n" >> {output.filenames}
+            
+            printf "${{lab}}\t${{mark}}\t${path}.bw\n" >> {output.filenames}
+        done 
+        
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_single_loci_browser_plot:
+    input:
+        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}.txt",
+        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}.txt",
+        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}.txt",
+        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}.txt",
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}.txt",
+        trackfolder = directory("results/combined/matrix/tracks_{target_name}__{regionID}")
+    ouput:
+        browser_plot = temp("results/combined/plots/single_browser__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.pdf")
+    params:
+        regionID = lambda wildcards: wildcards.regionID,
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_browser_plot.R")
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "single_browser_{target_name}_{regionID}"))
+    threads: config["resources"]["make_single_loci_browser_plot"]["threads"]
+    resources:
+        mem=config["resources"]["make_single_loci_browser_plot"]["mem"],
+        tmp=config["resources"]["make_single_loci_browser_plot"]["tmp"]
+    shell:
+        """
+        {{
+        if [[ -s {input.htstart} ]]; then
+            printf "\nPlotting browser on {params.regionID} with higlights\n\n"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.regionID}" "{input.htstart}" "{input.htwidth}"
+        else
+            printf "\nPlotting browser on ${ID} without higlights\n\n"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.regionID}"
+        fi
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule merge_region_browser_plots:
+    input: 
+        plots = lambda wildcards: define_individual_browser_plots(wildcards)
+    ouput:
+        merged_plots = "results/combined/plots/Browser_{target_name}__{env}__{analysis_name}__{ref_genome}.pdf"
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "merging_browser_{target_name}"))
+    threads: config["resources"]["merge_region_browser_plots"]["threads"]
+    resources:
+        mem=config["resources"]["merge_region_browser_plots"]["mem"],
+        tmp=config["resources"]["merge_region_browser_plots"]["tmp"]
+    shell:
+        """
+        pdfunite {input.plots} {output.merged_plots}
         """
 
 ###

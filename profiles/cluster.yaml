@@ -106,3 +106,6 @@ sort_heatmap: *single
 plotting_heatmap_on_targetfile: *single
 plotting_sorted_heatmap_on_targetfile: *single
 plotting_profile_on_targetfile: *single
+prep_browser_on_region: *heavy
+make_single_loci_browser_plot: *single
+merge_region_browser_plots: *low

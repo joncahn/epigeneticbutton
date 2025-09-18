@@ -20,6 +20,7 @@ dependencies:
   - shortstack=4.0
   - ucsc-bedgraphtobigwig
   - ucsc-bedsort
+  - poppler
   - r-base
   - r-plyr
   - r-dplyr

@@ -148,6 +148,7 @@ gene_info_file:
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
+heatmap_sort_mc_after_others: true # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
 profiles_scale: "mean" # options: [ 'mean' | median' ] 
 profiles_plot_params: "--plotType 'lines'"
 heatmaps_plot_params:
@@ -195,8 +196,13 @@ rnaseq_background_file: "default" # tab-delimited file with a column of GID (mat
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
 srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. It will be used as LOCIFILE in ShortStack (from ShortStack: Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 
-combined_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
-combined_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
+heatmap_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
+heatmap_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
+
+browser_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
+browser_target_file: "data/target_genes.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
+browser_TE_file: "none" # to be replaced with a bed file of TEs
+extend_browser: false # Whether the browser should be extended to all the genes intersected by the region of interest or fixed to the specific coordinates
 
 # Resource allocation
 minimal_resources: &default
@@ -313,3 +319,6 @@ resources:
   plotting_heatmap_on_targetfile: *single
   plotting_sorted_heatmap_on_targetfile: *single
   plotting_profile_on_targetfile: *single
+  prep_browser_on_region: *heavy
+  make_single_loci_browser_plot: *single
+  merge_region_browser_plots: *low
