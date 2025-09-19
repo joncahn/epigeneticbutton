@@ -1017,7 +1017,7 @@ rule prep_browser_on_region:
         zip_bw_label_colors = lambda wildcards: list(zip(define_key_for_plots(wildcards, "bigwigs"),define_key_for_plots(wildcards, "labels"),define_key_for_plots(wildcards, "backcolor"),define_key_for_plots(wildcards, "trackcolor"),define_key_for_plots(wildcards, "fillcolorplus"),define_key_for_plots(wildcards, "fillcolorminus"))),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
-        extend = config['extend_browser']
+        extend_browser = config['extend_browser']
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "prep_files_{target_name}_{regionID}"))
     conda: CONDA_ENV
@@ -1046,7 +1046,7 @@ rule prep_browser_on_region:
         
         ### To get genes in the region
         bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
-        if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend}" == "True" ]]; then
+        if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
             printf "Getting gene track and extending to include full length genes"
             grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
             region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
