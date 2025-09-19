@@ -198,8 +198,8 @@ def define_key_for_plots(wildcards, string):
                 grouped_bw[f"{row.data_type}_stranded"].append(bw)
                 grouped_labs[f"{row.data_type}_stranded"].append(f"{label}")
                 unique_rna.add(row.data_type)
-                label_to_mark[f"{label}"] = row.data_type
-                label_to_type[f"{label}"] = f"{row.line}_{row.tissue}"
+                label_to_mark[label] = row.data_type
+                label_to_type[label] = f"{row.line}_{row.tissue}"
         elif row.env == "sRNA":
             for size in srna_sizes:
                 if strand == "unstranded":
@@ -254,6 +254,11 @@ def define_key_for_plots(wildcards, string):
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    
+    missing = [lab for lab in labels if lab not in label_to_type]
+    print("MISSING LABELS:", missing)
+    print("ALL LABELS (deduped):", set(labels))
+    print("ALL label_to_type KEYS:", set(label_to_type.keys()))
     
     back_palette = assign_colors(marks, "tab20")
     track_palette = assign_colors(marks, "Set2")
