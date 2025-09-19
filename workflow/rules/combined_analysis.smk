@@ -1119,7 +1119,7 @@ rule make_single_loci_browser_plot:
         htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         trackfolder = directory("results/combined/matrix/tracks_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}")
-    ouput:
+    output:
         browser_plot = temp("results/combined/plots/single_browser__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.pdf")
     params:
         regionID = lambda wildcards: wildcards.regionID,
@@ -1147,7 +1147,7 @@ rule make_single_loci_browser_plot:
 rule merge_region_browser_plots:
     input: 
         plots = lambda wildcards: define_individual_browser_plots(wildcards)
-    ouput:
+    output:
         merged_plots = "results/combined/plots/Browser_{target_name}__{env}__{analysis_name}__{ref_genome}.pdf"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "merging_browser_{target_name}"))
