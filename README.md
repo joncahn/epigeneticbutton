@@ -246,9 +246,43 @@ If you only want the results of Shortstack and not the differential analysis, us
 
 **5. Plotting heatmap on regions (`rule plotting_heatmap_on_targetfile`)**\
 Given a bed file, it will plot a heatmap using deeptools.
+Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
+```bash 
+snakemake --cores 1 results/combined/plots/Heatmap__<matrix_param>__<env>__<analysis_name>__<ref_genome>__<target_name>.pdf
+```
+- the <matrix_param> can be `regions` for scaled regions, `tss` for reference point on the TSS or `tes` for reference point on the TES.
+- the <env> correspond to the data types to include. Since mC requires different parameters, it has to be done independently. If you have all different types samples including mC, and want the order of the regions to be maintained in the mC heatmap based on the other samples, then use:
+```bash
+snakemake --cores 1 results/combined/plots/Heatmap_sorted__<matrix_param>__mC__<analysis_name>__<ref_genome>__<target_name>.pdf
+```
+This will generate the heatmap for all the other samples first. If you want the regions sorted based on the mC samples only, then use:
+```bash
+snakemake --cores 1 results/combined/plots/Heatmap__<matrix_param>__mC__<analysis_name>__<ref_genome>__<target_name>.pdf
+```
+To make a heatmap will all the samples (excluding mC), use <env>=`most`. If you want to include mC samples (will probbaly *not work*) use <env>=`all`.\
+
+An example running the pipeline on a slurm hpc, with <analysis_name>="test_smk", <ref_genome>="ColCEN", <matrix_param>="regions", on most samples <env>="most", while setting the target file and its label "interesting_genes" directly in the snakemake command:
+```bash 
+snakemake --profile profiles/slurm results/combined/plots/Heatmap__regions__most__test_smk__ColCEN__interesting_genes.pdf --config heatmap_target_file="data/target_genes.bed" heatmap_target_file_label="interesting_genes"
+```
+Output is a pdf file, or two if sorted heatmap for mC samples was generated.\
+By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on their appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the config file `heatmaps_scales`.\
+By default, the heatmaps are sorted based on "mean" of all samples accross all regions. This can be changed in the config file `heatmaps_sort_options` to "median" or to "none", keeping the regions in the order of the bedfile.\
+If the given bedfile is stranded, the heatmap will be done by splitting the regions into plus and minus strand for proper stranded data (RNAseq and sRNAs) values. If this is not the wanted behavior, disable `stranded_heatmaps` in the config file.\
+The color scheme of the heatmap is "seismic" for all samples and "Oranges" for mC. This can be changed manually in the config file `heatmaps_plot_params`.
 
 **6. Plotting metaplot profiles on regions (`rule plotting_profile_on_targetfile`)**\
 Given a bed file, it will plot a metaplot profile using deeptools.
+Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
+```bash 
+snakemake --cores 1 results/combined/plots/Profile__<matrix_param>__<env>__<analysis_name>__<ref_genome>__<target_name>.pdf
+```
+Similar to heatmap above for the <matrix_param> options.\ 
+Use <env>="all" to include all samples (mC and others).\
+Output is two pdf files, where the samples are grouped by regions or not.\
+By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on their appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the config file `heatmaps_scales`.
+By default, the profiles represent the "mean" accross all regions. This can be changed in the config file `profile_scale` to "median".
+By default, the type of plots are "lines". See deeptools documentation for other options.
 
 **7. Rerunning a specific analysis**
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
