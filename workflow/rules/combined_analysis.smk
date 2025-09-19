@@ -259,17 +259,18 @@ def define_key_for_plots(wildcards, string):
     track_palette = assign_colors(marks, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
     minus_palette = make_it_lighter(track_palette, 1.6)
-    back_colors = [back_palette[label_to_type[lab]] for lab in labels]
+    back_colors = []
+    for lab in labels:
+        if lab not in label_to_type:
+            print(">>> MISSING KEY:", lab)
+            print(">>> AVAILABLE KEYS:", list(label_to_type.keys()))
+            raise KeyError(lab)
+        back_colors.append(back_palette[label_to_type[lab]])
+    
+    # back_colors = [back_palette[label_to_type[lab]] for lab in labels]
     track_colors = [track_palette[label_to_mark[lab]] for lab in labels]
     fill_colors_plus = [plus_palette[label_to_mark[lab]] for lab in labels]
     fill_colors_minus = [minus_palette[label_to_mark[lab]] for lab in labels]
-    
-    missing = [lab for lab in labels if lab not in label_to_type]
-    if missing:
-        print(">>> DEBUG: Missing labels in label_to_type:", missing)
-        print(">>> labels:", labels)
-        print(">>> label_to_type keys:", label_to_type.keys())
-        raise ValueError("Label mismatch!")
     
     if string == "bigwigs":
         return bigwigs
