@@ -119,7 +119,7 @@ def assign_colors(keys, cmap_name="tab20"):
 def make_it_lighter(palette, factor):
     new_palette = {}
     for k, c in palette.items():
-        rgb = mcolors.hex2colors(c)
+        rgb = mcolors.hex2color(c)
         h, l, s = mcolors.rgb_to_hls(*rgb)
         n = min(1, l*factor)
         new_palette[k] = mcolors.to_hex(mcolors.hls_to_rgb(h, n, s))
