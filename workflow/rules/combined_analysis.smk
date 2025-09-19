@@ -120,9 +120,9 @@ def make_it_lighter(palette, factor):
     new_palette = {}
     for k, c in palette.items():
         rgb = mcolors.hex2color(c)
-        h, l, s = mcolors.rgb_to_hls(*rgb)
+        h, l, s = colorsys.rgb_to_hls(*rgb)
         n = min(1, l*factor)
-        new_palette[k] = mcolors.to_hex(mcolors.hls_to_rgb(h, n, s))
+        new_palette[k] = mcolors.to_hex(colorsys.hls_to_rgb(h, n, s))
     return new_palette
 
 def define_key_for_plots(wildcards, string):
@@ -278,6 +278,21 @@ def define_key_for_plots(wildcards, string):
         return fill_colors_plus
     elif string == "fillcolorminus":
         return fill_colors_minus
+
+def define_individual_browser_plots(wildcards):
+    files = []
+    ref_genome = wildcards.ref_genome
+    analysis_name = wildcards.analysis_name    
+    env = wildcards.env
+    target_file = define_combined_target_file(wildcards)
+    target_name = wildcards.target_name
+    header = has_header(target_file)
+    regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
+    
+    for _, row in regions.iterrows():
+        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")    
+    return files
+
 
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
@@ -977,20 +992,6 @@ rule plotting_profile_on_targetfile:
 
 ###
 # rules to plot browser shots
-def define_individual_browser_plots(wildcards):
-    files = []
-    ref_genome = wildcards.ref_genome
-    analysis_name = wildcards.analysis_name    
-    env = wildcards.env
-    target_file = define_combined_target_file(wildcards)
-    target_name = wildcards.target_name
-    header = has_header(target_file)
-    regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
-    
-    for _, row in regions.iterrows():
-        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")    
-    return files
-    
 rule prep_browser_on_region:
     input:
         bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
