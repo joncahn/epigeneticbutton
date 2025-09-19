@@ -985,12 +985,10 @@ def define_individual_browser_plots(wildcards):
     target_file = define_combined_target_file(wildcards)
     target_name = wildcards.target_name
     header = has_header(target_file)
-
     regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
     
     for _, row in regions.iterrows():
-        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")
-    
+        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")    
     return files
     
 rule prep_browser_on_region:
@@ -1008,7 +1006,7 @@ rule prep_browser_on_region:
         htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         trackfolder = temp(directory("results/combined/matrix/tracks_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}")),
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
+        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
         tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
     params:
@@ -1016,7 +1014,7 @@ rule prep_browser_on_region:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
-        zip_bw_label_colors = lambda wildcards: list(zip(define_key_for_plots(wildcards, "bigwigs"),define_key_for_plots(wildcards, "labels"),define_key_for_plots(wildcards, "backcolor"),define_key_for_plots(wildcards, "trackcolor"),define_key_for_plots(wildcards, "fillcolorplus"),define_key_for_plots(wildcards, "fillcolorminus")))
+        zip_bw_label_colors = lambda wildcards: list(zip(define_key_for_plots(wildcards, "bigwigs"),define_key_for_plots(wildcards, "labels"),define_key_for_plots(wildcards, "backcolor"),define_key_for_plots(wildcards, "trackcolor"),define_key_for_plots(wildcards, "fillcolorplus"),define_key_for_plots(wildcards, "fillcolorminus"))),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
         extend = config['extend_browser']
@@ -1038,9 +1036,9 @@ rule prep_browser_on_region:
         
         htstart=$(awk -v r={{params.regionID}} '$4==r {{print $6}}')
         htwidth=$(awk -v r={{params.regionID}} '$4==r {{print $7}}')
-        if [[ hstart != "" ]]; then
-            printf "${htstart}\n" | awk -F"," '{for(i=1;i<=NF;i++) print $i}' > {output.htstart}
-            printf "${htwidth}\n" | awk -F"," '{for(i=1;i<=NF;i++) print $i}' > {output.htwidth}
+        if [[ ${{htstart}} != "" ]]; then
+            printf "${{htstart}}\n" | awk -F"," '{{for(i=1;i<=NF;i++) print $i}}' > {output.htstart}
+            printf "${{htwidth}}\n" | awk -F"," '{{for(i=1;i<=NF;i++) print $i}}' > {output.htwidth}
         else
             touch {output.htstart}
             touch {output.htwidth}
@@ -1073,7 +1071,7 @@ rule prep_browser_on_region:
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
         {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
-        path = "{output.trackfolder}/{{lab}}_empty"
+        path="{output.trackfolder}/{{lab}}_empty"
         bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
         if [[ -s "${{path}}.bg" ]]; then
             printf "${{lab}} has data on ${{chr}}\n"
