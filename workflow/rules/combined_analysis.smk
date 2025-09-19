@@ -109,6 +109,22 @@ def define_sample_types_for_upset(wildcards):
     result = ":".join(types)     
     return result
 
+def assign_colors(keys, cmap_name="tab20"):
+    cmap = plt.get_cmap(cmap_name)
+    colors = {}
+    for i,key in enumerate(sorted(set(keys))):
+        colors[key] = mcolors.to_hex(cmap(i % cmap.N))
+    return colors
+    
+def make_it_lighter(palette, factor):
+    new_palette = {}
+    for k, c in palette.items():
+        rgb = mcolors.hex2colors(c)
+        h, l, s = mcolors.rgb_to_hls(*rgb)
+        n = min(1, l*factor)
+        new_palette[k] = mcolors.to_hex(mcolors.hls_to_rgb(h, n, s)
+    return new_palette
+
 def define_key_for_plots(wildcards, string):
     bigwigs = []
     labels = []
@@ -120,10 +136,12 @@ def define_key_for_plots(wildcards, string):
     unique_mc = set()
     grouped_bw = defaultdict(list)
     grouped_labs = defaultdict(list)
+    label_to_mark = {}
+    label_to_type = {}
     srna_sizes = config['srna_heatmap_sizes']
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
-    strand = wildcards.strand
+    strand = getattr(wildcards, "strand", "unstranded")
     
     if globenv == "all":
         filtered_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
@@ -142,6 +160,9 @@ def define_key_for_plots(wildcards, string):
             grouped_bw[f"chip_{row.sample_type}"].append(bw)
             grouped_labs[f"chip_{row.sample_type}"].append(label)
             unique_chip.add(row.sample_type)
+            label_to_mark[label] = row.sample_type
+            label_to_type[label] = f"{row.line}_{row.tissue}"
+            
         elif row.env == "TF":
             merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
             onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
@@ -150,6 +171,9 @@ def define_key_for_plots(wildcards, string):
             grouped_bw[f"tf_{row.extra_info}"].append(bw)
             grouped_labs[f"tf_{row.extra_info}"].append(label)
             unique_tf.add(row.extra_info)
+            label_to_mark[label] = row.extra_info
+            label_to_type[label] = f"{row.line}_{row.tissue}"
+            
         elif row.env == "RNA":
             if strand == "unstranded":
                 merged = f"{prefix}__merged__{row.ref_genome}"
@@ -162,6 +186,10 @@ def define_key_for_plots(wildcards, string):
                 grouped_labs[f"{row.data_type}_plus"].append(f"{label}_plus")
                 grouped_labs[f"{row.data_type}_minus"].append(f"{label}_minus")
                 unique_rna.add(row.data_type)
+                label_to_mark[f"{label}_plus"] = row.data_type
+                label_to_mark[f"{label}_minus"] = row.data_type
+                label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
             else:
                 merged = f"{prefix}__merged__{row.ref_genome}"
                 onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
@@ -170,6 +198,8 @@ def define_key_for_plots(wildcards, string):
                 grouped_bw[f"{row.data_type}_stranded"].append(bw)
                 grouped_labs[f"{row.data_type}_stranded"].append(f"{label}")
                 unique_rna.add(row.data_type)
+                label_to_mark[f"{label}"] = row.data_type
+                label_to_type[f"{label}"] = f"{row.line}_{row.tissue}"
         elif row.env == "sRNA":
             for size in srna_sizes:
                 if strand == "unstranded":
@@ -183,6 +213,10 @@ def define_key_for_plots(wildcards, string):
                     grouped_labs[f"sRNA_{size}_plus"].append(f"{label}_plus")
                     grouped_labs[f"sRNA_{size}_minus"].append(f"{label}_minus")
                     unique_srna.add(f"sRNA_{size}")
+                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}"
+                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}"
+                    label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                    label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
                 else:
                     merged = f"{prefix}__merged__{row.ref_genome}"
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
@@ -191,6 +225,8 @@ def define_key_for_plots(wildcards, string):
                     grouped_bw[f"sRNA_{size}_stranded"].append(bw)
                     grouped_labs[f"sRNA_{size}_stranded"].append(f"{label}")
                     unique_srna.add(f"sRNA_{size}")
+                    label_to_mark[label] = f"sRNA_{size}"
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
         elif row.env == "mC":
             merged = f"{prefix}__merged__{row.ref_genome}"
             onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
@@ -200,6 +236,8 @@ def define_key_for_plots(wildcards, string):
                 grouped_bw[f"m{context}"].append(bw)
                 grouped_labs[f"m{context}"].append(f"{label}")
                 unique_mc.add(f"m{context}")
+                label_to_mark[label] = f"m{context}"
+                label_to_type[label] = f"{row.line}_{row.tissue}"
 
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
@@ -217,7 +255,14 @@ def define_key_for_plots(wildcards, string):
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
-    types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
+    back_palette = assign_colors(marks, "tab20")
+    track_palette = assign_colors(marks, "Set2")
+    plus_palette = make_it_lighter(track_palette, 1.1)
+    minus_palette = make_it_lighter(track_palette, 1.6)
+    back_colors = [back_palette[label_to_type[lab]] for lab in labels]
+    track_colors = [track_palette[label_to_mark[lab]] for lab in labels]
+    fill_colors_plus = [plus_palette[label_to_mark[lab]] for lab in labels]
+    fill_colors_minus = [minus_palette[label_to_mark[lab]] for lab in labels]
     
     if string == "bigwigs":
         return bigwigs
@@ -225,8 +270,14 @@ def define_key_for_plots(wildcards, string):
         return labels
     elif string == "marks":
         return marks
-    elif string == "types":
-        return types
+    elif string == "backcolor":
+        return back_colors
+    elif string == "trackcolor":
+        return track_colors
+    elif string == "fillcolorplus":
+        return fill_colors_plus
+    elif string == "fillcolorminus":
+        return fill_colors_minus
 
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
@@ -927,20 +978,18 @@ rule plotting_profile_on_targetfile:
 
 ###
 # rules to plot browser shots
-def define_individual_browser_plots(wildcards, string):
+def define_individual_browser_plots(wildcards):
     files = []
     ref_genome = wildcards.ref_genome
     analysis_name = wildcards.analysis_name    
     env = wildcards.env
     target_file = define_combined_target_file(wildcards)
+    target_name = wildcards.target_name
     header = has_header(target_file)
 
-    regions = [r.strip() for r in open(target_file)]
+    regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
     
     for _, row in regions.iterrows():
-        if header = "yes":
-            next
-
         files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")
     
     return files
@@ -953,23 +1002,22 @@ rule prep_browser_on_region:
         gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
         all_genes = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
     output:
-        filenames = temp("results/combined/matrix/filenames__{target_name}__{regionID}.txt"),
-        genes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}.gff"),
-        tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}.txt"),
-        htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}.txt"),
-        htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}.txt"),
-        trackfolder = temp(directory("results/combined/matrix/tracks_{target_name}__{regionID}")),
-        tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}.txt"),
-        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}.bed",
-        temparray = temp("results/combined/matrix/array__{target_name}__{regionID}.npz"),
-        tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}.tab")
+        filenames = temp("results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        genes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff"),
+        tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        trackfolder = temp(directory("results/combined/matrix/tracks_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}")),
+        tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
+        temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
+        tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
-        marks = lambda wildcards: define_key_for_plots(wildcards, "marks"),
-        types = lambda wildcards: define_key_for_plots(wildcards, "types"),
+        zip_bw_label_colors = lambda wildcards: list(zip(define_key_for_plots(wildcards, "bigwigs"),define_key_for_plots(wildcards, "labels"),define_key_for_plots(wildcards, "backcolor"),define_key_for_plots(wildcards, "trackcolor"),define_key_for_plots(wildcards, "fillcolorplus"),define_key_for_plots(wildcards, "fillcolorminus")))
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
         extend = config['extend_browser']
@@ -988,6 +1036,17 @@ rule prep_browser_on_region:
         end=$(awk -v r={{params.regionID}} '$4==r {{print $3}}')
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
         binsize=$(awk -v r={{params.regionID}} '$4==r {{print $5}}')
+        
+        htstart=$(awk -v r={{params.regionID}} '$4==r {{print $6}}')
+        htwidth=$(awk -v r={{params.regionID}} '$4==r {{print $7}}')
+        if [[ hstart != "" ]]; then
+            printf "${htstart}\n" | awk -F"," '{for(i=1;i<=NF;i++) print $i}' > {output.htstart}
+            printf "${htwidth}\n" | awk -F"," '{for(i=1;i<=NF;i++) print $i}' > {output.htwidth}
+        else
+            touch {output.htstart}
+            touch {output.htwidth}
+        fi
+        
         ### To get genes in the region
         bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
         if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend}" == "True" ]]; then
@@ -1014,74 +1073,60 @@ rule prep_browser_on_region:
         
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
-        i=0
-        for file in {input.bigwigs}
-        do
-            lab = "{params.labels[$i]}"
-            path = "{output.trackfolder}/${{lab}}_empty"
-            bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{file}} ${{path}}.bg
-            if [[ -s "${{path}}.bg" ]]; then
-                printf "${{lab}} has data on ${{chr}}\n"
-                filelist2+=("${{file}}")
-            else
-                printf "${{lab}} is empty on ${{chr}}\n"
-                grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
-                bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
-                filelist2+=("${{path}}.bw")
-            fi
-            i=$((i+1))
-            rm -f "${{path}}.bg"
-        done
+        {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
+        path = "{output.trackfolder}/{{lab}}_empty"
+        bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
+        if [[ -s "${{path}}.bg" ]]; then
+            printf "${{lab}} has data on ${{chr}}\n"
+            filelist2+=("{{bw}}")
+        else
+            printf "${{lab}} is empty on ${{chr}}\n"
+            grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
+            bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
+            filelist2+=("${{path}}.bw")
+        fi
+        rm -f "${{path}}.bg"
+        {% endfor %}
+        
         printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
 
-        # printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolor1\tFillcolor2\tYmin\tYmax\n" > {output.filenames}
-        printf "Name\tMark\tType\tPath\n" > {output.filenames}
-        
-        backcolorspalette("green","red","black","orange","#a3514b","#a667a5","pink","blue","purple","grey")
-        
-        i=0
-        for file in {input.bigwigs}
-        do
-            lab = "{params.labels[$i]}"
-            mark = "{params.marks[$i]}"
-            path = "{output.trackfolder}/${{lab}}_empty"
+        # printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
+        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolor1\tFillcolor2\n" > {output.filenames}
+        {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
+        path="{output.trackfolder}/{{lab}}_empty"
+        printf "Making bw for ${{lab}}\n"
+        col=($(awk -v ORS=" " -v t={{lab}} 'NR==1 {for(i=1;i<=NF;i++) if ($i~t) print i}' {output.tempvalues}))
+        if [[ "{{lab}}" ~ "minus" ]]; then
+            awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
+        else
+            awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
+        fi
+        bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
             
-                
-            printf "Making bw for ${{lab}}\n"
-            col=($(awk -v ORS=" " -v t=${{namelab}} 'NR==1 {for(i=1;i<=NF;i++) if ($i~t) print i}' {output.tempvalues}))
-            if [[ "${{lab}}" ~ "minus" ]]; then
-                awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
-            else
-                awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
-            fi
-            bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
+        # ylimmin=$(cat data/${ID}_*${group}.bedGraph | awk 'BEGIN {a=9999} {if ($4<a) a=$4;} END {if (a<0) b=a*1.2; else b=a*0.8; print b}' )
+        # ylimmax=$(cat data/${ID}_*${group}.bedGraph | awk 'BEGIN {a=-9999} {if ($4>a) a=$4;} END {if (a>0) b=a*1.2; else b=a*0.8; print b}' )
+        # printf "${{lab}}\t${{mark}}\t${path}.bw\t${backcolor}\t${trackcolor}\t${fillcolor1}\t${fillcolor2}\t${ylimmin}\t${ylimmax}\n" >> {output.filenames}
             
-            
-            
-            ## To potential add backcolor, trackcolor, fillcolors and limits
-            # ylimmin=$(cat data/${ID}_*${group}.bedGraph | awk 'BEGIN {a=9999} {if ($4<a) a=$4;} END {if (a<0) b=a*1.2; else b=a*0.8; print b}' )
-            # ylimmax=$(cat data/${ID}_*${group}.bedGraph | awk 'BEGIN {a=-9999} {if ($4>a) a=$4;} END {if (a>0) b=a*1.2; else b=a*0.8; print b}' )
-            # printf "${{lab}}\t${{mark}}\t${path}.bw\t${backcolor}\t${trackcolor}\t${fillcolor1}\t${fillcolor2}\t${ylimmin}\t${ylimmax}\n" >> {output.filenames}
-            
-            printf "${{lab}}\t${{mark}}\t${path}.bw\n" >> {output.filenames}
-        done 
+        printf "${{lab}}\t${path}.bw\t{{back}}\t{{track}}\t{{minus}}\t{{plus}}\n" >> {output.filenames}
+        {% endfor %}
         
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_single_loci_browser_plot:
     input:
-        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}.txt",
-        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}.txt",
-        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}.txt",
-        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}.txt",
-        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}.txt",
-        trackfolder = directory("results/combined/matrix/tracks_{target_name}__{regionID}")
+        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        trackfolder = directory("results/combined/matrix/tracks_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}")
     ouput:
         browser_plot = temp("results/combined/plots/single_browser__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.pdf")
     params:
         regionID = lambda wildcards: wildcards.regionID,
+        title = lambda wildcards: f"results/combined/plots/single_browser__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.pdf",
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_browser_plot.R")
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "single_browser_{target_name}_{regionID}"))
@@ -1094,10 +1139,10 @@ rule make_single_loci_browser_plot:
         {{
         if [[ -s {input.htstart} ]]; then
             printf "\nPlotting browser on {params.regionID} with higlights\n\n"
-            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.regionID}" "{input.htstart}" "{input.htwidth}"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.title}" "{input.htstart}" "{input.htwidth}"
         else
             printf "\nPlotting browser on ${ID} without higlights\n\n"
-            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.regionID}"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.title}"
         fi
         }} 2>&1 | tee -a "{log}"
         """

@@ -40,5 +40,8 @@ dependencies:
   - bioconductor-topGO
   - r-purrr
   - r-complexupset
+  - bioconductor-gviz
+  - bioconductor-genomicfeatures
+  - bioconductor-rtracklayer
 
 

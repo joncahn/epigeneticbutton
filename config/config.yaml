@@ -199,8 +199,8 @@ srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. 
 heatmap_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 heatmap_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
 
-browser_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
-browser_target_file: "data/target_genes.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
+browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
+browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
 browser_TE_file: "none" # to be replaced with a bed file of TEs
 extend_browser: false # Whether the browser should be extended to all the genes intersected by the region of interest or fixed to the specific coordinates
 

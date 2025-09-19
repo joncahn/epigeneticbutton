@@ -14,7 +14,7 @@ if ( file.exists(args[2]) ) {
 }
 
 tes<-import(args[3])
-id<-args[4]
+title<-args[4]
 
 htcol<-c()
 htcol2<-c()
@@ -38,23 +38,23 @@ options(ucscChromosomeNames=FALSE)
 tracksize<-c(1,1,0.5)
 tracklist<-list()
 for ( i in c(1:nrow(filenames)) ) {
-	name<-filenames$Name[i]
-	group<-filenames$Group[i]
+	label<-filenames$Name[i]
 	path<-filenames$Path[i]
 	backcolor<-filenames$Backcolor[i]
 	trackcolor<-filenames$Trackcolor[i]
-	fillcolor1<-filenames$Fillcolor1[i]
-	fillcolor2<-filenames$Fillcolor2[i]
-	ymin<-filenames$Ymin[i]
-	ymax<-filenames$Ymax[i]
-	ymintick<-sign(ymin)*((floor(abs(ymin)*100)/100))
-	ymaxtick<-sign(ymax)*((floor(abs(ymax)*100)/100))
+	fillcolorplus<-filenames$Fillcolorplus[i]
+	fillcolorminus<-filenames$Fillcolorminus[i]
+	# ymin<-filenames$Ymin[i]
+	# ymax<-filenames$Ymax[i]
+	# ymintick<-sign(ymin)*((floor(abs(ymin)*100)/100))
+	# ymaxtick<-sign(ymax)*((floor(abs(ymax)*100)/100))
 	tracksize<-c(tracksize,1)
-	sample<-paste0(name,"_",group)
-	print(paste0("Importing bw for ",sample))
+	print(paste0("Importing bw for ",label))
 	bw<-import(path)
-	print(paste0("Creating track for ",sample))
-	track<-DataTrack(bw, type="polygon", baseline=0, name=sample, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolor1,fillcolor2), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
+	print(paste0("Creating track for ",label))
+	track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
+	# when adding lmits
+	# track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolor1,fillcolor2), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
 	tracklist<-append(tracklist, track)
 }
 
@@ -64,12 +64,12 @@ tetrack<-AnnotationTrack(tes, name = "TEs", stacking = "dense", fill = "lightgre
 
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start = htstart, width = htwidth, col=htcol, fill=htcol2)
-	pdf(paste0("plots/",id,"_browser.pdf"),paper="a4")
+	pdf(title,paper="a4")
 	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, title.width=2.5)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
-	pdf(paste0("plots/",id,"_browser.pdf"),paper="a4")
+	pdf(title,paper="a4")
 	plotTracks(tracks, sizes=tracksize, title.width=2.5)
 	dev.off()
 }
