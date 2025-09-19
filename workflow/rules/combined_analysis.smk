@@ -122,7 +122,7 @@ def make_it_lighter(palette, factor):
         rgb = mcolors.hex2colors(c)
         h, l, s = mcolors.rgb_to_hls(*rgb)
         n = min(1, l*factor)
-        new_palette[k] = mcolors.to_hex(mcolors.hls_to_rgb(h, n, s)
+        new_palette[k] = mcolors.to_hex(mcolors.hls_to_rgb(h, n, s))
     return new_palette
 
 def define_key_for_plots(wildcards, string):
@@ -518,7 +518,6 @@ rule plotting_srna_sizes_stats:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
         """
-
 
 ###
 # Rules to prep and plot ChIP upset plots
