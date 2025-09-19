@@ -262,8 +262,8 @@ def define_key_for_plots(wildcards, string):
     back_colors = []
     for lab in labels:
         if lab not in label_to_type:
-            print(">>> MISSING KEY:", lab)
-            print(">>> AVAILABLE KEYS:", list(label_to_type.keys()))
+            print(">>> MISSING KEY:", lab, file=sys.stderr)
+            print(">>> AVAILABLE KEYS:", list(label_to_type.keys()), file=sys.stderr)
             raise KeyError(lab)
         back_colors.append(back_palette[label_to_type[lab]])
     
