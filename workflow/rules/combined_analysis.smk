@@ -255,11 +255,6 @@ def define_key_for_plots(wildcards, string):
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
-    missing = [lab for lab in labels if lab not in label_to_type]
-    print("MISSING LABELS:", missing)
-    print("ALL LABELS (deduped):", set(labels))
-    print("ALL label_to_type KEYS:", set(label_to_type.keys()))
-    
     back_palette = assign_colors(marks, "tab20")
     track_palette = assign_colors(marks, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
@@ -268,6 +263,13 @@ def define_key_for_plots(wildcards, string):
     track_colors = [track_palette[label_to_mark[lab]] for lab in labels]
     fill_colors_plus = [plus_palette[label_to_mark[lab]] for lab in labels]
     fill_colors_minus = [minus_palette[label_to_mark[lab]] for lab in labels]
+    
+    missing = [lab for lab in labels if lab not in label_to_type]
+    if missing:
+        print(">>> DEBUG: Missing labels in label_to_type:", missing)
+        print(">>> labels:", labels)
+        print(">>> label_to_type keys:", label_to_type.keys())
+        raise ValueError("Label mismatch!")
     
     if string == "bigwigs":
         return bigwigs
