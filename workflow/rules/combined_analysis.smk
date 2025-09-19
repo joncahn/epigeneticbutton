@@ -1117,8 +1117,7 @@ rule make_single_loci_browser_plot:
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        trackfolder = directory("results/combined/matrix/tracks_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}")
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"
     output:
         browser_plot = temp("results/combined/plots/single_browser__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.pdf")
     params:
