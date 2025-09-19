@@ -255,19 +255,13 @@ def define_key_for_plots(wildcards, string):
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
-    back_palette = assign_colors(marks, "tab20")
+    types = sorted((filtered["line"] + "_" + filtered["tissue"]).tolist())
+    
+    back_palette = assign_colors(types, "tab20")
     track_palette = assign_colors(marks, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
     minus_palette = make_it_lighter(track_palette, 1.6)
-    back_colors = []
-    for lab in labels:
-        if lab not in label_to_type:
-            print(">>> MISSING KEY:", lab, file=sys.stderr)
-            print(">>> AVAILABLE KEYS:", list(label_to_type.keys()), file=sys.stderr)
-            raise KeyError(lab)
-        back_colors.append(back_palette[label_to_type[lab]])
-    
-    # back_colors = [back_palette[label_to_type[lab]] for lab in labels]
+    back_colors = [back_palette[label_to_type[lab]] for lab in labels]
     track_colors = [track_palette[label_to_mark[lab]] for lab in labels]
     fill_colors_plus = [plus_palette[label_to_mark[lab]] for lab in labels]
     fill_colors_minus = [minus_palette[label_to_mark[lab]] for lab in labels]
