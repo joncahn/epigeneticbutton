@@ -281,21 +281,6 @@ def define_key_for_plots(wildcards, string):
     elif string == "fillcolorminus":
         return fill_colors_minus
 
-def define_individual_browser_plots(wildcards):
-    files = []
-    ref_genome = wildcards.ref_genome
-    analysis_name = wildcards.analysis_name    
-    env = wildcards.env
-    target_file = define_combined_target_file(wildcards)
-    target_name = wildcards.target_name
-    header = has_header(target_file)
-    regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
-    
-    for _, row in regions.iterrows():
-        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")    
-    return files
-
-
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
@@ -396,7 +381,21 @@ checkpoint is_stranded:
             else:
                 out.write("unstranded" + "\n")
 
-            
+###
+def define_individual_browser_plots(wildcards):
+    files = []
+    ref_genome = wildcards.ref_genome
+    analysis_name = wildcards.analysis_name    
+    env = wildcards.env
+    target_file = define_combined_target_file(wildcards)
+    target_name = wildcards.target_name
+    header = has_header(target_file)
+    regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
+    
+    for _, row in regions.iterrows():
+        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")    
+    return files
+    
 ###
 # Rules to prep and then plot the mapping stats:
 rule prepping_mapping_stats:

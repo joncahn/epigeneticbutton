@@ -284,7 +284,20 @@ By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, R
 By default, the profiles represent the "mean" accross all regions. This can be changed in the config file `profile_scale` to "median".
 By default, the type of plots are "lines". See deeptools documentation for other options.
 
-**7. Rerunning a specific analysis**
+**7. Plotting browser screenshots on regions (`rule merge_region_browser_plots`)** UNDER DEVELOPMENT\
+Given a region file, it will plot a browser screenshot using R packages.
+Edit `browser_target_file` and `browser_target_file_label` in the config file. To run the analysis: 
+```bash 
+snakemake --cores 1 results/combined/plots/Browser_<target_name>__<env>__<analysis_name>__<ref_genome>.pdf
+```
+The target file is a bed-like file, with the following columns: Chr Start End ID Binsize Higlight_starts Higlight_widths\
+Each region will be printed individually, and merged into a final PDF.\
+Hightlights columns are optional, and correspond to regions of the browser that will be highlighted for this specific region (boxed). As many highlights can be used in a comma-separated lists. For example, if the region is chr1 1000 5000, using col6=3000,4000 col7=50,200 will make a box higlighting chr1:3000-3050 and another chr1:4000:4200.\
+Use <env>="all" to include all samples, or just a single environment for data type-specific browsers.\
+By default, the browser will be limited to the coordinates given for each regions, potentially interrupting gene annotations. In case you want to extend the browser to include all genes in the window, switch`extend_browser`  to true.\
+By default, no TE file is used. If you want to add TE annotations, supply a bed-file in the config file `browser_TE_file`.\
+
+**8. Rerunning a specific analysis**
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
 e.g `snakemake --cores 1 results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force`
 If only the combined analysis is to be performed, and not everything else, delete all the chkpts files in `results/combined/chkpts/` as well as in the chkpt of each relevant environment `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
