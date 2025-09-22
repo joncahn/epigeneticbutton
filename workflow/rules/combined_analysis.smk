@@ -1097,7 +1097,7 @@ rule prep_browser_on_region:
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
 
         ### printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
-        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolor1\tFillcolor2\n" > {output.filenames}
+        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
         {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
         path="{output.trackfolder}/{{lab}}_empty"
         printf "Making bw for {{lab}}\n"
@@ -1113,7 +1113,7 @@ rule prep_browser_on_region:
         ### ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
         ### printf "${{lab}}\t${{mark}}\t${{path}}.bw\t${{backcolor}}\t${{trackcolor}}\t${{fillcolor1}}\t${{fillcolor2}}\t${{ylimmin}}\t${{ylimmax}}\n" >> {output.filenames}
             
-        printf "${{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{minus}}\t{{plus}}\n" >> {output.filenames}
+        printf "${{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
         {{% endfor %}}
         
         }} 2>&1 | tee -a "{log}"
