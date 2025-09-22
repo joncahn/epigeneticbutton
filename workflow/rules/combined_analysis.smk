@@ -1036,6 +1036,7 @@ rule prep_browser_on_region:
     shell:
         """
         {{
+        set -x
         chr=$(awk -v r={params.regionID} '$4==r {{print $1}}' {input.target_file})
         start=$(awk -v r={params.regionID} '$4==r {{print $2}}' {input.target_file})
         end=$(awk -v r={params.regionID} '$4==r {{print $3}}' {input.target_file})
@@ -1069,10 +1070,10 @@ rule prep_browser_on_region:
         
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
         if [[ {params.TEfile} == "none" ]]; then
-            printf "No TE file provided"
+            printf "No TE file provided\n"
             touch {output.tes}
         else
-            printf "Getting TE track"
+            printf "Getting TE track\n"
             bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
         fi
         
