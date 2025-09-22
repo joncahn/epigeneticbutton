@@ -1078,7 +1078,7 @@ rule prep_browser_on_region:
         
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
-        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
+        {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
         path="{output.trackfolder}/{{lab}}_empty"
         bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
         if [[ -s "${{path}}.bg" ]]; then
@@ -1091,14 +1091,14 @@ rule prep_browser_on_region:
             filelist2+=("${{path}}.bw")
         fi
         rm -f "${{path}}.bg"
-        {{% endfor %}}
+        {% endfor %}
         
         printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
 
         # printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
         printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolor1\tFillcolor2\n" > {output.filenames}
-        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
+        {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
         path="{output.trackfolder}/{{lab}}_empty"
         printf "Making bw for ${{lab}}\n"
         col=($(awk -v ORS=" " -v t={{lab}} 'NR==1 {for(i=1;i<=NF;i++) if ($i~t) print i}' {output.tempvalues}))
@@ -1114,7 +1114,7 @@ rule prep_browser_on_region:
         # printf "${{lab}}\t${{mark}}\t${path}.bw\t${backcolor}\t${trackcolor}\t${fillcolor1}\t${fillcolor2}\t${ylimmin}\t${ylimmax}\n" >> {output.filenames}
             
         printf "${{lab}}\t${path}.bw\t{{back}}\t{{track}}\t{{minus}}\t{{plus}}\n" >> {output.filenames}
-        {{% endfor %}}
+        {% endfor %}
         
         }} 2>&1 | tee -a "{log}"
         """
