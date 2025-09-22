@@ -1045,8 +1045,8 @@ rule prep_browser_on_region:
         htstart=$(awk -v r={params.regionID} '$4==r {{print $6}}' {input.target_file})
         htwidth=$(awk -v r={params.regionID} '$4==r {{print $7}}' {input.target_file})
         if [[ ${{htstart}} != "" ]]; then
-            printf "${{htstart}}\n" | awk -F"," '{{for(i=1;i<=NF;i++) print $i}}' > {output.htstart}
-            printf "${{htwidth}}\n" | awk -F"," '{{for(i=1;i<=NF;i++) print $i}}' > {output.htwidth}
+            printf "${{htstart}}\n" | awk -F"," '{{{{for(i=1;i<=NF;i++) print $i}}}}' > {output.htstart}
+            printf "${{htwidth}}\n" | awk -F"," '{{{{for(i=1;i<=NF;i++) print $i}}}}' > {output.htwidth}
         else
             touch {output.htstart}
             touch {output.htwidth}
