@@ -1036,14 +1036,14 @@ rule prep_browser_on_region:
     shell:
         """
         {{
-        chr=$(awk -v r={{params.regionID}} '$4==r {{print $1}}' {input.target_file})
-        start=$(awk -v r={{params.regionID}} '$4==r {{print $2}}' {input.target_file})
-        end=$(awk -v r={{params.regionID}} '$4==r {{print $3}}' {input.target_file})
+        chr=$(awk -v r={params.regionID} '$4==r {{print $1}}' {input.target_file})
+        start=$(awk -v r={params.regionID} '$4==r {{print $2}}' {input.target_file})
+        end=$(awk -v r={params.regionID} '$4==r {{print $3}}' {input.target_file})
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
-        binsize=$(awk -v r={{params.regionID}} '$4==r {{print $5}}' {input.target_file})
+        binsize=$(awk -v r={params.regionID} '$4==r {{print $5}}' {input.target_file})
         
-        htstart=$(awk -v r={{params.regionID}} '$4==r {{print $6}}' {input.target_file})
-        htwidth=$(awk -v r={{params.regionID}} '$4==r {{print $7}}' {input.target_file})
+        htstart=$(awk -v r={params.regionID} '$4==r {{print $6}}' {input.target_file})
+        htwidth=$(awk -v r={params.regionID} '$4==r {{print $7}}' {input.target_file})
         if [[ ${{htstart}} != "" ]]; then
             printf "${{htstart}}\n" | awk -F"," '{{for(i=1;i<=NF;i++) print $i}}' > {output.htstart}
             printf "${{htwidth}}\n" | awk -F"," '{{for(i=1;i<=NF;i++) print $i}}' > {output.htwidth}
