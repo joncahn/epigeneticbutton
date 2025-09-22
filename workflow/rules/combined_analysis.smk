@@ -1073,7 +1073,7 @@ rule prep_browser_on_region:
             touch {output.tes}
         else
             printf "Getting TE track"
-            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{if ($6!="+" && $6!="-") $6="*"; print $0}' > {output.tes}
+            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
         fi
         
         printf "Testing if all bw have data on the chromosome\n"
