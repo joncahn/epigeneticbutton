@@ -1109,9 +1109,9 @@ rule prep_browser_on_region:
         fi
         bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
             
-        # ylimmin=$(cat ${{path}}.bedGraph | awk 'BEGIN {a=9999} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
-        # ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {a=-9999} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
-        # printf "${{lab}}\t${{mark}}\t${path}.bw\t${backcolor}\t${trackcolor}\t${fillcolor1}\t${fillcolor2}\t${ylimmin}\t${ylimmax}\n" >> {output.filenames}
+        ### ylimmin=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
+        ### ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
+        ### printf "${{lab}}\t${{mark}}\t${path}.bw\t${backcolor}\t${trackcolor}\t${fillcolor1}\t${fillcolor2}\t${ylimmin}\t${ylimmax}\n" >> {output.filenames}
             
         printf "${{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{minus}}\t{{plus}}\n" >> {output.filenames}
         {{% endfor %}}
