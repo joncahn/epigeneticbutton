@@ -1078,7 +1078,7 @@ rule prep_browser_on_region:
         
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
-        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}|
+        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
         path="{output.trackfolder}/{{lab}}_empty"
         bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
         if [[ -s "${{path}}.bg" ]]; then
