@@ -1,3 +1,5 @@
+CONDA_ENV_RNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_rna.yaml")
+
 # function to access logs more easily
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -103,7 +105,7 @@ rule make_STAR_indices:
         star_index = config[config['species']]['star_index']
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","STAR_index_{ref_genome}.log"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["make_STAR_indices"]["threads"]
     resources:
         mem=config["resources"]["make_STAR_indices"]["mem"],
@@ -133,7 +135,7 @@ rule STAR_map_pe:
         prefix = lambda wildcards: f"results/RNA/mapped/star_pe__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "PE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["STAR_map_pe"]["threads"]
     resources:
         mem=config["resources"]["STAR_map_pe"]["mem"],
@@ -170,7 +172,7 @@ rule STAR_map_se:
         prefix = lambda wildcards: f"results/RNA/mapped/star_se__{wildcards.sample_name}_"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["STAR_map_se"]["threads"]
     resources:
         mem=config["resources"]["STAR_map_se"]["mem"],
@@ -198,7 +200,7 @@ rule filter_rna_pe:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_rna("{sample_name}", "filteringRNA", "PE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["filter_rna_pe"]["threads"]
     resources:
         mem=config["resources"]["filter_rna_pe"]["mem"],
@@ -233,7 +235,7 @@ rule filter_rna_se:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_rna("{sample_name}", "filteringRNA", "SE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["filter_rna_se"]["threads"]
     resources:
         mem=config["resources"]["filter_rna_se"]["mem"],
@@ -344,7 +346,7 @@ rule merging_rna_replicates:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
         temp(return_log_rna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_rna_reps", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["merging_rna_replicates"]["threads"]
     resources:
         mem=config["resources"]["merging_rna_replicates"]["mem"],
@@ -375,7 +377,7 @@ rule make_rna_stranded_bigwigs:
         multimap = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
     log:
         temp(return_log_rna("{sample_name}", "making_bigiwig", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["make_rna_stranded_bigwigs"]["threads"]
     resources:
         mem=config["resources"]["make_rna_stranded_bigwigs"]["mem"],
@@ -466,7 +468,7 @@ rule call_all_DEGs:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_rna("{ref_genome}", "call_DEGs", "{analysis_name}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["call_all_DEGs"]["threads"]
     resources:
         mem=config["resources"]["call_all_DEGs"]["mem"],
@@ -491,7 +493,7 @@ rule gather_gene_expression_rpkm:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_rna("{ref_genome}", "gene_expression", "{analysis_name}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["gather_gene_expression_rpkm"]["threads"]
     resources:
         mem=config["resources"]["gather_gene_expression_rpkm"]["mem"],
@@ -517,7 +519,7 @@ rule plot_expression_levels:
         target_name = lambda wildcards: wildcards.target_name
     log:
         temp(return_log_rna("{ref_genome}", "plot_expression_{target_name}", "{analysis_name}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["plot_expression_levels"]["threads"]
     resources:
         mem=config["resources"]["plot_expression_levels"]["mem"],
@@ -543,7 +545,7 @@ rule create_GO_database:
         geneinfofile = lambda wildcards: config['gene_info_file'][wildcards.ref_genome]
     log:
         temp(return_log_rna("{ref_genome}", "build_GO", "{dbname}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["create_GO_database"]["threads"]
     resources:
         mem=config["resources"]["create_GO_database"]["mem"],
@@ -580,7 +582,7 @@ rule perform_GO_on_target_file:
         target_name = lambda wildcards: wildcards.target_name
     log:
         temp(return_log_rna("{ref_genome}", "GO_{target_name}", "{analysis_name}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_RNA
     threads: config["resources"]["perform_GO_on_target_file"]["threads"]
     resources:
         mem=config["resources"]["perform_GO_on_target_file"]["mem"],

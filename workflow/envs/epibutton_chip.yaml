@@ -4,6 +4,11 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  - bowtie2
+  - samtools
+  - bedtools
+  - deeptools
+  - macs2
   - numpy<=1.19
   - idr
   - bedtools

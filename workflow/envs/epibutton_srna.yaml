@@ -5,3 +5,7 @@ channels:
   - defaults
 dependencies:
   - shortstack=4.0
+  - seqcluster
+  - setuptools<81 #version required for seqcluster
+  - biopython<1.85 #version required for seqcluster
+  - seqtk

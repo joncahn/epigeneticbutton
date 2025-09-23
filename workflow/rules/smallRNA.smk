@@ -1,3 +1,5 @@
+CONDA_ENV_SRNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_srna.yaml")
+
 # function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
@@ -13,10 +15,12 @@ def define_input_file_for_shortstack(sample_name):
     rna_depletion = config['structural_rna_depletion']
     netflex_v3 = config['netflex_v3_deduplication']
     if paired == "SE":
-        if netflex_v3:
-            return "deduplicated__{sample_name}__R0" if rna_depletion else "trim__{sample_name}__R0"
+        if rna_depletion:
+            return "filtered__{sample_name}__R0" 
+        elif netflex_v3:
+            return "deduplicated__{sample_name}__R0"
         else:
-            return "filtered__{sample_name}__R0" if rna_depletion else "trim__{sample_name}__R0"
+            return "trim__{sample_name}__R0"
 
 def define_input_for_grouped_analysis(ref_genome):
     bamfiles = []

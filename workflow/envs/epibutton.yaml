@@ -4,48 +4,23 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python>=3
-  - pyyaml
+  - pigz
+  - samtools
+  - fastqc
   - cutadapt
   - sra-tools>=3
-  - pigz
-  - fastqc
-  - bowtie2
-  - samtools
   - bedtools
   - deeptools
-  - macs2
-  - bismark
-  - star
-  - shortstack=4.0
   - ucsc-bedgraphtobigwig
-  - ucsc-bedsort
   - poppler
-  - seqcluster
-  - setuptools<81 #version required for seqcluster
-  - biopython<1.85 #version required for seqcluster
-  - seqtk
-  - r-base
-  - r-plyr
   - r-dplyr
-  - r-ggplot2=3.5.2
-  - r-readr
   - r-tidyr
+  - r-ggplot2=3.5.2
   - r-cowplot
   - r-rcolorbrewer
-  - bioconductor-dmrcaller
-  - bioconductor-limma
-  - bioconductor-edger
-  - r-stringr
-  - r-gplots
-  - bioconductor-annotationforge
-  - bioconductor-go.db
-  - bioconductor-rrvgo
-  - bioconductor-topGO
   - r-purrr
   - r-complexupset
   - bioconductor-gviz
   - bioconductor-genomicfeatures
   - bioconductor-rtracklayer
-
 

@@ -413,7 +413,6 @@ rule prepping_mapping_stats:
         stat_file = "results/combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_mapping_stats"))
-    conda: CONDA_ENV
     threads: config["resources"]["prepping_mapping_stats"]["threads"]
     resources:
         mem=config["resources"]["prepping_mapping_stats"]["mem"],
@@ -458,7 +457,6 @@ rule prepping_chip_peak_stats:
         stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_peak_stats"))
-    conda: CONDA_ENV
     threads: config["resources"]["prepping_chip_peak_stats"]["threads"]
     resources:
         mem=config["resources"]["prepping_chip_peak_stats"]["mem"],
@@ -505,7 +503,6 @@ rule prepping_srna_sizes_stats:
         stat_file = "results/combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_srna_sizes"))
-    conda: CONDA_ENV
     threads: config["resources"]["prepping_srna_sizes_stats"]["threads"]
     resources:
         mem=config["resources"]["prepping_srna_sizes_stats"]["mem"],
