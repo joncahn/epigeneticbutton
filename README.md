@@ -368,7 +368,6 @@ IDR relies on an older version of numpy to work (due to deprecated np.int) and n
 
 ## Features under development
 - RAMPAGE
-- Browser: create a hub/jbrowse session? invert minus stranded bigwigs.
 - ATAC-seq
 - ONT for direct methylation calling
 

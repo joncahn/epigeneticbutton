@@ -116,8 +116,8 @@ rule deduplicate_srna_netflexv3:
         #### 1) Collapse the PCR-duplicated reads
         seqcluster collapse -f {input.fastq} -o {output.collapse_folder}
 
-        ### 2) Trimming the read-specific UMIs (first and last 4bp)
-        seqtk trimfq -b 4 -e 4 {output.collapsed_fastq} > {output.deduplicated_fastq}
+        ### 2) Trimming the read-specific UMIs (first and last 4bp, and adding a minimum 15bp)
+        seqtk trimfq -b 4 -e 4 {output.collapsed_fastq} | seqtk seq -L 15 > {output.deduplicated_fastq}
         pigz -p {threads} -c {output.deduplicated_fastq} > {output.gzipped_fastq}
         }} 2>&1 | tee -a "{log}"
         """
@@ -222,13 +222,15 @@ rule make_srna_size_stats:
         {{
         printf "\nGetting stats for {params.sample_name}\n"
         printf "Sample\tType\tSize\tCount\n" > {output.report}
-        zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
         printf "\nGetting filtered stats for {params.sample_name}\n"
-        if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
-            zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
-        fi
         if [[ -s results/sRNA/fastq/deduplicated__{params.sample_name}__R0.fastq.gz ]]; then
             zcat results/sRNA/fastq/deduplicated__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"deduplicated",$2,$1}}' >> "{output.report}"
+            zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) {{a=length($1)-8; if (a>=15) print a}}}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+        else
+            zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+        fi
+        if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
+            zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
         fi
         samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> "{output.report}"
         }} 2>&1 | tee -a "{log}"
