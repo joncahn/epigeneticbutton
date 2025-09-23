@@ -120,7 +120,7 @@ rule deduplicate_srna_netflexv3:
 
 rule filter_structural_rna:
     input:
-        fastq = fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_structural(wildcards.sample_name)}.fastq.gz",
+        fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_structural(wildcards.sample_name)}.fastq.gz",
         fasta = config['structural_rna_fafile']
     output:
         filtered_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq"),
