@@ -190,6 +190,8 @@ https://epicc-builder.streamlit.app/
 - `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in config (chip_tracks: binsize: 1)
 
 ###  Additional output options
+Below is a list of *cool* outputs that can be generated once whole pipeline ran once. You'll find a basic structure for how to tell snakemake to generate them, feel free to replace the --cores 1 with the HPC profile you would rather use.
+
 **1. Plotting RNAseq expression levels on target genes (`rule plot_expression_levels`)**\
 Given a list of genes (and optional labels), it will plot the expression levels in all the different samples in the samplefile and analysis name defined. Genes uniquely differentially regulated in one sample versus one or more samples are color coded. It is based on a Rdata file created during the Differential Expression analysis (rule call_all_degs). To use it, edit the config file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`) and run the following command, replacing {analysis_name}, {ref_genome} and {target_label} with wanted values:
 ```bash 
