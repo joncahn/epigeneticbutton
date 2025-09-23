@@ -5,7 +5,19 @@ channels:
   - defaults
 dependencies:
   - shortstack=4.0
+  - bowtie2
+  - pigz
+  - samtools
+  - deeptools
   - seqcluster
   - setuptools<81 #version required for seqcluster
   - biopython<1.85 #version required for seqcluster
   - seqtk
+  - r-base
+  - bioconductor-limma
+  - bioconductor-edger
+  - r-dplyr
+  - r-tidyr
+  - r-stringr
+  - r-gplots
+  - r-rcolorbrewer
