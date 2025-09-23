@@ -87,7 +87,8 @@ https://epicc-builder.streamlit.app/
    - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Help_Gene_Ontology) before setting it to `true` as it requires 2 other files.
    - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file. No other option yet.
    - For ChIP-seq: the default mapping parameters are bowtie2 `--end-to-end` default parameters. Other options are available in the config file `chip_mapping_option`.
-   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to Additional output options #2 below and the [Help structural RNAs](Help/Help_structural_RNAs_database_with_Rfam) before setting it to `true`.
+   - For sRNA-seq: the default is not based on Netflex v3 library preparation. If your data was made with this kit, an additional deduplication and read trimming is required. To turn it ON, change the `Netflex_v3_deduplication` in the config file. See [Known issues #3](#known-potential-issues) below if you have mixed libraries.
+   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to the [Help structural RNAs](Help/Help_structural_RNAs_database_with_Rfam) before setting it to `true`.
 
 ### Running the Pipeline
 
@@ -356,18 +357,7 @@ Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, 
 The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developper created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
 
 3. small RNA-seq libraries\
-Different small RNAseq libraries have different chemistry and might need to be trimmed differently. If using nextflex v3 for example, you need to trim an extra 4bp at both ends of your reads. The following code snippet would need to be applied to these samples to further process the adapter-trimmed files and add these 2 steps: 
-```
-### 1) Collapse the PCR-duplicated reads
-seqcluster collapse -f results/sRNA/fastq/clipped_${name}.fastq -o results/sRNA/fastq/collapsed
-mv results/sRNA/fastq/collapsed/clipped_${name}_trimmed.fastq results/sRNA/fastq/collapsed_${name}.fastq
-rm -rf results/sRNA/fastq/collapsed/
-
-### 2) Trimming the read-specific UMIs (first and last 4bp)
-seqtk trimfq -Q -b 4 -e 4 results/sRNA/fastq/collapsed_${name}.fastq > results/sRNA/fastq/trimmed_${name}.fastq
-gzip results/sRNA/fastq/trimmed_${name}.fastq
-```
-This should be done manually, until an option with a specific rule is potentially created in a future release.
+Different small RNAseq libraries have different chemistry and might need to be trimmed differently. For now, the code only works if all your samples were done using the same library preparation, either netflex v3 or not. If you have a mix of libraries, you should run the pipeline with each kind separately, and then rerun the analysis with all the samples you want.
 
 4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
@@ -377,7 +367,6 @@ IDR relies on an older version of numpy to work (due to deprecated np.int) and n
 ## Features under development
 - RAMPAGE
 - Browser: create a hub/jbrowse session? invert minus stranded bigwigs.
-- Additional combined analysis output
 - ATAC-seq
 - ONT for direct methylation calling
 

@@ -97,8 +97,8 @@ rule deduplicate_srna_netflexv3:
         fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
     output:
         collapse_folder = temp(directory("results/sRNA/fastq/collapsed_{sample_name}")),
-        collapsed_fastq = "results/sRNA/fastq/collapsed_{sample_name}/trim__{sample_name}__R0_trimmed.fastq",
-        deduplicated_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq",
+        collapsed_fastq = temp("results/sRNA/fastq/collapsed_{sample_name}/trim__{sample_name}__R0_trimmed.fastq"),
+        deduplicated_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq"),
         gzipped_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -226,6 +226,9 @@ rule make_srna_size_stats:
         printf "\nGetting filtered stats for {params.sample_name}\n"
         if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
             zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
+        fi
+        if [[ -s results/sRNA/fastq/deduplicated__{params.sample_name}__R0.fastq.gz ]]; then
+            zcat results/sRNA/fastq/deduplicated__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"deduplicated",$2,$1}}' >> "{output.report}"
         fi
         samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> "{output.report}"
         }} 2>&1 | tee -a "{log}"
