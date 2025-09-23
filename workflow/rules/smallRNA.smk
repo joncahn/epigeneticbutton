@@ -92,8 +92,8 @@ rule deduplicate_srna_netflexv3:
     input:
         fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
     output:
-        collapse_folder = temp(directory("results/sRNA/fastq/collapsed"))
-        collapsed_fastq = temp("results/sRNA/fastq/collapsed/trim__{sample_name}__R0.fastq"),
+        collapse_folder = temp(directory("results/sRNA/fastq/collapsed")),
+        collapsed_fastq = temp("results/sRNA/fastq/collapsed/trim__{sample_name}__R0_trimmed.fastq"),
         deduplicated_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq"),
         gzipped_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz"
     params:
@@ -113,7 +113,7 @@ rule deduplicate_srna_netflexv3:
         seqcluster collapse -f {input.fastq} -o {output.collapse_folder}
 
         ### 2) Trimming the read-specific UMIs (first and last 4bp)
-        seqtk trimfq -Q -b 4 -e 4 {outpu.collapsed_fastq} > {output.deduplicated_fastq}
+        seqtk trimfq -Q -b 4 -e 4 {output.collapsed_fastq} > {output.deduplicated_fastq}
         pigz -p {threads} -dc {output.deduplicated_fastq} > {output.gzipped_fastq}
         }} 2>&1 | tee -a "{log}"
         """
