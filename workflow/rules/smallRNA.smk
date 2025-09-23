@@ -2,10 +2,21 @@
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
 
+def define_input_file_for_structural(sample_name):
+    paired = get_sample_info_from_name(sample_name, samples, 'paired')
+    netflex_v3 = config['netflex_v3_deduplication']
+    if paired == "SE":
+        return "deduplicated__{sample_name}__R0" if netflex_v3 else "trim__{sample_name}__R0"
+
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
+    rna_depletion = config['structural_rna_depletion']
+    netflex_v3 = config['netflex_v3_deduplication']
     if paired == "SE":
-        return "filtered__{sample_name}__R0" if config['structural_rna_depletion'] else "trim__{sample_name}__R0"
+        if netflex_v3:
+            return "deduplicated__{sample_name}__R0" if rna_depletion else "trim__{sample_name}__R0"
+        else:
+            return "filtered__{sample_name}__R0" if rna_depletion else "trim__{sample_name}__R0"
 
 def define_input_for_grouped_analysis(ref_genome):
     bamfiles = []
@@ -77,9 +88,39 @@ def define_final_srna_output(ref_genome):
 
     return results
 
+rule deduplicate_srna_netflexv3:
+    input:
+        fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
+    output:
+        collapse_folder = temp(directory("results/sRNA/fastq/collapsed"))
+        collapsed_fastq = temp("results/sRNA/fastq/collapsed/trim__{sample_name}__R0.fastq"),
+        deduplicated_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq"),
+        gzipped_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+    log:
+        temp(return_log_smallrna("{sample_name}", "deduplicate_srna_netflexv3", "all"))
+    conda: CONDA_ENV
+    threads: config["resources"]["deduplicate_srna_netflexv3"]["threads"]
+    resources:
+        mem=config["resources"]["deduplicate_srna_netflexv3"]["mem"],
+        tmp=config["resources"]["deduplicate_srna_netflexv3"]["tmp"]
+    shell:
+        """
+        {{
+        #### 1) Collapse the PCR-duplicated reads
+        seqcluster collapse -f {input.fastq} -o {output.collapse_folder}
+
+        ### 2) Trimming the read-specific UMIs (first and last 4bp)
+        seqtk trimfq -Q -b 4 -e 4 {outpu.collapsed_fastq} > {output.deduplicated_fastq}
+        pigz -p {threads} -dc {output.deduplicated_fastq} > {output.gzipped_fastq}
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule filter_structural_rna:
     input:
-        fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq = fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_structural(wildcards.sample_name)}.fastq.gz",
         fasta = config['structural_rna_fafile']
     output:
         filtered_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq"),

@@ -80,6 +80,7 @@ create_GO_database: *single
 perform_GO_on_target_file: *single
 # smallRNA
 shortstack_map: *heavy
+deduplicate_srna_netflexv3: *standard
 filter_structural_rna: *heavy
 shortstack_map: *heavy
 make_srna_size_stats: *standard

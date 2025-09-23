@@ -1036,7 +1036,6 @@ rule prep_browser_on_region:
     shell:
         """
         {{
-        set -x
         chr=$(awk -v r={params.regionID} '$4==r {{print $1}}' {input.target_file})
         start=$(awk -v r={params.regionID} '$4==r {{print $2}}' {input.target_file})
         end=$(awk -v r={params.regionID} '$4==r {{print $3}}' {input.target_file})
@@ -1094,28 +1093,28 @@ rule prep_browser_on_region:
         rm -f "${{path}}.bg"
         {{% endfor %}}
         
-        printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
-        multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
+        # printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
+        # multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
 
-        ### printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
-        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
-        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
-        path="{output.trackfolder}/{{lab}}_empty"
-        printf "Making bw for {{lab}}\n"
-        col=($(awk -v ORS=" " -v t={{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
-        if [[ "{{lab}}" ~ "minus" ]]; then
-            awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
-        else
-            awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
-        fi
-        bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
+        # ### printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
+        # printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
+        # {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
+        # path="{output.trackfolder}/{{lab}}_empty"
+        # printf "Making bw for {{lab}}\n"
+        # col=($(awk -v ORS=" " -v t={{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
+        # if [[ "{{lab}}" ~ "minus" ]]; then
+            # awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
+        # else
+            # awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
+        # fi
+        # bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
             
-        ### ylimmin=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
-        ### ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
-        ### printf "${{lab}}\t${{mark}}\t${{path}}.bw\t${{backcolor}}\t${{trackcolor}}\t${{fillcolor1}}\t${{fillcolor2}}\t${{ylimmin}}\t${{ylimmax}}\n" >> {output.filenames}
+        # ### ylimmin=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
+        # ### ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
+        # ### printf "${{lab}}\t${{mark}}\t${{path}}.bw\t${{backcolor}}\t${{trackcolor}}\t${{fillcolor1}}\t${{fillcolor2}}\t${{ylimmin}}\t${{ylimmax}}\n" >> {output.filenames}
             
-        printf "${{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
-        {{% endfor %}}
+        # printf "${{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
+        # {{% endfor %}}
         
         }} 2>&1 | tee -a "{log}"
         """

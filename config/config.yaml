@@ -127,6 +127,7 @@ mC_mapping:
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
 
 # small RNA parameters
+netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: false # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
 structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
@@ -294,6 +295,7 @@ resources:
   perform_GO_on_target_file: *single
   # smallRNA
   shortstack_map: *heavy
+  deduplicate_srna_netflexv3: *standard
   filter_structural_rna: *heavy
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
