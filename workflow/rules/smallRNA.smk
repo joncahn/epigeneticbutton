@@ -92,7 +92,7 @@ rule deduplicate_srna_netflexv3:
     input:
         fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
     output:
-        collapse_folder = temp(directory("results/sRNA/fastq/collapsed")),
+        collapse_folder = temp(directory("results/sRNA/fastq/collapsed_{sample_name}")),
         collapsed_fastq = temp("results/sRNA/fastq/collapsed/trim__{sample_name}__R0_trimmed.fastq"),
         deduplicated_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq"),
         gzipped_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz"
