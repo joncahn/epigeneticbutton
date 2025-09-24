@@ -1078,11 +1078,11 @@ rule prep_browser_on_region:
         {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
         path="{output.trackfolder}/{{lab}}_empty"
         bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
-        if [[ -s "${{path}}.bg" ]]; then
-            printf "${{lab}} has data on ${{chr}}\n"
+        if [[ -s "{{path}}.bg" ]]; then
+            printf "{{lab}} has data on ${{chr}}\n"
             filelist2+=("{{bw}}")
         else
-            printf "${{lab}} is empty on ${{chr}}\n"
+            printf "{{lab}} is empty on ${{chr}}\n"
             grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
             bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
             filelist2+=("${{path}}.bw")
@@ -1108,9 +1108,9 @@ rule prep_browser_on_region:
             
         # ### ylimmin=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
         # ### ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
-        # ### printf "${{lab}}\t${{mark}}\t${{path}}.bw\t${{backcolor}}\t${{trackcolor}}\t${{fillcolor1}}\t${{fillcolor2}}\t${{ylimmin}}\t${{ylimmax}}\n" >> {output.filenames}
+        # ### printf "{{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\t${{ylimmin}}\t${{ylimmax}}\n" >> {output.filenames}
             
-        # printf "${{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
+        # printf "{{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
         # {{% endfor %}}
         
         }} 2>&1 | tee -a "{log}"
