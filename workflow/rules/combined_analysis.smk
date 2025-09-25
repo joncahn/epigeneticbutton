@@ -298,8 +298,9 @@ def define_individual_browser_plots(wildcards):
 
     regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
     
-    for _, row in regions.iterrows():
-        files.append(f"results/combined/plots/single_browser__{target_name}__{row[3]}__{env}__{analysis_name}__{ref_genome}.pdf")    
+    starter = 2 if header == "yes" else 1
+    for row_number, _ in enumerate(regions.itertuples(index=False),start=starter):
+        files.append(f"results/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
     return files
 
 def define_final_combined_output(ref_genome):
@@ -1034,15 +1035,19 @@ rule prep_browser_on_region:
         """
         {{
         printf "Extracting values for {params.regionID}\n"
-        chr=$(awk -v r={params.regionID} '$4==r {{print $1}}' {input.target_file})
-        start=$(awk -v r={params.regionID} '$4==r {{print $2}}' {input.target_file})
-        end=$(awk -v r={params.regionID} '$4==r {{print $3}}' {input.target_file})
+        tmpregion="{params.regionID}"
+        line_nb=${{tmpregion#line}}
+        chr=$(awk -v r=${{line_nb}} 'NR==r {{print $1}}' {input.target_file})
+        start=$(awk -v r=${{line_nb}} 'NR==r {{print $2}}' {input.target_file})
+        end=$(awk -v r=${{line_nb}} 'NR==r {{print $3}}' {input.target_file})
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
-        binsize=$(awk -v r={params.regionID} '$4==r {{print $5}}' {input.target_file})
+
+        regionID=$(awk -v r=${{line_nb}} 'NR==r {{print $4}}' {input.target_file})
+        binsize=$(awk -v r=${{line_nb}} 'NR==r {{print $5}}' {input.target_file})
         
-        printf "chr: ${{chr}}\nstart: ${{start}}\nend: ${{end}}\n"
-        # htstart=$(awk -v r={params.regionID} '$4==r {{print $6}}' {input.target_file})
-        # htwidth=$(awk -v r={params.regionID} '$4==r {{print $7}}' {input.target_file})
+        printf "chr: ${{chr}}\nstart: ${{start}}\nend: ${{end}}\nregion ID: ${{regionID}}\nbinsize: ${{binsize}}\n"
+        # htstart=$(awk -v r=${{line_nb}} '$4==r {{print $6}}' {input.target_file})
+        # htwidth=$(awk -v r=${{line_nb}} '$4==r {{print $7}}' {input.target_file})
         # if [[ ${{htstart}} != "" ]]; then
             # printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htstart}
             # printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htwidth}
