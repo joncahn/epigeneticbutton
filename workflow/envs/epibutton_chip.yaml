@@ -9,7 +9,3 @@ dependencies:
   - bedtools
   - deeptools
   - macs2
-  - numpy<=1.19
-  - idr
-  - bedtools
-  - meme>=5
