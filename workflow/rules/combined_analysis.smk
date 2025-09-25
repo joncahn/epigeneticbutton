@@ -1037,14 +1037,10 @@ rule prep_browser_on_region:
         printf "Extracting values for {params.regionID}\n"
         tmpregion="{params.regionID}"
         line_nb=${{tmpregion#line}}
-        echo $line_nb 2>&1 | tee -a "{log}"
-        chr=$(awk -v r=${{line_nb}} 'NR==r {{print $1}}' {input.target_file})
-        echo $chr 2>&1 | tee -a "{log}"
-        start=$(awk -v r=${{line_nb}} 'NR==r {{print $2}}' {input.target_file})
-        echo $start 2>&1 | tee -a "{log}"
-        end=$(awk -v r=${{line_nb}} 'NR==r {{print $3}}' {input.target_file})
-        printf "${{chr}}\t${{start}}\t${{end}}\n" | tee {output.templocus} -a "{log}"
-        # printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
+        chr=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
+        start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
+        end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
+        printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
 
         # regionID=$(awk -v r=${{line_nb}} 'NR==r {{print $4}}' {input.target_file})
         # binsize=$(awk -v r=${{line_nb}} 'NR==r {{print $5}}' {input.target_file})
