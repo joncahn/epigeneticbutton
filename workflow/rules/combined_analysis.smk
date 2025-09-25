@@ -1036,11 +1036,11 @@ rule prep_browser_on_region:
         {{
         printf "Extracting values for {params.regionID}\n"
         tmpregion="{params.regionID}"
-        line_nb=$(cat ${{tmpregion}} | sed 's/line//')
+        line_nb=$(echo "${{tmpregion}}" | sed 's/line//')
         chr=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
         start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
         end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
-        printf "${{chr}}\t${{start}}\t${{end}}\n" > "{output.templocus}"
+        printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
 
         # regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
         # binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
