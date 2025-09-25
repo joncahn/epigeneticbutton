@@ -1020,6 +1020,7 @@ rule prep_browser_on_region:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
+        nbsamples = lambda wildcards: len(define_key_for_plots(wildcards, "labels")),
         backcolors = lambda wildcards: define_key_for_plots(wildcards, "backcolors"),
         trackcolors = lambda wildcards: define_key_for_plots(wildcards, "trackcolors"),
         fillcolorsplus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorsplus"),
@@ -1083,8 +1084,8 @@ rule prep_browser_on_region:
         
         printf "Testing if all bw have data on the chromosome\n"
         bws=({input.bigwigs})
-        nb=${{#bws[@]}}
-        nb_samples=$((nb-1))
+        nbsamples={params.nbsamples}
+        nb=$((nb-1))
         labels=({params.labels})
         backcolors=({params.backcolors})
         trackcolors=({params.trackcolors})
@@ -1092,7 +1093,7 @@ rule prep_browser_on_region:
         fillcolorsminus=({params.fillcolorsminus})
         
         filelist2=()
-        for i in $(seq 0 ${{nb_samples}})
+        for i in $(seq 0 $nb)
         do
             bw="${{bws[i]}}"
             lab="${{labels[i]}}"
@@ -1100,7 +1101,7 @@ rule prep_browser_on_region:
             track="${{trackcolors[i]}}"
             plus="${{fillcolorsplus[i]}}"
             minus="${{fillcolorsminus[i]}}"
-            echo "sample #: $1\nbw: $bw\nlab: $lab\nback: $back\ntrack: $track\nplus: $plus\nminus: $minus\n\n"
+            echo "sample #: $i\nbw: $bw\nlab: $lab\nback: $back\ntrack: $track\nplus: $plus\nminus: $minus\n\n"
         done
         
         printf "\n\nso far so good\n"
