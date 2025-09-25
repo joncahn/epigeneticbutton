@@ -1033,13 +1033,13 @@ rule prep_browser_on_region:
         tmp=config["resources"]["prep_browser_on_region"]["tmp"]
     shell:
         """
-        {{
         printf "Extracting values for {params.regionID}\n"
         tmpregion="{params.regionID}"
         line_nb=$(echo "${{tmpregion}}" | sed 's/line//')
         chr=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
         start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
         end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
+        printf "${{chr}}\t${{start}}\t${{end}}\n" > "{log}"
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
 
         # regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
@@ -1118,8 +1118,6 @@ rule prep_browser_on_region:
             
         # printf "{{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
         # {{% endfor %}}
-        
-        }} 2>&1 | tee -a "{log}"
         """
 
 rule make_single_loci_browser_plot:
