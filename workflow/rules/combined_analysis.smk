@@ -261,10 +261,10 @@ def define_key_for_plots(wildcards, string):
     track_palette = assign_colors(marks, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
     minus_palette = make_it_lighter(track_palette, 1.6)
-    back_colors = [back_palette[label_to_type[lab]] for lab in labels]
-    track_colors = [track_palette[label_to_mark[lab]] for lab in labels]
-    fill_colors_plus = [plus_palette[label_to_mark[lab]] for lab in labels]
-    fill_colors_minus = [minus_palette[label_to_mark[lab]] for lab in labels]
+    backcolors = [back_palette[label_to_type[lab]] for lab in labels]
+    trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
+    fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
+    fillcolorsminus = [minus_palette[label_to_mark[lab]] for lab in labels]
     
     if string == "bigwigs":
         return bigwigs
@@ -272,14 +272,14 @@ def define_key_for_plots(wildcards, string):
         return labels
     elif string == "marks":
         return marks
-    elif string == "backcolor":
-        return back_colors
-    elif string == "trackcolor":
-        return track_colors
-    elif string == "fillcolorplus":
-        return fill_colors_plus
-    elif string == "fillcolorminus":
-        return fill_colors_minus
+    elif string == "backcolors":
+        return backcolors
+    elif string == "trackcolors":
+        return trackcolors
+    elif string == "fillcolorsplus":
+        return fillcolorsplus
+    elif string == "fillcolorsminus":
+        return fillcolorsminus
 
 def define_individual_browser_plots(wildcards):
     files = []
@@ -1020,10 +1020,10 @@ rule prep_browser_on_region:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
-        backcolors = lambda wildcards: define_key_for_plots(wildcards, "backcolor"),
-        trackcolors = lambda wildcards: define_key_for_plots(wildcards, "trackcolor"),
-        fillcolorsplus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorplus"),
-        fillcolorsminus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorminus"),
+        backcolors = lambda wildcards: define_key_for_plots(wildcards, "backcolors"),
+        trackcolors = lambda wildcards: define_key_for_plots(wildcards, "trackcolors"),
+        fillcolorsplus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorsplus"),
+        fillcolorsminus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorsminus"),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
         extend_browser = config['extend_browser']
