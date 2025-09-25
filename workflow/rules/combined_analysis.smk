@@ -1047,7 +1047,13 @@ rule prep_browser_on_region:
         
         htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $6}}')
         htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $7}}')
-        printf "htstart: ${{htstart}}\nhtwidth: ${{htwidth}}\n" > "{log}"
+        if [[ ${{htstart}} != "" ]]; then
+            printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htstart}"
+            printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htwidth}"
+        else
+            touch {output.htstart}
+            touch {output.htwidth}
+        fi
         }} 2>&1 | tee -a "{log}" 
         """
 
