@@ -1033,13 +1033,14 @@ rule prep_browser_on_region:
     shell:
         """
         {{
+        printf "Extracting values for {params.regionID}\n"
         chr=$(awk -v r={params.regionID} '$4==r {{print $1}}' {input.target_file})
         start=$(awk -v r={params.regionID} '$4==r {{print $2}}' {input.target_file})
         end=$(awk -v r={params.regionID} '$4==r {{print $3}}' {input.target_file})
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
         binsize=$(awk -v r={params.regionID} '$4==r {{print $5}}' {input.target_file})
         
-        printf "chr: ${chr}\nstart: ${start|\nend: ${end}\n"
+        printf "chr: ${{chr}}\nstart: ${{start}}\nend: ${{end}}\n"
         # htstart=$(awk -v r={params.regionID} '$4==r {{print $6}}' {input.target_file})
         # htwidth=$(awk -v r={params.regionID} '$4==r {{print $7}}' {input.target_file})
         # if [[ ${{htstart}} != "" ]]; then
