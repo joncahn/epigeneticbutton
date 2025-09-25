@@ -1,4 +1,5 @@
 CONDA_ENV_CHIP=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_chip.yaml")
+CONDA_ENV_IDR=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_idr.yaml")
 
 # function to access logs more easily
 def return_log_chip(env, sample_name, step, paired):
@@ -685,7 +686,7 @@ rule idr_analysis_replicates:
         replicate_pairs = lambda wildcards: get_replicate_pairs(wildcards)
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", ""))
-    conda: CONDA_ENV_CHIP
+    conda: CONDA_ENV_IDR
     threads: config["resources"]["idr_analysis_replicates"]["threads"]
     resources:
         mem=config["resources"]["idr_analysis_replicates"]["mem"],
@@ -902,7 +903,7 @@ rule find_motifs_in_file:
         jaspar_db = config['jaspar_db']
     log:
         temp(return_log_chip("{env}","{peak_file}", "motifs", ""))
-    conda: CONDA_ENV_CHIP
+    conda: CONDA_ENV_IDR
     threads: config["resources"]["find_motifs_in_file"]["threads"]
     resources:
         mem=config["resources"]["find_motifs_in_file"]["mem"],
