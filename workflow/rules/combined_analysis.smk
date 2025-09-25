@@ -1079,7 +1079,7 @@ rule prep_browser_on_region:
         fi
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
-        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
+        {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
         printf "bw: {{bw}}\nlab: {{lab}}\nback: {{back}}\ntrack: {{track}}\nplus: {{plus}}\nminus: {{minus}}\n\n"
         path="{output.trackfolder}/{{lab}}_empty"
         bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} "${{path}}.bg"
@@ -1093,7 +1093,7 @@ rule prep_browser_on_region:
             filelist2+=("${{path}}.bw")
         fi
         rm -f "${{path}}.bg"
-        {{% endfor %}}
+        {% endfor %}
         
         printf "\n\nso far so good\n"
         }} 2>&1 | tee -a "{log}" 
