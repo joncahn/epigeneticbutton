@@ -1020,7 +1020,10 @@ rule prep_browser_on_region:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
-        zip_bw_label_colors = lambda wildcards: list(zip(define_key_for_plots(wildcards, "bigwigs"),define_key_for_plots(wildcards, "labels"),define_key_for_plots(wildcards, "backcolor"),define_key_for_plots(wildcards, "trackcolor"),define_key_for_plots(wildcards, "fillcolorplus"),define_key_for_plots(wildcards, "fillcolorminus"))),
+        backcolors = lambda wildcards: define_key_for_plots(wildcards, "backcolor"),
+        trackcolors = lambda wildcards: define_key_for_plots(wildcards, "trackcolor"),
+        fillcolorsplus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorplus"),
+        fillcolorsminus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorminus"),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
         extend_browser = config['extend_browser']
@@ -1077,23 +1080,27 @@ rule prep_browser_on_region:
             printf "Getting TE track\n"
             bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
         fi
+        
         printf "Testing if all bw have data on the chromosome\n"
+        labels = ({params.labels})
+        backcolors = ({params.backcolors})
+        trackcolors = ({params.trackcolors})
+        fillcolorsplus = ({params.fillcolorsplus})
+        fillcolorsminus = ({params.fillcolorsminus})
+        bws=({input.bigwigs})
+        nb_samples=$((${{#bws[@]}} -1))
+        
         filelist2=()
-        {% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}
-        printf "bw: {{bw}}\nlab: {{lab}}\nback: {{back}}\ntrack: {{track}}\nplus: {{plus}}\nminus: {{minus}}\n\n"
-        path="{output.trackfolder}/{{lab}}_empty"
-        bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} "${{path}}.bg"
-        if [[ -s "${{path}}.bg" ]]; then
-            printf "{{lab}} has data on ${{chr}}\n"
-            filelist2+=("{{bw}}")
-        else
-            printf "{{lab}} is empty on ${{chr}}\n"
-            grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
-            bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
-            filelist2+=("${{path}}.bw")
-        fi
-        rm -f "${{path}}.bg"
-        {% endfor %}
+        for i in $(seq 0 ${{nb_samples}})
+        do
+            bw="${{bws[i]}}"
+            lab="${{labels[i]}}"
+            back="${{backcolors[i]}}"
+            track="${{trackcolors[i]}}"
+            plus="${{fillcolorsplus[i]}}"
+            minus="${{fillcolorsminus[i]}}"
+            echo "sample #: $1\nbw: $bw\nlab: $lab\nback: $back\ntrack: $track\nplus: $plus\nminus: $minus\n\n"
+        done
         
         printf "\n\nso far so good\n"
         }} 2>&1 | tee -a "{log}" 
