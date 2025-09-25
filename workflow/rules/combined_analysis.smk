@@ -1037,8 +1037,11 @@ rule prep_browser_on_region:
         printf "Extracting values for {params.regionID}\n"
         tmpregion="{params.regionID}"
         line_nb=${{tmpregion#line}}
+        echo $line_nb
         chr=$(awk -v r=${{line_nb}} 'NR==r {{print $1}}' {input.target_file})
+        echo $chr
         start=$(awk -v r=${{line_nb}} 'NR==r {{print $2}}' {input.target_file})
+        echo $start
         end=$(awk -v r=${{line_nb}} 'NR==r {{print $3}}' {input.target_file})
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
 
