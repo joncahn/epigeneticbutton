@@ -1039,15 +1039,16 @@ rule prep_browser_on_region:
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
         binsize=$(awk -v r={params.regionID} '$4==r {{print $5}}' {input.target_file})
         
-        htstart=$(awk -v r={params.regionID} '$4==r {{print $6}}' {input.target_file})
-        htwidth=$(awk -v r={params.regionID} '$4==r {{print $7}}' {input.target_file})
-        if [[ ${{htstart}} != "" ]]; then
-            printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htstart}
-            printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htwidth}
-        else
-            touch {output.htstart}
-            touch {output.htwidth}
-        fi
+        printf "chr: ${chr}\nstart: ${start|\nend: ${end}\n"
+        # htstart=$(awk -v r={params.regionID} '$4==r {{print $6}}' {input.target_file})
+        # htwidth=$(awk -v r={params.regionID} '$4==r {{print $7}}' {input.target_file})
+        # if [[ ${{htstart}} != "" ]]; then
+            # printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htstart}
+            # printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htwidth}
+        # else
+            # touch {output.htstart}
+            # touch {output.htwidth}
+        # fi
         
         # ### To get genes in the region
         # bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
