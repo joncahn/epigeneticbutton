@@ -1037,20 +1037,19 @@ rule prep_browser_on_region:
         printf "Extracting values for {params.regionID}\n"
         tmpregion="{params.regionID}"
         line_nb=${{tmpregion#line}}
-        chr=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
-        start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
-        end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
-        printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
+        chr=$(cat "{input.target_file}" | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
+        start=$(cat "{input.target_file}" | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
+        end=$(cat "{input.target_file}" | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
+        printf "${{chr}}\t${{start}}\t${{end}}\n" > "{output.templocus}"
 
-        # regionID=$(awk -v r=${{line_nb}} 'NR==r {{print $4}}' {input.target_file})
-        # binsize=$(awk -v r=${{line_nb}} 'NR==r {{print $5}}' {input.target_file})
+        # regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
+        # binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
         
-        # printf "chr: ${{chr}}\nstart: ${{start}}\nend: ${{end}}\nregion ID: ${{regionID}}\nbinsize: ${{binsize}}\n"
-        # htstart=$(awk -v r=${{line_nb}} '$4==r {{print $6}}' {input.target_file})
-        # htwidth=$(awk -v r=${{line_nb}} '$4==r {{print $7}}' {input.target_file})
+        # htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $6}}')
+        # htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $7}}')
         # if [[ ${{htstart}} != "" ]]; then
-            # printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htstart}
-            # printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > {output.htwidth}
+            # printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htstart}"
+            # printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htwidth}"
         # else
             # touch {output.htstart}
             # touch {output.htwidth}
