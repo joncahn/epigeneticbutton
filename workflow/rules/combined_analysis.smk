@@ -1049,46 +1049,46 @@ rule prep_browser_on_region:
             touch {output.htwidth}
         fi
         
-        ### To get genes in the region
-        bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
-        if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
-            printf "Getting gene track and extending to include full length genes"
-            grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
-        elif [ -s "{output.tempgenes}" ]; then
-            printf "Getting gene track and without extension"
-            bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            region="${{chr}}:${{start}}:${{end}}"
-        else
-            printf "No genes in this region"
-            region="${{chr}}:${{start}}:${{end}}"
-        fi
+        # ### To get genes in the region
+        # bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
+        # if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
+            # printf "Getting gene track and extending to include full length genes"
+            # grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
+            # region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
+        # elif [ -s "{output.tempgenes}" ]; then
+            # printf "Getting gene track and without extension"
+            # bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
+            # region="${{chr}}:${{start}}:${{end}}"
+        # else
+            # printf "No genes in this region"
+            # region="${{chr}}:${{start}}:${{end}}"
+        # fi
         
-        ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ {params.TEfile} == "none" ]]; then
-            printf "No TE file provided\n"
-            touch {output.tes}
-        else
-            printf "Getting TE track\n"
-            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-        fi
+        # ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
+        # if [[ {params.TEfile} == "none" ]]; then
+            # printf "No TE file provided\n"
+            # touch {output.tes}
+        # else
+            # printf "Getting TE track\n"
+            # bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+        # fi
         
-        printf "Testing if all bw have data on the chromosome\n"
-        filelist2=()
-        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
-        path="{output.trackfolder}/{{lab}}_empty"
-        bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
-        if [[ -s "{{path}}.bg" ]]; then
-            printf "{{lab}} has data on ${{chr}}\n"
-            filelist2+=("{{bw}}")
-        else
-            printf "{{lab}} is empty on ${{chr}}\n"
-            grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
-            bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
-            filelist2+=("${{path}}.bw")
-        fi
-        rm -f "${{path}}.bg"
-        {{% endfor %}}
+        # printf "Testing if all bw have data on the chromosome\n"
+        # filelist2=()
+        # {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
+        # path="{output.trackfolder}/{{lab}}_empty"
+        # bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
+        # if [[ -s "{{path}}.bg" ]]; then
+            # printf "{{lab}} has data on ${{chr}}\n"
+            # filelist2+=("{{bw}}")
+        # else
+            # printf "{{lab}} is empty on ${{chr}}\n"
+            # grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
+            # bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
+            # filelist2+=("${{path}}.bw")
+        # fi
+        # rm -f "${{path}}.bg"
+        # {{% endfor %}}
         
         # printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
         # multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
