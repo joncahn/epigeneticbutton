@@ -1085,7 +1085,7 @@ rule prep_browser_on_region:
         bws=({input.bigwigs})
         nb_samples=$((${{#bws[@]}} -1))
         labels=({params.labels})
-        backcolors=({params.backcolors})
+        backcolors=({params.backcolors})
         trackcolors=({params.trackcolors})
         fillcolorsplus=({params.fillcolorsplus})
         fillcolorsminus=({params.fillcolorsminus})
