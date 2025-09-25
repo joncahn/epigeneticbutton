@@ -1077,11 +1077,23 @@ rule prep_browser_on_region:
             printf "Getting TE track\n"
             bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
         fi
-        printf "${{region}}\n"
-        printf "genes:\n"
-        cat {output.genes}
-        printf "TEs:\n"
-        cat {output.tes}
+        printf "Testing if all bw have data on the chromosome\n"
+        filelist2=()
+        {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
+        printf "bw: {{bw}}\nlab: {{lab}}\nback: {{back}}\ntrack: {{track}}\nplus: {{plus}}\nminus: {{minus}}\n\n"
+        path="{output.trackfolder}/{{lab}}_empty"
+        bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} "${{path}}.bg"
+        if [[ -s "${{path}}.bg" ]]; then
+            printf "{{lab}} has data on ${{chr}}\n"
+            filelist2+=("{{bw}}")
+        else
+            printf "{{lab}} is empty on ${{chr}}\n"
+            grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
+            bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
+            filelist2+=("${{path}}.bw")
+        fi
+        rm -f "${{path}}.bg"
+        {{% endfor %}}
         
         printf "\n\nso far so good\n"
         }} 2>&1 | tee -a "{log}" 
