@@ -1033,91 +1033,22 @@ rule prep_browser_on_region:
         tmp=config["resources"]["prep_browser_on_region"]["tmp"]
     shell:
         """
+        {{
         printf "Extracting values for {params.regionID}\n"
         tmpregion="{params.regionID}"
         line_nb=$(echo "${{tmpregion}}" | sed 's/line//')
         chr=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
         start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
         end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
-        printf "${{chr}}\t${{start}}\t${{end}}\n" > "{log}"
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
 
-        # regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
-        # binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
+        regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
+        binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
         
-        # htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $6}}')
-        # htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $7}}')
-        # if [[ ${{htstart}} != "" ]]; then
-            # printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htstart}"
-            # printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htwidth}"
-        # else
-            # touch {output.htstart}
-            # touch {output.htwidth}
-        # fi
-        
-        # ### To get genes in the region
-        # bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
-        # if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
-            # printf "Getting gene track and extending to include full length genes"
-            # grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            # region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
-        # elif [ -s "{output.tempgenes}" ]; then
-            # printf "Getting gene track and without extension"
-            # bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            # region="${{chr}}:${{start}}:${{end}}"
-        # else
-            # printf "No genes in this region"
-            # region="${{chr}}:${{start}}:${{end}}"
-        # fi
-        
-        # ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        # if [[ {params.TEfile} == "none" ]]; then
-            # printf "No TE file provided\n"
-            # touch {output.tes}
-        # else
-            # printf "Getting TE track\n"
-            # bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-        # fi
-        
-        # printf "Testing if all bw have data on the chromosome\n"
-        # filelist2=()
-        # {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
-        # path="{output.trackfolder}/{{lab}}_empty"
-        # bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} {{bw}} ${{path}}.bg
-        # if [[ -s "{{path}}.bg" ]]; then
-            # printf "{{lab}} has data on ${{chr}}\n"
-            # filelist2+=("{{bw}}")
-        # else
-            # printf "{{lab}} is empty on ${{chr}}\n"
-            # grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > ${{path}}.bg
-            # bedGraphToBigWig ${{path}}.bg {input.chrom_sizes} ${{path}}.bw
-            # filelist2+=("${{path}}.bw")
-        # fi
-        # rm -f "${{path}}.bg"
-        # {{% endfor %}}
-        
-        # printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
-        # multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
-
-        # ### printf "Name\tMark\tType\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
-        # printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
-        # {{% for bw, lab, back, track, plus, minus in params.zip_bw_label_colors %}}
-        # path="{output.trackfolder}/{{lab}}_empty"
-        # printf "Making bw for {{lab}}\n"
-        # col=($(awk -v ORS=" " -v t={{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
-        # if [[ "{{lab}}" ~ "minus" ]]; then
-            # awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
-        # else
-            # awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > ${{path}}.bedGraph
-        # fi
-        # bedGraphToBigWig ${{path}}.bedGraph {input.chrom_sizes} ${{path}}.bw
-            
-        # ### ylimmin=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
-        # ### ylimmax=$(cat ${{path}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
-        # ### printf "{{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\t${{ylimmin}}\t${{ylimmax}}\n" >> {output.filenames}
-            
-        # printf "{{lab}}\t${{path}}.bw\t{{back}}\t{{track}}\t{{plus}}\t{{minus}}\n" >> {output.filenames}
-        # {{% endfor %}}
+        htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $6}}')
+        htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $7}}')
+        printf "htstart: ${{htstart}}\nhtwidth: ${{htwidth}}\n" > "{log}"
+        }} 2>&1 | tee -a "{log}" 
         """
 
 rule make_single_loci_browser_plot:
