@@ -1142,8 +1142,7 @@ rule prep_browser_on_region:
                     ymax={params.chh_scale}
                 fi
             fi
-            echo $ymin
-            echo $ymax
+            printf "${{lab}}\t${{path}}.bw\t${{back}}\t${{track}}\t${{plus}}\t${{minus}}\t${{ymin}}\t${{ymax}}\n" >> {output.filenames}
         done < {params.sample_table}
         
         }} 2>&1 | tee -a "{log}" 
