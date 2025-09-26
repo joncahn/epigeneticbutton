@@ -260,7 +260,7 @@ def define_key_for_plots(wildcards, string):
     back_palette = assign_colors(types, "tab20")
     track_palette = assign_colors(marks, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
-    minus_palette = make_it_lighter(track_palette, 1.6)
+    minus_palette = make_it_lighter(track_palette, 1.4)
     backcolors = [back_palette[label_to_type[lab]] for lab in labels]
     trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
@@ -1014,8 +1014,8 @@ rule prep_browser_on_region:
         filenames = temp("results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         genes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff"),
         tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
-        htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
