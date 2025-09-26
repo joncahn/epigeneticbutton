@@ -1094,7 +1094,7 @@ rule prep_browser_on_region:
         
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
-        mkdir "{params.trackfolder}"
+        rm -rf "{params.trackfolder}" && mkdir "{params.trackfolder}"
         while read bw lab back track plus minus mark
         do
             path="{params.trackfolder}/${{lab}}_empty"
