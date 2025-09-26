@@ -14,7 +14,7 @@ if ( file.exists(args[2]) ) {
 	genes<-c()
 }
 
-head(genes)
+head(genes(genes))
 
 tes<-import(args[3], format="bed")
 plotname<-args[4]
