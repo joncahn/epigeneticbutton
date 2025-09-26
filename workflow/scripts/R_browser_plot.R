@@ -62,10 +62,29 @@ for ( i in c(1:tot) ) {
 
 axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
 
-genes(genes)
-transcripts(genes)
+txs <- GenomicFeatures::transcripts(genes)
+tx_names <- if (!is.null(mcols(txs)$tx_name)) {
+  as.character(mcols(txs)$tx_name)
+} else if (!is.null(names(txs))) {
+  names(txs)
+} else {
+  paste0("tx", seq_along(txs))
+}
 
-genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=TRUE, stacking = "dense",transcriptAnnotation="gene")
+txByGene <- GenomicFeatures::transcriptsBy(genes, by = "gene")
+
+map <- unlist(lapply(names(txByGene), function(g) {
+  txs_in_gene <- mcols(txByGene[[g]])$tx_name
+  if (is.null(txs_in_gene)) txs_in_gene <- names(txByGene[[g]])
+  setNames(rep(g, length(txs_in_gene)), txs_in_gene)
+}), use.names = TRUE)
+
+gene_label_for_tx <- as.character(map[tx_names])
+idx_na <- which(is.na(gene_label_for_tx) | gene_label_for_tx == "")
+if (length(idx_na)) gene_label_for_tx[idx_na] <- tx_names[idx_na]
+
+genetrack <- Gviz::GeneRegionTrack(txs, name = "Genes", shape = "smallArrow", col = "black", fill = "grey60", rotation.title = 0, cex.title = 0.5, lwd = 0.1, collapseTranscripts = "meta", showId = TRUE, stacking = "dense", transcriptAnnotation = "transcript")
+symbol(genetrack) <- gene_label_for_tx
 
 tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
 
