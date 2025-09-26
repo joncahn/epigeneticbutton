@@ -10,7 +10,7 @@ def define_combined_target_file(wildcards):
     
     if target_name == heatname:
         return config['heatmap_target_file']
-    elif target_name.startswith(browsername):
+    elif target_name == browsername:
         return config['browser_target_file']
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
