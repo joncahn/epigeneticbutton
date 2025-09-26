@@ -1023,6 +1023,7 @@ rule prep_browser_on_region:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
+        labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
@@ -1085,8 +1086,22 @@ rule prep_browser_on_region:
         filelist2=()
         while read bw lab back track plus minus
         do
-            echo "bw: $bw\nlab: $lab\nback: $back\ntrack: $track\nplus: $plus\nminus: $minus\n\n"
+            path="{output.trackfolder}/${{lab}}_empty"
+            echo $path
+            bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{bw}} "${{path}}.bg"
+            if [[ -s "${{path}}.bg" ]]; then
+                printf "${{lab}} has data on ${{chr}}\n"
+                filelist2+=("${{bw}}")
+            else
+                printf "${{lab}} is empty on ${{chr}}\n"
+                grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
+                bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
+                filelist2+=("${{path}}.bw")
+            fi
+            rm -f "${{path}}.bg"        
         done < {params.sample_table}
+        printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
+        multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs=${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
         
         printf "\n\nso far so good\n"
         }} 2>&1 | tee -a "{log}" 
