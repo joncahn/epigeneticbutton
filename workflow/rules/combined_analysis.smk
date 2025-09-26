@@ -1016,6 +1016,7 @@ rule prep_browser_on_region:
         tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
@@ -1054,6 +1055,8 @@ rule prep_browser_on_region:
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
 
         regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
+        printf "${{regionID}}\n" > {output.name}
+        
         binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
         
         htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $6}}')
@@ -1153,6 +1156,7 @@ rule make_single_loci_browser_plot:
         filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
         tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
+        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"
     output:
@@ -1174,10 +1178,10 @@ rule make_single_loci_browser_plot:
         {{
         if [[ -s {input.htstart} ]]; then
             printf "\nPlotting browser on {params.regionID} with higlights\n\n"
-            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.title}" "{input.htstart}" "{input.htwidth}"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{input.name}" "{params.title}" "{input.htstart}" "{input.htwidth}"
         else
             printf "\nPlotting browser on {params.regionID} without higlights\n\n"
-            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.title}"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{input.name}" "{params.title}"
         fi
         rm -rf {params.trackfolder}
         }} 2>&1 | tee -a "{log}"
