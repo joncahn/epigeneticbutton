@@ -1074,11 +1074,13 @@ rule prep_browser_on_region:
         if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
             printf "Getting gene track and extending to include full length genes\n"
             bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
+            region=$(awk -v OFS=":" -v c=${{chr}} -v s=${{start}} -v e=${{end}} 'BEGIN {{m=s; n=e}} {{if (s>$4-1) s=$4-1; if (e<$5) e=$5;}} END {{print c,m,n}}' {output.genes})
+            echo $region
         elif [[ -s "{output.tempgenes}" ]]; then
             printf "Getting gene track without extension\n"
             bedtools intersect -wb -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' > {output.genes}
             region="${{chr}}:${{start}}:${{end}}"
+            echo $region
         else
             printf "No genes in this region\n"
             region="${{chr}}:${{start}}:${{end}}"

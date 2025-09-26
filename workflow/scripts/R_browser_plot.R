@@ -61,7 +61,7 @@ for ( i in c(1:tot) ) {
 }
 
 axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
-genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showID=TRUE, stacking = "dense")
+genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showID=TRUE, stacking = "dense", transcriptAnnotation="gene")
 tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
 
 if ( length(htcol) > 0 ) {
