@@ -1059,8 +1059,8 @@ rule prep_browser_on_region:
         
         binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
         
-        htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $6}}')
-        htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} '$4==r {{print $7}}')
+        htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $6}}')
+        htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $7}}')
         if [[ ${{htstart}} != "" ]]; then
             printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htstart}"
             printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htwidth}"
@@ -1072,11 +1072,11 @@ rule prep_browser_on_region:
         ### To get genes in the region
         bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
         if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
-            printf "Getting gene track without extension\n"
+            printf "Getting gene track and extending to include full length genes\n"
             bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
             region="${{chr}}:${{start}}:${{end}}"
         elif [[ -s "{output.tempgenes}" ]]; then
-            printf "Getting gene track and extending to include full length genes\n"
+            printf "Getting gene track without extension\n"
             grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
             region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
         else
@@ -1176,12 +1176,13 @@ rule make_single_loci_browser_plot:
     shell:
         """
         {{
+        name=$(cat {input.name})
         if [[ -s {input.htstart} ]]; then
             printf "\nPlotting browser on {params.regionID} with higlights\n\n"
-            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{input.name}" "{params.title}" "{input.htstart}" "{input.htwidth}"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}" "{input.htstart}" "{input.htwidth}"
         else
             printf "\nPlotting browser on {params.regionID} without higlights\n\n"
-            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{input.name}" "{params.title}"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}"
         fi
         rm -rf {params.trackfolder}
         }} 2>&1 | tee -a "{log}"
