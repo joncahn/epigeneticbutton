@@ -1114,6 +1114,7 @@ rule prep_browser_on_region:
             else
                 awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
             fi
+            bedGraphToBigWig "${{path}}.bedGraph" {input.chrom_sizes} "${{path}}.bw"
 
         done < {params.sample_table}
         
@@ -1146,7 +1147,7 @@ rule make_single_loci_browser_plot:
             printf "\nPlotting browser on {params.regionID} with higlights\n\n"
             Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.title}" "{input.htstart}" "{input.htwidth}"
         else
-            printf "\nPlotting browser on ${ID} without higlights\n\n"
+            printf "\nPlotting browser on {params.regionID} without higlights\n\n"
             Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "{params.title}"
         fi
         }} 2>&1 | tee -a "{log}"
