@@ -65,7 +65,7 @@ axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
 genes(genes)
 transcripts(genes)
 
-genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=TRUE, stacking = "dense",transcriptAnnotation="genes")
+genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=TRUE, stacking = "dense",transcriptAnnotation="gene")
 
 tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
 
