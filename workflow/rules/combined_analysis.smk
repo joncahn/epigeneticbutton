@@ -1103,6 +1103,16 @@ rule prep_browser_on_region:
         printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs ${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
         
+        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
+        while read bw lab back track plus minus
+        do
+            path="{output.trackfolder}/${{lab}}_empty"
+            printf "Making bw for ${{lab}}\n"
+            col=($(awk -v ORS=" " -v t=${{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
+            echo $col
+            echo ${{col[*]}}
+        done < {params.sample_table}
+        
         }} 2>&1 | tee -a "{log}" 
         """
 
