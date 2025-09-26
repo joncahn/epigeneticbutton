@@ -1016,7 +1016,6 @@ rule prep_browser_on_region:
         tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        trackfolder = directory("results/combined/matrix/tracks_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}"),
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
@@ -1027,6 +1026,7 @@ rule prep_browser_on_region:
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
+        trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
         extend_browser = config['extend_browser'],
@@ -1091,10 +1091,10 @@ rule prep_browser_on_region:
         
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
-        mkdir "{output.trackfolder}"
+        mkdir "{params.trackfolder}"
         while read bw lab back track plus minus mark
         do
-            path="{output.trackfolder}/${{lab}}_empty"
+            path="{params.trackfolder}/${{lab}}_empty"
             bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{bw}} "${{path}}.bg"
             if [[ -s "${{path}}.bg" ]]; then
                 printf "${{lab}} has data on ${{chr}}\n"
@@ -1113,7 +1113,7 @@ rule prep_browser_on_region:
         printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
         while read bw lab back track plus minus mark
         do
-            path="{output.trackfolder}/${{lab}}_${{mark}}"
+            path="{params.trackfolder}/${{lab}}_${{mark}}"
             printf "Making bw for ${{lab}}\n"
             col=($(awk -v ORS=" " -v t=${{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
             if [[ "${{lab}}" == *_minus ]]; then
@@ -1127,8 +1127,8 @@ rule prep_browser_on_region:
                 ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
                 ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
             elif [[ {params.browser_scales} == "type" ]]; then
-                ymin=$(cat {output.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
-                ymax=$(cat {output.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
+                ymin=$(cat {params.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
+                ymax=$(cat {params.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
             fi
             if [[ {params.mc_scales} == "True" ]]; then
                 if [[ ${{mark}} == "mCG" ]]; then
