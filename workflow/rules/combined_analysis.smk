@@ -265,6 +265,7 @@ def define_key_for_plots(wildcards, string):
     trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsminus = [minus_palette[label_to_mark[lab]] for lab in labels]
+    alignedmarks = [marks[label_to_mark[lab]] for lab in labels]
     
     if string == "bigwigs":
         return bigwigs
@@ -281,6 +282,7 @@ def define_key_for_plots(wildcards, string):
             "trackcolors": trackcolors,
             "fillcolorsplus": fillcolorsplus,
             "fillcolorsminus": fillcolorsminus,
+            "marks": alignedmarks,
         })
         tab.to_csv(table_name, sep="\t", index=False, header=False)
         return table_name
@@ -1085,7 +1087,7 @@ rule prep_browser_on_region:
         printf "Testing if all bw have data on the chromosome\n"
         filelist2=()
         mkdir "{output.trackfolder}"
-        while read bw lab back track plus minus
+        while read bw lab back track plus minus mark
         do
             path="{output.trackfolder}/${{lab}}_empty"
             bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{bw}} "${{path}}.bg"
@@ -1104,7 +1106,7 @@ rule prep_browser_on_region:
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs ${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
         
         printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
-        while read bw lab back track plus minus
+        while read bw lab back track plus minus mark
         do
             path="{output.trackfolder}/${{lab}}_empty"
             printf "Making bw for ${{lab}}\n"
@@ -1115,7 +1117,11 @@ rule prep_browser_on_region:
                 awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
             fi
             bedGraphToBigWig "${{path}}.bedGraph" {input.chrom_sizes} "${{path}}.bw"
-
+            
+            ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
+            ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
+            echo $ymin
+            echo $ymax
         done < {params.sample_table}
         
         }} 2>&1 | tee -a "{log}" 
@@ -1136,6 +1142,7 @@ rule make_single_loci_browser_plot:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_browser_plot.R")
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "single_browser_{target_name}_{regionID}"))
+    conda: CONDA_ENV
     threads: config["resources"]["make_single_loci_browser_plot"]["threads"]
     resources:
         mem=config["resources"]["make_single_loci_browser_plot"]["mem"],
@@ -1160,6 +1167,7 @@ rule merge_region_browser_plots:
         merged_plots = "results/combined/plots/Browser_{target_name}__{env}__{analysis_name}__{ref_genome}.pdf"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "merging_browser_{target_name}"))
+    conda: CONDA_ENV
     threads: config["resources"]["merge_region_browser_plots"]["threads"]
     resources:
         mem=config["resources"]["merge_region_browser_plots"]["mem"],
