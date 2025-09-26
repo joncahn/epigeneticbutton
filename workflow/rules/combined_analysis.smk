@@ -265,7 +265,7 @@ def define_key_for_plots(wildcards, string):
     trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsminus = [minus_palette[label_to_mark[lab]] for lab in labels]
-    alignedmarks = [marks[label_to_mark[lab]] for lab in labels]
+    alignedmarks = [label_to_mark[lab] for lab in labels]
     
     if string == "bigwigs":
         return bigwigs
