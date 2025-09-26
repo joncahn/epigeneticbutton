@@ -16,7 +16,9 @@ if ( file.exists(args[2]) ) {
 
 tes<-import(args[3], format="bed")
 plotname<-args[4]
-filemame<-args[5]
+pdfmame<-args[5]
+
+tot<-nrow(filenames)
 
 htcol<-c()
 htcol2<-c()
@@ -39,7 +41,7 @@ options(ucscChromosomeNames=FALSE)
 
 tracksize<-c(1,1,0.5)
 tracklist<-list()
-for ( i in c(1:nrow(filenames)) ) {
+for ( i in c(1:tot) ) {
 	label<-filenames$Name[i]
 	path<-filenames$Path[i]
 	backcolor<-filenames$Backcolor[i]
@@ -64,12 +66,12 @@ tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen
 
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
-	pdf(title,paper="a4",horizontal = TRUE)
+	pdf(pdfmame, width = 12, height = tot)
 	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
-	pdf(title,paper="a4",horizontal = TRUE)
+	pdf(pdfmame,paper="a4", width = 12, height = tot)
 	plotTracks(tracks, sizes=tracksize, main=plotname)
 	dev.off()
 }
