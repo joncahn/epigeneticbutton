@@ -1085,7 +1085,7 @@ rule prep_browser_on_region:
         printf "Testing if all bw have data on the chromosome\n"
         bws=({input.bigwigs})
         nbsamples={params.nbsamples}
-        nb=$((nb-1))
+        nb=$((nbsamples-1))
         labels=({params.labels})
         backcolors=({params.backcolors})
         trackcolors=({params.trackcolors})
