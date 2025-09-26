@@ -3,18 +3,68 @@
 library(Gviz)
 library(GenomicFeatures)
 library(rtracklayer)
-library(txdbmaker)
 
 args = commandArgs(trailingOnly=TRUE)
 
 filenames<-read.delim(args[1], header=TRUE)
 if ( file.exists(args[2]) ) {
-	genes<-txdbmaker::makeTxDbFromGFF(args[2], format="gff")
+
+	gff <- import(args[2], format = "gff3")
+	gene_types <- c("gene")
+	tx_types   <- c("mRNA", "transcript")
+	genes_gff  <- gff[gff$type %in% gene_types]
+	trans_gff  <- gff[gff$type %in% tx_types]
+	exons_gff  <- gff[gff$type == "exon"]
+
+	stopifnot(!is.null(mcols(trans_gff)$ID) || length(trans_gff) == 0)
+	stopifnot(!is.null(mcols(trans_gff)$Parent) || length(trans_gff) == 0)
+	stopifnot(!is.null(mcols(exons_gff)$Parent))
+
+	parents_list <- strsplit(as.character(mcols(exons_gff)$Parent), ",")
+	rep_idx      <- rep(seq_along(exons_gff), lengths(parents_list))
+	trans_ids    <- unlist(parents_list, use.names = FALSE)
+	exons_expanded <- exons_gff[rep_idx]
+	mcols(exons_expanded)$transcript <- trans_ids
+
+	tx_to_gene <- character(0)
+	if (length(trans_gff) > 0 && !is.null(mcols(trans_gff)$ID) && !is.null(mcols(trans_gff)$Parent)) {
+		tx_ids    <- as.character(mcols(trans_gff)$ID)
+		tx_pars   <- as.character(mcols(trans_gff)$Parent)  # usually gene ID
+		tx_to_gene <- setNames(tx_pars, tx_ids)
+	} else if (length(genes_gff) > 0 && !is.null(mcols(genes_gff)$ID)) {
+		overlaps <- findOverlaps(exons_expanded, genes_gff)
+		gene_ids <- as.character(mcols(genes_gff)$ID)
+		mapped <- rep(NA_character_, length(exons_expanded))
+		mapped[queryHits(overlaps)] <- gene_ids[subjectHits(overlaps)]
+		mcols(exons_expanded)$symbol <- mapped
+	}
+
+	if (length(tx_to_gene) > 0) {
+		gene_labels <- tx_to_gene[ mcols(exons_expanded)$transcript ]
+		na_idx <- which(is.na(gene_labels) | gene_labels == "")
+		if (length(na_idx)) {
+			gene_labels[na_idx] <- as.character(mcols(exons_expanded)$transcript[na_idx])
+		}
+		mcols(exons_expanded)$symbol <- as.character(gene_labels)
+	}
+
+	if (any(is.na(mcols(exons_expanded)$symbol))) {
+		warning("Some symbol labels are NA; they will be replaced by transcript IDs.")
+		na_idx <- which(is.na(mcols(exons_expanded)$symbol))
+		mcols(exons_expanded)$symbol[na_idx] <- as.character(mcols(exons_expanded)$transcript[na_idx])
+	}
+	
+	genetrack <- GeneRegionTrack(exons_expanded, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=TRUE, stacking="dense",transcriptAnnotation="symbol")
+
+#	genes<-txdbmaker::makeTxDbFromGFF(args[2], format="gff")
+# 	genetrack <- GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=TRUE, stacking="dense", transcriptAnnotation="symbol")
 } else {
 	genes<-c()
 }
 
 tes<-import(args[3], format="bed")
+tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
+
 plotname<-args[4]
 pdfmame<-args[5]
 
@@ -62,41 +112,15 @@ for ( i in c(1:tot) ) {
 
 axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
 
-txs <- GenomicFeatures::transcripts(genes)
-tx_names <- if (!is.null(mcols(txs)$tx_name)) {
-  as.character(mcols(txs)$tx_name)
-} else if (!is.null(names(txs))) {
-  names(txs)
-} else {
-  paste0("tx", seq_along(txs))
-}
-
-txByGene <- GenomicFeatures::transcriptsBy(genes, by = "gene")
-
-map <- unlist(lapply(names(txByGene), function(g) {
-  txs_in_gene <- mcols(txByGene[[g]])$tx_name
-  if (is.null(txs_in_gene)) txs_in_gene <- names(txByGene[[g]])
-  setNames(rep(g, length(txs_in_gene)), txs_in_gene)
-}), use.names = TRUE)
-
-gene_label_for_tx <- as.character(map[tx_names])
-idx_na <- which(is.na(gene_label_for_tx) | gene_label_for_tx == "")
-if (length(idx_na)) gene_label_for_tx[idx_na] <- tx_names[idx_na]
-
-genetrack <- Gviz::GeneRegionTrack(txs, name = "Genes", shape = "smallArrow", col = "black", fill = "grey60", rotation.title = 0, cex.title = 0.5, lwd = 0.1, collapseTranscripts = "meta", showId = TRUE, stacking = "dense", transcriptAnnotation = "transcript")
-symbol(genetrack) <- gene_label_for_tx
-
-tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
-
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
 	pdf(pdfmame, width = 12, height = tot)
-	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, title.width=3)
+	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
 	pdf(pdfmame,paper="a4", width = 12, height = tot)
-	plotTracks(tracks, sizes=tracksize, main=plotname, title.width=3)
+	plotTracks(tracks, sizes=tracksize, main=plotname)
 	dev.off()
 }
 
