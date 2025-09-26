@@ -272,14 +272,18 @@ def define_key_for_plots(wildcards, string):
         return labels
     elif string == "marks":
         return marks
-    elif string == "backcolors":
-        return backcolors
-    elif string == "trackcolors":
-        return trackcolors
-    elif string == "fillcolorsplus":
-        return fillcolorsplus
-    elif string == "fillcolorsminus":
-        return fillcolorsminus
+    elif string == "table":
+        table_name = f"results/combined/matrix/sample_table__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.tab"
+        tab = pd.DataFrame({
+            "bigwigs": bigwigs,
+            "labels": labels,
+            "backcolors": backcolors,
+            "trackcolors": trackcolors,
+            "fillcolorsplus": fillcolorsplus,
+            "fillcolorsminus": fillcolorsminus,
+        })
+        tab.to_csv(table_name, sep="\t", index=False, header=False)
+        return table_name
 
 def define_individual_browser_plots(wildcards):
     files = []
@@ -1019,12 +1023,7 @@ rule prep_browser_on_region:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
-        labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
-        nbsamples = lambda wildcards: len(define_key_for_plots(wildcards, "labels")),
-        backcolors = lambda wildcards: define_key_for_plots(wildcards, "backcolors"),
-        trackcolors = lambda wildcards: define_key_for_plots(wildcards, "trackcolors"),
-        fillcolorsplus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorsplus"),
-        fillcolorsminus = lambda wildcards: define_key_for_plots(wildcards, "fillcolorsminus"),
+        sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
         extend_browser = config['extend_browser']
@@ -1083,25 +1082,11 @@ rule prep_browser_on_region:
         fi
         
         printf "Testing if all bw have data on the chromosome\n"
-        bws=({input.bigwigs})
-        nbsamples={params.nbsamples}
-        labels=({params.labels})
-        backcolors=({params.backcolors})
-        trackcolors=({params.trackcolors})
-        fillcolorsplus=({params.fillcolorsplus})
-        fillcolorsminus=({params.fillcolorsminus})
-        
         filelist2=()
-        for i in $(seq 0 $nbsamples)
+        while read bw lab back track plus minus
         do
-            bw="${{bws[i]}}"
-            lab="${{labels[i]}}"
-            back="${{backcolors[i]}}"
-            track="${{trackcolors[i]}}"
-            plus="${{fillcolorsplus[i]}}"
-            minus="${{fillcolorsminus[i]}}"
-            echo "sample #: $i\nbw: $bw\nlab: $lab\nback: $back\ntrack: $track\nplus: $plus\nminus: $minus\n\n"
-        done
+            echo "bw: $bw\nlab: $lab\nback: $back\ntrack: $track\nplus: $plus\nminus: $minus\n\n"
+        done < {params.sample_table}
         
         printf "\n\nso far so good\n"
         }} 2>&1 | tee -a "{log}" 
