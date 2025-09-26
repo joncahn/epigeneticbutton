@@ -15,13 +15,14 @@ if ( file.exists(args[2]) ) {
 }
 
 tes<-import(args[3], format="bed")
-title<-args[4]
+plotname<-args[4]
+filemame<-args[5]
 
 htcol<-c()
 htcol2<-c()
-if ( length(args) == 6 ) {
-	htstarttable<-read.delim(args[5], header=FALSE)
-	htwidthtable<-read.delim(args[6], header=FALSE)
+if ( length(args) == 7 ) {
+	htstarttable<-read.delim(args[6], header=FALSE)
+	htwidthtable<-read.delim(args[7], header=FALSE)
 	colors<-c("#B7E2FD","#fac0c7","#fac0c7","#fac0c7","#fac0c7","#fac0c7")
 	colors2<-c("#F6FBFE","#fffafa","#fffafa","#fffafa","#fffafa","#fffafa")
 	htstart<-c()
@@ -63,12 +64,12 @@ tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen
 
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
-	pdf(title,paper="a4")
+	pdf(title,paper="a4",horizontal = TRUE)
 	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, title.width=2.5)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
-	pdf(title,paper="a4")
+	pdf(title,paper="a4",horizontal = TRUE)
 	plotTracks(tracks, sizes=tracksize, title.width=2.5)
 	dev.off()
 }
