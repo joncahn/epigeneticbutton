@@ -1085,7 +1085,6 @@ rule prep_browser_on_region:
         printf "Testing if all bw have data on the chromosome\n"
         bws=({input.bigwigs})
         nbsamples={params.nbsamples}
-        nb=$((nbsamples-1))
         labels=({params.labels})
         backcolors=({params.backcolors})
         trackcolors=({params.trackcolors})
@@ -1093,7 +1092,7 @@ rule prep_browser_on_region:
         fillcolorsminus=({params.fillcolorsminus})
         
         filelist2=()
-        for i in $(seq 0 $nb)
+        for i in $(seq 0 $nbsamples)
         do
             bw="${{bws[i]}}"
             lab="${{labels[i]}}"
