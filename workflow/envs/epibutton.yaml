@@ -23,4 +23,5 @@ dependencies:
   - bioconductor-gviz
   - bioconductor-genomicfeatures
   - bioconductor-rtracklayer
+  - bioconductor-txdbmaker
 
