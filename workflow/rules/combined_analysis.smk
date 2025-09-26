@@ -1029,7 +1029,12 @@ rule prep_browser_on_region:
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
         regionID = lambda wildcards: wildcards.regionID,
         TEfile = config['browser_TE_file'],
-        extend_browser = config['extend_browser']
+        extend_browser = config['extend_browser'],
+        browser_scales = config['browser_scales'],
+        mc_scales = config['fixed_mc_scales'],
+        cg_scale = config['fixed_mcg'],
+        chg_scale = config['fixed_mchg'],
+        chh_scale = config['fixed_mchh']
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "prep_files_{target_name}_{regionID}"))
     conda: CONDA_ENV
@@ -1100,7 +1105,7 @@ rule prep_browser_on_region:
                 bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
                 filelist2+=("${{path}}.bw")
             fi
-            rm -f "${{path}}.bg"        
+            rm -f "${{path}}.bg"            
         done < {params.sample_table}
         printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs ${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
@@ -1108,7 +1113,7 @@ rule prep_browser_on_region:
         printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
         while read bw lab back track plus minus mark
         do
-            path="{output.trackfolder}/${{lab}}_empty"
+            path="{output.trackfolder}/${{lab}}_${{mark}}"
             printf "Making bw for ${{lab}}\n"
             col=($(awk -v ORS=" " -v t=${{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
             if [[ "${{lab}}" == *_minus ]]; then
@@ -1118,8 +1123,25 @@ rule prep_browser_on_region:
             fi
             bedGraphToBigWig "${{path}}.bedGraph" {input.chrom_sizes} "${{path}}.bw"
             
-            ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}' )
-            ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}' )
+            if [[ {params.browser_scales} == "sample" ]]; then
+                ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
+                ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
+            elif [[ {params.browser_scales} == "type" ]]; then
+                ymin=$(cat {output.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
+                ymax=$(cat {output.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
+            fi
+            if [[ {params.mc_scales} == "True" ]]; then
+                if [[ ${{mark}} == "mCG" ]]; then
+                    ymin=0
+                    ymax={params.fixed_cg}
+                elif [[ ${{mark}} == "mCHG" ]]; then
+                    ymin=0
+                    ymax={params.fixed_chg}
+                elif [[ ${{mark}} == "mCHH" ]]; then
+                    ymin=0
+                    ymax={params.fixed_chh}
+                fi
+            fi
             echo $ymin
             echo $ymax
         done < {params.sample_table}
