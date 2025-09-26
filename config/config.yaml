@@ -1,5 +1,5 @@
 # Path to the working directory where the repository was cloned
-repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/picbutton"
+repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/devel"
 repo_folder_rule: "path/to/epigeneticbutton/repo"
 
 # Name of the run
@@ -203,7 +203,6 @@ heatmap_target_file: "data/target_genes.bed" # bed file containing the regions t
 browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
 browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
 browser_TE_file: "none" # to be replaced with a bed file of TEs
-extend_browser: false # Whether the browser should be extended to all the genes intersected by the region of interest or fixed to the specific coordinates
 browser_scales: "sample" # options: [ 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 fixed_mc_scales: true # Whether the scales for mC should be fixed to the value below
 fixed_mcg: 100

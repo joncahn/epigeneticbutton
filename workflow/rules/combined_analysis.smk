@@ -1012,11 +1012,11 @@ rule prep_browser_on_region:
         all_genes = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
     output:
         filenames = temp("results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        genes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff"),
+        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
         tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
-        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        name = temp("results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
@@ -1053,6 +1053,7 @@ rule prep_browser_on_region:
         start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
         end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
         printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
+        region="${{chr}}:${{start}}:${{end}}"
 
         regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
         printf "${{regionID}}\n" > {output.name}
@@ -1071,19 +1072,11 @@ rule prep_browser_on_region:
         
         ### To get genes in the region
         bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
-        if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
-            printf "Getting gene track and extending to include full length genes\n"
-            bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            region=$(awk -v OFS=":" -v c=${{chr}} -v s=${{start}} -v e=${{end}} 'BEGIN {{m=s; n=e}} {{if (m>$4-1) m=$4-1; if (n<$5) n=$5;}} END {{print c,m,n}}' {output.genes})
-            echo $region
-        elif [[ -s "{output.tempgenes}" ]]; then
-            printf "Getting gene track without extension\n"
+        if [[ -s "{output.tempgenes}" ]]; then
+            printf "Getting gene track\n"
             bedtools intersect -wb -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' > {output.genes}
-            region="${{chr}}:${{start}}:${{end}}"
-            echo $region
         else
             printf "No genes in this region\n"
-            region="${{chr}}:${{start}}:${{end}}"
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
         if [[ {params.TEfile} == "none" ]]; then
