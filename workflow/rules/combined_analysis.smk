@@ -1107,10 +1107,10 @@ rule prep_browser_on_region:
         printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\n" > {output.filenames}
         while read bw lab back track plus minus
         do
-            path="{output.trackfolder}/{{lab}}_empty"
+            path="{output.trackfolder}/${{lab}}_empty"
             printf "Making bw for ${{lab}}\n"
             col=($(awk -v ORS=" " -v t=${{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
-            if [[ "${{lab}}" ~ "minus" ]]; then
+            if [[ "${{lab}}" == *_minus ]]; then
                 awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
             else
                 awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
