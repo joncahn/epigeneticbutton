@@ -45,17 +45,15 @@ for ( i in c(1:nrow(filenames)) ) {
 	trackcolor<-filenames$Trackcolor[i]
 	fillcolorplus<-filenames$Fillcolorplus[i]
 	fillcolorminus<-filenames$Fillcolorminus[i]
-	# ymin<-filenames$Ymin[i]
-	# ymax<-filenames$Ymax[i]
-	# ymintick<-sign(ymin)*((floor(abs(ymin)*100)/100))
-	# ymaxtick<-sign(ymax)*((floor(abs(ymax)*100)/100))
+	ymin<-filenames$Ymin[i]
+	ymax<-filenames$Ymax[i]
+	ymintick<-sign(ymin)*((floor(abs(ymin)*100)/100))
+	ymaxtick<-sign(ymax)*((floor(abs(ymax)*100)/100))
 	tracksize<-c(tracksize,1)
 	print(paste0("Importing bw for ",label))
 	bw<-import(path)
 	print(paste0("Creating track for ",label))
-	track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
-	# when adding lmits
-	# track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolor1,fillcolor2), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
+	track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
 	tracklist<-append(tracklist, track)
 }
 
