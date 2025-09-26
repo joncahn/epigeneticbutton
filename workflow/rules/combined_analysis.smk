@@ -1074,7 +1074,7 @@ rule prep_browser_on_region:
         if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
             printf "Getting gene track and extending to include full length genes\n"
             bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
-            region=$(awk -v OFS=":" -v c=${{chr}} -v s=${{start}} -v e=${{end}} 'BEGIN {{m=s; n=e}} {{if (s>$4-1) s=$4-1; if (e<$5) e=$5;}} END {{print c,m,n}}' {output.genes})
+            region=$(awk -v OFS=":" -v c=${{chr}} -v s=${{start}} -v e=${{end}} 'BEGIN {{m=s; n=e}} {{if (m>$4-1) m=$4-1; if (n<$5) n=$5;}} END {{print c,m,n}}' {output.genes})
             echo $region
         elif [[ -s "{output.tempgenes}" ]]; then
             printf "Getting gene track without extension\n"
