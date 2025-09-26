@@ -14,7 +14,7 @@ if ( file.exists(args[2]) ) {
 	genes<-c()
 }
 
-tes<-import(args[3])
+tes<-import(args[3], format="bed")
 title<-args[4]
 
 htcol<-c()
@@ -57,12 +57,12 @@ for ( i in c(1:nrow(filenames)) ) {
 	tracklist<-append(tracklist, track)
 }
 
-axistrack<-GenomeAxisTrack(scale=0.1, labelPos = "above")
-genetrack<-GeneRegionTrack(genes, name = "Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showID=FALSE, stacking = "dense")
-tetrack<-AnnotationTrack(tes, name = "TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
+axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
+genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showID=FALSE, stacking = "dense")
+tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
 
 if ( length(htcol) > 0 ) {
-	httrack <- HighlightTrack(trackList=tracklist, start = htstart, width = htwidth, col=htcol, fill=htcol2)
+	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
 	pdf(title,paper="a4")
 	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, title.width=2.5)
 	dev.off()
