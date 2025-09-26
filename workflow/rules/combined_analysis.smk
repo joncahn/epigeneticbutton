@@ -1068,20 +1068,14 @@ rule prep_browser_on_region:
         
         ### To get genes in the region
         bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
-        printf "tempgenes:\n"
-        cat {output.tempgenes}
         if [[ -s "{output.tempgenes}" ]] && [[ "{params.extend_browser}" == "True" ]]; then
             printf "Getting gene track without extension\n"
             bedtools intersect -wa -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
             region="${{chr}}:${{start}}:${{end}}"
-            echo "genes:\n"
-            cat {output.genes}
         elif [[ -s "{output.tempgenes}" ]]; then
             printf "Getting gene track and extending to include full length genes\n"
             grep -f "{output.tempgenes}" {input.gff} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $0}}' > {output.genes}
             region=$(awk -v OFS=":" -v s=${{start}} -v e=${{end}} '{{if (NR==1) {{c=$1; a=$4-1;}}}} END {{b=$5; if (a<s) m=a; else m=s; if (b>e) n=b; else n=e; print c,m,n}}' {output.genes})
-            echo "genes:\n"
-            cat {output.genes}
         else
             printf "No genes in this region\n"
             region="${{chr}}:${{start}}:${{end}}"
