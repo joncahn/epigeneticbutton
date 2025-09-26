@@ -1133,13 +1133,13 @@ rule prep_browser_on_region:
             if [[ {params.mc_scales} == "True" ]]; then
                 if [[ ${{mark}} == "mCG" ]]; then
                     ymin=0
-                    ymax={params.fixed_cg}
+                    ymax={params.cg_scale}
                 elif [[ ${{mark}} == "mCHG" ]]; then
                     ymin=0
-                    ymax={params.fixed_chg}
+                    ymax={params.chg_scale}
                 elif [[ ${{mark}} == "mCHH" ]]; then
                     ymin=0
-                    ymax={params.fixed_chh}
+                    ymax={params.chh_scale}
                 fi
             fi
             echo $ymin
