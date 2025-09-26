@@ -67,12 +67,12 @@ tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
 	pdf(pdfmame, width = 12, height = tot)
-	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname)
+	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, title.width=3)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
 	pdf(pdfmame,paper="a4", width = 12, height = tot)
-	plotTracks(tracks, sizes=tracksize, main=plotname)
+	plotTracks(tracks, sizes=tracksize, main=plotname, title.width=3)
 	dev.off()
 }
 
