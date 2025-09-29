@@ -107,7 +107,7 @@ plot<-upset(mat, sampleslist, name="Peaks",
           ),
           "overall_sizes" = theme(
             panel.grid = element_blank(),
-			axis.text.x = element_text(angle = 45, hjust = 1),
+			axis.text.x = element_text(angle = 45),
             axis.ticks.x = element_line(linewidth = 0.25, color = "#2e2e2e")
           )
         )
