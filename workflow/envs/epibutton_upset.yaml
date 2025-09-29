@@ -1,0 +1,11 @@
+name: epibutton_upset
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-dplyr
+  - r-tidyr
+  - r-ggplot2=3.4
+  - r-rcolorbrewer
+  - r-complexupset

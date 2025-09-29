@@ -356,7 +356,7 @@ epigeneticbutton/
 Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, the sample it is compared to must be called 'Input'. It must also be sequenced either paired-end or single-end but the same than the IPs.
 
 2. ShortStack version\
-The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developper created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
+The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developer created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
 
 3. small RNA-seq libraries\
 Different small RNAseq libraries have different chemistry and might need to be trimmed differently. For now, the code only works if all your samples were done using the same library preparation, either netflex v3 or not. If you have a mix of libraries, you should run the pipeline with each kind separately, and then rerun the analysis with all the samples you want.
@@ -364,7 +364,7 @@ Different small RNAseq libraries have different chemistry and might need to be t
 4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
-5. Editing the theme in ComplexUpset does not work with ggplot2 4.0.0 (switch from S3 to S7 elements), which is why the ggplot2 is set to 3.5.2 in the `epibutton.yaml`.
+5. Editing the theme in ComplexUpset does not work with ggplot2>=3.5 (errors with themese and switch from S3 to S7 elements), which is why the ggplot2 is set to 3.4 in the `epibutton_upset.yaml` until it is resolved by developers.
 
 ## Features under development
 - RAMPAGE

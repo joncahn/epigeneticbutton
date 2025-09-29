@@ -1,3 +1,5 @@
+CONDA_ENV_UPSET=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_upset.yaml")
+
 # function to access logs more easily
 def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
@@ -627,7 +629,7 @@ rule plotting_upset_peaks:
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot.R")
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_upset_{target_name}_{env}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_UPSET
     threads: config["resources"]["plotting_upset_peaks"]["threads"]
     resources:
         mem=config["resources"]["plotting_upset_peaks"]["mem"],
