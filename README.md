@@ -364,7 +364,7 @@ Different small RNAseq libraries have different chemistry and might need to be t
 4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
-5. Editing the theme in ComplexUpset does not work with ggplot2 4.0.0 (switch from S3 to S7 elements), which is why the ggplot2 is set to 3.5.2.
+5. Editing the theme in ComplexUpset does not work with ggplot2 4.0.0 (switch from S3 to S7 elements), which is why the ggplot2 is set to 3.5.2 in the `epibutton.yaml`.
 
 ## Features under development
 - RAMPAGE
