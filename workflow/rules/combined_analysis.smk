@@ -197,8 +197,8 @@ def define_key_for_plots(wildcards, string):
                 onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                 bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
-                grouped_bw[f"{row.data_type}_stranded"].append(bw)
-                grouped_labs[f"{row.data_type}_stranded"].append(f"{label}")
+                grouped_bw[f"{row.data_type}"].append(bw)
+                grouped_labs[f"{row.data_type}"].append(f"{label}")
                 unique_rna.add(row.data_type)
                 label_to_mark[label] = row.data_type
                 label_to_type[label] = f"{row.line}_{row.tissue}"
@@ -224,8 +224,8 @@ def define_key_for_plots(wildcards, string):
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                     bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}_stranded"].append(bw)
-                    grouped_labs[f"sRNA_{size}_stranded"].append(f"{label}")
+                    grouped_bw[f"sRNA_{size}"].append(bw)
+                    grouped_labs[f"sRNA_{size}"].append(f"{label}")
                     unique_srna.add(f"sRNA_{size}")
                     label_to_mark[label] = f"sRNA_{size}"
                     label_to_type[label] = f"{row.line}_{row.tissue}"
@@ -244,15 +244,15 @@ def define_key_for_plots(wildcards, string):
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_bw.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
