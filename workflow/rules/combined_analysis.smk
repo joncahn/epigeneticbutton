@@ -257,10 +257,12 @@ def define_key_for_plots(wildcards, string):
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
+    marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    
     types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
     
     back_palette = assign_colors(types, "tab20")
-    track_palette = assign_colors(marks, "Set2")
+    track_palette = assign_colors(marksforbrowser, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
     minus_palette = make_it_lighter(track_palette, 1.4)
     backcolors = [back_palette[label_to_type[lab]] for lab in labels]
