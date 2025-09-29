@@ -6,6 +6,6 @@ channels:
 dependencies:
   - r-dplyr
   - r-tidyr
-  - r-ggplot2=3.4
+  - r-ggplot2=3.5
   - r-rcolorbrewer
   - r-complexupset
