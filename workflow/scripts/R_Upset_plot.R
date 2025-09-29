@@ -81,7 +81,9 @@ plot<-upset(mat, sampleslist, name="Peaks",
             scale_fill_manual(values=colmarks, name="Exclusive marks"))
       ),
       queries = queries,
-      set_sizes = (upset_set_size() + ylab("Total peaks")),
+	  set_sizes = (upset_set_size() + ylab("Total peaks"),
+	  # set_sizes = (upset_set_size() + ylab("Total peaks") + ## This would be better but updates makes it break
+        # theme(axis.text.x = element_text(angle = 45))),
       matrix = (intersection_matrix(geom = geom_point(shape = "circle", size = 3),
           segment = geom_segment(linewidth = 1.5),
           outline_color = list(active = alpha("white", 0),inactive = alpha("white", 0))) +
@@ -107,7 +109,6 @@ plot<-upset(mat, sampleslist, name="Peaks",
           ),
           "overall_sizes" = theme(
             panel.grid = element_blank(),
-			axis.text.x.bottom = element_text(angle = 45, hjust = 1, inherit.blank = FALSE),
             axis.ticks.x = element_line(linewidth = 0.25, color = "#2e2e2e")
           )
         )
