@@ -81,7 +81,7 @@ plot<-upset(mat, sampleslist, name="Peaks",
             scale_fill_manual(values=colmarks, name="Exclusive marks"))
       ),
       queries = queries,
-	  set_sizes = (upset_set_size() + ylab("Total peaks"),
+	  set_sizes = (upset_set_size() + ylab("Total peaks")),
 	  # set_sizes = (upset_set_size() + ylab("Total peaks") + ## This would be better but updates makes it break
         # theme(axis.text.x = element_text(angle = 45))),
       matrix = (intersection_matrix(geom = geom_point(shape = "circle", size = 3),
