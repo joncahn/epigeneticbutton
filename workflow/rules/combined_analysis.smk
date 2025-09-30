@@ -123,7 +123,7 @@ def make_it_lighter(palette, factor):
     for k, c in palette.items():
         rgb = mcolors.hex2color(c)
         h, l, s = colorsys.rgb_to_hls(*rgb)
-        n = min(1, l*factor)
+        n = min(0.9, l*factor)
         new_palette[k] = mcolors.to_hex(colorsys.hls_to_rgb(h, n, s))
     return new_palette
 
@@ -265,6 +265,9 @@ def define_key_for_plots(wildcards, string):
     track_palette = assign_colors(marksforbrowser, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
     minus_palette = make_it_lighter(track_palette, 1.4)
+    for m in unique_rna + unique_srna:
+        minus_palette[m] = plus_palette[m]
+    
     backcolors = [back_palette[label_to_type[lab]] for lab in labels]
     trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
@@ -1018,10 +1021,10 @@ rule prep_browser_on_region:
     output:
         filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
-        tes = temp("results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
-        htstart = temp("results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        htwidth = temp("results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        name = temp("results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
+        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
