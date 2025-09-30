@@ -355,7 +355,7 @@ rule analyze_all_srna_samples_on_target_file:
             ShortStack --version
             ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         fi
-        if [[ ! -e {output.count_file} ]];
+        if [[ ! -e {output.count_file} ]]; then
             touch {output.count_file}
         fi
         }} 2>&1 | tee -a "{log}"
