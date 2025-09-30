@@ -17,7 +17,7 @@ if ( file.exists(args[2]) ) {
 tes<-import(args[3], format="bed")
 
 plotname<-args[4]
-pdfmame<-args[5]
+pdfname<-args[5]
 
 tot<-nrow(filenames)
 
@@ -69,12 +69,12 @@ tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen
 
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
-	pdf(pdfmame, width = 12, height = tot)
-	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, cex.main = 1, title.width = twid)
+	pdf(pdfname, width = 12, height = tot)
+	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, cex.main = 1, title.width = twid/10)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
-	pdf(pdfmame,paper="a4", width = 12, height = tot)
+	pdf(pdfname,paper="a4", width = 12, height = tot)
 	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1, title.width = twid)
 	dev.off()
 }
