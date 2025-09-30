@@ -265,7 +265,7 @@ def define_key_for_plots(wildcards, string):
     track_palette = assign_colors(marksforbrowser, "Set2")
     plus_palette = make_it_lighter(track_palette, 1.1)
     minus_palette = make_it_lighter(track_palette, 1.4)
-    for m in unique_rna + unique_srna:
+    for m in unique_rna | unique_srna:
         minus_palette[m] = plus_palette[m]
     
     backcolors = [back_palette[label_to_type[lab]] for lab in labels]
