@@ -2,6 +2,7 @@
 
 library(Gviz)
 library(GenomicFeatures)
+library(rtracklayer)
 library(txdbmaker)
 
 args = commandArgs(trailingOnly=TRUE)
@@ -60,7 +61,7 @@ for ( i in c(1:tot) ) {
 	tracklist<-append(tracklist, track)
 }
 
-max(nchar(filenames$Name))
+twid<-max(nchar(filenames$Name))
 
 axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
 genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=FALSE, stacking="dense")
@@ -69,12 +70,12 @@ tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
 	pdf(pdfmame, width = 12, height = tot)
-	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname)
+	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, cex.main = 1, title.width = twid)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
 	pdf(pdfmame,paper="a4", width = 12, height = tot)
-	plotTracks(tracks, sizes=tracksize, main=plotname)
+	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1, title.width = twid)
 	dev.off()
 }
 
