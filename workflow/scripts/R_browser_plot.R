@@ -57,25 +57,26 @@ for ( i in c(1:tot) ) {
 	print(paste0("Importing bw for ",label))
 	bw<-import(path)
 	print(paste0("Creating track for ",label))
-	track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, hjust.title=1)
+	track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, just="center")
 	tracklist<-append(tracklist, track)
 }
 
 twid<-max(nchar(filenames$Name))
 
 axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
-genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts="meta", showId=FALSE, stacking="dense")
+genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, collapseTranscripts=FALSE, featureAnnotation="gene", stacking="dense")
 tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen", shape="box", rotation.title=0, cex.title=0.5, lwd=0.1)
 
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
+	names(httrack) <- str_wrap(gsub("_", " ", names(httrack)), width = 10)
 	pdf(pdfname, width = 12, height = tot)
 	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, cex.main = 1, title.width = twid/10)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
-	pdf(pdfname,paper="a4", width = 12, height = tot)
-	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1, title.width = twid)
+	pdf(pdfname, paper="a4", width = 12, height = tot)
+	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1, title.width = twid/10)
 	dev.off()
 }
 
