@@ -118,7 +118,7 @@ snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 snakemake --dag | dot -Tpng > dag.png
 ```
 
-*Even if snakemake is launched on a cluster with a profile option, the run will output a lot on the terminal. It is recommended to launch the command from a screen, to start it from a script submitted to the cluster, or to put the command in the background (which will still output snakemake commands but allows further action).
+*Even if snakemake is launched on a cluster with a profile option, the run will output a lot on the terminal. It is recommended to launch the command from a screen, to start it from a script submitted to the cluster, or to put the command in the background (which will still output snakemake commands but allows further action).*\
 *For full understanding of snakemake capabilities and options: https://snakemake.readthedocs.io/en/stable/*
 
 ## Sample file configuration
