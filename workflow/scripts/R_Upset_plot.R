@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
 
+library(remotes)
+
+### tmeporary patch for resolving issues with ggplot=4.0 
+remotes::install_github("krassowski/complex-upset#212")
+
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -98,7 +103,7 @@ plot<-upset(mat, sampleslist, name="Peaks",
         list(
           "default" = theme(
             panel.grid.major.x = element_blank(),
-            axis.ticks.y = element_line(linewidth = 0.25, color = "#2e2e2e")
+            axis.ticks.y = element_line(linewidth = unit(0.25, "pt"), color = "#2e2e2e")
           ),
           "intersections_matrix" = theme(
             panel.grid = element_blank(),
