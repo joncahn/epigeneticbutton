@@ -27,6 +27,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Data type-specific analysis
   - Combined analysis across samples
   - Quality control and reporting
+  - Additional output options such as heatmaps, metaplots and browsers
 
 - **Flexible Configuration**:
   - [App](https://epicc-builder.streamlit.app/) to validate configuration options
@@ -117,7 +118,7 @@ snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
 snakemake --dag | dot -Tpng > dag.png
 ```
 
-*Even if snakemake is launched on a cluster with a profile option, the run will output a lot on the terminal. It is recommended to launch the command from a screen, to start it from a script submitted to the cluster, or to put the command in the background (which will still output snakemake commands but allows further action).
+*Even if snakemake is launched on a cluster with a profile option, the run will output a lot on the terminal. It is recommended to launch the command from a screen, to start it from a script submitted to the cluster, or to put the command in the background (which will still output snakemake commands but allows further action).*\
 *For full understanding of snakemake capabilities and options: https://snakemake.readthedocs.io/en/stable/*
 
 ## Sample file configuration
