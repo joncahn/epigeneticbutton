@@ -57,11 +57,10 @@ for ( i in c(1:tot) ) {
 	print(paste0("Importing bw for ",label))
 	bw<-import(path)
 	print(paste0("Creating track for ",label))
-	track<-DataTrack(bw, type="polygon", baseline=0, name=label, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), rotation.title=0, cex.title=0.5, lwd=0.01, fontsize=12, fontcolor.title="black", col.axis="black", cex.axis=0.5)
+	lab<-gsub("_", "\n", label)
+	track<-DataTrack(bw, type="polygon", baseline=0, name=lab, background.title = backcolor, col=trackcolor, fill.mountain=c(fillcolorminus,fillcolorplus), col.baseline="grey50", ylim=c(ymin,ymax), yTicksAt=c(ymintick,ymaxtick), cex.title=0.5, lwd=0.01, fontsize=12, fontcolor.title="black", col.axis="black", cex.axis=0.5)
 	tracklist<-append(tracklist, track)
 }
-
-twid<-max(nchar(filenames$Name))
 
 axistrack<-GenomeAxisTrack(scale=0.1, labelPos="above")
 genetrack<-GeneRegionTrack(genes, name="Genes", shape="smallArrow", col="black", fill="grey60", rotation.title=0, cex.title=0.5, lwd=0.1, fontsize=12, fontcolor.title="black", collapseTranscripts=FALSE, showId=TRUE, stacking="squish")
@@ -69,14 +68,13 @@ tetrack<-AnnotationTrack(tes, name="TEs", stacking = "dense", fill = "lightgreen
 
 if ( length(htcol) > 0 ) {
 	httrack <- HighlightTrack(trackList=tracklist, start=htstart, width=htwidth, col=htcol, fill=htcol2)
-	names(httrack) <- str_wrap(gsub("_", " ", names(httrack)), width = 10)
 	pdf(pdfname, width = 20, height = tot)
-	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, cex.main = 1, title.width = twid/15, margin=c(1,2*twid,1,1))
+	plotTracks(list(axistrack, genetrack, tetrack, httrack), sizes=tracksize, main=plotname, cex.main = 1)
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
 	pdf(pdfname, paper="a4", width = 20, height = tot)
-	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1, title.width = twid/15, margin=c(1,2*twid,1,1))
+	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1)
 	dev.off()
 }
 
