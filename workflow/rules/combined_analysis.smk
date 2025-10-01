@@ -331,15 +331,14 @@ def define_final_combined_output(ref_genome):
     rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     srna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     
-    ## Need to fix Upset plot first
-    # if len(chip_analysis_samples) >=2:
-        # plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
+    if len(chip_analysis_samples) >=2:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
     
-    # if len(tf_analysis_samples) >=2:
-        # plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
+    if len(tf_analysis_samples) >=2:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
     
-    # if len(chip_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
-        # plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
+    if len(chip_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
     if len(mc_analysis_samples) >=1:
         if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
