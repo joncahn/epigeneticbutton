@@ -1,11 +1,10 @@
-name: epibutton_chip
+name: epibutton_idr
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - bowtie2
-  - samtools
+  - numpy<=1.19
+  - idr
   - bedtools
-  - deeptools
-  - macs2
+  - meme>=5

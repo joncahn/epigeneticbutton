@@ -1,11 +1,26 @@
+CONDA_ENV_SRNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_srna.yaml")
+
 # function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
 
+def define_input_file_for_structural(sample_name):
+    paired = get_sample_info_from_name(sample_name, samples, 'paired')
+    netflex_v3 = config['netflex_v3_deduplication']
+    if paired == "SE":
+        return "deduplicated__{sample_name}__R0" if netflex_v3 else "trim__{sample_name}__R0"
+
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
+    rna_depletion = config['structural_rna_depletion']
+    netflex_v3 = config['netflex_v3_deduplication']
     if paired == "SE":
-        return "filtered__{sample_name}__R0" if config['structural_rna_depletion'] else "trim__{sample_name}__R0"
+        if rna_depletion:
+            return "filtered__{sample_name}__R0" 
+        elif netflex_v3:
+            return "deduplicated__{sample_name}__R0"
+        else:
+            return "trim__{sample_name}__R0"
 
 def define_input_for_grouped_analysis(ref_genome):
     bamfiles = []
@@ -64,8 +79,12 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
-    analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
-    analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_genes.done")
+    if len(filtered_analysis_samples) >= 2:
+        analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
+        analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_genes.done")
+    elif len(filtered_analysis_samples) == 1:
+        analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_new_clusters/Counts.txt")
+        analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Counts.txt")
     
     results = map_files
 	
@@ -77,9 +96,39 @@ def define_final_srna_output(ref_genome):
 
     return results
 
+rule deduplicate_srna_netflexv3:
+    input:
+        fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
+    output:
+        collapse_folder = temp(directory("results/sRNA/fastq/collapsed_{sample_name}")),
+        collapsed_fastq = temp("results/sRNA/fastq/collapsed_{sample_name}/trim__{sample_name}__R0_trimmed.fastq"),
+        deduplicated_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq"),
+        gzipped_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+    log:
+        temp(return_log_smallrna("{sample_name}", "deduplicate_srna_netflexv3", "all"))
+    conda: CONDA_ENV_SRNA
+    threads: config["resources"]["deduplicate_srna_netflexv3"]["threads"]
+    resources:
+        mem=config["resources"]["deduplicate_srna_netflexv3"]["mem"],
+        tmp=config["resources"]["deduplicate_srna_netflexv3"]["tmp"]
+    shell:
+        """
+        {{
+        #### 1) Collapse the PCR-duplicated reads
+        seqcluster collapse -f {input.fastq} -o {output.collapse_folder}
+
+        ### 2) Trimming the read-specific UMIs (first and last 4bp, and adding a minimum 15bp)
+        seqtk trimfq -b 4 -e 4 {output.collapsed_fastq} | seqtk seq -L 15 > {output.deduplicated_fastq}
+        pigz -p {threads} -c {output.deduplicated_fastq} > {output.gzipped_fastq}
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule filter_structural_rna:
     input:
-        fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_structural(wildcards.sample_name)}.fastq.gz",
         fasta = config['structural_rna_fafile']
     output:
         filtered_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq"),
@@ -89,7 +138,7 @@ rule filter_structural_rna:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_smallrna("{sample_name}", "filter_structural_rna", "all"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["filter_structural_rna"]["threads"]
     resources:
         mem=config["resources"]["filter_structural_rna"]["mem"],
@@ -120,7 +169,7 @@ rule dispatch_srna_fastq:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
     output:
         fastq_file = temp("results/sRNA/mapped/clean__{sample_name}.fastq.gz")
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     localrule: True
     shell:
         """
@@ -141,7 +190,7 @@ rule shortstack_map:
         srna_params = config['srna_mapping_params']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
         mem=config["resources"]["shortstack_map"]["mem"],
@@ -167,7 +216,7 @@ rule make_srna_size_stats:
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         temp(return_log_smallrna("{sample_name}", "make_srna_stats", "all"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_srna_size_stats"]["threads"]
     resources:
         mem=config["resources"]["make_srna_size_stats"]["mem"],
@@ -177,8 +226,13 @@ rule make_srna_size_stats:
         {{
         printf "\nGetting stats for {params.sample_name}\n"
         printf "Sample\tType\tSize\tCount\n" > {output.report}
-        zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
         printf "\nGetting filtered stats for {params.sample_name}\n"
+        if [[ -s results/sRNA/fastq/deduplicated__{params.sample_name}__R0.fastq.gz ]]; then
+            zcat results/sRNA/fastq/deduplicated__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"deduplicated",$2,$1}}' >> "{output.report}"
+            zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) {{a=length($1)-8; if (a>=15) print a}}}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+        else
+            zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+        fi
         if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
             zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
         fi
@@ -199,7 +253,7 @@ rule filter_size_srna_sample:
         size = lambda wildcards: wildcards.size
     log:
         temp(return_log_smallrna("{sample_name}", "filter_size_srna", "{size}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["filter_size_srna_sample"]["threads"]
     resources:
         mem=config["resources"]["filter_size_srna_sample"]["mem"],
@@ -226,7 +280,7 @@ rule merging_srna_replicates:
         size = lambda wildcards: wildcards.size
     log:
         temp(return_log_smallrna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_srna_reps", "{size}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["merging_srna_replicates"]["threads"]
     resources:
         mem=config["resources"]["merging_srna_replicates"]["mem"],
@@ -254,7 +308,7 @@ rule make_srna_stranded_bigwigs:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_smallrna("{sample_name}", "making_bigiwig", "{size}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_srna_stranded_bigwigs"]["threads"]
     resources:
         mem=config["resources"]["make_srna_stranded_bigwigs"]["mem"],
@@ -283,7 +337,7 @@ rule analyze_all_srna_samples_on_target_file:
         target_name = lambda wildcards: wildcards.target_name
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_analysis", "{target_name}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["analyze_all_srna_samples_on_target_file"]["threads"]
     resources:
         mem=config["resources"]["analyze_all_srna_samples_on_target_file"]["mem"],
@@ -300,6 +354,9 @@ rule analyze_all_srna_samples_on_target_file:
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
             ShortStack --version
             ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+        fi
+        if [[ ! -e {output.count_file} ]]; then
+            touch {output.count_file}
         fi
         }} 2>&1 | tee -a "{log}"
         """
@@ -356,7 +413,7 @@ rule call_all_differential_srna_clusters:
         region_file = lambda wildcards: f"results/sRNA/clusters/{analysis_name}__{wildcards.ref_genome}__on_{wildcards.target_name}/Results.txt" if define_srna_target_file(wildcards) == [] else define_srna_target_file(wildcards)
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_cluster_degs", "{target_name}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["call_all_DEGs"]["threads"]
     resources:
         mem=config["resources"]["call_all_DEGs"]["mem"],

@@ -1,3 +1,6 @@
+CONDA_ENV_CHIP=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_chip.yaml")
+CONDA_ENV_IDR=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_idr.yaml")
+
 # function to access logs more easily
 def return_log_chip(env, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results",env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -282,7 +285,7 @@ rule make_bt2_indices:
         indices = directory("genomes/{ref_genome}/bt2_index")
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","bowtie_index_{ref_genome}.log"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_bt2_indices"]["threads"]
     resources:
         mem=config["resources"]["make_bt2_indices"]["mem"],
@@ -313,7 +316,7 @@ rule bowtie2_map_pe:
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_pe']    
     log:
         temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "PE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["bowtie2_map_pe"]["threads"]
     resources:
         mem=config["resources"]["bowtie2_map_pe"]["mem"],
@@ -343,7 +346,7 @@ rule bowtie2_map_se:
         mapping_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['map_se']    
     log:
         temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "SE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["bowtie2_map_se"]["threads"]
     resources:
         mem=config["resources"]["bowtie2_map_se"]["mem"],
@@ -373,7 +376,7 @@ rule filter_chip_pe:
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
         temp(return_log_chip("{env}","{sample_name}", "filteringChIP", "PE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["filter_chip_pe"]["threads"]
     resources:
         mem=config["resources"]["filter_chip_pe"]["mem"],
@@ -410,7 +413,7 @@ rule filter_chip_se:
         filtering_params = lambda wildcards: config['chip_mapping'][config['chip_mapping_option']]['filter']    
     log:
         temp(return_log_chip("{env}","{sample_name}", "filteringChIP", "SE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["filter_chip_se"]["threads"]
     resources:
         mem=config["resources"]["filter_chip_se"]["mem"],
@@ -522,7 +525,7 @@ rule make_coverage_chip:
         env = "ChIP|TF"
     params:
         binsize = config['chip_tracks']['binsize']
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_coverage_chip"]["threads"]
     resources:
         mem=config["resources"]["make_coverage_chip"]["mem"],
@@ -547,7 +550,7 @@ rule make_bigwig_chip:
         params = config['chip_tracks']['params']
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_bigwig_{file_type}", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_bigwig_chip"]["threads"]
     resources:
         mem=config["resources"]["make_bigwig_chip"]["mem"],
@@ -574,7 +577,7 @@ rule make_fingerprint_plot:
         inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}"
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "making_fingerprint_{file_type}", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_fingerprint_plot"]["threads"]
     resources:
         mem=config["resources"]["make_fingerprint_plot"]["mem"],
@@ -606,7 +609,7 @@ rule calling_peaks_macs2_pe:
         genomesize = config[config['species']]['genomesize']
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "PE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["calling_peaks_macs2_pe"]["threads"]
     resources:
         mem=config["resources"]["calling_peaks_macs2_pe"]["mem"],
@@ -643,7 +646,7 @@ rule calling_peaks_macs2_se:
         genomesize = config[config['species']]['genomesize']
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "SE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["calling_peaks_macs2_se"]["threads"]
     resources:
         mem=config["resources"]["calling_peaks_macs2_se"]["mem"],
@@ -683,7 +686,7 @@ rule idr_analysis_replicates:
         replicate_pairs = lambda wildcards: get_replicate_pairs(wildcards)
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "IDR", ""))
-    conda: os.path.join(REPO_FOLDER,"workflow","envs","epibutton_chip.yaml")
+    conda: CONDA_ENV_IDR
     threads: config["resources"]["idr_analysis_replicates"]["threads"]
     resources:
         mem=config["resources"]["idr_analysis_replicates"]["mem"],
@@ -739,7 +742,7 @@ rule merging_chip_replicates:
         env = lambda wildcards: wildcards.env
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["merging_chip_replicates"]["threads"]
     resources:
         mem=config["resources"]["merging_chip_replicates"]["mem"],
@@ -769,7 +772,7 @@ rule making_pseudo_replicates:
         env = lambda wildcards: wildcards.env
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "splitting_pseudreps", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["making_pseudo_replicates"]["threads"]
     resources:
         mem=config["resources"]["making_pseudo_replicates"]["mem"],
@@ -806,7 +809,7 @@ rule best_peaks_pseudoreps:
         peaktype = lambda wildcards: get_peaktype(wildcards.sample_type, config["chip_callpeaks"]["peaktype"])
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "selecting_best_peaks", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["best_peaks_pseudoreps"]["threads"]
     resources:
         mem=config["resources"]["best_peaks_pseudoreps"]["mem"],
@@ -900,7 +903,7 @@ rule find_motifs_in_file:
         jaspar_db = config['jaspar_db']
     log:
         temp(return_log_chip("{env}","{peak_file}", "motifs", ""))
-    conda: os.path.join(REPO_FOLDER,"workflow","envs","epibutton_chip.yaml")
+    conda: CONDA_ENV_IDR
     threads: config["resources"]["find_motifs_in_file"]["threads"]
     resources:
         mem=config["resources"]["find_motifs_in_file"]["mem"],

@@ -1,0 +1,14 @@
+name: epibutton
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - bismark
+  - pigz
+  - bedtools
+  - ucsc-bedgraphtobigwig
+  - r-base
+  - r-dplyr
+  - bioconductor-dmrcaller
+

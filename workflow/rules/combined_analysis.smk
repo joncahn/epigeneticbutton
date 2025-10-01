@@ -1,14 +1,19 @@
+CONDA_ENV_UPSET=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_upset.yaml")
+
 # function to access logs more easily
 def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
 def define_combined_target_file(wildcards):
-    tname = config['combined_target_file_label']
+    heatname = config['heatmap_target_file_label']
+    browsername = config['browser_target_file_label']
     target_name = wildcards.target_name
     ref_genome = wildcards.ref_genome
     
-    if target_name == tname:
-        return config['combined_target_file']
+    if target_name == heatname:
+        return config['heatmap_target_file']
+    elif target_name == browsername:
+        return config['browser_target_file']
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
@@ -106,7 +111,23 @@ def define_sample_types_for_upset(wildcards):
     result = ":".join(types)     
     return result
 
-def define_key_for_heatmaps(wildcards, string):
+def assign_colors(keys, cmap_name="tab20"):
+    cmap = plt.get_cmap(cmap_name)
+    colors = {}
+    for i,key in enumerate(sorted(set(keys))):
+        colors[key] = mcolors.to_hex(cmap(i % cmap.N))
+    return colors
+    
+def make_it_lighter(palette, factor):
+    new_palette = {}
+    for k, c in palette.items():
+        rgb = mcolors.hex2color(c)
+        h, l, s = colorsys.rgb_to_hls(*rgb)
+        n = min(0.9, l*factor)
+        new_palette[k] = mcolors.to_hex(colorsys.hls_to_rgb(h, n, s))
+    return new_palette
+
+def define_key_for_plots(wildcards, string):
     bigwigs = []
     labels = []
     marks = []
@@ -117,12 +138,16 @@ def define_key_for_heatmaps(wildcards, string):
     unique_mc = set()
     grouped_bw = defaultdict(list)
     grouped_labs = defaultdict(list)
+    label_to_mark = {}
+    label_to_type = {}
     srna_sizes = config['srna_heatmap_sizes']
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
-    strand = wildcards.strand
+    strand = getattr(wildcards, "strand", "unstranded")
     
     if globenv == "all":
+        filtered_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
+    elif globenv == "most":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] != "mC") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -137,6 +162,9 @@ def define_key_for_heatmaps(wildcards, string):
             grouped_bw[f"chip_{row.sample_type}"].append(bw)
             grouped_labs[f"chip_{row.sample_type}"].append(label)
             unique_chip.add(row.sample_type)
+            label_to_mark[label] = row.sample_type
+            label_to_type[label] = f"{row.line}_{row.tissue}"
+            
         elif row.env == "TF":
             merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
             onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
@@ -145,6 +173,9 @@ def define_key_for_heatmaps(wildcards, string):
             grouped_bw[f"tf_{row.extra_info}"].append(bw)
             grouped_labs[f"tf_{row.extra_info}"].append(label)
             unique_tf.add(row.extra_info)
+            label_to_mark[label] = row.extra_info
+            label_to_type[label] = f"{row.line}_{row.tissue}"
+            
         elif row.env == "RNA":
             if strand == "unstranded":
                 merged = f"{prefix}__merged__{row.ref_genome}"
@@ -157,14 +188,20 @@ def define_key_for_heatmaps(wildcards, string):
                 grouped_labs[f"{row.data_type}_plus"].append(f"{label}_plus")
                 grouped_labs[f"{row.data_type}_minus"].append(f"{label}_minus")
                 unique_rna.add(row.data_type)
+                label_to_mark[f"{label}_plus"] = row.data_type
+                label_to_mark[f"{label}_minus"] = row.data_type
+                label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
             else:
                 merged = f"{prefix}__merged__{row.ref_genome}"
                 onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                 bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
-                grouped_bw[f"{row.data_type}_stranded"].append(bw)
-                grouped_labs[f"{row.data_type}_stranded"].append(f"{label}")
+                grouped_bw[f"{row.data_type}"].append(bw)
+                grouped_labs[f"{row.data_type}"].append(f"{label}")
                 unique_rna.add(row.data_type)
+                label_to_mark[label] = row.data_type
+                label_to_type[label] = f"{row.line}_{row.tissue}"
         elif row.env == "sRNA":
             for size in srna_sizes:
                 if strand == "unstranded":
@@ -178,14 +215,20 @@ def define_key_for_heatmaps(wildcards, string):
                     grouped_labs[f"sRNA_{size}_plus"].append(f"{label}_plus")
                     grouped_labs[f"sRNA_{size}_minus"].append(f"{label}_minus")
                     unique_srna.add(f"sRNA_{size}")
+                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}"
+                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}"
+                    label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                    label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
                 else:
                     merged = f"{prefix}__merged__{row.ref_genome}"
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                     bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}_stranded"].append(bw)
-                    grouped_labs[f"sRNA_{size}_stranded"].append(f"{label}")
+                    grouped_bw[f"sRNA_{size}"].append(bw)
+                    grouped_labs[f"sRNA_{size}"].append(f"{label}")
                     unique_srna.add(f"sRNA_{size}")
+                    label_to_mark[label] = f"sRNA_{size}"
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
         elif row.env == "mC":
             merged = f"{prefix}__merged__{row.ref_genome}"
             onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
@@ -195,22 +238,41 @@ def define_key_for_heatmaps(wildcards, string):
                 grouped_bw[f"m{context}"].append(bw)
                 grouped_labs[f"m{context}"].append(f"{label}")
                 unique_mc.add(f"m{context}")
-                    
+                label_to_mark[label] = f"m{context}"
+                label_to_type[label] = f"{row.line}_{row.tissue}"
+
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_bw.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}_stranded", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}_stranded", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    
+    marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    
+    types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
+    
+    back_palette = assign_colors(types, "tab20")
+    track_palette = assign_colors(marksforbrowser, "Set2")
+    plus_palette = make_it_lighter(track_palette, 1.1)
+    minus_palette = make_it_lighter(track_palette, 1.4)
+    for m in unique_rna | unique_srna:
+        minus_palette[m] = plus_palette[m]
+    
+    backcolors = [back_palette[label_to_type[lab]] for lab in labels]
+    trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
+    fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
+    fillcolorsminus = [minus_palette[label_to_mark[lab]] for lab in labels]
+    alignedmarks = [label_to_mark[lab] for lab in labels]
     
     if string == "bigwigs":
         return bigwigs
@@ -218,11 +280,47 @@ def define_key_for_heatmaps(wildcards, string):
         return labels
     elif string == "marks":
         return marks
+    elif string == "table":
+        table_name = f"results/combined/matrix/sample_table__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.tab"
+        tab = pd.DataFrame({
+            "bigwigs": bigwigs,
+            "labels": labels,
+            "backcolors": backcolors,
+            "trackcolors": trackcolors,
+            "fillcolorsplus": fillcolorsplus,
+            "fillcolorsminus": fillcolorsminus,
+            "marks": alignedmarks,
+        })
+        tab.to_csv(table_name, sep="\t", index=False, header=False)
+        return table_name
+
+def define_individual_browser_plots(wildcards):
+    files = []
+    ref_genome = wildcards.ref_genome
+    analysis_name = wildcards.analysis_name    
+    env = wildcards.env
+    target_file = define_combined_target_file(wildcards)
+    target_name = wildcards.target_name
+    
+    with open(target_file) as f:
+        first_line = f.readline().strip().split("\t")
+    try:
+        header = "no" if (int(first_line[1]) >=0 and int(first_line[2]) >=0) else "yes"
+    except (ValueError, IndexError):
+        header = "yes"
+
+    regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
+    
+    starter = 2 if header == "yes" else 1
+    for row_number, _ in enumerate(regions.itertuples(index=False),start=starter):
+        files.append(f"results/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
+    return files
 
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
     analysis_name = config['analysis_name']
+    mc_sort = config['heatmap_sort_mc_after_others']
     text_files = []
     plot_files = []
     
@@ -243,7 +341,7 @@ def define_final_combined_output(ref_genome):
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
     if len(mc_analysis_samples) >=1:
-        if len(all_analysis_samples) > len(mc_analysis_samples):
+        if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
             plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
@@ -256,13 +354,13 @@ def define_final_combined_output(ref_genome):
         plot_files.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
     else:
-        plot_files.append(f"results/combined/plots/Heatmap__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Heatmap__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Heatmap__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
     
-    plot_files.append(f"results/combined/plots/Profile__regions__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Profile__tss__all__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Profile__tes__all__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+    plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
 
     if analysis:
         results = plot_files + text_files
@@ -317,8 +415,7 @@ checkpoint is_stranded:
                 out.write("stranded" + "\n")
             else:
                 out.write("unstranded" + "\n")
-
-            
+    
 ###
 # Rules to prep and then plot the mapping stats:
 rule prepping_mapping_stats:
@@ -330,7 +427,6 @@ rule prepping_mapping_stats:
         stat_file = "results/combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_mapping_stats"))
-    conda: CONDA_ENV
     threads: config["resources"]["prepping_mapping_stats"]["threads"]
     resources:
         mem=config["resources"]["prepping_mapping_stats"]["mem"],
@@ -375,7 +471,6 @@ rule prepping_chip_peak_stats:
         stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_peak_stats"))
-    conda: CONDA_ENV
     threads: config["resources"]["prepping_chip_peak_stats"]["threads"]
     resources:
         mem=config["resources"]["prepping_chip_peak_stats"]["mem"],
@@ -422,7 +517,6 @@ rule prepping_srna_sizes_stats:
         stat_file = "results/combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_srna_sizes"))
-    conda: CONDA_ENV
     threads: config["resources"]["prepping_srna_sizes_stats"]["threads"]
     resources:
         mem=config["resources"]["prepping_srna_sizes_stats"]["mem"],
@@ -457,7 +551,6 @@ rule plotting_srna_sizes_stats:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
         """
-
 
 ###
 # Rules to prep and plot ChIP upset plots
@@ -541,7 +634,7 @@ rule plotting_upset_peaks:
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot.R")
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_upset_{target_name}_{env}"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_UPSET
     threads: config["resources"]["plotting_upset_peaks"]["threads"]
     resources:
         mem=config["resources"]["plotting_upset_peaks"]["mem"],
@@ -555,7 +648,7 @@ rule plotting_upset_peaks:
 # rule to plot heatmaps
 rule making_stranded_matrix_on_targetfile:
     input:
-        bigwigs = lambda wildcards: define_key_for_heatmaps(wildcards, "bigwigs"),
+        bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
@@ -568,8 +661,8 @@ rule making_stranded_matrix_on_targetfile:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
         target_name = lambda wildcards: wildcards.target_name,
-        labels = lambda wildcards: define_key_for_heatmaps(wildcards, "labels"),
-        marks = lambda wildcards: define_key_for_heatmaps(wildcards, "marks"),
+        labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
+        marks = lambda wildcards: define_key_for_plots(wildcards, "marks"),
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
         params = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base'),
@@ -645,12 +738,12 @@ rule computing_matrix_scales:
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
-        params_heatmap = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        params_profile = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        temp_values = "results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
+        params_heatmap = temp("results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
+        params_profile = temp("results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
+        params_regions = temp("results/combined/matrix/params_regions_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
+        temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
         temp_profile = temp("results/combined/matrix/temp_profile_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf"),
-        temp_profile_values = "results/combined/matrix/temp_profile_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+        temp_profile_values = temp("results/combined/matrix/temp_profile_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -812,8 +905,8 @@ rule plotting_heatmap_on_targetfile:
 rule sort_heatmap:
     input: 
         matrix = "results/combined/matrix/final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz",
-        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__all__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed",
-        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__all__{analysis_name}__{ref_genome}__{target_name}.txt"
+        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__most__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed",
+        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__most__{analysis_name}__{ref_genome}__{target_name}.txt"
     output:
         temp_matrix = temp("results/combined/matrix/temp_sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"),
         matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"
@@ -913,6 +1006,204 @@ rule plotting_profile_on_targetfile:
         ymax=$(cat {input.params_profile} | awk 'BEGIN {{y=-99999}} {{for (i=1; i<=NF; i++) {{if ($i == "--yMax") {{for (j=i+1; j<=NF && $j !~ /^--/; j++) {{if ($j>y) y=$j}} break}} }} }} END {{print y}}' )
         plotProfile -m {input.matrix} -out {output.plot2} {params.plot_params} ${{reg}} --yMin ${{ymin}} --yMax ${{ymax}} ${{add}} --perGroup
         }} 2>&1 | tee -a "{log}"
+        """
+
+###
+# rules to plot browser shots
+rule prep_browser_on_region:
+    input:
+        bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
+        target_file = lambda wildcards: define_combined_target_file(wildcards),
+        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
+        all_genes = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+    output:
+        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
+        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
+        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
+        temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
+        tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
+    params:
+        analysis_name = config['analysis_name'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        target_name = lambda wildcards: wildcards.target_name,
+        labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
+        sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
+        trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
+        regionID = lambda wildcards: wildcards.regionID,
+        TEfile = config['browser_TE_file'],
+        browser_scales = config['browser_scales'],
+        mc_scales = config['fixed_mc_scales'],
+        cg_scale = config['fixed_mcg'],
+        chg_scale = config['fixed_mchg'],
+        chh_scale = config['fixed_mchh']
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "prep_files_{target_name}_{regionID}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["prep_browser_on_region"]["threads"]
+    resources:
+        mem=config["resources"]["prep_browser_on_region"]["mem"],
+        tmp=config["resources"]["prep_browser_on_region"]["tmp"]
+    shell:
+        """
+        {{
+        printf "Extracting values for {params.regionID}\n"
+        tmpregion="{params.regionID}"
+        line_nb=$(echo "${{tmpregion}}" | sed 's/line//')
+        chr=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $1}}')
+        start=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $2}}')
+        end=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $3}}')
+        printf "${{chr}}\t${{start}}\t${{end}}\n" > {output.templocus}
+        region="${{chr}}:${{start}}:${{end}}"
+
+        regionID=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $4}}')
+        printf "${{regionID}}\n" > {output.name}
+        
+        binsize=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $5}}')
+        
+        htstart=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $6}}')
+        htwidth=$(cat {input.target_file} | awk -v r=${{line_nb}} 'NR==r {{print $7}}')
+        if [[ ${{htstart}} != "" ]]; then
+            printf "${{htstart}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htstart}"
+            printf "${{htwidth}}\n" | awk -F"," '{{for (i=1;i<=NF;i++) print $i}}' > "{output.htwidth}"
+        else
+            touch {output.htstart}
+            touch {output.htwidth}
+        fi
+        
+        ### To get genes in the region
+        bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
+        if [[ -s "{output.tempgenes}" ]]; then
+            printf "Getting gene track\n"
+            bedtools intersect -wb -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' > {output.genes}
+        else
+            printf "No genes in this region\n"
+        fi
+        ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
+        if [[ {params.TEfile} == "none" ]]; then
+            printf "No TE file provided\n"
+            touch {output.tes}
+        else
+            printf "Getting TE track\n"
+            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+        fi
+        
+        printf "Testing if all bw have data on the chromosome\n"
+        filelist2=()
+        rm -rf "{params.trackfolder}" && mkdir "{params.trackfolder}"
+        while read bw lab back track plus minus mark
+        do
+            path="{params.trackfolder}/${{lab}}_empty"
+            bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{bw}} "${{path}}.bg"
+            if [[ -s "${{path}}.bg" ]]; then
+                printf "${{lab}} has data on ${{chr}}\n"
+                filelist2+=("${{bw}}")
+            else
+                printf "${{lab}} is empty on ${{chr}}\n"
+                grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
+                bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
+                filelist2+=("${{path}}.bw")
+            fi
+            rm -f "${{path}}.bg"            
+        done < {params.sample_table}
+        printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
+        multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs ${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
+        
+        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
+        while read bw lab back track plus minus mark
+        do
+            path="{params.trackfolder}/${{lab}}_${{mark}}"
+            printf "Making bw for ${{lab}}\n"
+            col=($(awk -v ORS=" " -v t=${{lab}} 'NR==1 {{for (i=1;i<=NF;i++) if ($i~t) print i}}' {output.tempvalues}))
+            if [[ "${{lab}}" == *_minus ]]; then
+                awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=-$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
+            else
+                awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
+            fi
+            bedGraphToBigWig "${{path}}.bedGraph" {input.chrom_sizes} "${{path}}.bw"
+            
+            if [[ {params.browser_scales} == "sample" ]]; then
+                ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
+                ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
+            elif [[ {params.browser_scales} == "type" ]]; then
+                ymin=$(cat {params.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
+                ymax=$(cat {params.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
+            fi
+            if [[ {params.mc_scales} == "True" ]]; then
+                if [[ ${{mark}} == "mCG" ]]; then
+                    ymin=0
+                    ymax={params.cg_scale}
+                elif [[ ${{mark}} == "mCHG" ]]; then
+                    ymin=0
+                    ymax={params.chg_scale}
+                elif [[ ${{mark}} == "mCHH" ]]; then
+                    ymin=0
+                    ymax={params.chh_scale}
+                fi
+            fi
+            printf "${{lab}}\t${{path}}.bw\t${{back}}\t${{track}}\t${{plus}}\t${{minus}}\t${{ymin}}\t${{ymax}}\n" >> {output.filenames}
+        done < {params.sample_table}
+        
+        }} 2>&1 | tee -a "{log}" 
+        """
+
+rule make_single_loci_browser_plot:
+    input:
+        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
+        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
+        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
+        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"
+    output:
+        browser_plot = temp("results/combined/plots/single_browser__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.pdf")
+    params:
+        regionID = lambda wildcards: wildcards.regionID,
+        title = lambda wildcards: f"results/combined/plots/single_browser__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.pdf",
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_browser_plot.R"),
+        trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}"
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "single_browser_{target_name}_{regionID}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["make_single_loci_browser_plot"]["threads"]
+    resources:
+        mem=config["resources"]["make_single_loci_browser_plot"]["mem"],
+        tmp=config["resources"]["make_single_loci_browser_plot"]["tmp"]
+    shell:
+        """
+        {{
+        name=$(cat {input.name})
+        if [[ -s {input.htstart} ]]; then
+            printf "\nPlotting browser on {params.regionID} with higlights\n\n"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}" "{input.htstart}" "{input.htwidth}"
+        else
+            printf "\nPlotting browser on {params.regionID} without higlights\n\n"
+            Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}"
+        fi
+        # rm -rf {params.trackfolder}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule merge_region_browser_plots:
+    input: 
+        plots = lambda wildcards: define_individual_browser_plots(wildcards)
+    output:
+        merged_plots = "results/combined/plots/Browser_{target_name}__{env}__{analysis_name}__{ref_genome}.pdf"
+    log:
+        temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "merging_browser_{target_name}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["merge_region_browser_plots"]["threads"]
+    resources:
+        mem=config["resources"]["merge_region_browser_plots"]["mem"],
+        tmp=config["resources"]["merge_region_browser_plots"]["tmp"]
+    shell:
+        """
+        pdfunite {input.plots} {output.merged_plots}
         """
 
 ###

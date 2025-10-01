@@ -80,6 +80,7 @@ create_GO_database: *single
 perform_GO_on_target_file: *single
 # smallRNA
 shortstack_map: *heavy
+deduplicate_srna_netflexv3: *standard
 filter_structural_rna: *heavy
 shortstack_map: *heavy
 make_srna_size_stats: *standard
@@ -106,3 +107,6 @@ sort_heatmap: *single
 plotting_heatmap_on_targetfile: *single
 plotting_sorted_heatmap_on_targetfile: *single
 plotting_profile_on_targetfile: *single
+prep_browser_on_region: *heavy
+make_single_loci_browser_plot: *single
+merge_region_browser_plots: *low

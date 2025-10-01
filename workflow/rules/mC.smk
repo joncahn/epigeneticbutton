@@ -1,3 +1,5 @@
+CONDA_ENV_MC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_mc.yaml")
+
 # function to access logs more easily
 def return_log_mc(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
@@ -74,7 +76,7 @@ rule make_bismark_indices:
         limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","bismark_index_{ref_genome}.log"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_MC
     threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
         mem=config["resources"]["make_bismark_indices"]["mem"],
@@ -111,7 +113,7 @@ rule bismark_map_pe:
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
         mem=config["resources"]["bismark_map_pe"]["mem"],
@@ -149,7 +151,7 @@ rule bismark_map_se:
         limthreads = lambda wildcards, threads: max(1, threads // 3)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
         mem=config["resources"]["bismark_map_se"]["mem"],
@@ -275,7 +277,7 @@ rule merging_mc_replicates:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
         temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_MC
     threads: config["resources"]["merging_mc_replicates"]["threads"]
     resources:
         mem=config["resources"]["merging_mc_replicates"]["mem"],
@@ -305,7 +307,7 @@ rule make_mc_bigwig_files:
         context = config['mC_context']
     log:
         temp(return_log_mc("{sample_name}", "bigwig", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
         mem=config["resources"]["make_mc_bigwig_files"]["mem"],
@@ -362,7 +364,7 @@ rule call_DMRs_pairwise:
         nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
-    conda: CONDA_ENV
+    conda: CONDA_ENV_MC
     threads: config["resources"]["call_DMRs_pairwise"]["threads"]
     resources:
         mem=config["resources"]["call_DMRs_pairwise"]["mem"],
