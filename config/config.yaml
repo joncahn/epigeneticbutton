@@ -22,7 +22,7 @@ ColCEN:
 B73_v5:
   species: "mays" 
   fasta_file: "data/B73_v5_fasta.fa.gz" # can be gzipped or not
-  gff_file: "data/B73_v5_gff.gff.gz" # can be gzipped or not
+  gff_file: "data/B73_v5_gff.gff3.gz" # can be gzipped or not
   gtf_file: "data/B73_v5_gtf.gtf.gz" # can be gzipped or not
   gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
