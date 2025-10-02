@@ -275,7 +275,6 @@ rule make_rna_stats_pe:
         tmp=config["resources"]["make_rna_stats_pe"]["tmp"]
     shell:
         """
-        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -286,7 +285,6 @@ rule make_rna_stats_pe:
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        }} 2>&1 | tee -a "{log}"
         """
         
 rule make_rna_stats_se:
@@ -309,7 +307,6 @@ rule make_rna_stats_se:
         tmp=config["resources"]["make_rna_stats_se"]["tmp"]
     shell:
         """
-        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -320,7 +317,6 @@ rule make_rna_stats_se:
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
-        }} 2>&1 | tee -a "{log}"
         """
 
 rule pe_or_se_rna_dispatch:
