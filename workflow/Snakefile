@@ -82,7 +82,6 @@ sample_info_map = {
 
 # Define reference genomes and the path to them
 REF_GENOMES = set(samples["ref_genome"].unique())
-REF_PATH = config["ref_path"]
 
 # Define data types
 DATA_TYPES = set(samples["data_type"].unique())
@@ -146,9 +145,6 @@ analysis_samples = (
 )
 # Add a sample_name column to the analysis_sample file
 analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
-
-# # Save the result to 'analysis_samplefile.txt'
-# analysis_samples.to_csv(f"{analysis_name}__analysis_samplefile.txt", sep="\t", index=False)
 
 # To assign all replicates to each sample
 analysis_to_replicates = (
