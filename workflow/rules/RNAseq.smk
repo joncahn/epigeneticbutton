@@ -275,6 +275,7 @@ rule make_rna_stats_pe:
         tmp=config["resources"]["make_rna_stats_pe"]["tmp"]
     shell:
         """
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -285,6 +286,7 @@ rule make_rna_stats_pe:
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule make_rna_stats_se:
@@ -307,6 +309,7 @@ rule make_rna_stats_se:
         tmp=config["resources"]["make_rna_stats_se"]["tmp"]
     shell:
         """
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -317,6 +320,7 @@ rule make_rna_stats_se:
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule pe_or_se_rna_dispatch:
@@ -475,9 +479,11 @@ rule call_all_DEGs:
         tmp=config["resources"]["call_all_DEGs"]["tmp"]
     shell:
         """
+        {{
         printf "running edgeR for all samples in {params.ref_genome}\n"
         Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
         touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule gather_gene_expression_rpkm:
@@ -526,8 +532,10 @@ rule plot_expression_levels:
         tmp=config["resources"]["plot_expression_levels"]["tmp"]
     shell:
         """
+        {{
         printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
         Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.target_name}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule create_GO_database:
@@ -552,6 +560,7 @@ rule create_GO_database:
         tmp=config["resources"]["create_GO_database"]["tmp"]
     shell:
         """
+        {{
         rm -rf {output.godb}
         if file {params.gaffile} | grep -q 'gzip compressed'; then
             gunzip -c {params.gaffile} > {output.tempgaf}
@@ -565,6 +574,7 @@ rule create_GO_database:
         fi
         printf "Creating GO database for {params.ref_genome}\n"
         Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule perform_GO_on_target_file:
@@ -589,9 +599,11 @@ rule perform_GO_on_target_file:
         tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
     shell:
         """
+        {{
         printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
         Rscript "{params.script}" "{params.dbname}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}" "{params.target_name}"
         touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule all_rna:

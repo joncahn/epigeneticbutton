@@ -489,6 +489,7 @@ rule make_chip_stats_se:
         tmp=config["resources"]["make_chip_stats_se"]["tmp"]
     shell:
         """
+        {{
         printf "\nMaking mapping statistics summary\n"
         tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
@@ -498,6 +499,7 @@ rule make_chip_stats_se:
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule pe_or_se_chip_dispatch:
@@ -869,6 +871,7 @@ rule make_peak_stats:
         tmp=config["resources"]["make_peak_stats"]["tmp"]
     shell:
         """
+        {{
         nrep1=$(awk '{{print $1,$2,$3}}' {params.rep1} | sort -k1,1 -k2,2n -u | wc -l)
         if [[ "{params.rep2}" == "missingrep" ]]; then
             nrep2=0
@@ -886,6 +889,7 @@ rule make_peak_stats:
             awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.tf_name} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{idr}} -v f=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; print l,t,m,r,a,b,c,d,e,f" ("f/x*100"%)"}}' >> "{output.stat_file}"
         fi
         cat {input.logs} > "{output.log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule find_motifs_in_file:

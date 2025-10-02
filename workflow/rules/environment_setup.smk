@@ -49,7 +49,7 @@ rule check_fasta:
             printf "\nNo fasta file (with .fasta(.gz) or .fa(.gz) extension) found at the location:\n {params.fasta}\n"
             exit 1
         fi
-        }} >> 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_gff:
@@ -78,7 +78,7 @@ rule check_gff:
             printf "\nNo gff file (with .gff*(.gz) extension) found at the location:\n {params.gff}\n"
             exit 1
         fi
-        }} >> 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule check_gtf:
@@ -107,7 +107,7 @@ rule check_gtf:
             printf "\nNo gtf file (with .gtf(.gz) extension) found at the location:\n {params.gtf}\n"
             exit 1
         fi
-        }} >> 2>&1 | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_chrom_sizes:
@@ -127,9 +127,11 @@ rule check_chrom_sizes:
         tmp=config["resources"]["check_chrom_sizes"]["tmp"]
     shell:
         """
-        printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
+        {{
+        printf "\nMaking chrom.sizes file for {params.ref_genome}\n"
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule prep_region_file:
@@ -150,8 +152,10 @@ rule prep_region_file:
         tmp=config["resources"]["prep_region_file"]["tmp"]
     shell:
         """
+        {{
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
         awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
+        }} 2>&1 | tee -a "{log}"
         """
         
