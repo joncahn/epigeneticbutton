@@ -576,7 +576,7 @@ rule perform_GO_on_target_file:
         touch = "results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_GO_analysis.R"),
-        dbname = config[config['species']]['go_database'],
+        dbname = lambda wildcards: config[config[wildcards.ref_genome]['species']]['go_database'],
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name
