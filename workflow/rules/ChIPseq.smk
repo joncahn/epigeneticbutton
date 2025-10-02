@@ -606,7 +606,7 @@ rule calling_peaks_macs2_pe:
         filetype = lambda wildcards: {wildcards.file_type},
         env = lambda wildcards: {wildcards.env},
         params = config["chip_callpeaks"]['params'],
-        genomesize = config[config['species']]['genomesize']
+        genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV_CHIP
@@ -643,7 +643,7 @@ rule calling_peaks_macs2_se:
         filetype = lambda wildcards: {wildcards.file_type},
         env = lambda wildcards: {wildcards.env},
         params = config["chip_callpeaks"]['params'],
-        genomesize = config[config['species']]['genomesize']
+        genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV_CHIP

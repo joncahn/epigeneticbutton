@@ -33,8 +33,8 @@ def define_rnaseq_background_file(wildcards):
         return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
         
 def get_go_database(ref_genome):
-    species=config['species']
-    genus=config[config['species']]['genus']
+    species=config[ref_genome]['species']
+    genus=config[config[ref_genome]['species']]['genus']
     return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
 
 def define_final_rna_output(ref_genome):
@@ -102,7 +102,7 @@ rule make_STAR_indices:
     output:
         indices = directory("genomes/{ref_genome}/STAR_index")
     params:
-        star_index = config[config['species']]['star_index']
+        star_index = lambda wildcards: config[config[wildcards.ref_genome]['species']]['star_index']
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","STAR_index_{ref_genome}.log"))
     conda: CONDA_ENV_RNA
@@ -475,9 +475,11 @@ rule call_all_DEGs:
         tmp=config["resources"]["call_all_DEGs"]["tmp"]
     shell:
         """
+        {{
         printf "running edgeR for all samples in {params.ref_genome}\n"
         Rscript "{params.script}" "{input.counts}" "{input.samples}" "{params.analysis_name}" "{params.ref_genome}" "{input.region_file}"
         touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule gather_gene_expression_rpkm:
@@ -526,8 +528,10 @@ rule plot_expression_levels:
         tmp=config["resources"]["plot_expression_levels"]["tmp"]
     shell:
         """
+        {{
         printf "running plot expression levels for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
         Rscript "{params.script}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{params.target_name}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule create_GO_database:
@@ -538,11 +542,11 @@ rule create_GO_database:
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        species = config['species'],
-        genus = config[config['species']]['genus'],
-        ncbiID = config[config['species']]['ncbiID'],
-        gaffile = lambda wildcards: config['gaf_file'][wildcards.ref_genome],
-        geneinfofile = lambda wildcards: config['gene_info_file'][wildcards.ref_genome]
+        species = lambda wildcards: config[wildcards.ref_genome]['species'],
+        genus = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genus'],
+        ncbiID = lambda wildcards: config[config[wildcards.ref_genome]['species']]['ncbiID'],
+        gaffile = lambda wildcards: config[wildcards.ref_genome]['gaf_file'],
+        geneinfofile = lambda wildcards: config[wildcards.ref_genome]['gene_info_file']
     log:
         temp(return_log_rna("{ref_genome}", "build_GO", "{dbname}"))
     conda: CONDA_ENV_RNA
@@ -552,6 +556,7 @@ rule create_GO_database:
         tmp=config["resources"]["create_GO_database"]["tmp"]
     shell:
         """
+        {{
         rm -rf {output.godb}
         if file {params.gaffile} | grep -q 'gzip compressed'; then
             gunzip -c {params.gaffile} > {output.tempgaf}
@@ -565,18 +570,19 @@ rule create_GO_database:
         fi
         printf "Creating GO database for {params.ref_genome}\n"
         Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule perform_GO_on_target_file:
     input:
-        godb = lambda wildcards: directory(f"genomes/{wildcards.ref_genome}/GO/{config[config['species']]['go_database']}"),
+        godb = lambda wildcards: directory(f"genomes/{wildcards.ref_genome}/GO/{config[config[wildcards.ref_genome]['species']]['go_database']}"),
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
         touch = "results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_GO_analysis.R"),
-        dbname = config[config['species']]['go_database'],
+        dbname = lambda wildcards: config[config[wildcards.ref_genome]['species']]['go_database'],
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name
@@ -589,9 +595,11 @@ rule perform_GO_on_target_file:
         tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
     shell:
         """
+        {{
         printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
         Rscript "{params.script}" "{params.dbname}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}" "{params.target_name}"
         touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule all_rna:

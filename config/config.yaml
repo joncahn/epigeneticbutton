@@ -8,18 +8,34 @@ analysis_name: "devel"
 # Path to the sample metadata file
 sample_file: "config/all_samples.tsv"
 
-# Path to the directory containing reference genomes
-ref_path: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis"
-ref_path_rule: "path/to/reference/genomes"
-
+# Path to the annotation files for each reference genome
+ColCEN: 
+  species: "thaliana"  
+  fasta_file: "data/ColCEN_fasta.fa.gz" # can be gzipped or not
+  gff_file: "data/ColCEN_gff.gff3.gz" # can be gzipped or not
+  gtf_file: "data/ColCEN_gtf.gtf.gz" # can be gzipped or not
+  gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+  gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+  te_file: "data/ColCEN_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
+  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+  
+B73_v5:
+  species: "mays" 
+  fasta_file: "data/B73_v5_fasta.fa.gz" # can be gzipped or not
+  gff_file: "data/B73_v5_gff.gff3.gz" # can be gzipped or not
+  gtf_file: "data/B73_v5_gtf.gtf.gz" # can be gzipped or not
+  gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+  gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+  te_file: "data/B73_v5_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
+  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+  
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
 QC_option: "none" # options: ["none"|"all"]
 te_analysis: false
+GO: false # If switching to true, make sure the database is created, or the required files below are edited
 
 # Species-dependent parameters:
-species: "thaliana" # choose one option below or create a new entry with all the corresponding information
-
 thaliana:
   star_index: "--genomeSAindexNbases 12"
   genomesize: 1.3e8
@@ -48,6 +64,13 @@ adapter1:
   TF: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
   mC: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
   sRNA: "TGGAATTCTCGGGTGCCAAGG" # default nextflex
+
+adapter2:
+  ChIP: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
+  RNA: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
+  TF: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
+  mC: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
+  sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # default netflex
 
 # Mapping option default
 chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
@@ -129,23 +152,12 @@ mC_mapping:
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: false # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
-structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_heatmap_sizes: [21, 24] # these sizes in nucleotide will be used for plotting heatmaps (can add as many as desired as a list, for sizes within the range above). Several sizes do not work well with "type" heatmap scaling or unstranded bed files.
 
-# Gene Ontology files to create a new database (make sure you match the reference genome(s) present in the samplefile)
-GO: false # If switching to true, make sure the database is created, or the required files below are edited
-gaf_file:
-  ColCEN: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not
-  B73_v5: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not
-
-gene_info_file:
-  ColCEN: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not
-  B73_v5: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not
-
-# For deeptools heatmaps
+# For deeptools heatmaps and profiles
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"

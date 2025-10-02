@@ -110,8 +110,8 @@ rule process_fastq_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
-        adapter1 = "AGATCGGAAGAGCACACGTCTGAAC",
-        adapter2 = "AGATCGGAAGAGCGTCGTGTAGGGA",
+        adapter1 = lambda wildcards: config['adapter1'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        adapter2 = lambda wildcards: config['adapter2'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
         trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')]
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))

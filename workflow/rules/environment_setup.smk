@@ -27,7 +27,7 @@ rule check_fasta:
     output:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     params:
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
+        fasta = lambda wildcards: config[wildcards.ref_genome]['fasta_file']
     log:
         temp(return_log_env("{ref_genome}", "fasta"))
     conda: CONDA_ENV
@@ -37,38 +37,26 @@ rule check_fasta:
         tmp=config["resources"]["check_fasta"]["tmp"]
     shell:
         """
-        # Search for fasta file
-        if [ -s {params.ref_dir}/*.fa.gz ]; then
-            fa_file=$(ls {params.ref_dir}/*.fa.gz)
-            fa_filename=${{fa_file##*/}}
-            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
-            pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
-        elif [ -s {params.ref_dir}/*.fa ]; then
-            fa_file=$(ls {params.ref_dir}/*.fa)
-            fa_filename=${{fa_file##*/}}
-            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
-            cp ${{fa_file}} {output.fasta}
-        elif [ -s {params.ref_dir}/*.fasta.gz ]; then
-            fa_file=$(ls {params.ref_dir}/*.fasta.gz)
-            fa_filename=${{fa_file##*/}}
-            printf "\nGzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
-            pigz -p {threads} -dc ${{fa_file}} > {output.fasta}
-        elif [ -s {params.ref_dir}/*.fasta ]; then
-            fa_file=$(ls {params.ref_dir}/*.fasta)
-            fa_filename=${{fa_file##*/}}
-            printf "\nUnzipped fasta file found in {params.ref_dir}:\n ${{fa_filename}}\n" >> {log} 2>&1
-            cp ${{fa_file}} {output.fasta}
+        {{
+        # Looks if fasta is present and gzipped or not
+        if [[ {params.fasta} == *.fa.gz || {params.fasta} == *.fasta.gz ]]; then
+            printf "\nGzipped fasta file found: {params.fasta}\n"
+            pigz -p {threads} -dc {params.fasta} > {output.fasta}
+        elif [[ {params.fasta} == *.fa || {params.fasta} == *.fasta ]]; then
+            printf "\nUnzipped fasta file found: {params.fasta}\n"
+            cp {params.fasta} {output.fasta}
         else
-            printf "\nNo fasta file found in reference directory:\n {params.ref_dir}\n" >> {log} 2>&1
+            printf "\nNo fasta file (with .fasta(.gz) or .fa(.gz) extension) found at the location:\n {params.fasta}\n"
             exit 1
         fi
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_gff:
     output:
         gff = "genomes/{ref_genome}/{ref_genome}.gff"
     params:
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
+        gff = lambda wildcards: config[wildcards.ref_genome]['gff_file']
     log:
         temp(return_log_env("{ref_genome}", "gff"))
     conda: CONDA_ENV
@@ -78,27 +66,26 @@ rule check_gff:
         tmp=config["resources"]["check_gff"]["tmp"]
     shell:
         """
-        if [ -s {params.ref_dir}/*.gff*.gz ]; then
-            gff_file=$(ls {params.ref_dir}/*gff*.gz)
-            gff_filename=${{gff_file##*/}}
-            printf "\nGzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n" >> {log} 2>&1
-            pigz -p {threads} -dc ${{gff_file}} > {output.gff}	
-        elif [ -s {params.ref_dir}/*.gff* ]; then
-            gff_file=$(ls {params.ref_dir}/*.gff*)
-            gff_filename=${{gff_file##*/}}
-            printf "\nUnzipped GFF annotation file found in {params.ref_dir}:\n ${{gff_filename}}\n" >> {log} 2>&1
-            cp ${{gff_file}} {output.gff}
+        {{
+        # Looks if gff is present and is gzipped or not
+        if [[ {params.gff} == *.gff*.gz ]]; then
+            printf "\nGzipped gff file found: {params.gff}\n"
+            pigz -p {threads} -dc {params.gff} > {output.gff}
+        elif [[ {params.gff} == *.gff* ]]; then
+            printf "\nUnzipped gff file found: {params.gff}\n"
+            cp {params.gff} {output.gff}
         else
-            printf "\nNo gff annotation file found in reference directory:\n {params.ref_dir}\n" >> {log} 2>&1
+            printf "\nNo gff file (with .gff*(.gz) extension) found at the location:\n {params.gff}\n"
             exit 1
         fi
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule check_gtf:
     output:
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
     params:
-        ref_dir = lambda wildcards: os.path.join(REF_PATH, wildcards.ref_genome)
+        gtf = lambda wildcards: config[wildcards.ref_genome]['gtf_file']
     log:
         temp(return_log_env("{ref_genome}", "gtf"))
     conda: CONDA_ENV
@@ -108,20 +95,19 @@ rule check_gtf:
         tmp=config["resources"]["check_gtf"]["tmp"]
     shell:
         """
-        if [ -s {params.ref_dir}/*.gtf.gz ]; then
-            gtf_file=$(ls {params.ref_dir}/*gtf.gz)
-            gtf_filename=${{gtf_file##*/}}
-            printf "\nGzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n" >> {log} 2>&1
-            sed 's/gene://' ${{gtf_file}} | pigz -p {threads} -dc > {output.gtf}	
-        elif [ -s {params.ref_dir}/*.gtf ]; then
-            gtf_file=$(ls {params.ref_dir}/*.gtf)
-            gtf_filename=${{gtf_file##*/}}
-            printf "\nUnzipped GTF annotation file found in {params.ref_dir}:\n ${{gtf_filename}}\n" >> {log} 2>&1
-            sed 's/gene://' ${{gtf_file}} > {output.gtf}
+        {{
+        # Looks if gtf is present and is gzipped or not
+        if [[ {params.gtf} == *.gtf.gz ]]; then
+            printf "\nGzipped gtf file found: {params.gtf}\n"
+            pigz -p {threads} -dc {params.gtf} > {output.gtf}
+        elif [[ {params.gtf} == *.gtf ]]; then
+            printf "\nUnzipped gtf file found: {params.gtf}\n"
+            cp {params.gtf} {output.gtf}
         else
-            printf "\nNo GTF annotation file found in reference directory:\n {params.ref_dir}\n" >> {log} 2>&1
+            printf "\nNo gtf file (with .gtf(.gz) extension) found at the location:\n {params.gtf}\n"
             exit 1
         fi
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule check_chrom_sizes:
@@ -141,9 +127,11 @@ rule check_chrom_sizes:
         tmp=config["resources"]["check_chrom_sizes"]["tmp"]
     shell:
         """
-        printf "\nMaking chrom.sizes file for {params.ref_genome}\n" >> {log} 2>&1
+        {{
+        printf "\nMaking chrom.sizes file for {params.ref_genome}\n"
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule prep_region_file:
@@ -164,8 +152,10 @@ rule prep_region_file:
         tmp=config["resources"]["prep_region_file"]["tmp"]
     shell:
         """
+        {{
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
         awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
         awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
+        }} 2>&1 | tee -a "{log}"
         """
         
