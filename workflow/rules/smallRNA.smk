@@ -196,7 +196,7 @@ rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
-        indices = "genomes/{ref_genome}/{ref_genome}.1.ebwt"
+        indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
