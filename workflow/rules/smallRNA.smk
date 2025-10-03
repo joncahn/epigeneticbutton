@@ -216,7 +216,7 @@ rule shortstack_map:
     input:
         fastq = "results/sRNA/mapped/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.1.ebwt"
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.1.ebwt"
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
