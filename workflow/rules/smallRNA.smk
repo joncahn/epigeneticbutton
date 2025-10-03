@@ -134,7 +134,7 @@ rule make_bt2_indices_for_structural_RNAs:
         indices = directory("genomes/structural_RNAs/{ref_genome}_bt2_index")
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","strctural_RNA_bt2_index_{ref_genome}.log"))
-    conda: CONDA_ENV_CHIP
+    conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bt2_indices_for_structural_RNAs"]["threads"]
     resources:
         mem=config["resources"]["make_bt2_indices_for_structural_RNAs"]["mem"],
