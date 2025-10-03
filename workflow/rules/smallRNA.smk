@@ -175,7 +175,7 @@ rule filter_structural_rna:
     shell:
         """
         {{
-        bowtie2 --very-sensitive -p {threads} -x -x "{input.indices}/{params.ref_genome}" -U {input.fastq} | samtools view -@ {threads} -f 0x4 | samtools fastq -@ {threads} > {output.filtered_fastq}
+        bowtie2 --very-sensitive -p {threads} -x "{input.indices}/{params.ref_genome}" -U {input.fastq} | samtools view -@ {threads} -f 0x4 | samtools fastq -@ {threads} > {output.filtered_fastq}
         pigz -p {threads} {output.filtered_fastq} -c > {output.gzipped_fastq}
         }} 2>&1 | tee -a "{log}"
         """
