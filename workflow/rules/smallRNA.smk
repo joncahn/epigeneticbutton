@@ -126,10 +126,39 @@ rule deduplicate_srna_netflexv3:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule make_bt2_indices_for_structural_RNAs:
+    input:
+        fasta = lambda wildcards: config[wildcards.ref_genome]['structural_rna_fafile']
+    output:
+        temp_fasta = temp("genomes/structural_RNAs/{ref_genome}/temp.fa"),
+        indices = directory("genomes/structural_RNAs/{ref_genome}_bt2_index")
+    log:
+        temp(os.path.join(REPO_FOLDER,"results","logs","strctural_RNA_bt2_index_{ref_genome}.log"))
+    conda: CONDA_ENV_CHIP
+    threads: config["resources"]["make_bt2_indices_for_structural_RNAs"]["threads"]
+    resources:
+        mem=config["resources"]["make_bt2_indices_for_structural_RNAs"]["mem"],
+        tmp=config["resources"]["make_bt2_indices_for_structural_RNAs"]["tmp"]
+    shell:
+        """
+        {{
+        if [[ {input.fasta} =~ \.gz$ ]]; then
+            printf "Fasta of structural RNAs for {wildcards.ref_genome} is gzipped file: {input.fasta}\n"
+            gunzip {input.fasta} -c > {output.temp_fasta}
+        else
+            printf "Fasta of structural RNAs for {wildcards.ref_genome} is unzipped file: {input.fasta}\n"
+            cp {input.fasta} {output.temp_fasta}
+        fi
+        printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
+        mkdir genomes/structural_RNAs/{wildcards.ref_genome}/bt2_index
+        bowtie2-build --threads {threads} "{output.temp_fasta}" "{output.indices}/{wildcards.ref_genome}"
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule filter_structural_rna:
     input:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_structural(wildcards.sample_name)}.fastq.gz",
-        fasta = lambda wildcards: config[parse_sample_name(wildcards.sample_name)['ref_genome']]['structural_rna_fafile']
+        indices = lambda wildcards: f"genomes/structural_RNAs/{parse_sample_name(wildcards.sample_name)['ref_genome']}_bt2_index"
     output:
         filtered_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq"),
         gzipped_fastq = "results/sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
@@ -146,20 +175,7 @@ rule filter_structural_rna:
     shell:
         """
         {{
-        if [[ ! -d genomes/structural_RNAs/{params.ref_genome}/bt2_index ]]; then
-            if [[ {input.fasta} =~ \.gz$ ]]; then
-                printf "Generating bowtie2 index for structural RNAs of {params.ref_genome} using gzipped file: {input.fasta}\n"
-                mkdir -p genomes/structural_RNAs/{params.ref_genome}
-                gunzip {input.fasta} -c > "genomes/structural_RNAs/{params.ref_genome}/temp.fa"
-                bowtie2-build --threads {threads} "genomes/structural_RNAs/{params.ref_genome}/temp.fa" "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
-                rm -f "genomes/structural_RNAs/{params.ref_genome}/temp.fa"
-            else
-                printf "Generating bowtie2 index for structural RNAs of {params.ref_genome} using file: {input.fasta}\n"
-                mkdir -p genomes/structural_RNAs/{params.ref_genome}
-                bowtie2-build --threads {threads} "{input.fasta}" "genomes/structural_RNAs/{params.ref_genome}/bt2_index"
-            fi
-        fi
-        bowtie2 --very-sensitive -p {threads} -x genomes/structural_RNAs/{params.ref_genome}/bt2_index -U {input.fastq} | samtools view -@ {threads} -f 0x4 | samtools fastq -@ {threads} > {output.filtered_fastq}
+        bowtie2 --very-sensitive -p {threads} -x -x "{input.indices}/{params.ref_genome}" -U {input.fastq} | samtools view -@ {threads} -f 0x4 | samtools fastq -@ {threads} > {output.filtered_fastq}
         pigz -p {threads} {output.filtered_fastq} -c > {output.gzipped_fastq}
         }} 2>&1 | tee -a "{log}"
         """

@@ -312,6 +312,7 @@ resources:
   # smallRNA
   shortstack_map: *heavy
   deduplicate_srna_netflexv3: *standard
+  make_bt2_indices_for_structural_RNAs: *heavy
   filter_structural_rna: *heavy
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
