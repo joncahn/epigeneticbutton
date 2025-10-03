@@ -28,6 +28,13 @@ B73_v5:
   gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   te_file: "data/B73_v5_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+
+la8011:
+  species: "aequinoctialis"
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.fasta.gz"
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.noname.gff3.gz"
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz"
+  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
@@ -49,6 +56,10 @@ mays:
   ncbiID: "4577"
   genus: "Zea"
   go_database: org.Zmays.eg.db
+
+aequinoctialis:
+  star_index: "--genomeSAindexNbases 12"
+  genomesize: 8.0e8
 
 # Trimming and processing parameters:
 trimming_quality:
@@ -151,11 +162,11 @@ mC_mapping:
 
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
-structural_rna_depletion: false # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
+structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
-srna_heatmap_sizes: [21, 24] # these sizes in nucleotide will be used for plotting heatmaps (can add as many as desired as a list, for sizes within the range above). Several sizes do not work well with "type" heatmap scaling or unstranded bed files.
+srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps (can add as many as desired as a list, for sizes within the range above). Several sizes do not work well with "type" heatmap scaling or unstranded bed files.
 
 # For deeptools heatmaps and profiles
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
@@ -310,6 +321,7 @@ resources:
   create_GO_database: *single
   perform_GO_on_target_file: *single
   # smallRNA
+  make_bowtie1_indices: *standard
   shortstack_map: *heavy
   deduplicate_srna_netflexv3: *standard
   make_bt2_indices_for_structural_RNAs: *heavy
