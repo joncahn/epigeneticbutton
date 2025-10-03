@@ -150,7 +150,7 @@ rule make_bt2_indices_for_structural_RNAs:
             cp {input.fasta} {output.temp_fasta}
         fi
         printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
-        mkdir genomes/structural_RNAs/{wildcards.ref_genome}/bt2_index
+        mkdir -p genomes/structural_RNAs/{wildcards.ref_genome}_bt2_index
         bowtie2-build --threads {threads} "{output.temp_fasta}" "{output.indices}/{wildcards.ref_genome}"
         }} 2>&1 | tee -a "{log}"
         """
