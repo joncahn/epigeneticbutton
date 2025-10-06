@@ -441,7 +441,7 @@ rule call_all_differential_srna_clusters:
         srna_samples = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/samples_for_edgeR.txt",
         srna_counts = "results/sRNA/clusters/{analysis_name}__{ref_genome}__on_{target_name}/counts_for_edgeR.txt"
     output:
-        mdsplot = "results/combined/plots/MDS_sRNA_{analysis_name}_{ref_genome}__on_{target_name}_d12.pdf"
+        mdsplot = "results/combined/plots/MDS_sRNA_{analysis_name}_{ref_genome}__on_{target_name}_d12.pdf",
         touch = "results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_srna_DEGs.R"),
