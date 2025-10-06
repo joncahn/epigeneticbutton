@@ -13,7 +13,8 @@ summary_stats<-read.delim(statfile, header = TRUE)
 summary_stats$Count<-as.numeric(summary_stats$Count)
 minsize<-min(summary_stats$Size)
 maxsize<-max(summary_stats$Size)
-tot<-nrow(summary_stats)
+
+tot<-length(unique(summary_stats$Sample))
 
 plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	
