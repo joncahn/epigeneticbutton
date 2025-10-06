@@ -15,6 +15,7 @@ minsize<-min(summary_stats$Size)
 maxsize<-max(summary_stats$Size)
 
 tot<-length(unique(summary_stats$Sample))
+tot
 
 plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	
