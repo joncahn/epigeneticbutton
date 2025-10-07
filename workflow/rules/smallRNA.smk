@@ -195,25 +195,41 @@ rule dispatch_srna_fastq:
         cp {input.fastq} {output.fastq_file}
         """
 
+# rule make_bowtie1_indices:
+    # input:
+        # fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+    # output:
+        # indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
+    # log:
+        # temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
+    # conda: CONDA_ENV_SRNA
+    # threads: config["resources"]["make_bowtie1_indices"]["threads"]
+    # resources:
+        # mem_mb=config["resources"]["make_bowtie1_indices"]["mem_mb"],
+        # tmp_mb=config["resources"]["make_bowtie1_indices"]["tmp_mb"],
+        # qos=config["resources"]["make_bowtie1_indices"]["qos"]
+    # shell:
+        # """
+        # {{
+        # printf "\nMaking Bowtie1 indices for {wildcards.ref_genome}\n"
+        # bowtie-build {input.fasta} {input.fasta}
+        # }} 2>&1 | tee -a "{log}"
+        # """
+        
 rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
-    log:
-        temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
-    conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_bowtie1_indices"]["threads"]
+    threads: 1
     resources:
-        mem_mb=config["resources"]["make_bowtie1_indices"]["mem_mb"],
-        tmp_mb=config["resources"]["make_bowtie1_indices"]["tmp_mb"],
-        qos=config["resources"]["make_bowtie1_indices"]["qos"]
+        mem_mb=32000,
+        tmp_mb=48000,
+        qos="slow_nice"
     shell:
         """
-        {{
         printf "\nMaking Bowtie1 indices for {wildcards.ref_genome}\n"
         bowtie-build {input.fasta} {input.fasta}
-        }} 2>&1 | tee -a "{log}"
         """
 
 rule shortstack_map:
