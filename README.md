@@ -141,13 +141,10 @@ For each reference genome, a corresponding fasta, gff and gtf files are required
 B73_NAM:
 	fasta_file: path/to/B73.fasta	# can be .fa(.gz) or .fasta(.gz)
 	gff_file: B73.gff	# can be .gff*(.gz)
-	│	└── B73.gtf	# can be .gtf(.gz)	
- 	└── tair10/		# ref_genome: "tair10" (second ref genome)
-		├── Ath.fasta	# can be .fa(.gz) or .fasta(.gz)
-		├── Ath.gff	# can be .gff*(.gz)
-		└── Ath.gtf	# can be .gtf(.gz)
+	gtf_file: B73.gtf	# can be .gtf(.gz)
 ```
-The GTF file can be created from a GFF file with cufflinks `gffread -T <gff_file> -o <gtf_file>` and check that `transcript_id` and `gene_id` are correctly assigned in the 9th column. The GFF file should have `gene` in the 3rd column. All files can be gzipped (.gz extension).
+Other files specific to each reference genome are optional.
+The GTF file can be created from a GFF file with cufflinks `gffread -T <gff_file> -o <gtf_file>` and check that `transcript_id` and `gene_id` are correctly assigned in the 9th column. The GFF file should have `gene` and `exon` in the 3rd column. All files can be gzipped (.gz extension).
 
 ### Histone ChIP-seq
 - Col1: *data_type*: `ChIP` or `ChIP_<id>` where `<id>` is an identifier to relate an IP sample to its corresponding input. Only necessary in case there are different inputs to be used for different IP samples that otherwise share the same `line` and `tissue` values.
