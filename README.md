@@ -52,12 +52,12 @@ cd epigeneticbutton
 
 2. Install snakemake and the executor plugin you need to run it:
 ```bash
-conda install -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm
+conda install -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm coincbc
 ```
 or in a new environment:
 ```bash
-conda create -n epicc -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm coincbc
-conda activate epicc
+conda create -n smk9 -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm coincbc
+conda activate smk9
 ```
 ## Usage
 
