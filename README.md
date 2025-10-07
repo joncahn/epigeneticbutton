@@ -52,7 +52,7 @@ cd epigeneticbutton
 
 2. Install snakemake:
 ```bash
-conda install -c bioconda snakemake>=7
+conda install -c bioconda snakemake>=7 matplotlib
 ```
 
 ## Usage
