@@ -50,11 +50,15 @@ git clone git@github.com:joncahn/epigeneticbutton.git
 cd epigeneticbutton
 ```
 
-2. Install snakemake:
+2. Install snakemake and the executor plugin you need to run it:
 ```bash
-conda install -c bioconda snakemake>=7 matplotlib
+conda install -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm
 ```
-
+or in a new environment:
+```bash
+conda create -n epicc -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm
+conda activate epicc
+```
 ## Usage
 
 ### Configuration
