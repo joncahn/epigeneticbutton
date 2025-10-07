@@ -11,9 +11,9 @@ sample_file: "config/all_samples.tsv"
 # Path to the annotation files for each reference genome
 ColCEN: 
   species: "thaliana"  
-  fasta_file: "data/ColCEN_fasta.fa.gz" # can be gzipped or not
-  gff_file: "data/ColCEN_gff.gff3.gz" # can be gzipped or not
-  gtf_file: "data/ColCEN_gtf.gtf.gz" # can be gzipped or not
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # can be gzipped or not
   gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   te_file: "data/ColCEN_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
@@ -21,9 +21,9 @@ ColCEN:
   
 B73_v5:
   species: "mays" 
-  fasta_file: "data/B73_v5_fasta.fa.gz" # can be gzipped or not
-  gff_file: "data/B73_v5_gff.gff3.gz" # can be gzipped or not
-  gtf_file: "data/B73_v5_gtf.gtf.gz" # can be gzipped or not
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0_Zm00001eb.1.gff3" # can be gzipped or not
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # can be gzipped or not
   gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   te_file: "data/B73_v5_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
