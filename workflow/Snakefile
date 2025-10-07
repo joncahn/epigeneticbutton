@@ -27,10 +27,15 @@ env_patterns = [
     ("TF_*", "TF"),
 ]
 
-# Define sample metadata
-samples = pd.read_csv(config["sample_file"], sep="\t", header=None,
-                      names=["data_type", "line", "tissue", "sample_type", "replicate", 
-                             "seq_id", "fastq_path", "paired", "ref_genome"])
+# Define sample metadata and avoid header if present
+colnames = ["data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome"]
+with open(config["sample_file"]) as f:
+    first_line = f.readline().strip().split("\t")
+if first_line == colnames:
+    samples = pd.read_csv(config["sample_file"], sep="\t", header=0, names=colnames)
+else:
+    samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
+
 samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).reset_index(drop=True)
 
 # Create an "env" column based on the string patterns in data_type

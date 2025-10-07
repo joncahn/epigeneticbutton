@@ -52,7 +52,7 @@ cd epigeneticbutton
 
 2. Install snakemake:
 ```bash
-conda install -c bioconda snakemake
+conda install -c bioconda snakemake>=7
 ```
 
 ## Usage
@@ -75,7 +75,7 @@ https://epicc-builder.streamlit.app/
 
 2. Update `config/config.yaml` with your paths and parameters:
    - Sample file: this is the full path to the file detailed above which contain your samples metadata. 
-   - Reference genome path: this is the path leading to the directories that are called exactly like `ref_genome` above and that contain only 1 fasta file, 1 gff file and 1 gtf file. (See [below](#common-to-all-types-of-samples) for more details)
+   - Reference genome files: for each reference genome in the sample file (last column), enter the full path of a fasta file, a gene gff file, and a gene gtf file (See [below](#common-to-all-types-of-samples) for more details)
    - Analysis parameters / options
    - Species-specific parameters
    - Resources allocation
@@ -135,13 +135,12 @@ The combination line x tissue will be the base for all comparisons (e.g `WT_leaf
 - Col6: *seq_id*: Unique identifier to identify the raw data. Can be an SRR number (e.g. SRR27821931) if the data is deposited in SRA, or a unique identifier of the file if the data is local (e.g. `wt_k27`). This identifier should be shared by both 'R1' and 'R2' fastq files for paired-end data.
 - Col7: *fastq_path*: Either `SRA` if raw data to be downloaded from SRA (the SRR number should be used as `seq-id`), or the path to the directory containing the fastq file (e.g. `/archive/fastq`), in which case the `seq_id` should be a unique identifier of the corresponding file in this folder (e.g. `/archive/fastq/raw.reads.wt_k27.fastq.gz`)
 - Col8: *paired*: `PE` for paired-end data or `SE` for single-end data. PE samples should have two fastq files R1 and R2 at the location defined above, sharing the same identifier in Col6 (e.g. `/archive/fastq/raw.reads.wt_k27_R1.fastq.gz` and `/archive/fastq/raw.reads.wt_k27_R2.fastq.gz`)
-- Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). It should be the name of a directory found at the path defined in the config file `ref_path` and it must contain a single fasta file, a single gff file and a single gtf file. If mapping to multiple references, these directory should be organized in the same `ref_path` directory. For example, the following structure:
+- Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). 
+For each reference genome, a corresponding fasta, gff and gtf files are required. It can be a full path (including the extension) or relative to the main repo folder. These files can be gzipped. For example, if your sample file has `B73_NAM` as a reference genome (last column), there must be this entry in the config file:
 ```
-/home/
-└── genomes/			# ref_path: "/home/genomes"
-	├── B73_NAM/		# ref_genome: "B73_NAM" (first ref genome)
-	│	├── B73.fasta	# can be .fa(.gz) or .fasta(.gz)
-	│	├── B73.gff	# can be .gff*(.gz)
+B73_NAM:
+	fasta_file: path/to/B73.fasta	# can be .fa(.gz) or .fasta(.gz)
+	gff_file: B73.gff	# can be .gff*(.gz)
 	│	└── B73.gtf	# can be .gtf(.gz)	
  	└── tair10/		# ref_genome: "tair10" (second ref genome)
 		├── Ath.fasta	# can be .fa(.gz) or .fasta(.gz)
@@ -370,6 +369,8 @@ Different small RNAseq libraries have different chemistry and might need to be t
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
 5. Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A patch version exists which is installed from github and works fine for now.
+
+6. Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `profiles/cluster.yaml` file.
 
 ## Features under development
 - RAMPAGE

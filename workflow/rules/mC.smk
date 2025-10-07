@@ -79,8 +79,9 @@ rule make_bismark_indices:
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
-        mem=config["resources"]["make_bismark_indices"]["mem"],
-        tmp=config["resources"]["make_bismark_indices"]["tmp"]
+        mem_mb=config["resources"]["make_bismark_indices"]["mem_mb"],
+        tmp_mb=config["resources"]["make_bismark_indices"]["tmp_mb"],
+        qos=config["resources"]["make_bismark_indices"]["qos"]
     shell:
         """
         {{
@@ -116,8 +117,9 @@ rule bismark_map_pe:
     conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
-        mem=config["resources"]["bismark_map_pe"]["mem"],
-        tmp=config["resources"]["bismark_map_pe"]["tmp"]
+        mem_mb=config["resources"]["bismark_map_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["bismark_map_pe"]["tmp_mb"],
+        qos=config["resources"]["bismark_map_pe"]["qos"]
     shell:
         """
         {{
@@ -154,8 +156,9 @@ rule bismark_map_se:
     conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
-        mem=config["resources"]["bismark_map_se"]["mem"],
-        tmp=config["resources"]["bismark_map_se"]["tmp"]
+        mem_mb=config["resources"]["bismark_map_se"]["mem_mb"],
+        tmp_mb=config["resources"]["bismark_map_se"]["tmp_mb"],
+        qos=config["resources"]["bismark_map_se"]["qos"]
     shell:
         """
         {{
@@ -203,8 +206,9 @@ rule make_mc_stats_pe:
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
     threads: config["resources"]["make_mc_stats_pe"]["threads"]
     resources:
-        mem=config["resources"]["make_mc_stats_pe"]["mem"],
-        tmp=config["resources"]["make_mc_stats_pe"]["tmp"]
+        mem_mb=config["resources"]["make_mc_stats_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mc_stats_pe"]["tmp_mb"],
+        qos=config["resources"]["make_mc_stats_pe"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -244,8 +248,9 @@ rule make_mc_stats_se:
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
     threads: config["resources"]["make_mc_stats_se"]["threads"]
     resources:
-        mem=config["resources"]["make_mc_stats_se"]["mem"],
-        tmp=config["resources"]["make_mc_stats_se"]["tmp"]
+        mem_mb=config["resources"]["make_mc_stats_se"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mc_stats_se"]["tmp_mb"],
+        qos=config["resources"]["make_mc_stats_se"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -280,8 +285,9 @@ rule merging_mc_replicates:
     conda: CONDA_ENV_MC
     threads: config["resources"]["merging_mc_replicates"]["threads"]
     resources:
-        mem=config["resources"]["merging_mc_replicates"]["mem"],
-        tmp=config["resources"]["merging_mc_replicates"]["tmp"]
+        mem_mb=config["resources"]["merging_mc_replicates"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_mc_replicates"]["tmp_mb"],
+        qos=config["resources"]["merging_mc_replicates"]["qos"]
     shell:
         """
         {{
@@ -310,8 +316,9 @@ rule make_mc_bigwig_files:
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
-        mem=config["resources"]["make_mc_bigwig_files"]["mem"],
-        tmp=config["resources"]["make_mc_bigwig_files"]["tmp"]    
+        mem_mb=config["resources"]["make_mc_bigwig_files"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mc_bigwig_files"]["tmp_mb"],
+        qos=config["resources"]["make_mc_bigwig_files"]["qos"]
     shell:
         """
         {{
@@ -367,8 +374,9 @@ rule call_DMRs_pairwise:
     conda: CONDA_ENV_MC
     threads: config["resources"]["call_DMRs_pairwise"]["threads"]
     resources:
-        mem=config["resources"]["call_DMRs_pairwise"]["mem"],
-        tmp=config["resources"]["call_DMRs_pairwise"]["tmp"]
+        mem_mb=config["resources"]["call_DMRs_pairwise"]["mem_mb"],
+        tmp_mb=config["resources"]["call_DMRs_pairwise"]["tmp_mb"],
+        qos=config["resources"]["call_DMRs_pairwise"]["qos"]
     shell:
         """
         {{

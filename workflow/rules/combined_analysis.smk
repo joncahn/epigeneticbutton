@@ -429,8 +429,9 @@ rule prepping_mapping_stats:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_mapping_stats"))
     threads: config["resources"]["prepping_mapping_stats"]["threads"]
     resources:
-        mem=config["resources"]["prepping_mapping_stats"]["mem"],
-        tmp=config["resources"]["prepping_mapping_stats"]["tmp"]
+        mem_mb=config["resources"]["prepping_mapping_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_mapping_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_mapping_stats"]["qos"]
     shell:
         """
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
@@ -454,8 +455,9 @@ rule plotting_mapping_stats:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_mapping_stats"]["threads"]
     resources:
-        mem=config["resources"]["plotting_mapping_stats"]["mem"],
-        tmp=config["resources"]["plotting_mapping_stats"]["tmp"]
+        mem_mb=config["resources"]["plotting_mapping_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_mapping_stats"]["tmp_mb"],
+        qos=config["resources"]["plotting_mapping_stats"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}"
@@ -473,8 +475,9 @@ rule prepping_chip_peak_stats:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_peak_stats"))
     threads: config["resources"]["prepping_chip_peak_stats"]["threads"]
     resources:
-        mem=config["resources"]["prepping_chip_peak_stats"]["mem"],
-        tmp=config["resources"]["prepping_chip_peak_stats"]["tmp"]
+        mem_mb=config["resources"]["prepping_chip_peak_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_chip_peak_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_chip_peak_stats"]["qos"]
     shell:
         """
         printf "Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > "{output.stat_file}"
@@ -499,8 +502,9 @@ rule plotting_peaks_stats_chip_tf:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_peaks_stats_chip_tf"]["threads"]
     resources:
-        mem=config["resources"]["plotting_peaks_stats_chip_tf"]["mem"],
-        tmp=config["resources"]["plotting_peaks_stats_chip_tf"]["tmp"]
+        mem_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["tmp_mb"],
+        qos=config["resources"]["plotting_peaks_stats_chip_tf"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}" "{params.env}"
@@ -519,8 +523,9 @@ rule prepping_srna_sizes_stats:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_srna_sizes"))
     threads: config["resources"]["prepping_srna_sizes_stats"]["threads"]
     resources:
-        mem=config["resources"]["prepping_srna_sizes_stats"]["mem"],
-        tmp=config["resources"]["prepping_srna_sizes_stats"]["tmp"]
+        mem_mb=config["resources"]["prepping_srna_sizes_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_srna_sizes_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_srna_sizes_stats"]["qos"]
     shell:
         """
         printf "Sample\tType\tSize\tCount\n" > "{output.stat_file}"
@@ -545,8 +550,9 @@ rule plotting_srna_sizes_stats:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_srna_sizes_stats"]["threads"]
     resources:
-        mem=config["resources"]["plotting_srna_sizes_stats"]["mem"],
-        tmp=config["resources"]["plotting_srna_sizes_stats"]["tmp"]
+        mem_mb=config["resources"]["plotting_srna_sizes_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_srna_sizes_stats"]["tmp_mb"],
+        qos=config["resources"]["plotting_srna_sizes_stats"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
@@ -572,8 +578,9 @@ rule combine_peakfiles:
     conda: CONDA_ENV
     threads: config["resources"]["combine_peakfiles"]["threads"]
     resources:
-        mem=config["resources"]["combine_peakfiles"]["mem"],
-        tmp=config["resources"]["combine_peakfiles"]["tmp"]
+        mem_mb=config["resources"]["combine_peakfiles"]["mem_mb"],
+        tmp_mb=config["resources"]["combine_peakfiles"]["tmp_mb"],
+        qos=config["resources"]["combine_peakfiles"]["qos"]
     shell:
         """
         {{
@@ -605,8 +612,9 @@ rule get_annotations_for_bedfile:
     conda: CONDA_ENV
     threads: config["resources"]["get_annotations_for_bedfile"]["threads"]
     resources:
-        mem=config["resources"]["get_annotations_for_bedfile"]["mem"],
-        tmp=config["resources"]["get_annotations_for_bedfile"]["tmp"]
+        mem_mb=config["resources"]["get_annotations_for_bedfile"]["mem_mb"],
+        tmp_mb=config["resources"]["get_annotations_for_bedfile"]["tmp_mb"],
+        qos=config["resources"]["get_annotations_for_bedfile"]["qos"]
     shell:
         """
         {{
@@ -637,8 +645,9 @@ rule plotting_upset_peaks:
     conda: CONDA_ENV_UPSET
     threads: config["resources"]["plotting_upset_peaks"]["threads"]
     resources:
-        mem=config["resources"]["plotting_upset_peaks"]["mem"],
-        tmp=config["resources"]["plotting_upset_peaks"]["tmp"]
+        mem_mb=config["resources"]["plotting_upset_peaks"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_upset_peaks"]["tmp_mb"],
+        qos=config["resources"]["plotting_upset_peaks"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.mergedfile}" "{input.annotatedfile}" "{params.env}" "{params.types}" "{output.plot}"
@@ -675,8 +684,9 @@ rule making_stranded_matrix_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["making_stranded_matrix_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["making_stranded_matrix_on_targetfile"]["mem"],
-        tmp=config["resources"]["making_stranded_matrix_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["making_stranded_matrix_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["making_stranded_matrix_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["making_stranded_matrix_on_targetfile"]["qos"]
     shell:
         """
         {{
@@ -717,8 +727,9 @@ rule merging_matrix:
     conda: CONDA_ENV
     threads: config["resources"]["merging_matrix"]["threads"]
     resources:
-        mem=config["resources"]["merging_matrix"]["mem"],
-        tmp=config["resources"]["merging_matrix"]["tmp"]
+        mem_mb=config["resources"]["merging_matrix"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_matrix"]["tmp_mb"],
+        qos=config["resources"]["merging_matrix"]["qos"]
     shell:
         """
         {{
@@ -757,8 +768,9 @@ rule computing_matrix_scales:
     conda: CONDA_ENV
     threads: config["resources"]["computing_matrix_scales"]["threads"]
     resources:
-        mem=config["resources"]["computing_matrix_scales"]["mem"],
-        tmp=config["resources"]["computing_matrix_scales"]["tmp"]
+        mem_mb=config["resources"]["computing_matrix_scales"]["mem_mb"],
+        tmp_mb=config["resources"]["computing_matrix_scales"]["tmp_mb"],
+        qos=config["resources"]["computing_matrix_scales"]["qos"]
     shell:
         """
         {{        
@@ -884,8 +896,9 @@ rule plotting_heatmap_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_heatmap_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_heatmap_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["plotting_heatmap_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_heatmap_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["plotting_heatmap_on_targetfile"]["qos"]
     shell:
         """
         if [[ "{params.matrix}" == "tes" ]]; then
@@ -919,8 +932,9 @@ rule sort_heatmap:
     conda: CONDA_ENV
     threads: config["resources"]["sort_heatmap"]["threads"]
     resources:
-        mem=config["resources"]["sort_heatmap"]["mem"],
-        tmp=config["resources"]["sort_heatmap"]["tmp"]
+        mem_mb=config["resources"]["sort_heatmap"]["mem_mb"],
+        tmp_mb=config["resources"]["sort_heatmap"]["tmp_mb"],
+        qos=config["resources"]["sort_heatmap"]["qos"]
     shell:
         """
         printf "Sorting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
@@ -947,8 +961,9 @@ rule plotting_sorted_heatmap_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_sorted_heatmap_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["qos"]
     shell:
         """
         if [[ "{params.matrix}" == "tes" ]]; then
@@ -984,8 +999,9 @@ rule plotting_profile_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_profile_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_profile_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_profile_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["plotting_profile_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_profile_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["plotting_profile_on_targetfile"]["qos"]
     shell:
         """
         {{
@@ -1047,8 +1063,9 @@ rule prep_browser_on_region:
     conda: CONDA_ENV
     threads: config["resources"]["prep_browser_on_region"]["threads"]
     resources:
-        mem=config["resources"]["prep_browser_on_region"]["mem"],
-        tmp=config["resources"]["prep_browser_on_region"]["tmp"]
+        mem_mb=config["resources"]["prep_browser_on_region"]["mem_mb"],
+        tmp_mb=config["resources"]["prep_browser_on_region"]["tmp_mb"],
+        qos=config["resources"]["prep_browser_on_region"]["qos"]
     shell:
         """
         {{
@@ -1172,8 +1189,9 @@ rule make_single_loci_browser_plot:
     conda: CONDA_ENV
     threads: config["resources"]["make_single_loci_browser_plot"]["threads"]
     resources:
-        mem=config["resources"]["make_single_loci_browser_plot"]["mem"],
-        tmp=config["resources"]["make_single_loci_browser_plot"]["tmp"]
+        mem_mb=config["resources"]["make_single_loci_browser_plot"]["mem_mb"],
+        tmp_mb=config["resources"]["make_single_loci_browser_plot"]["tmp_mb"],
+        qos=config["resources"]["make_single_loci_browser_plot"]["qos"]
     shell:
         """
         {{
@@ -1199,8 +1217,9 @@ rule merge_region_browser_plots:
     conda: CONDA_ENV
     threads: config["resources"]["merge_region_browser_plots"]["threads"]
     resources:
-        mem=config["resources"]["merge_region_browser_plots"]["mem"],
-        tmp=config["resources"]["merge_region_browser_plots"]["tmp"]
+        mem_mb=config["resources"]["merge_region_browser_plots"]["mem_mb"],
+        tmp_mb=config["resources"]["merge_region_browser_plots"]["tmp_mb"],
+        qos=config["resources"]["merge_region_browser_plots"]["qos"]
     shell:
         """
         pdfunite {input.plots} {output.merged_plots}

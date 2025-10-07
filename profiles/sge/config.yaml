@@ -4,14 +4,14 @@ use-conda: true
 conda-frontend: conda
 latency-wait: 60
 restart-times: 1
-cluster-config: ../cluster.yaml
+
 cluster: >-
   qsub
   -V
   -cwd
   -pe threads {threads}
-  -l m_mem_free={cluster.mem_mb}M
-  -l tmp_free={cluster.tmp_mb}M
+  -l m_mem_free={resources.mem_mb}M
+  -l tmp_free={resources.tmp_mb}M
   -N smk_{jobid}
   -o hpclogs/{rule}/smk_{jobid}.log
   -e hpclogs/{rule}/smk_{jobid}.log

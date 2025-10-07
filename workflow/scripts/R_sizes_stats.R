@@ -14,6 +14,8 @@ summary_stats$Count<-as.numeric(summary_stats$Count)
 minsize<-min(summary_stats$Size)
 maxsize<-max(summary_stats$Size)
 
+tot<-length(unique(summary_stats$Sample))
+
 plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	
 	count<-filter(stattable, Size>=sizemin & Size<=sizemax)
@@ -60,10 +62,10 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	plot
 }  
 
-pdf(paste0("results/combined/plots/srna_sizes_stats_",analysisname,"_sRNA.pdf"), height=10, width=12)
+pdf(paste0("results/combined/plots/srna_sizes_stats_",analysisname,"_sRNA.pdf"), height=tot*2, width=12)
 plot.sRNA.sizes(summary_stats, minsize, maxsize)
 dev.off()
 
-pdf(paste0("results/combined/plots/srna_sizes_stats_zoom_",analysisname,"_sRNA.pdf"), height=10, width=12)
+pdf(paste0("results/combined/plots/srna_sizes_stats_zoom_",analysisname,"_sRNA.pdf"), height=tot*2, width=12)
 plot.sRNA.sizes(summary_stats, 20, 25)
 dev.off()

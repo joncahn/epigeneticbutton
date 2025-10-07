@@ -214,7 +214,7 @@ heatmap_target_file: "data/target_genes.bed" # bed file containing the regions t
 
 browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
 browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
-browser_TE_file: "none" # to be replaced with a bed file of TEs
+browser_TE_file: "none" # to be replaced with a bed file of TEs !! improvement to do: make it true/false, and prepare the TE file defined in reference genome (if gzipped for it)
 browser_scales: "sample" # options: [ 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 fixed_mc_scales: true # Whether the scales for mC should be fixed to the value below
 fixed_mcg: 100
@@ -222,35 +222,35 @@ fixed_mchg: 60
 fixed_mchh: 20
 
 # Resource allocation
-minimal_resources: &default
-  threads: 1
-  mem: 32
-  tmp: 32
-
 low_resources: &low
   threads: 1
-  mem: 1000
-  tmp: 1000
+  mem_mb: 1000
+  tmp_mb: 1000
+  qos: "default"
 
 standard_resources: &standard
   threads: 4
-  mem: 2000
-  tmp: 2000
+  mem_mb: 2000
+  tmp_mb: 2000
+  qos: "default"
 
 heavy_resources: &heavy
   threads: 8
-  mem: 8000
-  tmp: 48000
-
+  mem_mb: 8000
+  tmp_mb: 48000
+  qos: "slow_nice"
+  
 max_resources: &max
   threads: 16
-  mem: 10000
-  tmp: 96000
+  mem_mb: 10000
+  tmp_mb: 96000
+  qos: "slow_nice"
 
 single_thread: &single
   threads: 1
-  mem: 32000
-  tmp: 48000
+  mem_mb: 32000
+  tmp_mb: 48000
+  qos: "slow_nice"
   
 resources:
   # environment_setup

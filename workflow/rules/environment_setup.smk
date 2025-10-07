@@ -33,8 +33,9 @@ rule check_fasta:
     conda: CONDA_ENV
     threads: config["resources"]["check_fasta"]["threads"]
     resources:
-        mem=config["resources"]["check_fasta"]["mem"],
-        tmp=config["resources"]["check_fasta"]["tmp"]
+        mem_mb=config["resources"]["check_fasta"]["mem_mb"],
+        tmp_mb=config["resources"]["check_fasta"]["tmp_mb"],
+        qos=config["resources"]["check_fasta"]["qos"]
     shell:
         """
         {{
@@ -62,8 +63,9 @@ rule check_gff:
     conda: CONDA_ENV
     threads: config["resources"]["check_gff"]["threads"]
     resources:
-        mem=config["resources"]["check_gff"]["mem"],
-        tmp=config["resources"]["check_gff"]["tmp"]
+        mem_mb=config["resources"]["check_gff"]["mem_mb"],
+        tmp_mb=config["resources"]["check_gff"]["tmp_mb"],
+        qos=config["resources"]["check_gff"]["qos"]
     shell:
         """
         {{
@@ -91,8 +93,9 @@ rule check_gtf:
     conda: CONDA_ENV
     threads: config["resources"]["check_gtf"]["threads"]
     resources:
-        mem=config["resources"]["check_gtf"]["mem"],
-        tmp=config["resources"]["check_gtf"]["tmp"]
+        mem_mb=config["resources"]["check_gtf"]["mem_mb"],
+        tmp_mb=config["resources"]["check_gtf"]["tmp_mb"],
+        qos=config["resources"]["check_gtf"]["qos"]
     shell:
         """
         {{
@@ -123,8 +126,9 @@ rule check_chrom_sizes:
     conda: CONDA_ENV
     threads: config["resources"]["check_chrom_sizes"]["threads"]
     resources:
-        mem=config["resources"]["check_chrom_sizes"]["mem"],
-        tmp=config["resources"]["check_chrom_sizes"]["tmp"]
+        mem_mb=config["resources"]["check_chrom_sizes"]["mem_mb"],
+        tmp_mb=config["resources"]["check_chrom_sizes"]["tmp_mb"],
+        qos=config["resources"]["check_chrom_sizes"]["qos"]
     shell:
         """
         {{
@@ -148,8 +152,9 @@ rule prep_region_file:
     conda: CONDA_ENV
     threads: config["resources"]["prep_region_file"]["threads"]
     resources:
-        mem=config["resources"]["prep_region_file"]["mem"],
-        tmp=config["resources"]["prep_region_file"]["tmp"]
+        mem_mb=config["resources"]["prep_region_file"]["mem_mb"],
+        tmp_mb=config["resources"]["prep_region_file"]["tmp_mb"],
+        qos=config["resources"]["prep_region_file"]["qos"]
     shell:
         """
         {{
