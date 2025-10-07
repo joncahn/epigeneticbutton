@@ -56,7 +56,7 @@ conda install -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slur
 ```
 or in a new environment:
 ```bash
-conda create -n epicc -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm
+conda create -n epicc -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm coincbc
 conda activate epicc
 ```
 ## Usage
