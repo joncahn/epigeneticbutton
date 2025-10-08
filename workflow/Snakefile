@@ -17,6 +17,10 @@ min_version("6.0")
 configfile: "config/config.yaml"
 analysis = config['full_analysis']
 
+print("You just pushed the epigenetic button!\nIt is going to be EPICC... hopefully!")
+with open("data/banner.txt") as f:
+    print(f.read())
+
 # Define patterns and envs
 env_patterns = [
     ("ChIP*", "ChIP"),

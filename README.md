@@ -50,15 +50,13 @@ git clone git@github.com:joncahn/epigeneticbutton.git
 cd epigeneticbutton
 ```
 
-2. Install snakemake and the executor plugin you need to run it:
+2. Install snakemake and other required packages from the depency file:
 ```bash
-conda install -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm coincbc
-```
-or in a new environment:
-```bash
-conda create -n smk9 -c bioconda snakemake>=9 matplotlib snakemake-executor-plugin-slurm coincbc
+conda create -n smk9 -y --file config/smk9.txt
 conda activate smk9
 ```
+If you want to run the pipeline on a different platform than locally or slurm, you will need to also install the corresponding snakemake-executor-plugin
+
 ## Usage
 
 ### Configuration
@@ -84,7 +82,7 @@ https://epicc-builder.streamlit.app/
    - Species-specific parameters
    - Resources allocation
    
-3. If changing resource allocation for cluster submission, consider adjusting the `profiles/cluster.yaml` for job-specific resources, and the corresponding config file for your cluster scheduler (`profiles/sge/config.yaml` or `profiles/slurm/config.yaml` for SGE or SLURM, respectively). The default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
+3. If you are running the pipeline on a different platform than CSHL slurm cluster, you will likely need to adjust the rule-specific resource parameters at the bottom of the `config/config.yaml` and the config file for your cluster scheduler (`profiles/slurm/config.yaml` for SLURM or create a new profile for your scheduler). In slurm, the default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
 4. Default options: 
    - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file. Other options are listed below and in the config file.
@@ -99,25 +97,15 @@ https://epicc-builder.streamlit.app/
 
 1. To run the pipeline locally:
 ```bash
-snakemake --use-conda --conda-frontend conda --cores 12
+snakemake --use-conda --conda-frontend conda --cores 12 > snakemake.log 2>&1
 ```
 
-2. To run the pipeline on a HPC-SGE (using qsub):
+2. To run the pipeline on a HPC-slurm (using sbatch):
 ```bash
-snakemake --profile profiles/sge
+snakemake --profile profiles/slurm > snakemake.log 2>&1
 ```
 
-3. To run the pipeline on a HPC-slurm (using sbatch):
-```bash
-snakemake --profile profiles/slurm
-```
-
-4. Optional: consider prebuilding the environments to make sure no conflict arise (it should take ~5min):
-```bash
-snakemake --use-conda --conda-frontend conda --conda-create-envs-only --cores 1
-```
-
-5. Optional: to test the pipeline, consider generating a DAG first to make sure your sample files and parameters work:
+3. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
 ```bash
 snakemake --dag | dot -Tpng > dag.png
 ```
