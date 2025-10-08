@@ -167,14 +167,14 @@ if (length(keepDEG) >= 2) {
 	pdf(paste0("results/combined/plots/Heatmap_sRNA_cpm__",analysisname,"__",refgenome,"__on_",targetname,".pdf"),10,15)
 	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
 			main=paste0("Differential sRNA in ",refgenome," from ",analysisname," mapping to ",targetname),
-			margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45,
+			margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45,
 			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
 	dev.off()
 
 	pdf(paste0("results/combined/plots/Heatmap_sRNA_zscore__",analysisname,"__",refgenome,"__on_",targetname,".pdf"),10,15)
 	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
 			main=paste0("Differential sRNA in ",refgenome," from ",analysisname," mapping to ",targetname),
-			margins=c(12,2),cexCol=2, labRow = "", col="bluered", srtCol=45, scale="row",
+			margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45, scale="row",
 			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
 	dev.off()
 }
