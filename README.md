@@ -97,12 +97,12 @@ https://epicc-builder.streamlit.app/
 
 1. To run the pipeline locally:
 ```bash
-snakemake --use-conda --conda-frontend conda --cores 12 > snakemake.log 2>&1
+snakemake --use-conda --conda-frontend conda --cores 12
 ```
 
 2. To run the pipeline on a HPC-slurm (using sbatch):
 ```bash
-snakemake --profile profiles/slurm > snakemake.log 2>&1
+snakemake --profile profiles/slurm
 ```
 
 3. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
