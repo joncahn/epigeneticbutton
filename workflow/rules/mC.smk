@@ -179,6 +179,8 @@ rule pe_or_se_mc_dispatch:
     output:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         touch = "results/mC/chkpts/map__{sample_name}.done"
+    wildcard_constraints:
+        sample_name = "^(?!.*__merged__)[A-Za-z0-9_]+$"
     localrule: True
     shell:
         """
