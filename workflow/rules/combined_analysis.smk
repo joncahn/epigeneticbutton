@@ -183,10 +183,8 @@ def define_key_for_plots(wildcards, string):
                 bw1 = f"results/{row.env}/tracks/{merged}__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__plus.bw"
                 bw2 = f"results/{row.env}/tracks/{merged}__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__minus.bw"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
-                grouped_bw[f"{row.data_type}_plus"].append(bw1)
-                grouped_bw[f"{row.data_type}_minus"].append(bw2)
-                grouped_labs[f"{row.data_type}_plus"].append(f"{label}_plus")
-                grouped_labs[f"{row.data_type}_minus"].append(f"{label}_minus")
+                grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
+                grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
                 unique_rna.add(row.data_type)
                 label_to_mark[f"{label}_plus"] = row.data_type
                 label_to_mark[f"{label}_minus"] = row.data_type
@@ -210,10 +208,8 @@ def define_key_for_plots(wildcards, string):
                     bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
                     bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}_plus"].append(bw1)
-                    grouped_bw[f"sRNA_{size}_minus"].append(bw2)
-                    grouped_labs[f"sRNA_{size}_plus"].append(f"{label}_plus")
-                    grouped_labs[f"sRNA_{size}_minus"].append(f"{label}_minus")
+                    grouped_bw[f"sRNA_{size}"].extend([bw1, bw2])
+                    grouped_labs[f"sRNA_{size}"].extend([f"{label}_plus", f"{label}_minus"])
                     unique_srna.add(f"sRNA_{size}")
                     label_to_mark[f"{label}_plus"] = f"sRNA_{size}"
                     label_to_mark[f"{label}_minus"] = f"sRNA_{size}"
@@ -244,15 +240,15 @@ def define_key_for_plots(wildcards, string):
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_bw.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
