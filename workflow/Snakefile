@@ -13,15 +13,27 @@ import colorsys
 
 min_version("6.0")
 
+# Intro message
+
+def print_banner():
+    try:
+        with open("/dev/tty", "w") as tty:
+            print("You just pushed the epigenetic button!", file=tty)
+            print("It is going to be EPICC...", file=tty)
+            with open("data/banner.txt") as f:
+                print(f.read(), file=tty)
+    except OSError:
+        # Fallback if no terminal (e.g., running in background job)
+        print("You just pushed the epigenetic button!")
+        print("It is going to be EPICC...")
+        with open("data/banner.txt") as f:
+            print(f.read())
+
+print_banner()
+
 # Configuration
 configfile: "config/config.yaml"
 analysis = config['full_analysis']
-
-print("You just pushed the epigenetic button!", file=sys.stderr)
-print("It is going to be... ", file=sys.stderr)
-
-with open("data/banner.txt") as f:
-    print(f.read(), file=sys.stderr)
 
 # Define patterns and envs
 env_patterns = [
