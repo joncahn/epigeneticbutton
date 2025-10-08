@@ -17,7 +17,9 @@ min_version("6.0")
 configfile: "config/config.yaml"
 analysis = config['full_analysis']
 
-print("You just pushed the epigenetic button!\nIt is going to be EPICC... hopefully!")
+print("You just pushed the epigenetic button!")
+print("It is going to be EPICC... hopefully!")
+print(" ")
 with open("data/banner.txt") as f:
     print(f.read())
 
