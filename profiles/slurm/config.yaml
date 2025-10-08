@@ -11,6 +11,3 @@ sbatch:
   cpus-per-task: "{threads}"
   mem: "{resources.mem_mb}"
   qos: "{resources.qos}"
-  additional-args:
-    - "--output=hpclogs/{rule}/smk_{jobid}.log"
-    - "--error=hpclogs/{rule}/smk_{jobid}.log"
