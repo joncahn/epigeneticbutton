@@ -199,9 +199,9 @@ rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
 	output:
-		indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
+	    indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
 	log:
-		temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
+	    temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
@@ -219,8 +219,8 @@ rule make_bowtie1_indices:
 rule shortstack_map:
     input:
         fastq = "results/sRNA/mapped/clean__{sample_name}.fastq.gz",
-		fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
-		indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.1.ebwt"
+	    fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa"
+	    indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.1.ebwt"
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
