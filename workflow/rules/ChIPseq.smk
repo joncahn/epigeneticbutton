@@ -9,7 +9,10 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
     env = get_sample_info_from_name(sname, samples, 'env')
     paired = get_sample_info_from_name(sname, samples, 'paired')
-    if paired == "PE":
+    rep = get_sample_info_from_name(sname, samples, 'replicate')
+    if rep == "merged":
+        return None
+    elif paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     elif paired == "SE":
         rule_obj = getattr(rules, f"{rulename}_se")
