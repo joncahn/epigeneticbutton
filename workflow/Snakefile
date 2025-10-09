@@ -146,7 +146,7 @@ def parse_sample_name(sample_name):
 def get_sample_info_from_name(sname, samples, field):
     match = samples.loc[samples["sample_name"] == sname]
     if match.empty:
-        raise ValueError(f"\nSample '{sname}' not found in {samples} table.")
+        return None
     else:
         return match[field].iloc[0]
 
