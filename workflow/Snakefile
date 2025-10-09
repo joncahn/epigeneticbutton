@@ -258,7 +258,7 @@ def print_done():
     if _pipeline_failed:
         msg = f"EPICC FAIL! Pipeline failed after {duration}. Check the logs for more details."
     else:
-        msg = f"EPICC SUCCESS! Pipeline completed successfully in {duration}. It is truly EPICC!"
+        msg = f"EPICC SUCCESS! Pipeline completed successfully in {duration}. Go check those results!"
     
     print_to_tty_or_stdout(msg, color=color)
 

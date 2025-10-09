@@ -105,6 +105,11 @@ snakemake --use-conda --conda-frontend conda --cores 12
 snakemake --profile profiles/slurm
 ```
 
+If you do not want all the snakemake output (very talkative), instead of using `--quiet` I would recommmend redirecting it to a log and putting the run in the background:
+```bash
+snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
+```
+
 3. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
 ```bash
 snakemake --dag | dot -Tpng > dag.png
