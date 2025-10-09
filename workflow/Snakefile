@@ -22,7 +22,6 @@ def print_banner():
             with open("data/banner.txt") as f:
                 print(f.read(), file=tty)
     except OSError:
-        # Fallback if no terminal (e.g., running in background job)
         print("You just pushed the epigenetic button!")
         print("It is going to be EPICC...")
         with open("data/banner.txt") as f:

@@ -315,7 +315,7 @@ rule make_mc_bigwig_files:
         bigwigchh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
         touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
-        sample_name = lambda wildcards: wildcards.sample_name,
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         ref_genome = lambda wildcards: wildcards.ref_genome,
         context = config['mC_context']
     log:
