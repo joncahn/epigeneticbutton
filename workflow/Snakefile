@@ -28,7 +28,8 @@ def print_banner():
         with open("data/banner.txt") as f:
             print(f.read())
 
-print_banner()
+if "SNAKEMAKE" not in os.environ:
+    print_banner()
 
 # Configuration
 configfile: "config/config.yaml"
