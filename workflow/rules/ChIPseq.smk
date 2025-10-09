@@ -10,14 +10,15 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     env = get_sample_info_from_name(sname, samples, 'env')
     paired = get_sample_info_from_name(sname, samples, 'paired')
     rep = get_sample_info_from_name(sname, samples, 'replicate')
+    rule_obj = None
     if rep == "merged":
-        return None
+        pass
     elif paired == "PE":
         rule_obj = getattr(rules, f"{rulename}_pe")
     elif paired == "SE":
         rule_obj = getattr(rules, f"{rulename}_se")
-        
-    return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
+    
+    return None if rule_obj is None else getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
