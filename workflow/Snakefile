@@ -10,22 +10,44 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import colorsys
+import time
+import atexit
+import traceback
 
-min_version("6.0")
+min_version("9.0")
+
+_start = time.time()
+_pipeline_failed = False
 
 # Intro message
-def print_banner():
+def print_to_tty_or_stdout(msg, color=None):
+    colors = {
+        "green": "\033[92m",
+        "red": "\033[91m",
+        "reset": "\033[0m"
+    }
+    color_code = colors.get(color, "")
+    reset_code = colors["reset"] if color else ""
     try:
         with open("/dev/tty", "w") as tty:
-            print("You just pushed the epigenetic button!", file=tty)
-            print("It is going to be EPICC...", file=tty)
-            with open("data/banner.txt") as f:
-                print(f.read(), file=tty)
+            print(f"{color_code}{msg}{reset_code}", file=tty)
     except OSError:
-        print("You just pushed the epigenetic button!")
-        print("It is going to be EPICC...")
+        print(msg)
+        
+def print_banner():
+    banner_lines = [
+        "You just pushed the epigenetic button!",
+        "It is going to be EPICC..."
+    ]
+    
+    try:
         with open("data/banner.txt") as f:
-            print(f.read())
+            banner_lines.extend(f.read().splitlines())
+    except FileNotFoundError:
+        pass
+
+    for line in banner_lines:
+        print_to_tty_or_stdout(line, color="green")
 
 if "SNAKEMAKE" not in os.environ:
     print_banner()
@@ -224,3 +246,27 @@ rule combined_analysis:
         """
         touch {output.chkpt}
         """ 
+
+# Exit message
+def print_done():
+    elapsed = time.time() - _start
+    h, m = divmod(elapsed / 3600, 1)
+    m = int(m * 60)
+    duration = f"{int(h)}h {m}m"
+
+    color = "red" if _pipeline_failed else "green"
+    if _pipeline_failed:
+        msg = f"EPICC FAIL! Pipeline failed after {duration}. Check the logs for more details."
+    else:
+        msg = f"EPICC SUCCESS! Pipeline completed successfully in {duration}. It is truly EPICC!"
+    
+    print_to_tty_or_stdout(msg, color=color)
+
+if "SNAKEMAKE" not in os.environ:
+    def handle_exit():
+        global _pipeline_failed
+        exc_type, _, _ = sys.exc_info()
+        if exc_type is not None:
+            _pipeline_failed = True
+        print_done()
+    atexit.register(handle_exit)
