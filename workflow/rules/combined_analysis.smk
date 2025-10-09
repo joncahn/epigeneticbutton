@@ -20,9 +20,8 @@ def define_combined_target_file(wildcards):
         file = f"results/combined/tracks/{ref_genome}__{target_name}.bed"
     else:
         raise ValueError(   
-            f"{target_name} does not match possible files." 
-            "It can be 'combined_peaks', or the value of "
-            "'combined_target_file_name' in the config file"
+            f"{target_name} does not match possible files. It can be 'combined_peaks'," 
+            " or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
         )
     
     return file
