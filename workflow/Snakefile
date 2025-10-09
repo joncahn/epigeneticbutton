@@ -182,7 +182,7 @@ include: "rules/sample_download.smk"
 include: "rules/ChIPseq.smk"
 include: "rules/RNAseq.smk"
 include: "rules/mC.smk"
-include: "rules/smallRNA.smk"
+include: "rules/smallRNAseq.smk"
 include: "rules/combined_analysis.smk"
 
 # Rule all to specify final target
