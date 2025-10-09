@@ -1036,6 +1036,7 @@ rule prep_browser_on_region:
         htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        temptes = temp("results/combined/matrix/tes_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
         tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
@@ -1047,7 +1048,8 @@ rule prep_browser_on_region:
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
         trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
         regionID = lambda wildcards: wildcards.regionID,
-        TEfile = config['browser_TE_file'],
+        TEtrigger = config['browser_TE_file'],
+        TE_file = lambda wildcards: config[wildcards.ref_genome]['te_file']
         browser_scales = config['browser_scales'],
         mc_scales = config['fixed_mc_scales'],
         cg_scale = config['fixed_mcg'],
@@ -1097,12 +1099,22 @@ rule prep_browser_on_region:
             printf "No genes in this region\n"
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ {params.TEfile} == "none" ]]; then
-            printf "No TE file provided\n"
+        if [[ {params.TEtrigger} == "none" ]]; then
+            printf "No TE file to use\n"
+            touch {output.temptes}
             touch {output.tes}
-        else
+        elif [[ -s {params.TE_file} ]] && [[ {params.TE_file} == *.bed.gz ]]; then
+            printf "Getting TE track formm gzipped bed file\n"
+            pigz -p {threads} -dc {params.TE_file} > {output.temptes}
+            bedtools intersect -a {output.temptes} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+        elif [[ -s {params.TE_file} ]] && [[ {params.TE_file} == *.bed ]]; then
             printf "Getting TE track\n"
-            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+            bedtools intersect -a {params.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+            touch {output.temptes}
+        else
+            printf "TE file does not exist or is not bed format (.bed extension)\nNo TE file will be used\n"
+            touch {output.temptes}
+            touch {output.tes}
         fi
         
         printf "Testing if all bw have data on the chromosome\n"
