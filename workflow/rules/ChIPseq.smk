@@ -18,7 +18,7 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     elif paired == "SE":
         rule_obj = getattr(rules, f"{rulename}_se")
     
-    return None if rule_obj is None else getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
+    return [] if rule_obj is None else getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
