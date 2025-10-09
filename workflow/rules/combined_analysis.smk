@@ -1049,7 +1049,7 @@ rule prep_browser_on_region:
         trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
         regionID = lambda wildcards: wildcards.regionID,
         TEtrigger = config['browser_TE_file'],
-        TE_file = lambda wildcards: config[wildcards.ref_genome]['te_file']
+        TE_file = lambda wildcards: config[wildcards.ref_genome]['te_file'],
         browser_scales = config['browser_scales'],
         mc_scales = config['fixed_mc_scales'],
         cg_scale = config['fixed_mcg'],
