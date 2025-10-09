@@ -14,9 +14,9 @@ def get_bt1_indices(wildcards):
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
     genomesize = float(config[config[ref_genome]['species']]['genomesize'])
     if genomesize > 4e9:
-        return "results/sRNA/chkpts/{ref_genome}__large_bt1_indices.done"
+        return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl",".3.ebwtl",".4.ebwtl",".rev.1.ebwtl",".rev.2.ebwtl")
     else: 
-        return "results/sRNA/chkpts/{ref_genome}__bt1_indices.done"
+        return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt",".3.ebwt",".4.ebwt",".rev.1.ebwt",".rev.2.ebwt")
         
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
@@ -203,11 +203,27 @@ rule dispatch_srna_fastq:
         cp {input.fastq} {output.fastq_file}
         """
 
+#### TEST RANDOM
+#####
+#
+#
+#
+#
+#
+#
+#
+#
+
+#
+#
+#
+
+
 rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
-        touch = "results/sRNA/chkpts/{ref_genome}__bt1_indices.done"
+        indices = multiext(r"genomes/{ref_genome}/{ref_genome}.fa", r".1.ebwt", r".2.ebwt", r".3.ebwt", r".4.ebwt", r".rev.1.ebwt", r".rev.2.ebwt")
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
@@ -219,7 +235,6 @@ rule make_bowtie1_indices:
         {{
         printf "\nMaking Bowtie1 indices for {wildcards.ref_genome}\n"
         bowtie-build {input.fasta} {input.fasta}
-        touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -227,7 +242,7 @@ rule make_bowtie1_indices_large:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
-        touch = "results/sRNA/chkpts/{ref_genome}__large_bt1_indices.done"
+        indices = multiext(r"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl", ".3.ebwtl", ".4.ebwtl", ".rev.1.ebwtl", ".rev.2.ebwtl")
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
@@ -239,7 +254,6 @@ rule make_bowtie1_indices_large:
         {{
         printf "\nMaking large Bowtie1 indices for {wildcards.ref_genome}\n"
         bowtie-build {input.fasta} {input.fasta}
-        touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
         
