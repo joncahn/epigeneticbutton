@@ -222,6 +222,8 @@ rule make_bowtie1_indices:
         }} 2>&1 | tee -a "{log}"
         """
 
+##
+
 rule make_bowtie1_indices_large:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
