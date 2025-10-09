@@ -194,14 +194,12 @@ rule dispatch_srna_fastq:
         """
         cp {input.fastq} {output.fastq_file}
         """
-        
+
 rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
-    log:
-        temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
