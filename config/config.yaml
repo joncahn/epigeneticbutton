@@ -16,7 +16,7 @@ ColCEN:
   gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # can be gzipped or not
   gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  te_file: "data/ColCEN_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
+  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
   
 B73_v5:
@@ -26,7 +26,7 @@ B73_v5:
   gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # can be gzipped or not
   gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  te_file: "data/B73_v5_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
+  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5_TEs.bed.gz" # can be gzipped or not;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
@@ -214,7 +214,7 @@ heatmap_target_file: "data/target_genes.bed" # bed file containing the regions t
 
 browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
 browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
-browser_TE_file: "none" # to be replaced with a bed file of TEs !! improvement to do: make it true/false, and prepare the TE file defined in reference genome (if gzipped for it)
+browser_TE_file: true # Whether to use a file of TEs or not. The file should be listed in the corresponding reference genome, and be a (potentially gzipped) bed file.
 browser_scales: "sample" # options: [ 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 fixed_mc_scales: true # Whether the scales for mC should be fixed to the value below
 fixed_mcg: 100
