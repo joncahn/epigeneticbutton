@@ -278,9 +278,7 @@ def define_final_chip_output(ref_genome):
         
 rule make_bt2_indices:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        gff = "genomes/{ref_genome}/{ref_genome}.gff",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = directory("genomes/{ref_genome}/bt2_index")
     log:
