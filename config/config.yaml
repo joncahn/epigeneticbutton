@@ -314,6 +314,7 @@ resources:
   make_bt2_indices_for_structural_RNAs: *heavy
   filter_structural_rna: *heavy
   make_bowtie1_indices: *single
+  make_bowtie1_indices_large: *single
   shortstack_map: *heavy
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard

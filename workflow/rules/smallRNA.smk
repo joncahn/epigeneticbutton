@@ -10,6 +10,14 @@ def define_input_file_for_structural(sample_name):
     if paired == "SE":
         return "deduplicated__{sample_name}__R0" if netflex_v3 else "trim__{sample_name}__R0"
 
+def get_bt1_indices(wildcards):
+    ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
+    genomesize = config[config[ref_genome]['species']]['genomesize']
+    if genomesize > 4e9:
+        return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl",".3.ebwtl",".4.ebwtl",".rev.1.ebwtl",".rev.2.ebwtl")
+    else: 
+        return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt",".3.ebwt",".4.ebwt",".rev.1.ebwt",".rev.2.ebwt")
+        
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     rna_depletion = config['structural_rna_depletion']
@@ -199,7 +207,7 @@ rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
-        indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
+        indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt",".3.ebwt",".4.ebwt",".rev.1.ebwt",".rev.2.ebwt")
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
@@ -214,11 +222,30 @@ rule make_bowtie1_indices:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule make_bowtie1_indices_large:
+    input:
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+    output:
+        indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl",".3.ebwtl",".4.ebwtl",".rev.1.ebwtl",".rev.2.ebwtl")
+    conda: CONDA_ENV_SRNA
+    threads: config["resources"]["make_bowtie1_indices"]["threads"]
+    resources:
+        mem_mb=config["resources"]["make_bowtie1_indices_large"]["mem_mb"],
+        tmp_mb=config["resources"]["make_bowtie1_indices_large"]["tmp_mb"],
+        qos=config["resources"]["make_bowtie1_indices_large"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nMaking large Bowtie1 indices for {wildcards.ref_genome}\n"
+        bowtie-build {input.fasta} {input.fasta}
+        }} 2>&1 | tee -a "{log}"
+        """
+        
 rule shortstack_map:
     input:
         fastq = "results/sRNA/mapped/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.1.ebwt"
+        indices = get_bt1_indices
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
