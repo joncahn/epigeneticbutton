@@ -9,6 +9,13 @@ def parameters_for_mc(sample_name):
     options = {"WGBS", "Pico", "EMseq"}
     return temp if temp in options else "default"
 
+def define_cx_report_input(wildcards):
+    name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}"
+    if wildcards.replicate == "merged":
+        return f"results/mC/methylcall/{name}.merged.CX_report.txt.gz"
+    else:
+        return f"results/mC/methylcall/{name}.deduplicated.CX_report.txt.gz"
+
 def define_DMR_samples(sample_name):
     data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
     line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
@@ -276,8 +283,8 @@ rule merging_mc_replicates:
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         bedfile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
-        tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt"),
-        mergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt.gz")
+        tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt"),
+        mergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt.gz")
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
@@ -300,19 +307,19 @@ rule merging_mc_replicates:
 
 rule make_mc_bigwig_files:
     input:
-        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        cx_report = define_cx_report_input,
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        bigwigcg = "results/mC/tracks/{sample_name}__CG.bw",
-        bigwigchg = "results/mC/tracks/{sample_name}__CHG.bw",
-        bigwigchh = "results/mC/tracks/{sample_name}__CHH.bw",
-        touch = "results/mC/chkpts/bigwig__{sample_name}.done"
+        bigwigcg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bw",
+        bigwigchg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
+        bigwigchh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
+        touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
         context = config['mC_context']
     log:
-        temp(return_log_mc("{sample_name}", "bigwig", ""))
+        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "bigwig", ""))
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
