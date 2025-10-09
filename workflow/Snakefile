@@ -37,7 +37,7 @@ def print_to_tty_or_stdout(msg, color=None):
 def print_banner():
     banner_lines = [
         "You just pushed the epigenetic button!",
-        "It is going to be EPICC..."
+        "It is going to be..."
     ]
     
     try:
