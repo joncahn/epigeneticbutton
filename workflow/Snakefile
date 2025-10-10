@@ -50,9 +50,9 @@ def print_banner():
 
 try:
     with open("/dev/tty", "w") as tty:
-        print_banner()  # writes directly to your terminal
+        print_banner()
 except OSError:
-    pass  # silently skip if no terminal
+    pass
 
 # Configuration
 configfile: "config/config.yaml"
