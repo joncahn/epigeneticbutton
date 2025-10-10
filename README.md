@@ -159,15 +159,15 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 
 ### RNA-seq
 - Col1: *data_type*: `RNAseq`. No other options.
-- Col4: *sample_type*: `RNAseq`. Does not really matter however, could be used for additional details, but will be used in file names.
+- Col4: *sample_type*: `RNAseq`. No other options.
 
 ### small RNA-seq
 - Col1: *data_type*: `sRNA`. No other options.
-- Col4: *sample_type*: `sRNA`. Does not really matter however, could be used for additional details, but will be used in file names.
+- Col4: *sample_type*: `sRNA`. Can also be `smallRNA` or `shRNA`. Does not really matter but it is used in file names.
 
 ### Whole Genome Bisulfite Sequencing
 - Col1: *data_type*: `mC`. No other options.
-- Col4: *sample_type*: `mC`. Does not really matter however, could be used for additional details, but will be used in file names. Might be used in the future to define the analysis method (WGBS, EM-seq, or ONT).
+- Col4: *sample_type*: `mC`. Can also be `WGBS`, `ONT`, `Pico` or `EMseq`. Not yet relevant except for the file names, but will be used in future release to define the type of data.
 
 ## Configuration Options
 
