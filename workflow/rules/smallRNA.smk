@@ -195,6 +195,12 @@ rule filter_structural_rna:
         }} 2>&1 | tee -a "{log}"
         """
 
+##
+#
+#
+#
+#
+
 rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
@@ -207,26 +213,14 @@ rule dispatch_srna_fastq:
         cp {input.fastq} {output.fastq_file}
         """
 
-###
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
 
 rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt", ".3.ebwt", ".4.ebwt", ".rev.1.ebwt", ".rev.2.ebwt")
+    log:
+        temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
