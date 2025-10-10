@@ -58,7 +58,7 @@ def assign_chip_input(row, tab):
     return True
 
 def check_table(tab):
-    err = 0
+    error_messages = []
     dup = tab[tab.duplicated(
         subset=["data_type","line","tissue","sample_type","replicate","ref_genome"], 
         keep=False
@@ -66,26 +66,22 @@ def check_table(tab):
     
     if not dup.empty:
         for _, r in dup.iterrows():
-            print(f'[X] Duplicated rows: {name(r)}', flush=True)
-            err = 1
+            error_messages.append(f'[X] Duplicated rows: {name(r)}', flush=True)
 
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
         if not validate_sample_type(row):
-            print(f'[X] Row #{i} {name(row)}: sample_type does not match data_type', flush=True)
-            err = 1
+            error_messages.append(f'[X] Row #{i} {name(row)}: sample_type does not match data_type', flush=True)
         if not validate_SRA(row):
-            print(f'[X] Row #{i} {name(row)}: fastq_path should be "SRA" for SRR IDs or a directory otherwise', flush=True)
-            err = 1
+            error_messages.append(f'[X] Row #{i} {name(row)}: fastq_path should be "SRA" for SRR IDs or a directory otherwise', flush=True)
         result = assign_chip_input(row, tab)
         if result == "Input":
-            print(f'[X] Row #{i} {name(row)}: missing a corresponding Input sample', flush=True)
-            err = 1
+            error_messages.append(f'[X] Row #{i} {name(row)}: missing a corresponding Input sample', flush=True)
         elif result == "Sample":
-            print(f'[X] Row #{i} {name(row)}: no sample depends on this Input', flush=True)
-            err = 1
+            error_messages.append(f'[X] Row #{i} {name(row)}: no sample depends on this Input', flush=True)
 
-    if err == 0:
-        print("[OK] Samplefile is correct!", flush=True)
+    if error_messages:
+        full_message = "\n".join(error_messages)
+        raise ValueError(f"[X] Validation failed — please fix the errors below in your samplefile and rerun.\n{full_message}\n\n")
     else:
-        raise ValueError("[X] Validation failed — please fix your samplefile and rerun.")
+        print("[OK] Samplefile is correct!\n", flush=True)
 
