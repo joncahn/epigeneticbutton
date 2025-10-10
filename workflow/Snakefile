@@ -248,7 +248,7 @@ rule combined_analysis:
         """ 
 
 # Exit message
-def on_success():
+onsuccess:
     elapsed = time.time() - _start
     h, m = divmod(elapsed / 3600, 1)
     m = int(m * 60)
@@ -257,7 +257,7 @@ def on_success():
         color="green"
     )
 
-def on_error():
+onerror:
     elapsed = time.time() - _start
     h, m = divmod(elapsed / 3600, 1)
     m = int(m * 60)
@@ -265,7 +265,4 @@ def on_error():
         f"EPICC FAIL! Pipeline failed after {int(h)}h {m}m. Check logs!", 
         color="red"
     )
-
-onsuccess(on_success)
-onerror(on_error)
 
