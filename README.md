@@ -184,10 +184,18 @@ https://epicc-builder.streamlit.app/
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
 - `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`.
 
-###  Additional output options
+### DMRs parameters
+- By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
+- DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG, CHG and CHH and the following (stringent) parameters:
+	- CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
+	- CHG: `method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
+	- CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
+- Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the rule `call_DMRs_pairwise` in the `mC.smk` file.
+
+##  Additional output options
 Below is a list of *cool* outputs that can be generated once whole pipeline ran once. You'll find a basic structure for how to tell snakemake to generate them, feel free to replace the --cores 1 with the HPC profile you would rather use.
 
-**1. Plotting RNAseq expression levels on target genes (`rule plot_expression_levels`)**\
+### **1. Plotting RNAseq expression levels on target genes (`rule plot_expression_levels`)**\
 Given a list of genes (and optional labels), it will plot the expression levels in all the different samples in the samplefile and analysis name defined. Genes uniquely differentially regulated in one sample versus one or more samples are color coded. It is based on a Rdata file created during the Differential Expression analysis (`rule call_all_degs`).\ 
 To run it, edit the config file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output pdf) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
 ```bash 
@@ -200,7 +208,7 @@ snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_gene
 ```
 Output is a single pdf file named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf` where each gene of the list is a page.
 
-**2. Performing GO analysis on target genes (`rule perform_GO_on_target_file`)**\
+### **2. Performing GO analysis on target genes (`rule perform_GO_on_target_file`)**\
 Given a file containing a list of genes to do GO analysis on, and optionally a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
 By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Help_Gene_Ontology](Help/Help_Gene_Ontology) for more details on how to create the GO database.\
 To run it, edit the config file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output files) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
@@ -214,7 +222,7 @@ snakemake --cores 1 results/RNA/GO/TopGO__test_smk__ColCEN__my_genes_of_interest
 ```
 Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
 
-**3. Finding motifs on target regions (`rule find_motifs_in_file`)**\
+### **3. Finding motifs on target regions (`rule find_motifs_in_file`)**\
 Given a bed file containing different regions, it will perform a motifs analysis with memme.\
 By default motifs analysis is only performed on the final selected TF peak files (`motifs: true` in the config file). Edit to `allrep: true` in the config file for motifs analysis to be performed on all replicates and pairwise idr peaks if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the config file `jaspar_db` and change the `motifs_ref_genome` to match the samples.\
 To run the analysis:
@@ -230,7 +238,7 @@ Output is the folder `results/TF/<motif_target_file_label>` containing a subdire
 When setting `motif_ref_genome:`, it is safer to use a reference genome that has already been used in a run. Otherwise, it will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path.\
 For the target file chosen `motif_target_file:`, if the regions are over 500bp, only the middle 400bp will be used.
 
-**4. Performing sRNA differential analysis on regions (`rule call_all_differential_srna_clusters`)**:\
+### **4. Performing sRNA differential analysis on regions (`rule call_all_differential_srna_clusters`)**:\
 Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, using all the samples from the sample file but limiting the mapping and counts to the loci in the target file. Edit `srna_target_file` and `srna_target_file_label` in the config file. To run the analysis: 
 ```bash 
 snakemake --cores 1 results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt
@@ -244,7 +252,7 @@ Output is the results folder from Shortstack limited to this loci file, followed
 
 If you only want the results of Shortstack and not the differential analysis, limit the run to the rule `analyze_all_srna_samples_on_target_file` instead, targeting: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt`
 
-**5. Plotting heatmap on regions (`rule plotting_heatmap_on_targetfile`)**\
+### **5. Plotting heatmap on regions (`rule plotting_heatmap_on_targetfile`)**\
 Given a bed file, it will plot a heatmap using deeptools.
 Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
 ```bash 
@@ -272,7 +280,7 @@ If the given bedfile is stranded, the heatmap will be done by splitting the regi
 The color scheme of the heatmap is "seismic" for all samples and "Oranges" for mC. This can be changed manually in the config file `heatmaps_plot_params`.
 The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the config file in `heatmaps` for each <matrix_params>.
 
-**6. Plotting metaplot profiles on regions (`rule plotting_profile_on_targetfile`)**\
+### **6. Plotting metaplot profiles on regions (`rule plotting_profile_on_targetfile`)**\
 Given a bed file, it will plot a metaplot profile using deeptools.
 Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
 ```bash 
@@ -286,7 +294,7 @@ By default, the profiles represent the "mean" accross all regions. This can be c
 By default, the type of plots are "lines". See deeptools documentation for other options and edit `profiles_plot_params` in the config file.
 The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the config file in `heatmaps` for each <matrix_params>.
 
-**7. Plotting browser screenshots on regions (`rule merge_region_browser_plots`)**\
+### **7. Plotting browser screenshots on regions (`rule merge_region_browser_plots`)**\
 Given a region file, it will plot a browser screenshot using R packages.
 Edit `browser_target_file` and `browser_target_file_label` in the config file. To run the analysis: 
 ```bash 
@@ -298,18 +306,10 @@ Hightlights columns are optional, and correspond to regions of the browser that 
 Use <env>="all" to include all samples, "most" for all data-types except mC, or any single environment for data type-specific browsers `[all, most, ChIP, TF, RNA, sRNA, mC]`.\
 By default, no TE file is used. If you want to add TE annotations, supply a bed-file in the config file `browser_TE_file`.\
 
-**8. Rerunning a specific analysis**
+### **8. Rerunning a specific analysis**
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
 e.g `snakemake --cores 1 results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force`
 If only the combined analysis is to be performed, and not everything else, delete all the chkpts files in `results/combined/chkpts/` as well as in the chkpt of each relevant environment `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
-
-### DMRs parameters
-- By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
-- DMRs are called with the R package DMRcaller (DOI: 10.18129/B9.bioc.DMRcaller) for CG, CHG and CHH and the following (stringent) parameters:
-	- CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
-	- CHG: `method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
-	- CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
-- Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the rule `call_DMRs_pairwise` in the `mC.smk` file.
 
 ## Output Structure
 
