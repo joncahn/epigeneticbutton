@@ -17,7 +17,6 @@ import traceback
 min_version("9.0")
 
 _start = time.time()
-_pipeline_failed = False
 
 # Intro message
 def print_to_tty_or_stdout(msg, color=None):
@@ -248,25 +247,24 @@ rule combined_analysis:
         """ 
 
 # Exit message
-def print_done():
+def on_success():
     elapsed = time.time() - _start
     h, m = divmod(elapsed / 3600, 1)
     m = int(m * 60)
-    duration = f"{int(h)}h {m}m"
+    print_to_tty_or_stdout(
+        f"EPICC SUCCESS! Pipeline completed successfully in {int(h)}h {m}m.", 
+        color="green"
+    )
 
-    color = "red" if _pipeline_failed else "green"
-    if _pipeline_failed:
-        msg = f"EPICC FAIL! Pipeline failed after {duration}. Check the logs for more details."
-    else:
-        msg = f"EPICC SUCCESS! Pipeline completed successfully in {duration}. Go check those results!"
-    
-    print_to_tty_or_stdout(msg, color=color)
+def on_error():
+    elapsed = time.time() - _start
+    h, m = divmod(elapsed / 3600, 1)
+    m = int(m * 60)
+    print_to_tty_or_stdout(
+        f"EPICC FAIL! Pipeline failed after {int(h)}h {m}m. Check logs!", 
+        color="red"
+    )
 
-if "SNAKEMAKE" not in os.environ:
-    def handle_exit():
-        global _pipeline_failed
-        exc_type, _, _ = sys.exc_info()
-        if exc_type is not None:
-            _pipeline_failed = True
-        print_done()
-    atexit.register(handle_exit)
+onsuccess(on_success)
+onerror(on_error)
+
