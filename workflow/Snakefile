@@ -10,8 +10,50 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import colorsys
+import time
+import atexit
+import traceback
+from scripts.samplefile_validation import check_table
 
-min_version("6.0")
+min_version("9.0")
+
+_start = time.time()
+
+# Intro message
+def print_to_tty_or_stdout(msg, color=None):
+    colors = {
+        "green": "\033[92m",
+        "red": "\033[91m",
+        "reset": "\033[0m"
+    }
+    color_code = colors.get(color, "")
+    reset_code = colors["reset"] if color else ""
+    try:
+        with open("/dev/tty", "w") as tty:
+            print(f"{color_code}{msg}{reset_code}", file=tty)
+    except OSError:
+        print(msg)
+        
+def print_banner():
+    banner_lines = [
+        "You just pushed the epigenetic button!",
+        "It is going to be..."
+    ]
+    
+    try:
+        with open("data/banner.txt") as f:
+            banner_lines.extend(f.read().splitlines())
+    except FileNotFoundError:
+        pass
+
+    for line in banner_lines:
+        print_to_tty_or_stdout(line, color="green")
+
+try:
+    with open("/dev/tty", "w") as tty:
+        print_banner()
+except OSError:
+    pass
 
 # Configuration
 configfile: "config/config.yaml"
@@ -37,6 +79,8 @@ else:
     samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
 
 samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).reset_index(drop=True)
+
+check_table(samples)
 
 # Create an "env" column based on the string patterns in data_type
 conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]
@@ -92,7 +136,9 @@ REF_GENOMES = set(samples["ref_genome"].unique())
 DATA_TYPES = set(samples["data_type"].unique())
 
 # Define the folder in which the snakemake pipeline has been cloned
-REPO_FOLDER = config["repo_folder"]
+REPO_FOLDER = os.path.abspath(config["repo_folder"])
+if not os.path.isdir(REPO_FOLDER):
+    raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the config file!")
 
 # Define the conda environment to build
 CONDA_ENV=os.path.join(REPO_FOLDER,"workflow","envs","epibutton.yaml")
@@ -129,7 +175,7 @@ def parse_sample_name(sample_name):
 def get_sample_info_from_name(sname, samples, field):
     match = samples.loc[samples["sample_name"] == sname]
     if match.empty:
-        raise ValueError(f"\nSample '{sname}' not found in {samples} table.")
+        return None
     else:
         return match[field].iloc[0]
 
@@ -207,3 +253,23 @@ rule combined_analysis:
         """
         touch {output.chkpt}
         """ 
+
+# Exit message
+onsuccess:
+    elapsed = time.time() - _start
+    h, m = divmod(elapsed / 3600, 1)
+    m = int(m * 60)
+    print_to_tty_or_stdout(
+        f"EPICC SUCCESS! Pipeline completed successfully in {int(h)}h {m}m.", 
+        color="green"
+    )
+
+onerror:
+    elapsed = time.time() - _start
+    h, m = divmod(elapsed / 3600, 1)
+    m = int(m * 60)
+    print_to_tty_or_stdout(
+        f"EPICC FAIL! Pipeline failed after {int(h)}h {m}m. Check logs!", 
+        color="red"
+    )
+

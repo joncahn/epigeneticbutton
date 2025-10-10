@@ -1,6 +1,5 @@
 CONDA_ENV_SRNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_srna.yaml")
 
-# function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
 
@@ -10,6 +9,14 @@ def define_input_file_for_structural(sample_name):
     if paired == "SE":
         return "deduplicated__{sample_name}__R0" if netflex_v3 else "trim__{sample_name}__R0"
 
+def get_bt1_indices(wildcards):
+    ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
+    genomesize = float(config[config[ref_genome]['species']]['genomesize'])
+    if genomesize > 4e9:
+        return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl",".3.ebwtl",".4.ebwtl",".rev.1.ebwtl",".rev.2.ebwtl")
+    else: 
+        return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt",".3.ebwt",".4.ebwt",".rev.1.ebwt",".rev.2.ebwt")
+        
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     rna_depletion = config['structural_rna_depletion']
@@ -21,6 +28,11 @@ def define_input_file_for_shortstack(sample_name):
             return "deduplicated__{sample_name}__R0"
         else:
             return "trim__{sample_name}__R0"
+    elif paired == "PE":
+        raise ValueError(
+            "Paired-end small RNA is not yet a feature."
+            f"{wildcards.sample_name} is set to be PE."
+        )
 
 def define_input_for_grouped_analysis(ref_genome):
     bamfiles = []
@@ -36,9 +48,9 @@ def define_srna_target_file(wildcards):
     if wildcards.target_name == "new_clusters":
         return []
     elif wildcards.target_name == "all_genes":
-        return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+        return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
     elif wildcards.target_name == "protein_coding_genes":
-        return f"results/combined/tracks/{wildcards.ref_genome}__protein_coding_genes.bed"
+        return f"results/combined/bedfiles/{wildcards.ref_genome}__protein_coding_genes.bed"
     elif wildcards.target_name == tname:
         return config['srna_target_file']
     else:
@@ -87,7 +99,7 @@ def define_final_srna_output(ref_genome):
         analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Counts.txt")
     
     results = map_files
-	
+
     if qc_option == "all":
         results += qc_files
         
@@ -112,8 +124,9 @@ rule deduplicate_srna_netflexv3:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["deduplicate_srna_netflexv3"]["threads"]
     resources:
-        mem=config["resources"]["deduplicate_srna_netflexv3"]["mem"],
-        tmp=config["resources"]["deduplicate_srna_netflexv3"]["tmp"]
+        mem_mb=config["resources"]["deduplicate_srna_netflexv3"]["mem_mb"],
+        tmp_mb=config["resources"]["deduplicate_srna_netflexv3"]["tmp_mb"],
+        qos=config["resources"]["deduplicate_srna_netflexv3"]["qos"]
     shell:
         """
         {{
@@ -137,12 +150,13 @@ rule make_bt2_indices_for_structural_RNAs:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bt2_indices_for_structural_RNAs"]["threads"]
     resources:
-        mem=config["resources"]["make_bt2_indices_for_structural_RNAs"]["mem"],
-        tmp=config["resources"]["make_bt2_indices_for_structural_RNAs"]["tmp"]
+        mem_mb=config["resources"]["make_bt2_indices_for_structural_RNAs"]["mem_mb"],
+        tmp_mb=config["resources"]["make_bt2_indices_for_structural_RNAs"]["tmp_mb"],
+        qos=config["resources"]["make_bt2_indices_for_structural_RNAs"]["qos"]
     shell:
         """
         {{
-        if [[ {input.fasta} =~ \.gz$ ]]; then
+        if [[ {input.fasta} == *.gz ]]; then
             printf "Fasta of structural RNAs for {wildcards.ref_genome} is gzipped file: {input.fasta}\n"
             gunzip {input.fasta} -c > {output.temp_fasta}
         else
@@ -170,8 +184,9 @@ rule filter_structural_rna:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["filter_structural_rna"]["threads"]
     resources:
-        mem=config["resources"]["filter_structural_rna"]["mem"],
-        tmp=config["resources"]["filter_structural_rna"]["tmp"]
+        mem_mb=config["resources"]["filter_structural_rna"]["mem_mb"],
+        tmp_mb=config["resources"]["filter_structural_rna"]["tmp_mb"],
+        qos=config["resources"]["filter_structural_rna"]["qos"]
     shell:
         """
         {{
@@ -196,14 +211,15 @@ rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
-        indices = "genomes/{ref_genome}/{ref_genome}.fa.1.ebwt"
+        indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt", ".3.ebwt", ".4.ebwt", ".rev.1.ebwt", ".rev.2.ebwt")
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
-        mem=config["resources"]["make_bowtie1_indices"]["mem"],
-        tmp=config["resources"]["make_bowtie1_indices"]["tmp"]
+        mem_mb=config["resources"]["make_bowtie1_indices"]["mem_mb"],
+        tmp_mb=config["resources"]["make_bowtie1_indices"]["tmp_mb"],
+        qos=config["resources"]["make_bowtie1_indices"]["qos"]
     shell:
         """
         {{
@@ -212,11 +228,32 @@ rule make_bowtie1_indices:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule make_bowtie1_indices_large:
+    input:
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+    output:
+        indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl", ".3.ebwtl", ".4.ebwtl", ".rev.1.ebwtl", ".rev.2.ebwtl")
+    log:
+        temp(os.path.join(REPO_FOLDER,"results","logs","large_bt1_index_{ref_genome}.log"))
+    conda: CONDA_ENV_SRNA
+    threads: config["resources"]["make_bowtie1_indices"]["threads"]
+    resources:
+        mem_mb=config["resources"]["make_bowtie1_indices_large"]["mem_mb"],
+        tmp_mb=config["resources"]["make_bowtie1_indices_large"]["tmp_mb"],
+        qos=config["resources"]["make_bowtie1_indices_large"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nMaking large Bowtie1 indices for {wildcards.ref_genome}\n"
+        bowtie-build {input.fasta} {input.fasta}
+        }} 2>&1 | tee -a "{log}"
+        """
+        
 rule shortstack_map:
     input:
         fastq = "results/sRNA/mapped/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.1.ebwt"
+        indices = get_bt1_indices
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
@@ -230,8 +267,9 @@ rule shortstack_map:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
-        mem=config["resources"]["shortstack_map"]["mem"],
-        tmp=config["resources"]["shortstack_map"]["tmp"]
+        mem_mb=config["resources"]["shortstack_map"]["mem_mb"],
+        tmp_mb=config["resources"]["shortstack_map"]["tmp_mb"],
+        qos=config["resources"]["shortstack_map"]["qos"]
     shell:
         """
         {{
@@ -256,8 +294,9 @@ rule make_srna_size_stats:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_srna_size_stats"]["threads"]
     resources:
-        mem=config["resources"]["make_srna_size_stats"]["mem"],
-        tmp=config["resources"]["make_srna_size_stats"]["tmp"]
+        mem_mb=config["resources"]["make_srna_size_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["make_srna_size_stats"]["tmp_mb"],
+        qos=config["resources"]["make_srna_size_stats"]["qos"]
     shell:
         """
         {{
@@ -293,8 +332,9 @@ rule filter_size_srna_sample:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["filter_size_srna_sample"]["threads"]
     resources:
-        mem=config["resources"]["filter_size_srna_sample"]["mem"],
-        tmp=config["resources"]["filter_size_srna_sample"]["tmp"]
+        mem_mb=config["resources"]["filter_size_srna_sample"]["mem_mb"],
+        tmp_mb=config["resources"]["filter_size_srna_sample"]["tmp_mb"],
+        qos=config["resources"]["filter_size_srna_sample"]["qos"]
     shell:
         """
         {{
@@ -320,15 +360,16 @@ rule merging_srna_replicates:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["merging_srna_replicates"]["threads"]
     resources:
-        mem=config["resources"]["merging_srna_replicates"]["mem"],
-        tmp=config["resources"]["merging_srna_replicates"]["tmp"]
+        mem_mb=config["resources"]["merging_srna_replicates"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_srna_replicates"]["tmp_mb"],
+        qos=config["resources"]["merging_srna_replicates"]["qos"]
     shell:
         """
         {{
         printf "\nMerging replicates of {params.sname} {params.size}\n"
-		samtools merge -@ {threads} {output.tempfile} {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} {output.tempfile}
-		samtools index -@ {threads} {output.mergefile}
+        samtools merge -@ {threads} {output.tempfile} {input.bamfiles}
+        samtools sort -@ {threads} -o {output.mergefile} {output.tempfile}
+        samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -348,14 +389,15 @@ rule make_srna_stranded_bigwigs:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_srna_stranded_bigwigs"]["threads"]
     resources:
-        mem=config["resources"]["make_srna_stranded_bigwigs"]["mem"],
-        tmp=config["resources"]["make_srna_stranded_bigwigs"]["tmp"]
+        mem_mb=config["resources"]["make_srna_stranded_bigwigs"]["mem_mb"],
+        tmp_mb=config["resources"]["make_srna_stranded_bigwigs"]["tmp_mb"],
+        qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"]
     shell:
         """
         {{
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-		bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
-		bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+        bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
+        bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -377,8 +419,9 @@ rule analyze_all_srna_samples_on_target_file:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["analyze_all_srna_samples_on_target_file"]["threads"]
     resources:
-        mem=config["resources"]["analyze_all_srna_samples_on_target_file"]["mem"],
-        tmp=config["resources"]["analyze_all_srna_samples_on_target_file"]["tmp"]
+        mem_mb=config["resources"]["analyze_all_srna_samples_on_target_file"]["mem_mb"],
+        tmp_mb=config["resources"]["analyze_all_srna_samples_on_target_file"]["tmp_mb"],
+        qos=config["resources"]["analyze_all_srna_samples_on_target_file"]["qos"]
     shell:
         """
         {{
@@ -412,8 +455,9 @@ rule prep_files_for_differential_srna_clusters:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_prep", "{target_name}"))
     threads: config["resources"]["prep_files_for_differential_srna_clusters"]["threads"]
     resources:
-        mem=config["resources"]["prep_files_for_differential_srna_clusters"]["mem"],
-        tmp=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp"]
+        mem_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["mem_mb"],
+        tmp_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp_mb"],
+        qos=config["resources"]["prep_files_for_differential_srna_clusters"]["qos"]
     run:
         filtered_samples = samples[ (samples['data_type'] == 'sRNA') & (samples['ref_genome'] == params.ref_genome) ].copy()
         filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
@@ -454,8 +498,9 @@ rule call_all_differential_srna_clusters:
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["call_all_DEGs"]["threads"]
     resources:
-        mem=config["resources"]["call_all_DEGs"]["mem"],
-        tmp=config["resources"]["call_all_DEGs"]["tmp"]
+        mem_mb=config["resources"]["call_all_DEGs"]["mem_mb"],
+        tmp_mb=config["resources"]["call_all_DEGs"]["tmp_mb"],
+        qos=config["resources"]["call_all_DEGs"]["qos"]
     shell:
         """
         printf "running edgeR for all samples in {params.ref_genome}\n"

@@ -1,6 +1,5 @@
 CONDA_ENV_MC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_mc.yaml")
 
-# function to access logs more easily
 def return_log_mc(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
      
@@ -8,6 +7,13 @@ def parameters_for_mc(sample_name):
     temp = parse_sample_name(sample_name)['sample_type']
     options = {"WGBS", "Pico", "EMseq"}
     return temp if temp in options else "default"
+
+def define_cx_report_input(wildcards):
+    name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}"
+    if wildcards.replicate == "merged":
+        return f"results/mC/methylcall/{name}.merged.CX_report.txt.gz"
+    else:
+        return f"results/mC/methylcall/{name}.deduplicated.CX_report.txt.gz"
 
 def define_DMR_samples(sample_name):
     data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
@@ -79,8 +85,9 @@ rule make_bismark_indices:
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
-        mem=config["resources"]["make_bismark_indices"]["mem"],
-        tmp=config["resources"]["make_bismark_indices"]["tmp"]
+        mem_mb=config["resources"]["make_bismark_indices"]["mem_mb"],
+        tmp_mb=config["resources"]["make_bismark_indices"]["tmp_mb"],
+        qos=config["resources"]["make_bismark_indices"]["qos"]
     shell:
         """
         {{
@@ -116,8 +123,9 @@ rule bismark_map_pe:
     conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
-        mem=config["resources"]["bismark_map_pe"]["mem"],
-        tmp=config["resources"]["bismark_map_pe"]["tmp"]
+        mem_mb=config["resources"]["bismark_map_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["bismark_map_pe"]["tmp_mb"],
+        qos=config["resources"]["bismark_map_pe"]["qos"]
     shell:
         """
         {{
@@ -154,8 +162,9 @@ rule bismark_map_se:
     conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
-        mem=config["resources"]["bismark_map_se"]["mem"],
-        tmp=config["resources"]["bismark_map_se"]["tmp"]
+        mem_mb=config["resources"]["bismark_map_se"]["mem_mb"],
+        tmp_mb=config["resources"]["bismark_map_se"]["tmp_mb"],
+        qos=config["resources"]["bismark_map_se"]["qos"]
     shell:
         """
         {{
@@ -201,10 +210,14 @@ rule make_mc_stats_pe:
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
+    log:
+        temp(return_log_mc("{sample_name}", "making_stats", "PE"))
+    conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_stats_pe"]["threads"]
     resources:
-        mem=config["resources"]["make_mc_stats_pe"]["mem"],
-        tmp=config["resources"]["make_mc_stats_pe"]["tmp"]
+        mem_mb=config["resources"]["make_mc_stats_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mc_stats_pe"]["tmp_mb"],
+        qos=config["resources"]["make_mc_stats_pe"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -242,10 +255,14 @@ rule make_mc_stats_se:
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
+    log:
+        temp(return_log_mc("{sample_name}", "making_stats", "SE"))
+    conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_stats_se"]["threads"]
     resources:
-        mem=config["resources"]["make_mc_stats_se"]["mem"],
-        tmp=config["resources"]["make_mc_stats_se"]["tmp"]
+        mem_mb=config["resources"]["make_mc_stats_se"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mc_stats_se"]["tmp_mb"],
+        qos=config["resources"]["make_mc_stats_se"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -271,8 +288,8 @@ rule merging_mc_replicates:
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
         bedfile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
-        tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt"),
-        mergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.deduplicated.CX_report.txt.gz")
+        tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt"),
+        mergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt.gz")
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
     log:
@@ -280,8 +297,9 @@ rule merging_mc_replicates:
     conda: CONDA_ENV_MC
     threads: config["resources"]["merging_mc_replicates"]["threads"]
     resources:
-        mem=config["resources"]["merging_mc_replicates"]["mem"],
-        tmp=config["resources"]["merging_mc_replicates"]["tmp"]
+        mem_mb=config["resources"]["merging_mc_replicates"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_mc_replicates"]["tmp_mb"],
+        qos=config["resources"]["merging_mc_replicates"]["qos"]
     shell:
         """
         {{
@@ -294,24 +312,25 @@ rule merging_mc_replicates:
 
 rule make_mc_bigwig_files:
     input:
-        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        cx_report = define_cx_report_input,
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        bigwigcg = "results/mC/tracks/{sample_name}__CG.bw",
-        bigwigchg = "results/mC/tracks/{sample_name}__CHG.bw",
-        bigwigchh = "results/mC/tracks/{sample_name}__CHH.bw",
-        touch = "results/mC/chkpts/bigwig__{sample_name}.done"
+        bigwigcg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bw",
+        bigwigchg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
+        bigwigchh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
+        touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     params:
-        sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        ref_genome = lambda wildcards: wildcards.ref_genome,
         context = config['mC_context']
     log:
-        temp(return_log_mc("{sample_name}", "bigwig", ""))
+        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "bigwig", ""))
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
-        mem=config["resources"]["make_mc_bigwig_files"]["mem"],
-        tmp=config["resources"]["make_mc_bigwig_files"]["tmp"]    
+        mem_mb=config["resources"]["make_mc_bigwig_files"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mc_bigwig_files"]["tmp_mb"],
+        qos=config["resources"]["make_mc_bigwig_files"]["qos"]
     shell:
         """
         {{
@@ -367,8 +386,9 @@ rule call_DMRs_pairwise:
     conda: CONDA_ENV_MC
     threads: config["resources"]["call_DMRs_pairwise"]["threads"]
     resources:
-        mem=config["resources"]["call_DMRs_pairwise"]["mem"],
-        tmp=config["resources"]["call_DMRs_pairwise"]["tmp"]
+        mem_mb=config["resources"]["call_DMRs_pairwise"]["mem_mb"],
+        tmp_mb=config["resources"]["call_DMRs_pairwise"]["tmp_mb"],
+        qos=config["resources"]["call_DMRs_pairwise"]["qos"]
     shell:
         """
         {{

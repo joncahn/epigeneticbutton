@@ -1,6 +1,5 @@
 CONDA_ENV_RNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_rna.yaml")
 
-# function to access logs more easily
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
@@ -30,7 +29,7 @@ def define_rnaseq_background_file(wildcards):
     elif wildcards.target_name == tname and os.path.exists(bgfile):
         return config['rnaseq_background_file']
     else:
-        return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+        return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
         
 def get_go_database(ref_genome):
     species=config[ref_genome]['species']
@@ -108,8 +107,9 @@ rule make_STAR_indices:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["make_STAR_indices"]["threads"]
     resources:
-        mem=config["resources"]["make_STAR_indices"]["mem"],
-        tmp=config["resources"]["make_STAR_indices"]["tmp"]
+        mem_mb=config["resources"]["make_STAR_indices"]["mem_mb"],
+        tmp_mb=config["resources"]["make_STAR_indices"]["tmp_mb"],
+        qos=config["resources"]["make_STAR_indices"]["qos"]
     shell:
         """
         {{
@@ -138,8 +138,9 @@ rule STAR_map_pe:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["STAR_map_pe"]["threads"]
     resources:
-        mem=config["resources"]["STAR_map_pe"]["mem"],
-        tmp=config["resources"]["STAR_map_pe"]["tmp"]
+        mem_mb=config["resources"]["STAR_map_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["STAR_map_pe"]["tmp_mb"],
+        qos=config["resources"]["STAR_map_pe"]["qos"]
     shell:
         """
         {{
@@ -175,8 +176,9 @@ rule STAR_map_se:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["STAR_map_se"]["threads"]
     resources:
-        mem=config["resources"]["STAR_map_se"]["mem"],
-        tmp=config["resources"]["STAR_map_se"]["tmp"]
+        mem_mb=config["resources"]["STAR_map_se"]["mem_mb"],
+        tmp_mb=config["resources"]["STAR_map_se"]["tmp_mb"],
+        qos=config["resources"]["STAR_map_se"]["qos"]
     shell:
         """
         {{
@@ -203,8 +205,9 @@ rule filter_rna_pe:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["filter_rna_pe"]["threads"]
     resources:
-        mem=config["resources"]["filter_rna_pe"]["mem"],
-        tmp=config["resources"]["filter_rna_pe"]["tmp"]
+        mem_mb=config["resources"]["filter_rna_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["filter_rna_pe"]["tmp_mb"],
+        qos=config["resources"]["filter_rna_pe"]["qos"]
     shell:
         """
         {{
@@ -238,8 +241,9 @@ rule filter_rna_se:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["filter_rna_se"]["threads"]
     resources:
-        mem=config["resources"]["filter_rna_se"]["mem"],
-        tmp=config["resources"]["filter_rna_se"]["tmp"]
+        mem_mb=config["resources"]["filter_rna_se"]["mem_mb"],
+        tmp_mb=config["resources"]["filter_rna_se"]["tmp_mb"],
+        qos=config["resources"]["filter_rna_se"]["qos"]
     shell:
         """
         {{
@@ -271,8 +275,9 @@ rule make_rna_stats_pe:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     threads: config["resources"]["make_rna_stats_pe"]["threads"]
     resources:
-        mem=config["resources"]["make_rna_stats_pe"]["mem"],
-        tmp=config["resources"]["make_rna_stats_pe"]["tmp"]
+        mem_mb=config["resources"]["make_rna_stats_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["make_rna_stats_pe"]["tmp_mb"],
+        qos=config["resources"]["make_rna_stats_pe"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -303,8 +308,9 @@ rule make_rna_stats_se:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     threads: config["resources"]["make_rna_stats_se"]["threads"]
     resources:
-        mem=config["resources"]["make_rna_stats_se"]["mem"],
-        tmp=config["resources"]["make_rna_stats_se"]["tmp"]
+        mem_mb=config["resources"]["make_rna_stats_se"]["mem_mb"],
+        tmp_mb=config["resources"]["make_rna_stats_se"]["tmp_mb"],
+        qos=config["resources"]["make_rna_stats_se"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -349,8 +355,9 @@ rule merging_rna_replicates:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["merging_rna_replicates"]["threads"]
     resources:
-        mem=config["resources"]["merging_rna_replicates"]["mem"],
-        tmp=config["resources"]["merging_rna_replicates"]["tmp"]
+        mem_mb=config["resources"]["merging_rna_replicates"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_rna_replicates"]["tmp_mb"],
+        qos=config["resources"]["merging_rna_replicates"]["qos"]
     shell:
         """
         {{
@@ -380,8 +387,9 @@ rule make_rna_stranded_bigwigs:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["make_rna_stranded_bigwigs"]["threads"]
     resources:
-        mem=config["resources"]["make_rna_stranded_bigwigs"]["mem"],
-        tmp=config["resources"]["make_rna_stranded_bigwigs"]["tmp"]
+        mem_mb=config["resources"]["make_rna_stranded_bigwigs"]["mem_mb"],
+        tmp_mb=config["resources"]["make_rna_stranded_bigwigs"]["tmp_mb"],
+        qos=config["resources"]["make_rna_stranded_bigwigs"]["qos"]
     shell:
         """
         {{
@@ -423,8 +431,9 @@ rule prep_files_for_DEGs:
         temp(return_log_rna("{ref_genome}", "prep_for_DEGs", "{analysis_name}"))
     threads: config["resources"]["prep_files_for_DEGs"]["threads"]
     resources:
-        mem=config["resources"]["prep_files_for_DEGs"]["mem"],
-        tmp=config["resources"]["prep_files_for_DEGs"]["tmp"]
+        mem_mb=config["resources"]["prep_files_for_DEGs"]["mem_mb"],
+        tmp_mb=config["resources"]["prep_files_for_DEGs"]["tmp_mb"],
+        qos=config["resources"]["prep_files_for_DEGs"]["qos"]
     run:
         filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == params.ref_genome) ].copy()
         filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
@@ -457,7 +466,7 @@ rule call_all_DEGs:
     input:
         samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
+        region_file = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
     output:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt",
@@ -471,8 +480,9 @@ rule call_all_DEGs:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["call_all_DEGs"]["threads"]
     resources:
-        mem=config["resources"]["call_all_DEGs"]["mem"],
-        tmp=config["resources"]["call_all_DEGs"]["tmp"]
+        mem_mb=config["resources"]["call_all_DEGs"]["mem_mb"],
+        tmp_mb=config["resources"]["call_all_DEGs"]["tmp_mb"],
+        qos=config["resources"]["call_all_DEGs"]["qos"]
     shell:
         """
         {{
@@ -486,7 +496,7 @@ rule gather_gene_expression_rpkm:
     input:
         samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
+        region_file = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
     output:
         rpkm = "results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
     params:
@@ -498,8 +508,9 @@ rule gather_gene_expression_rpkm:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["gather_gene_expression_rpkm"]["threads"]
     resources:
-        mem=config["resources"]["gather_gene_expression_rpkm"]["mem"],
-        tmp=config["resources"]["gather_gene_expression_rpkm"]["tmp"]
+        mem_mb=config["resources"]["gather_gene_expression_rpkm"]["mem_mb"],
+        tmp_mb=config["resources"]["gather_gene_expression_rpkm"]["tmp_mb"],
+        qos=config["resources"]["gather_gene_expression_rpkm"]["qos"]
     shell:
         """
         {{
@@ -524,8 +535,9 @@ rule plot_expression_levels:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["plot_expression_levels"]["threads"]
     resources:
-        mem=config["resources"]["plot_expression_levels"]["mem"],
-        tmp=config["resources"]["plot_expression_levels"]["tmp"]
+        mem_mb=config["resources"]["plot_expression_levels"]["mem_mb"],
+        tmp_mb=config["resources"]["plot_expression_levels"]["tmp_mb"],
+        qos=config["resources"]["plot_expression_levels"]["qos"]
     shell:
         """
         {{
@@ -552,8 +564,9 @@ rule create_GO_database:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["create_GO_database"]["threads"]
     resources:
-        mem=config["resources"]["create_GO_database"]["mem"],
-        tmp=config["resources"]["create_GO_database"]["tmp"]
+        mem_mb=config["resources"]["create_GO_database"]["mem_mb"],
+        tmp_mb=config["resources"]["create_GO_database"]["tmp_mb"],
+        qos=config["resources"]["create_GO_database"]["qos"]
     shell:
         """
         {{
@@ -591,8 +604,9 @@ rule perform_GO_on_target_file:
     conda: CONDA_ENV_RNA
     threads: config["resources"]["perform_GO_on_target_file"]["threads"]
     resources:
-        mem=config["resources"]["perform_GO_on_target_file"]["mem"],
-        tmp=config["resources"]["perform_GO_on_target_file"]["tmp"]
+        mem_mb=config["resources"]["perform_GO_on_target_file"]["mem_mb"],
+        tmp_mb=config["resources"]["perform_GO_on_target_file"]["tmp_mb"],
+        qos=config["resources"]["perform_GO_on_target_file"]["qos"]
     shell:
         """
         {{

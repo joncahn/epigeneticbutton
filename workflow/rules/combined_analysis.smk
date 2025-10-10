@@ -1,6 +1,5 @@
 CONDA_ENV_UPSET=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_upset.yaml")
 
-# function to access logs more easily
 def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
@@ -17,12 +16,11 @@ def define_combined_target_file(wildcards):
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
-        file = f"results/combined/tracks/{ref_genome}__{target_name}.bed"
+        file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
     else:
         raise ValueError(   
-            f"{target_name} does not match possible files." 
-            "It can be 'combined_peaks', or the value of "
-            "'combined_target_file_name' in the config file"
+            f"{target_name} does not match possible files. It can be 'combined_peaks'," 
+            " or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
         )
     
     return file
@@ -183,10 +181,8 @@ def define_key_for_plots(wildcards, string):
                 bw1 = f"results/{row.env}/tracks/{merged}__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__plus.bw"
                 bw2 = f"results/{row.env}/tracks/{merged}__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__minus.bw"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
-                grouped_bw[f"{row.data_type}_plus"].append(bw1)
-                grouped_bw[f"{row.data_type}_minus"].append(bw2)
-                grouped_labs[f"{row.data_type}_plus"].append(f"{label}_plus")
-                grouped_labs[f"{row.data_type}_minus"].append(f"{label}_minus")
+                grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
+                grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
                 unique_rna.add(row.data_type)
                 label_to_mark[f"{label}_plus"] = row.data_type
                 label_to_mark[f"{label}_minus"] = row.data_type
@@ -210,10 +206,8 @@ def define_key_for_plots(wildcards, string):
                     bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
                     bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}_plus"].append(bw1)
-                    grouped_bw[f"sRNA_{size}_minus"].append(bw2)
-                    grouped_labs[f"sRNA_{size}_plus"].append(f"{label}_plus")
-                    grouped_labs[f"sRNA_{size}_minus"].append(f"{label}_minus")
+                    grouped_bw[f"sRNA_{size}"].extend([bw1, bw2])
+                    grouped_labs[f"sRNA_{size}"].extend([f"{label}_plus", f"{label}_minus"])
                     unique_srna.add(f"sRNA_{size}")
                     label_to_mark[f"{label}_plus"] = f"sRNA_{size}"
                     label_to_mark[f"{label}_minus"] = f"sRNA_{size}"
@@ -244,15 +238,15 @@ def define_key_for_plots(wildcards, string):
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_bw.get(f"{rna}_plus", []) + grouped_bw.get(f"{rna}_minus", []) + grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_bw.get(f"{srna}_plus", []) + grouped_bw.get(f"{srna}_minus", []) + grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_bw.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
         sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_labs.get(f"{rna}_plus", []) + grouped_labs.get(f"{rna}_minus", []) + grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
-        sum([grouped_labs.get(f"{srna}_plus", []) + grouped_labs.get(f"{srna}_minus", []) + grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
+        sum([grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
@@ -429,8 +423,9 @@ rule prepping_mapping_stats:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_mapping_stats"))
     threads: config["resources"]["prepping_mapping_stats"]["threads"]
     resources:
-        mem=config["resources"]["prepping_mapping_stats"]["mem"],
-        tmp=config["resources"]["prepping_mapping_stats"]["tmp"]
+        mem_mb=config["resources"]["prepping_mapping_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_mapping_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_mapping_stats"]["qos"]
     shell:
         """
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
@@ -454,8 +449,9 @@ rule plotting_mapping_stats:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_mapping_stats"]["threads"]
     resources:
-        mem=config["resources"]["plotting_mapping_stats"]["mem"],
-        tmp=config["resources"]["plotting_mapping_stats"]["tmp"]
+        mem_mb=config["resources"]["plotting_mapping_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_mapping_stats"]["tmp_mb"],
+        qos=config["resources"]["plotting_mapping_stats"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}"
@@ -473,8 +469,9 @@ rule prepping_chip_peak_stats:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_peak_stats"))
     threads: config["resources"]["prepping_chip_peak_stats"]["threads"]
     resources:
-        mem=config["resources"]["prepping_chip_peak_stats"]["mem"],
-        tmp=config["resources"]["prepping_chip_peak_stats"]["tmp"]
+        mem_mb=config["resources"]["prepping_chip_peak_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_chip_peak_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_chip_peak_stats"]["qos"]
     shell:
         """
         printf "Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > "{output.stat_file}"
@@ -499,8 +496,9 @@ rule plotting_peaks_stats_chip_tf:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_peaks_stats_chip_tf"]["threads"]
     resources:
-        mem=config["resources"]["plotting_peaks_stats_chip_tf"]["mem"],
-        tmp=config["resources"]["plotting_peaks_stats_chip_tf"]["tmp"]
+        mem_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["tmp_mb"],
+        qos=config["resources"]["plotting_peaks_stats_chip_tf"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}" "{params.env}"
@@ -519,8 +517,9 @@ rule prepping_srna_sizes_stats:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_srna_sizes"))
     threads: config["resources"]["prepping_srna_sizes_stats"]["threads"]
     resources:
-        mem=config["resources"]["prepping_srna_sizes_stats"]["mem"],
-        tmp=config["resources"]["prepping_srna_sizes_stats"]["tmp"]
+        mem_mb=config["resources"]["prepping_srna_sizes_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_srna_sizes_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_srna_sizes_stats"]["qos"]
     shell:
         """
         printf "Sample\tType\tSize\tCount\n" > "{output.stat_file}"
@@ -545,8 +544,9 @@ rule plotting_srna_sizes_stats:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_srna_sizes_stats"]["threads"]
     resources:
-        mem=config["resources"]["plotting_srna_sizes_stats"]["mem"],
-        tmp=config["resources"]["plotting_srna_sizes_stats"]["tmp"]
+        mem_mb=config["resources"]["plotting_srna_sizes_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_srna_sizes_stats"]["tmp_mb"],
+        qos=config["resources"]["plotting_srna_sizes_stats"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
@@ -572,8 +572,9 @@ rule combine_peakfiles:
     conda: CONDA_ENV
     threads: config["resources"]["combine_peakfiles"]["threads"]
     resources:
-        mem=config["resources"]["combine_peakfiles"]["mem"],
-        tmp=config["resources"]["combine_peakfiles"]["tmp"]
+        mem_mb=config["resources"]["combine_peakfiles"]["mem_mb"],
+        tmp_mb=config["resources"]["combine_peakfiles"]["tmp_mb"],
+        qos=config["resources"]["combine_peakfiles"]["qos"]
     shell:
         """
         {{
@@ -592,7 +593,7 @@ rule combine_peakfiles:
 rule get_annotations_for_bedfile:
     input:
         bedfile = lambda wildcards: define_combined_target_file(wildcards),
-        region_file = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed",
+        region_file = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
@@ -605,8 +606,9 @@ rule get_annotations_for_bedfile:
     conda: CONDA_ENV
     threads: config["resources"]["get_annotations_for_bedfile"]["threads"]
     resources:
-        mem=config["resources"]["get_annotations_for_bedfile"]["mem"],
-        tmp=config["resources"]["get_annotations_for_bedfile"]["tmp"]
+        mem_mb=config["resources"]["get_annotations_for_bedfile"]["mem_mb"],
+        tmp_mb=config["resources"]["get_annotations_for_bedfile"]["tmp_mb"],
+        qos=config["resources"]["get_annotations_for_bedfile"]["qos"]
     shell:
         """
         {{
@@ -637,8 +639,9 @@ rule plotting_upset_peaks:
     conda: CONDA_ENV_UPSET
     threads: config["resources"]["plotting_upset_peaks"]["threads"]
     resources:
-        mem=config["resources"]["plotting_upset_peaks"]["mem"],
-        tmp=config["resources"]["plotting_upset_peaks"]["tmp"]
+        mem_mb=config["resources"]["plotting_upset_peaks"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_upset_peaks"]["tmp_mb"],
+        qos=config["resources"]["plotting_upset_peaks"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.mergedfile}" "{input.annotatedfile}" "{params.env}" "{params.types}" "{output.plot}"
@@ -675,8 +678,9 @@ rule making_stranded_matrix_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["making_stranded_matrix_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["making_stranded_matrix_on_targetfile"]["mem"],
-        tmp=config["resources"]["making_stranded_matrix_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["making_stranded_matrix_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["making_stranded_matrix_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["making_stranded_matrix_on_targetfile"]["qos"]
     shell:
         """
         {{
@@ -717,8 +721,9 @@ rule merging_matrix:
     conda: CONDA_ENV
     threads: config["resources"]["merging_matrix"]["threads"]
     resources:
-        mem=config["resources"]["merging_matrix"]["mem"],
-        tmp=config["resources"]["merging_matrix"]["tmp"]
+        mem_mb=config["resources"]["merging_matrix"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_matrix"]["tmp_mb"],
+        qos=config["resources"]["merging_matrix"]["qos"]
     shell:
         """
         {{
@@ -757,8 +762,9 @@ rule computing_matrix_scales:
     conda: CONDA_ENV
     threads: config["resources"]["computing_matrix_scales"]["threads"]
     resources:
-        mem=config["resources"]["computing_matrix_scales"]["mem"],
-        tmp=config["resources"]["computing_matrix_scales"]["tmp"]
+        mem_mb=config["resources"]["computing_matrix_scales"]["mem_mb"],
+        tmp_mb=config["resources"]["computing_matrix_scales"]["tmp_mb"],
+        qos=config["resources"]["computing_matrix_scales"]["qos"]
     shell:
         """
         {{        
@@ -884,8 +890,9 @@ rule plotting_heatmap_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_heatmap_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_heatmap_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_heatmap_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["plotting_heatmap_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_heatmap_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["plotting_heatmap_on_targetfile"]["qos"]
     shell:
         """
         if [[ "{params.matrix}" == "tes" ]]; then
@@ -919,8 +926,9 @@ rule sort_heatmap:
     conda: CONDA_ENV
     threads: config["resources"]["sort_heatmap"]["threads"]
     resources:
-        mem=config["resources"]["sort_heatmap"]["mem"],
-        tmp=config["resources"]["sort_heatmap"]["tmp"]
+        mem_mb=config["resources"]["sort_heatmap"]["mem_mb"],
+        tmp_mb=config["resources"]["sort_heatmap"]["tmp_mb"],
+        qos=config["resources"]["sort_heatmap"]["qos"]
     shell:
         """
         printf "Sorting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
@@ -947,8 +955,9 @@ rule plotting_sorted_heatmap_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_sorted_heatmap_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["qos"]
     shell:
         """
         if [[ "{params.matrix}" == "tes" ]]; then
@@ -984,8 +993,9 @@ rule plotting_profile_on_targetfile:
     conda: CONDA_ENV
     threads: config["resources"]["plotting_profile_on_targetfile"]["threads"]
     resources:
-        mem=config["resources"]["plotting_profile_on_targetfile"]["mem"],
-        tmp=config["resources"]["plotting_profile_on_targetfile"]["tmp"]
+        mem_mb=config["resources"]["plotting_profile_on_targetfile"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_profile_on_targetfile"]["tmp_mb"],
+        qos=config["resources"]["plotting_profile_on_targetfile"]["qos"]
     shell:
         """
         {{
@@ -1016,7 +1026,7 @@ rule prep_browser_on_region:
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
-        all_genes = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+        all_genes = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
     output:
         filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
@@ -1025,6 +1035,7 @@ rule prep_browser_on_region:
         htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
+        temptes = temp("results/combined/matrix/tes_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
         tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
@@ -1036,7 +1047,8 @@ rule prep_browser_on_region:
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
         trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
         regionID = lambda wildcards: wildcards.regionID,
-        TEfile = config['browser_TE_file'],
+        TEtrigger = config['browser_TE_file'],
+        TE_file = lambda wildcards: config[wildcards.ref_genome]['te_file'],
         browser_scales = config['browser_scales'],
         mc_scales = config['fixed_mc_scales'],
         cg_scale = config['fixed_mcg'],
@@ -1047,8 +1059,9 @@ rule prep_browser_on_region:
     conda: CONDA_ENV
     threads: config["resources"]["prep_browser_on_region"]["threads"]
     resources:
-        mem=config["resources"]["prep_browser_on_region"]["mem"],
-        tmp=config["resources"]["prep_browser_on_region"]["tmp"]
+        mem_mb=config["resources"]["prep_browser_on_region"]["mem_mb"],
+        tmp_mb=config["resources"]["prep_browser_on_region"]["tmp_mb"],
+        qos=config["resources"]["prep_browser_on_region"]["qos"]
     shell:
         """
         {{
@@ -1085,12 +1098,22 @@ rule prep_browser_on_region:
             printf "No genes in this region\n"
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ {params.TEfile} == "none" ]]; then
-            printf "No TE file provided\n"
+        if [[ {params.TEtrigger} == "none" ]]; then
+            printf "No TE file to use\n"
+            touch {output.temptes}
             touch {output.tes}
-        else
+        elif [[ -s {params.TE_file} ]] && [[ {params.TE_file} == *.bed.gz ]]; then
+            printf "Getting TE track formm gzipped bed file\n"
+            pigz -p {threads} -dc {params.TE_file} > {output.temptes}
+            bedtools intersect -a {output.temptes} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+        elif [[ -s {params.TE_file} ]] && [[ {params.TE_file} == *.bed ]]; then
             printf "Getting TE track\n"
-            bedtools intersect -a {params.TEfile} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+            bedtools intersect -a {params.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+            touch {output.temptes}
+        else
+            printf "TE file does not exist or is not bed format (.bed extension)\nNo TE file will be used\n"
+            touch {output.temptes}
+            touch {output.tes}
         fi
         
         printf "Testing if all bw have data on the chromosome\n"
@@ -1172,8 +1195,9 @@ rule make_single_loci_browser_plot:
     conda: CONDA_ENV
     threads: config["resources"]["make_single_loci_browser_plot"]["threads"]
     resources:
-        mem=config["resources"]["make_single_loci_browser_plot"]["mem"],
-        tmp=config["resources"]["make_single_loci_browser_plot"]["tmp"]
+        mem_mb=config["resources"]["make_single_loci_browser_plot"]["mem_mb"],
+        tmp_mb=config["resources"]["make_single_loci_browser_plot"]["tmp_mb"],
+        qos=config["resources"]["make_single_loci_browser_plot"]["qos"]
     shell:
         """
         {{
@@ -1199,8 +1223,9 @@ rule merge_region_browser_plots:
     conda: CONDA_ENV
     threads: config["resources"]["merge_region_browser_plots"]["threads"]
     resources:
-        mem=config["resources"]["merge_region_browser_plots"]["mem"],
-        tmp=config["resources"]["merge_region_browser_plots"]["tmp"]
+        mem_mb=config["resources"]["merge_region_browser_plots"]["mem_mb"],
+        tmp_mb=config["resources"]["merge_region_browser_plots"]["tmp_mb"],
+        qos=config["resources"]["merge_region_browser_plots"]["qos"]
     shell:
         """
         pdfunite {input.plots} {output.merged_plots}

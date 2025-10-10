@@ -1,4 +1,3 @@
-# function to access logs more easily
 def return_log_sample(data_type, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results",data_type,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
     
@@ -16,8 +15,9 @@ rule get_fastq_pe:
     conda: CONDA_ENV
     threads: config["resources"]["get_fastq_pe"]["threads"]
     resources:
-        mem=config["resources"]["get_fastq_pe"]["mem"],
-        tmp=config["resources"]["get_fastq_pe"]["tmp"]
+        mem_mb=config["resources"]["get_fastq_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["get_fastq_pe"]["tmp_mb"],
+        qos=config["resources"]["get_fastq_pe"]["qos"]
     shell:
         """
         {{
@@ -56,8 +56,9 @@ rule get_fastq_se:
     conda: CONDA_ENV
     threads: config["resources"]["get_fastq_se"]["threads"]
     resources:
-        mem=config["resources"]["get_fastq_se"]["mem"],
-        tmp=config["resources"]["get_fastq_se"]["tmp"]
+        mem_mb=config["resources"]["get_fastq_se"]["mem_mb"],
+        tmp_mb=config["resources"]["get_fastq_se"]["tmp_mb"],
+        qos=config["resources"]["get_fastq_se"]["qos"]
     shell:
         """
         {{
@@ -92,8 +93,9 @@ rule run_fastqc:
     conda: CONDA_ENV
     threads: 1
     resources:
-        mem=config["resources"]["run_fastqc"]["mem"],
-        tmp=config["resources"]["run_fastqc"]["tmp"]
+        mem_mb=config["resources"]["run_fastqc"]["mem_mb"],
+        tmp_mb=config["resources"]["run_fastqc"]["tmp_mb"],
+        qos=config["resources"]["run_fastqc"]["qos"]
     shell:
         """
         fastqc -o "results/{params.data_type}/reports/" "{input.fastq}"
@@ -118,8 +120,9 @@ rule process_fastq_pe:
     conda: CONDA_ENV
     threads: config["resources"]["process_fastq_pe"]["threads"]
     resources:
-        mem=config["resources"]["process_fastq_pe"]["mem"],
-        tmp=config["resources"]["process_fastq_pe"]["tmp"]
+        mem_mb=config["resources"]["process_fastq_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["process_fastq_pe"]["tmp_mb"],
+        qos=config["resources"]["process_fastq_pe"]["qos"]
     shell:
         """
         {{
@@ -146,8 +149,9 @@ rule process_fastq_se:
     conda: CONDA_ENV
     threads: config["resources"]["process_fastq_se"]["threads"]
     resources:
-        mem=config["resources"]["process_fastq_se"]["mem"],
-        tmp=config["resources"]["process_fastq_se"]["tmp"]
+        mem_mb=config["resources"]["process_fastq_se"]["mem_mb"],
+        tmp_mb=config["resources"]["process_fastq_se"]["tmp_mb"],
+        qos=config["resources"]["process_fastq_se"]["qos"]
     shell:
         """
         {{

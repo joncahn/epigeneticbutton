@@ -1,0 +1,4 @@
+snakemake>=9
+matplotlib 
+snakemake-executor-plugin-slurm 
+

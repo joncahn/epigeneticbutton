@@ -1,6 +1,5 @@
 # Path to the working directory where the repository was cloned
 repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/devel"
-repo_folder_rule: "path/to/epigeneticbutton/repo"
 
 # Name of the run
 analysis_name: "devel"
@@ -11,22 +10,22 @@ sample_file: "config/all_samples.tsv"
 # Path to the annotation files for each reference genome
 ColCEN: 
   species: "thaliana"  
-  fasta_file: "data/ColCEN_fasta.fa.gz" # can be gzipped or not
-  gff_file: "data/ColCEN_gff.gff3.gz" # can be gzipped or not
-  gtf_file: "data/ColCEN_gtf.gtf.gz" # can be gzipped or not
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # can be gzipped or not
   gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  te_file: "data/ColCEN_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
+  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
   
 B73_v5:
   species: "mays" 
-  fasta_file: "data/B73_v5_fasta.fa.gz" # can be gzipped or not
-  gff_file: "data/B73_v5_gff.gff3.gz" # can be gzipped or not
-  gtf_file: "data/B73_v5_gtf.gtf.gz" # can be gzipped or not
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0_Zm00001eb.1.gff3" # can be gzipped or not
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # can be gzipped or not
   gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  te_file: "data/B73_v5_TEs.bed.gz" # can be gzipped or not; NOT YET USEFUL;
+  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/B73_v5_TEs.bed.gz" # can be gzipped or not;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
 
 la8011:
@@ -225,7 +224,7 @@ heatmap_target_file: "data/target_genes.bed" # bed file containing the regions t
 
 browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
 browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
-browser_TE_file: "none" # to be replaced with a bed file of TEs
+browser_TE_file: true # Whether to use a file of TEs or not. The file should be listed in the corresponding reference genome, and be a (potentially gzipped) bed file.
 browser_scales: "sample" # options: [ 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 fixed_mc_scales: true # Whether the scales for mC should be fixed to the value below
 fixed_mcg: 100
@@ -233,35 +232,35 @@ fixed_mchg: 60
 fixed_mchh: 20
 
 # Resource allocation
-minimal_resources: &default
-  threads: 1
-  mem: 32
-  tmp: 32
-
 low_resources: &low
   threads: 1
-  mem: 1000
-  tmp: 1000
+  mem_mb: 1000
+  tmp_mb: 1000
+  qos: "default"
 
 standard_resources: &standard
   threads: 4
-  mem: 2000
-  tmp: 2000
+  mem_mb: 2000
+  tmp_mb: 2000
+  qos: "default"
 
 heavy_resources: &heavy
   threads: 8
-  mem: 8000
-  tmp: 48000
-
+  mem_mb: 8000
+  tmp_mb: 48000
+  qos: "slow_nice"
+  
 max_resources: &max
   threads: 16
-  mem: 10000
-  tmp: 96000
+  mem_mb: 10000
+  tmp_mb: 96000
+  qos: "slow_nice"
 
 single_thread: &single
   threads: 1
-  mem: 32000
-  tmp: 48000
+  mem_mb: 32000
+  tmp_mb: 48000
+  qos: "slow_nice"
   
 resources:
   # environment_setup
@@ -321,11 +320,12 @@ resources:
   create_GO_database: *single
   perform_GO_on_target_file: *single
   # smallRNA
-  make_bowtie1_indices: *standard
-  shortstack_map: *heavy
   deduplicate_srna_netflexv3: *standard
   make_bt2_indices_for_structural_RNAs: *heavy
   filter_structural_rna: *heavy
+  make_bowtie1_indices: *single
+  make_bowtie1_indices_large: *single
+  shortstack_map: *heavy
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
   merging_srna_replicates: *standard
