@@ -5,6 +5,7 @@ import fnmatch
 import sys
 import re
 from snakemake.utils import min_version
+from snakemake.utils import is_main_process
 from itertools import combinations
 from collections import defaultdict
 import matplotlib.pyplot as plt
@@ -48,7 +49,7 @@ def print_banner():
     for line in banner_lines:
         print_to_tty_or_stdout(line, color="green")
 
-if "SNAKEMAKE" not in os.environ:
+if is_main_process():
     print_banner()
 
 # Configuration

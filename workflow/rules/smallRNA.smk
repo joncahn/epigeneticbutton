@@ -208,6 +208,8 @@ rule make_bowtie1_indices:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt", ".3.ebwt", ".4.ebwt", ".rev.1.ebwt", ".rev.2.ebwt")
+    log:
+        temp(os.path.join(REPO_FOLDER,"results","logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
@@ -227,6 +229,8 @@ rule make_bowtie1_indices_large:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     output:
         indices = multiext("genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl", ".3.ebwtl", ".4.ebwtl", ".rev.1.ebwtl", ".rev.2.ebwtl")
+    log:
+        temp(os.path.join(REPO_FOLDER,"results","logs","large_bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
