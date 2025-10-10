@@ -40,7 +40,7 @@ def assign_chip_input(row, tab):
                 (tab["line"]==row.line) &
                 (tab["tissue"]==row.tissue) &
                 (tab["sample_type"]=="Input") &
-                (tab["reference_genome"]==row.reference_genome)
+                (tab["ref_genome"]==row.ref_genome)
             ]
             if match.empty:
                 return "Input"
@@ -51,7 +51,7 @@ def assign_chip_input(row, tab):
                 (tab["line"]==row.line) &
                 (tab["tissue"]==row.tissue) &
                 (tab["sample_type"] != "Input") &
-                (tab["reference_genome"]==row.reference_genome)
+                (tab["ref_genome"]==row.ref_genome)
             ]
             if match.empty:
                 return "Sample"          
