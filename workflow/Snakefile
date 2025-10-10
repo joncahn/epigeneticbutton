@@ -133,7 +133,9 @@ REF_GENOMES = set(samples["ref_genome"].unique())
 DATA_TYPES = set(samples["data_type"].unique())
 
 # Define the folder in which the snakemake pipeline has been cloned
-REPO_FOLDER = config["repo_folder"]
+REPO_FOLDER = os.path.abspath(config["repo_folder"])
+if not os.path.isdir(REPO_FOLDER):
+    raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the config file!")
 
 # Define the conda environment to build
 CONDA_ENV=os.path.join(REPO_FOLDER,"workflow","envs","epibutton.yaml")

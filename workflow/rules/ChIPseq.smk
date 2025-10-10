@@ -1,7 +1,6 @@
 CONDA_ENV_CHIP=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_chip.yaml")
 CONDA_ENV_IDR=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_idr.yaml")
 
-# function to access logs more easily
 def return_log_chip(env, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results",env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
 

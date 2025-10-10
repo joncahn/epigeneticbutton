@@ -1,6 +1,5 @@
 CONDA_ENV_UPSET=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_upset.yaml")
 
-# function to access logs more easily
 def return_log_combined(analysis_name, genome, types):
     return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
@@ -17,7 +16,7 @@ def define_combined_target_file(wildcards):
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
-        file = f"results/combined/tracks/{ref_genome}__{target_name}.bed"
+        file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
     else:
         raise ValueError(   
             f"{target_name} does not match possible files. It can be 'combined_peaks'," 
@@ -594,7 +593,7 @@ rule combine_peakfiles:
 rule get_annotations_for_bedfile:
     input:
         bedfile = lambda wildcards: define_combined_target_file(wildcards),
-        region_file = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed",
+        region_file = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
@@ -1027,7 +1026,7 @@ rule prep_browser_on_region:
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
-        all_genes = lambda wildcards: f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+        all_genes = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
     output:
         filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",

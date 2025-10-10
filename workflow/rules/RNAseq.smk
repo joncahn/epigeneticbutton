@@ -1,6 +1,5 @@
 CONDA_ENV_RNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_rna.yaml")
 
-# function to access logs more easily
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
@@ -30,7 +29,7 @@ def define_rnaseq_background_file(wildcards):
     elif wildcards.target_name == tname and os.path.exists(bgfile):
         return config['rnaseq_background_file']
     else:
-        return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+        return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
         
 def get_go_database(ref_genome):
     species=config[ref_genome]['species']
@@ -467,7 +466,7 @@ rule call_all_DEGs:
     input:
         samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
+        region_file = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
     output:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt",
@@ -497,7 +496,7 @@ rule gather_gene_expression_rpkm:
     input:
         samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
-        region_file = "results/combined/tracks/{ref_genome}__all_genes.bed"
+        region_file = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
     output:
         rpkm = "results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt"
     params:

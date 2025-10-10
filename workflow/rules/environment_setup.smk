@@ -1,15 +1,13 @@
-# function to access logs more easily
 def return_log_env(ref_genome, step):
     return os.path.join(REPO_FOLDER,"results","logs",f"tmp_{step}_{ref_genome}.log")
 
-# Rule to summarize the preparation of the reference genome
 rule prepare_reference:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        region_files = ["results/combined/tracks/{ref_genome}__protein_coding_genes.bed", "results/combined/tracks/{ref_genome}__all_genes.bed"],
+        region_files = ["results/combined/bedfiles/{ref_genome}__protein_coding_genes.bed", "results/combined/bedfiles/{ref_genome}__all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
     output:
         chkpt = "results/combined/chkpts/ref__{ref_genome}.done",
@@ -22,7 +20,6 @@ rule prepare_reference:
         touch {output.chkpt}
         """
 
-# Rule to make sure a fasta file is found, and unzipped it if needed
 rule check_fasta:
     output:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
@@ -143,8 +140,8 @@ rule prep_region_file:
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
         gff = "genomes/{ref_genome}/{ref_genome}.gff"
     output:
-        region_file1 = "results/combined/tracks/{ref_genome}__protein_coding_genes.bed",
-        region_file2 = "results/combined/tracks/{ref_genome}__all_genes.bed"
+        region_file1 = "results/combined/bedfiles/{ref_genome}__protein_coding_genes.bed",
+        region_file2 = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:

@@ -1,6 +1,5 @@
 CONDA_ENV_MC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_mc.yaml")
 
-# function to access logs more easily
 def return_log_mc(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
      

@@ -1,6 +1,5 @@
 CONDA_ENV_SRNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_srna.yaml")
 
-# function to access logs more easily
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")
 
@@ -29,6 +28,11 @@ def define_input_file_for_shortstack(sample_name):
             return "deduplicated__{sample_name}__R0"
         else:
             return "trim__{sample_name}__R0"
+    elif paired == "PE":
+        raise ValueError(
+            "Paired-end small RNA is not yet a feature."
+            f"{wildcards.sample_name} is set to be PE."
+        )
 
 def define_input_for_grouped_analysis(ref_genome):
     bamfiles = []
@@ -44,9 +48,9 @@ def define_srna_target_file(wildcards):
     if wildcards.target_name == "new_clusters":
         return []
     elif wildcards.target_name == "all_genes":
-        return f"results/combined/tracks/{wildcards.ref_genome}__all_genes.bed"
+        return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
     elif wildcards.target_name == "protein_coding_genes":
-        return f"results/combined/tracks/{wildcards.ref_genome}__protein_coding_genes.bed"
+        return f"results/combined/bedfiles/{wildcards.ref_genome}__protein_coding_genes.bed"
     elif wildcards.target_name == tname:
         return config['srna_target_file']
     else:
