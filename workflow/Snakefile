@@ -48,8 +48,11 @@ def print_banner():
     for line in banner_lines:
         print_to_tty_or_stdout(line, color="green")
 
-if os.environ.get("SNAKEMAKE_MAIN") == "1":
-    print_banner()
+try:
+    with open("/dev/tty", "w") as tty:
+        print_banner()  # writes directly to your terminal
+except OSError:
+    pass  # silently skip if no terminal
 
 # Configuration
 configfile: "config/config.yaml"
