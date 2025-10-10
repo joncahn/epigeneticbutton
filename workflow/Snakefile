@@ -13,6 +13,7 @@ import colorsys
 import time
 import atexit
 import traceback
+from scripts.samplefile_validation import check_table
 
 min_version("9.0")
 
@@ -78,6 +79,8 @@ else:
     samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
 
 samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).reset_index(drop=True)
+
+check_table(samples)
 
 # Create an "env" column based on the string patterns in data_type
 conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]
