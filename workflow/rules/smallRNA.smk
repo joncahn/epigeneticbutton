@@ -207,6 +207,21 @@ rule dispatch_srna_fastq:
         cp {input.fastq} {output.fastq_file}
         """
 
+###
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
 rule make_bowtie1_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
