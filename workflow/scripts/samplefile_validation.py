@@ -66,18 +66,18 @@ def check_table(tab):
     
     if not dup.empty:
         for _, r in dup.iterrows():
-            error_messages.append(f'[X] Duplicated rows: {name(r)}', flush=True)
+            error_messages.append(f'[X] Duplicated rows: {name(r)}')
 
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
         if not validate_sample_type(row):
-            error_messages.append(f'[X] Row #{i} {name(row)}: sample_type does not match data_type', flush=True)
+            error_messages.append(f'[X] Row #{i} {name(row)}: sample_type does not match data_type')
         if not validate_SRA(row):
-            error_messages.append(f'[X] Row #{i} {name(row)}: fastq_path should be "SRA" for SRR IDs or a directory otherwise', flush=True)
+            error_messages.append(f'[X] Row #{i} {name(row)}: fastq_path should be "SRA" for SRR IDs or a directory otherwise')
         result = assign_chip_input(row, tab)
         if result == "Input":
-            error_messages.append(f'[X] Row #{i} {name(row)}: missing a corresponding Input sample', flush=True)
+            error_messages.append(f'[X] Row #{i} {name(row)}: missing a corresponding Input sample')
         elif result == "Sample":
-            error_messages.append(f'[X] Row #{i} {name(row)}: no sample depends on this Input', flush=True)
+            error_messages.append(f'[X] Row #{i} {name(row)}: no sample depends on this Input')
 
     if error_messages:
         full_message = "\n".join(error_messages)
