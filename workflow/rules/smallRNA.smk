@@ -156,7 +156,7 @@ rule make_bt2_indices_for_structural_RNAs:
     shell:
         """
         {{
-        if [[ {input.fasta} =~ \.gz$ ]]; then
+        if [[ {input.fasta} == *.gz ]]; then
             printf "Fasta of structural RNAs for {wildcards.ref_genome} is gzipped file: {input.fasta}\n"
             gunzip {input.fasta} -c > {output.temp_fasta}
         else
@@ -168,11 +168,6 @@ rule make_bt2_indices_for_structural_RNAs:
         bowtie2-build --threads {threads} "{output.temp_fasta}" "{output.indices}/{wildcards.ref_genome}"
         }} 2>&1 | tee -a "{log}"
         """
-
-##
-#
-#
-#
 
 rule filter_structural_rna:
     input:
