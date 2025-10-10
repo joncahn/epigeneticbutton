@@ -60,7 +60,7 @@ def assign_chip_input(row, tab):
 def check_table(tab):
     err = 0
     dup = tab[tab.duplicated(
-        subset=["data_type","line","tissue","sample_type","replicate","reference_genome"], 
+        subset=["data_type","line","tissue","sample_type","replicate","ref_genome"], 
         keep=False
     )]
     
