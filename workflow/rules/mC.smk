@@ -211,6 +211,9 @@ rule make_mc_stats_pe:
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
+    log:
+        temp(return_log_mc("{sample_name}", "making_stats", "PE"))
+    conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_stats_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["make_mc_stats_pe"]["mem_mb"],
@@ -253,6 +256,9 @@ rule make_mc_stats_se:
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
+    log:
+        temp(return_log_mc("{sample_name}", "making_stats", "SE"))
+    conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_stats_se"]["threads"]
     resources:
         mem_mb=config["resources"]["make_mc_stats_se"]["mem_mb"],
