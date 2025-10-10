@@ -169,6 +169,11 @@ rule make_bt2_indices_for_structural_RNAs:
         }} 2>&1 | tee -a "{log}"
         """
 
+##
+#
+#
+#
+
 rule filter_structural_rna:
     input:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_structural(wildcards.sample_name)}.fastq.gz",
@@ -195,12 +200,6 @@ rule filter_structural_rna:
         }} 2>&1 | tee -a "{log}"
         """
 
-##
-#
-#
-#
-#
-
 rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
@@ -212,7 +211,6 @@ rule dispatch_srna_fastq:
         """
         cp {input.fastq} {output.fastq_file}
         """
-
 
 rule make_bowtie1_indices:
     input:
