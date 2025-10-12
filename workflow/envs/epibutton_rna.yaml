@@ -7,6 +7,7 @@ dependencies:
   - star
   - samtools
   - ucsc-bedgraphtobigwig
+  - ucsc-bedsort
   - r-base
   - bioconductor-limma
   - bioconductor-edger

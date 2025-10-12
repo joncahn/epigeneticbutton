@@ -94,14 +94,18 @@ for (i in 1:(length(genotypes)-1)) {
   for (j in (i+1):length(genotypes)) {
 	sample2<-genotypes[j]
 	FCtable<-create.FC.table(sample1,sample2,y)
-	FCtable<-merge(region_file,FCtable,by=c("Name"))
-	write.table(FCtable,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/FC_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	if ( nrow(FCtable) > 0 ) {
+		FCtable<-merge(region_file,FCtable,by=c("Name"))
+		write.table(FCtable,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/FC_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	}
 	DEGtable<-create.DEG.table(sample1,sample2,y)
-	DEGtable<-merge(region_file,DEGtable,by=c("Name"))
-	write.table(DEGtable,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/DEG_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
-	temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
-				select(Name, DEG, firstsample, secondsample)
-	allDEG<-rbind(allDEG,temptable)
+	if ( nrow(DEGtable) > 0 ) {
+		DEGtable<-merge(region_file,DEGtable,by=c("Name"))
+		write.table(DEGtable,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/DEG_",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
+					select(Name, DEG, firstsample, secondsample)
+		allDEG<-rbind(allDEG,temptable)
+	}
   }
 }
 
@@ -109,72 +113,93 @@ for (i in 1:(length(genotypes)-1)) {
 
 uniqueUP<-data.frame()
 uniqueDOWN<-data.frame()
-for (sample1 in genotypes) {
-	tempUP<-filter(allDEG, (DEG=="UP" & firstsample==sample1) | (DEG=="DOWN" & secondsample==sample1)) %>%
-			mutate(Sample=sample1) %>%
-			select(Name, Sample)
-	tempUP
-	uniqueUP<-rbind(uniqueUP, tempUP)
-	tempDOWN<-filter(allDEG, (DEG=="UP" & secondsample==sample1) | (DEG=="DOWN" & firstsample==sample1)) %>%
-			mutate(Sample=sample1) %>%
-			select(Name, Sample)
-	uniqueDOWN<-rbind(uniqueDOWN, tempDOWN)
-	tempDOWN
+if ( nrow(allDEG) > 0 ) {
+	for (sample1 in genotypes) {
+		tempUP<-filter(allDEG, (DEG=="UP" & firstsample==sample1) | (DEG=="DOWN" & secondsample==sample1)) %>%
+				mutate(Sample=sample1) %>%
+				select(Name, Sample)
+		if ( nrow(tempUP) > 0 ) {
+			uniqueUP<-rbind(uniqueUP, tempUP)
+		}
+		tempDOWN<-filter(allDEG, (DEG=="UP" & secondsample==sample1) | (DEG=="DOWN" & firstsample==sample1)) %>%
+				mutate(Sample=sample1) %>%
+				select(Name, Sample)
+		if ( nrow(tempDOWN) > 0 ) {
+			uniqueDOWN<-rbind(uniqueDOWN, tempDOWN)
+		}
+	}
 }
 
-uniqueUP<-unique(uniqueUP) %>%
-		group_by(Name) %>%
-		filter(n() == 1) %>%
-		ungroup() %>%
-		mutate(DEG="UP")
+if ( nrow(uniqueUP) > 0 ) {
+	uniqueUP<-unique(uniqueUP) %>%
+			group_by(Name) %>%
+			filter(n() == 1) %>%
+			ungroup() %>%
+			mutate(DEG="UP")
+}
 
-uniqueDOWN<-unique(uniqueDOWN) %>%
-		group_by(Name) %>%
-		filter(n() == 1) %>%
-		ungroup() %>%
-		mutate(DEG="DOWN")
+if ( nrow(uniqueDOWN) > 0 ) {
+	uniqueDOWN<-unique(uniqueDOWN) %>%
+			group_by(Name) %>%
+			filter(n() == 1) %>%
+			ungroup() %>%
+			mutate(DEG="DOWN")
+}
 
-uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
-			arrange(Sample)
-
-write.table(uniqueDEGs,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/unique_DEGs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+uniqueDEGs<-data.frame()
+if ( nrow(uniqueUP) > 0 && nrow(uniqueDOWN) > 0 ) {
+	uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
+				arrange(Sample)
+	write.table(uniqueDEGs,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/unique_DEGs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+} else if ( nrow(uniqueUP) > 0 ) {
+	uniqueDEGs<-uniqueUP
+	write.table(uniqueDEGs,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/unique_DEGs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+} else if ( nrow(uniqueDOWN) > 0 ) {
+	uniqueDEGs<-uniqueDOWN
+	write.table(uniqueDEGs,paste0("results/sRNA/clusters/",analysisname,"__",refgenome,"__on_",targetname,"/unique_DEGs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+}
 
 #### To create a summary table of number of DEGs
 
-stat_table<-group_by(allDEG, firstsample, secondsample, DEG) %>%
-			summarize(Nb=n())
-	
-for (sample1 in genotypes) {
-	nunique<-filter(uniqueDEGs, Sample == sample1) %>%
-		mutate(secondsample="Unique") %>%
-		select(firstsample=Sample, secondsample, DEG) %>%
-		group_by(firstsample, secondsample, DEG) %>%
-		summarize(Nb=n())
-	
-	stat_table<-rbind(stat_table, nunique)
+if ( nrow(allDEG) > 0 ) {
+	stat_table<-group_by(allDEG, firstsample, secondsample, DEG) %>%
+				summarize(Nb=n())
+	if ( nrow(uniqueDEGs) > 0 ) {
+		for (sample1 in genotypes) {
+			nunique<-filter(uniqueDEGs, Sample == sample1) %>%
+				mutate(secondsample="Unique") %>%
+				select(firstsample=Sample, secondsample, DEG) %>%
+				group_by(firstsample, secondsample, DEG) %>%
+				summarize(Nb=n())
+			if ( nrow(nunique) > 0 ) {
+				stat_table<-rbind(stat_table, nunique)
+			}
+		}
+	}
+	write.table(stat_table,paste0("results/sRNA/reports/summary_DEG_stats__",analysisname,"__",refgenome,"__on_",targetname,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 }
-
-write.table(stat_table,paste0("results/sRNA/reports/summary_DEG_stats__",analysisname,"__",refgenome,"__on_",targetname,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 #### To create heatmaps over all DEGs (by count per million and z-score)
 
-keepDEG<-unique(allDEG$Name)
+if ( nrow(allDEG) > 0 ) {
+	keepDEG<-unique(allDEG$Name)
 
-if (length(keepDEG) >= 2) {
-	logcounts<-cpm(y, log=TRUE)
-	lcpm<-logcounts[keepDEG,]
+	if (length(keepDEG) >= 2) {
+		logcounts<-cpm(y, log=TRUE)
+		lcpm<-logcounts[keepDEG,]
 
-	pdf(paste0("results/combined/plots/Heatmap_sRNA_cpm__",analysisname,"__",refgenome,"__on_",targetname,".pdf"),10,15)
-	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-			main=paste0("Differential sRNA in ",refgenome," from ",analysisname," mapping to ",targetname),
-			margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45,
-			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
-	dev.off()
+		pdf(paste0("results/combined/plots/Heatmap_sRNA_cpm__",analysisname,"__",refgenome,"__on_",targetname,".pdf"),10,15)
+		heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
+				main=paste0("Differential sRNA in ",refgenome," from ",analysisname," mapping to ",targetname),
+				margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45,
+				lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
+		dev.off()
 
-	pdf(paste0("results/combined/plots/Heatmap_sRNA_zscore__",analysisname,"__",refgenome,"__on_",targetname,".pdf"),10,15)
-	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
-			main=paste0("Differential sRNA in ",refgenome," from ",analysisname," mapping to ",targetname),
-			margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45, scale="row",
-			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
-	dev.off()
+		pdf(paste0("results/combined/plots/Heatmap_sRNA_zscore__",analysisname,"__",refgenome,"__on_",targetname,".pdf"),10,15)
+		heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
+				main=paste0("Differential sRNA in ",refgenome," from ",analysisname," mapping to ",targetname),
+				margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45, scale="row",
+				lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "")
+		dev.off()
+	}
 }
