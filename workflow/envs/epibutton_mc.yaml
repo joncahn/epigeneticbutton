@@ -1,4 +1,4 @@
-name: epibutton
+name: epibutton_mc
 channels:
   - conda-forge
   - bioconda

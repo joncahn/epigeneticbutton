@@ -1,4 +1,4 @@
-name: epibutton
+name: epibutton_rna
 channels:
   - conda-forge
   - bioconda
