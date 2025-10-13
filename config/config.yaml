@@ -1,8 +1,8 @@
 # Path to the working directory where the repository was cloned
-repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/devel"
+repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/epigeneticbutton"
 
 # Name of the run
-analysis_name: "devel"
+analysis_name: "epicc"
 
 # Path to the sample metadata file
 sample_file: "config/all_samples.tsv"
