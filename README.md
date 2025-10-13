@@ -365,6 +365,8 @@ IDR relies on an older version of numpy to work (due to deprecated np.int) and n
 
 6. Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
 
+7. If using local fastq files for paired-end data, the two read files need to end with `*R1*.f(ast)q(.gz)` and `*R2*.f(ast)q(.gz)`, or `_1.f(ast)q(.gz)` and `_2.f(ast)q(.gz)`, i.e. extensions `fq` or `fastq` and gzipped `.gz` or not. The `<seq_id>` should be common between the two files but distinct from all other files in the same folder (i.e. only one file matching the `*<seq_id>*R1*.f(ast)q(.gz)` expression).
+
 ## Features under development
 - RAMPAGE
 - ATAC-seq
