@@ -413,23 +413,23 @@ checkpoint is_stranded:
         with open(input.header) as h:
             header = h.read().strip()
         
+        has_strand = False
         strand_values = set()
         with open(input.bedfile) as f:
             if header == "yes":
                 next(f)
             for line in f:
                 cols = line.strip().split('\t')
-                if len(cols) < 6:
-                    raise ValueError(f"Invalid BED line (expected ≥6 columns): {line.strip()}")
-                else:
+                if len(cols) >= 6:
+                    has_strand = True
                     strand_values.add(cols[5])
-                    
+
         with open(output.file, "w") as out:
-            if strand_values.issubset({"+","-"}):
-                out.write("stranded" + "\n")
+            if has_strand and strand_values.issubset({"+", "-"}):
+                out.write("stranded\n")
             else:
-                out.write("unstranded" + "\n")
-    
+                out.write("unstranded\n")
+
 ###
 # Rules to prep and then plot the mapping stats:
 rule prepping_mapping_stats:

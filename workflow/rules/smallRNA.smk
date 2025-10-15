@@ -270,7 +270,8 @@ rule shortstack_map:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        srna_params = config['srna_mapping_params']
+        srna_params = config['srna_mapping_params'],
+        srna_params_fb = config['srna_mapping_params_fallback']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV_SRNA
@@ -285,7 +286,10 @@ rule shortstack_map:
         rm -rf results/sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name} || \
+        (printf "Retrying ShortStack run with fallback parameters\n" && \
+        rm -rf results/sRNA/mapped/{params.sample_name} && \
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})
         samtools index -@ {threads} {output.bam_file}
         }} 2>&1 | tee -a "{log}"
         """
