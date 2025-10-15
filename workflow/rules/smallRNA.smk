@@ -95,11 +95,11 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
-    if len(filtered_analysis_samples) >= 2:
+    if len(filtered_analysis_samples) >= 2 and any(len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2 for _, row in filtered_analysis_samples.iterrows()):
         analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
         analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_genes.done")
         te_analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_TEs.done")
-    elif len(filtered_analysis_samples) == 1:
+    elif len(filtered_analysis_samples) >= 1:
         analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_new_clusters/Counts.txt")
         analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Counts.txt")
         te_analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_TEs/Counts.txt")
