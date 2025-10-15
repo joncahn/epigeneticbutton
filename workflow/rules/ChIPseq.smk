@@ -259,13 +259,13 @@ def define_final_chip_output(ref_genome):
             paired = "pe" if get_sample_info_from_name(sname, samples, 'paired') == "PE" else "se"
             allrep_files.append(f"results/TF/chkpts/motifs__peaks_{paired}__final__{sname}_peaks.done")
         
+    results = map_files + bigwig_files
+    
     if qc_option == "all":
-        results = map_files + qc_files
-    else:
-        results = map_files 
+        results += qc_files
         
     if analysis:
-        results += bigwig_files + peak_files + stat_files
+        results += peak_files + stat_files
     
     if motifs:
         results += motif_files

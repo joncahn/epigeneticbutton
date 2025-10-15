@@ -37,8 +37,8 @@ la8011:
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
-QC_option: "none" # options: ["none"|"all"]
 te_analysis: false
+QC_option: "none" # options: ["none"|"all"] for fastqc
 GO: false # If switching to true, make sure the database is created, or the required files below are edited
 
 # Species-dependent parameters:
@@ -272,6 +272,7 @@ resources:
   check_gtf: *standard
   check_chrom_sizes: *single
   prep_region_file: *low
+  check_te_file: *standard
   # sample_download
   get_fastq_pe: *heavy
   get_fastq_se: *heavy

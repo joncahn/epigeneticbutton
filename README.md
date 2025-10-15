@@ -174,6 +174,10 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 More details can be found on the epicc-builder app or commented within the `config/config.yaml` file:
 https://epicc-builder.streamlit.app/
 
+### Main output options
+- `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true`, will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
+- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The TE file in bed format must be filled in the config file for the corresponding reference genome.
+
 ### Mapping Parameters
 - `default`: Standard mapping parameters
 - `repeat`: Centromere-specific mapping (more sensitive)
@@ -182,7 +186,7 @@ https://epicc-builder.streamlit.app/
 
 ###  Intermediate Target Rules
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
-- `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`.
+- `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`).
 
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.

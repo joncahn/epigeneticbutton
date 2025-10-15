@@ -24,7 +24,8 @@ rule check_fasta:
     output:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     params:
-        fasta = lambda wildcards: config[wildcards.ref_genome]['fasta_file']
+        fasta = lambda wildcards: config[wildcards.ref_genome]['fasta_file'],
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "fasta"))
     conda: CONDA_ENV
@@ -36,15 +37,17 @@ rule check_fasta:
     shell:
         """
         {{
-        # Looks if fasta is present and gzipped or not
-        if [[ {params.fasta} == *.fa.gz || {params.fasta} == *.fasta.gz ]]; then
+        if [[ ! -s {params.fasta} ]]; then
+            printf "\nFasta file for {params.ref_genome} does not exist:\n{params.fasta}\n"
+            exit 1
+        elif [[ {params.fasta} == *.fa.gz || {params.fasta} == *.fasta.gz ]]; then
             printf "\nGzipped fasta file found: {params.fasta}\n"
             pigz -p {threads} -dc {params.fasta} > {output.fasta}
         elif [[ {params.fasta} == *.fa || {params.fasta} == *.fasta ]]; then
             printf "\nUnzipped fasta file found: {params.fasta}\n"
             cp {params.fasta} {output.fasta}
         else
-            printf "\nNo fasta file (with .fasta(.gz) or .fa(.gz) extension) found at the location:\n {params.fasta}\n"
+            printf "\nExtension of fasta file unknown, should be .fasta(.gz) or .fa(.gz):\n {params.fasta}\n"
             exit 1
         fi
         }} 2>&1 | tee -a "{log}"
@@ -54,7 +57,8 @@ rule check_gff:
     output:
         gff = "genomes/{ref_genome}/{ref_genome}.gff"
     params:
-        gff = lambda wildcards: config[wildcards.ref_genome]['gff_file']
+        gff = lambda wildcards: config[wildcards.ref_genome]['gff_file'],
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "gff"))
     conda: CONDA_ENV
@@ -66,15 +70,17 @@ rule check_gff:
     shell:
         """
         {{
-        # Looks if gff is present and is gzipped or not
-        if [[ {params.gff} == *.gff*.gz ]]; then
+        if [[ ! -s {params.gff} ]]; then
+            printf "\nGFF file for {params.ref_genome} does not exist:\n{params.gff}\n"
+            exit 1
+        elif [[ {params.gff} == *.gff*.gz ]]; then
             printf "\nGzipped gff file found: {params.gff}\n"
             pigz -p {threads} -dc {params.gff} > {output.gff}
         elif [[ {params.gff} == *.gff* ]]; then
             printf "\nUnzipped gff file found: {params.gff}\n"
             cp {params.gff} {output.gff}
         else
-            printf "\nNo gff file (with .gff*(.gz) extension) found at the location:\n {params.gff}\n"
+            printf "\nExtension of gff file unknown, should be .gff*(.gz):\n {params.gff}\n"
             exit 1
         fi
         }} 2>&1 | tee -a "{log}"
@@ -84,7 +90,8 @@ rule check_gtf:
     output:
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
     params:
-        gtf = lambda wildcards: config[wildcards.ref_genome]['gtf_file']
+        gtf = lambda wildcards: config[wildcards.ref_genome]['gtf_file'],
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "gtf"))
     conda: CONDA_ENV
@@ -96,15 +103,17 @@ rule check_gtf:
     shell:
         """
         {{
-        # Looks if gtf is present and is gzipped or not
-        if [[ {params.gtf} == *.gtf.gz ]]; then
+        if [[ ! -s {params.gtf} ]]; then
+            printf "\nGTF file for {params.ref_genome} does not exist:\n{params.gtf}\n"
+            exit 1
+        elif [[ {params.gtf} == *.gtf.gz ]]; then
             printf "\nGzipped gtf file found: {params.gtf}\n"
             pigz -p {threads} -dc {params.gtf} > {output.gtf}
         elif [[ {params.gtf} == *.gtf ]]; then
             printf "\nUnzipped gtf file found: {params.gtf}\n"
             cp {params.gtf} {output.gtf}
         else
-            printf "\nNo gtf file (with .gtf(.gz) extension) found at the location:\n {params.gtf}\n"
+            printf "\nExtension of gtf file unknown, should be .gtf(.gz):\n {params.gtf}\n"
             exit 1
         fi
         }} 2>&1 | tee -a "{log}"
@@ -161,3 +170,35 @@ rule prep_region_file:
         }} 2>&1 | tee -a "{log}"
         """
         
+rule check_te_file:
+    output:
+        te_file = "genomes/{ref_genome}/{ref_genome}_TE_file.bed"
+    params:
+        te_file = lambda wildcards: config[wildcards.ref_genome]['te_file'],
+        ref_genome = lambda wildcards: wildcards.ref_genome
+    log:
+        temp(return_log_env("{ref_genome}", "TEs"))
+    conda: CONDA_ENV
+    threads: config["resources"]["check_te_file"]["threads"]
+    resources:
+        mem_mb=config["resources"]["check_te_file"]["mem_mb"],
+        tmp_mb=config["resources"]["check_te_file"]["tmp_mb"],
+        qos=config["resources"]["check_te_file"]["qos"]
+    shell:
+        """
+        {{
+        if [[ ! -s {params.te_file} ]]; then
+            printf "\nThe bed file of TEs for {wildcards.ref_genome} does not exist:\n {params.te_file}\n"
+            exit 1
+        elif [[ {params.te_file} == *.bed.gz ]]; then
+            printf "\nGzipped TE file found: {params.te_file}\n"
+            pigz -p {threads} -dc {params.te_file} > {output.te_file}
+        elif [[ {params.te_file} == *.bed ]]; then
+            printf "\nUnzipped TE file found: {params.te_file}\n"
+            cp {params.te_file} {output.te_file}
+        else
+            printf "\nExtension of bed file of TEs unknown, should be .bed(.gz):\n {params.te_file}\n"
+            exit 1
+        fi
+        }} 2>&1 | tee -a "{log}"
+        """
