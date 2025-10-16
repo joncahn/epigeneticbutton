@@ -172,7 +172,7 @@ rule prep_region_file:
         
 rule check_te_file:
     output:
-        te_file = "genomes/{ref_genome}/{ref_genome}_TE_file.bed"
+        te_file = "genomes/{ref_genome}/{ref_genome}__TE_file.bed"
     params:
         te_file = lambda wildcards: config[wildcards.ref_genome]['te_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome

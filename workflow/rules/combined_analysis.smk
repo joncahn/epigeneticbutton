@@ -18,7 +18,7 @@ def define_combined_target_file(wildcards):
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
         file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
     elif target_name.startswith("all_TEs"):
-        file = f"genomes/{ref_genome}/{ref_genome}_TE_file.bed"
+        file = f"genomes/{ref_genome}/{ref_genome}__TE_file.bed"
     else:
         raise ValueError(   
             f"{target_name} does not match possible files. It can be 'combined_peaks', 'all_genes', 'all_TEs'" 
