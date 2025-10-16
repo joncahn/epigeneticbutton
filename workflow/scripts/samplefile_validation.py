@@ -82,6 +82,4 @@ def check_table(tab):
     if error_messages:
         full_message = "\n".join(error_messages)
         raise ValueError(f"[X] Validation failed — please fix the errors below in your samplefile and rerun.\n{full_message}\n\n")
-    else:
-        print("[OK] Samplefile is correct!\n", flush=True)
 

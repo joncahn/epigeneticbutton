@@ -208,11 +208,11 @@ def define_key_for_plots(wildcards, string):
                     bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
                     bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}"].extend([bw1, bw2])
-                    grouped_labs[f"sRNA_{size}"].extend([f"{label}_plus", f"{label}_minus"])
-                    unique_srna.add(f"sRNA_{size}")
-                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}"
-                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}"
+                    grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
+                    grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
+                    unique_srna.add(f"sRNA_{size}nt")
+                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
+                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
                     label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                     label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
                 else:
@@ -220,10 +220,10 @@ def define_key_for_plots(wildcards, string):
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                     bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}"].append(bw)
-                    grouped_labs[f"sRNA_{size}"].append(f"{label}")
-                    unique_srna.add(f"sRNA_{size}")
-                    label_to_mark[label] = f"sRNA_{size}"
+                    grouped_bw[f"sRNA_{size}nt"].append(bw)
+                    grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
+                    unique_srna.add(f"sRNA_{size}nt")
+                    label_to_mark[label] = f"sRNA_{size}nt"
                     label_to_type[label] = f"{row.line}_{row.tissue}"
         elif row.env == "mC":
             merged = f"{prefix}__merged__{row.ref_genome}"
@@ -251,7 +251,7 @@ def define_key_for_plots(wildcards, string):
         sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
-    marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
     marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
