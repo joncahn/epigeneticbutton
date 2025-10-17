@@ -39,7 +39,7 @@ def define_input_for_grouped_analysis(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
-        bamfiles.append(f"results/sRNA/mapped/{sname}/clean__{sname}.bam")
+        bamfiles.append(f"results/sRNA/mapped/{sname}/clean__{sname}_condensed.bam")
     
     return bamfiles
     
@@ -265,8 +265,8 @@ rule shortstack_map:
         indices = get_bt1_indices
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
-        bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
+        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -296,8 +296,8 @@ rule shortstack_map:
         
 rule make_srna_size_stats:
     input:
-        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     output:
         report = "results/sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
@@ -331,8 +331,8 @@ rule make_srna_size_stats:
 
 rule filter_size_srna_sample:
     input:
-        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     output:
         filtered_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam"),
         index_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam.bai")
@@ -389,8 +389,11 @@ rule merging_srna_replicates:
 rule make_srna_stranded_bigwigs:
     input: 
         bamfile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam",
-        baifile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam.bai"
+        baifile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam.bai",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
+        temp_minus = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus.bg"),
+        temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_rev.bg"),
         bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
         bw_minus = "results/sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
@@ -409,8 +412,14 @@ rule make_srna_stranded_bigwigs:
         """
         {{
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-        bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
-        bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+        basename=${{{input.bamfile}%.bam})
+        ShortTracks --mode simple --stranded --bamfile {input.bamfile}
+        mv ${{basename}}_p.bw {output.bw_plus}
+        printf "Inverting minus strand (back to positive values)\n"
+        bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
+        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} | bedtools sort -g {input.chrom_sizes} > {output.temp_minus_rev}
+        bedGraphToBigWig {output.temp_minus_rev} {input.chrom_sizes} {output.bw_minus}
+        rm -f ${{basename}}_*.bw
         }} 2>&1 | tee -a "{log}"
         """
 
