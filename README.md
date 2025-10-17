@@ -85,13 +85,14 @@ https://epicc-builder.streamlit.app/
 3. If you are running the pipeline on a different platform than CSHL slurm cluster, you will likely need to adjust the rule-specific resource parameters at the bottom of the `config/config.yaml` and the config file for your cluster scheduler (`profiles/slurm/config.yaml` for SLURM or create a new profile for your scheduler). In slurm, the default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
 4. Default options: 
-   - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file. Other options are listed below and in the config file.
-   - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the config file. Other options are listed below and in the config file.
+   - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file ([see below](#main-output-options)).
+   - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the config file ([see below](#main-output-options)).
    - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Help_Gene_Ontology) before setting it to `true` as it requires 2 other files. These files are available for Arabidopsis thaliana (Tair10 / ColCEN assembly) and Maize B73 (v5 or NAM assembly) in the `data` folder.
-   - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file. No other option yet.
-   - For ChIP-seq: the default mapping parameters are bowtie2 `--end-to-end` default parameters. Other options are available in the config file `chip_mapping_option`.
+   - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file ([see below](#main-output-options)).
+   - For ChIP-seq: the default mapping parameters are bowtie2 `--end-to-end` default parameters. Other options are available in the config file `chip_mapping_option` ([see below](#chip-mapping-parameters)).
    - For sRNA-seq: the default is not based on Netflex v3 library preparation. If your data was made with this kit, an additional deduplication and read trimming is required. To turn it ON, change the `Netflex_v3_deduplication` in the config file. See [Known issues #3](#known-potential-issues) below if you have mixed libraries.
    - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to the [Help structural RNAs](Help/Help_structural_RNAs_database_with_Rfam) before setting it to `true`. This file is available for Maize in the `data` folder.
+   - For sRNA-seq: the default is to only perform *de novo* micro RNA identification (`--dn_mirna` argument in ShortStack). If you also want the known microRNAs, download them from [miRbase](www.mirbase.org), filter them for your species of interest, and add to the `srna_mapping_params` entry in the config file `--known_miRNAs <path/to/known_miRNA_file.fa>`.
 
 ### Running the Pipeline
 
@@ -176,17 +177,18 @@ https://epicc-builder.streamlit.app/
 
 ### Main output options
 - `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true`, will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
-- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The TE file in bed format must be filled in the config file for the corresponding reference genome.
-
-### Mapping Parameters
-- `default`: Standard mapping parameters
-- `repeat`: Centromere-specific mapping (more sensitive)
-- `repeatall`: Centromere mapping with relaxed MAPQ
-- `all`: Relaxed mapping parameters
+- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome.
+- `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files.
 
 ###  Intermediate Target Rules
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
 - `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`).
+
+### ChIP Mapping Parameters
+- `default`: Standard mapping parameters
+- `repeat`: Centromere-specific mapping (more sensitive)
+- `repeatall`: Centromere mapping with relaxed MAPQ
+- `all`: Relaxed mapping parameters
 
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
