@@ -63,13 +63,13 @@ def define_final_mC_output(ref_genome):
         sample2 = sample_name_str(b_dict, 'analysis')
         dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
     
+    results = map_files + bigwig_files
+    
     if qc_option == "all":
-        results = map_files + qc_files
-    else:
-        results = map_files
+        results += qc_files
     
     if analysis:
-        results += dmr_files + bigwig_files
+        results += dmr_files 
     
     return results
 

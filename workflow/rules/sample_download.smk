@@ -22,21 +22,40 @@ rule get_fastq_pe:
         """
         {{
         if [[ "{params.fastq_path}" == "SRA" ]]; then
-            printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
-            fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "{params.seq_id}"
+            printf "Using fasterq-dump for PE {params.sample_name} ({params.seq_id})\n"
+            numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
+            fastq_files_r1=()
+            fastq_files_r2=()
+            for nb in "${{numbers}}"; do
+                fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "${{nb}}"
+                fastq_files_r1+=("results/{params.data_type}/fastq/${{nb}}_1.fastq")
+                fastq_files_r2+=("results/{params.data_type}/fastq/${{nb}}_2.fastq")
+            done
             printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
-            pigz -p {threads} "results/{params.data_type}/fastq/{params.seq_id}_1.fastq"
-            mv "results/{params.data_type}/fastq/{params.seq_id}_1.fastq.gz" "{output.fastq1}"
-            pigz -p {threads} "results/{params.data_type}/fastq/{params.seq_id}_2.fastq"
-            mv "results/{params.data_type}/fastq/{params.seq_id}_2.fastq.gz" "{output.fastq2}"
-        elif ls "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz 1> /dev/null 2>&1 && ls "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz 1> /dev/null 2>&1; then
+            cat "${{fastq_files_r1[@]}}" > "results/{params.data_type}/fastq/raw__{params.sample_name}__R1.fastq"
+            pigz -p {threads} "results/{params.data_type}/fastq/raw__{params.sample_name}__R1.fastq"
+            rm -f "${{fastq_files_r1[@]}}"
+            cat "${{fastq_files_r2[@]}}" > "results/{params.data_type}/fastq/raw__{params.sample_name}__R2.fastq"
+            pigz -p {threads} "results/{params.data_type}/fastq/raw__{params.sample_name}__R2.fastq"
+            rm -f "${{fastq_files_r2[@]}}"
+        elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q.gz 2>/dev/null | wc -l) -eq 1 ]] && [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R2*f*q.gz 2>/dev/null | wc -l) -eq 1 ]]; then
             printf "Copying PE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
-            cp "{params.fastq_path}"/*"{params.seq_id}"*R1*q.gz "{output.fastq1}"
-            cp "{params.fastq_path}"/*"{params.seq_id}"*R2*q.gz "{output.fastq2}"
-        elif ls "{params.fastq_path}"/*"{params.seq_id}"*R1*q 1> /dev/null 2>&1 && ls "{params.fastq_path}"/*"{params.seq_id}"*R2*q 1> /dev/null 2>&1; then
+            cp "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q.gz "{output.fastq1}"
+            cp "{params.fastq_path}"/*"{params.seq_id}"*R2*f*q.gz "{output.fastq2}"
+        elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q 2>/dev/null | wc -l) -eq 1 ]] && [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R2*f*q 2>/dev/null | wc -l) -eq 1 ]]; then
             printf "Copying and gzipping PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
-            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*R1*q -c > "{output.fastq1}"
-            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*R2*q -c > "{output.fastq2}"
+            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q -c > "{output.fastq1}"
+            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*R2*f*q -c > "{output.fastq2}"
+        elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*_1.f*q.gz 2>/dev/null | wc -l) -eq 1 ]] && [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*_2.f*q.gz 2>/dev/null | wc -l) -eq 1 ]]; then
+            printf "Copying PE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
+            cp "{params.fastq_path}"/*"{params.seq_id}"*_1.f*q.gz "{output.fastq1}"
+            cp "{params.fastq_path}"/*"{params.seq_id}"*_2.f*q.gz "{output.fastq2}"
+        elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*_1.f*q 2>/dev/null | wc -l) -eq 1 ]] && [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*_2.f*q 2>/dev/null | wc -l) -eq 1 ]]; then
+            printf "Copying and gzipping PE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
+            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*_1.f*q -c > "{output.fastq1}"
+            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*_2.f*q -c > "{output.fastq2}"
+        elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*1*f*q 2>/dev/null | wc -l) -gt 1 ]]; then
+            printf "Error: Too many fastqs found for {params.sample_name} ({params.seq_id} in {params.fastq_path})\nThe seq_id used {params.seq_id} is likely not unique.\n"
         else
             printf "Error: No PE fastqs found for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
         fi
@@ -63,11 +82,17 @@ rule get_fastq_se:
         """
         {{
         if [[ "{params.fastq_path}" == "SRA" ]]; then
-            printf "Using fasterq-dump for {params.sample_name} ({params.seq_id})\n"
-            fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "{params.seq_id}"
+            printf "Using fasterq-dump for SE {params.sample_name} ({params.seq_id})\n"
+            numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
+            fastq_files=()
+            for nb in "${{numbers}}"; do
+                fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "${{nb}}"
+                fastq_files+=("results/{params.data_type}/fastq/${{nb}}.fastq")
+            done
             printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
-            pigz -p {threads} "results/{params.data_type}/fastq/{params.seq_id}.fastq"
-            mv "results/{params.data_type}/fastq/{params.seq_id}.fastq.gz" "{output.fastq0}"
+            cat "${{fastq_files[@]}}" > "results/{params.data_type}/fastq/raw__{params.sample_name}__R0.fastq"
+            pigz -p {threads} "results/{params.data_type}/fastq/raw__{params.sample_name}__R0.fastq"
+            rm -f "${{fastq_files[@]}}"
         elif ls "{params.fastq_path}"/*"{params.seq_id}"*q.gz 1> /dev/null 2>&1; then
             printf "\nCopying SE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*q.gz "{output.fastq0}"

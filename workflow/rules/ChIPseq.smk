@@ -259,13 +259,13 @@ def define_final_chip_output(ref_genome):
             paired = "pe" if get_sample_info_from_name(sname, samples, 'paired') == "PE" else "se"
             allrep_files.append(f"results/TF/chkpts/motifs__peaks_{paired}__final__{sname}_peaks.done")
         
+    results = map_files + bigwig_files
+    
     if qc_option == "all":
-        results = map_files + qc_files
-    else:
-        results = map_files 
+        results += qc_files
         
     if analysis:
-        results += bigwig_files + peak_files + stat_files
+        results += peak_files + stat_files
     
     if motifs:
         results += motif_files
@@ -323,7 +323,7 @@ rule bowtie2_map_pe:
     shell:
         """
         {{
-        printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
 		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.samfile}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"
@@ -354,7 +354,7 @@ rule bowtie2_map_se:
     shell:
         """
         {{
-        printf "\nMaping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
 		bowtie2 --version
 		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -U "{input.fastq}" -S "{output.samfile}" 2>&1 | tee "{output.metrics}"
         }} 2>&1 | tee -a "{log}"

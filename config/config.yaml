@@ -1,8 +1,8 @@
 # Path to the working directory where the repository was cloned
-repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/devel"
+repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/epigeneticbutton"
 
 # Name of the run
-analysis_name: "devel"
+analysis_name: "epicc"
 
 # Path to the sample metadata file
 sample_file: "config/all_samples.tsv"
@@ -37,8 +37,8 @@ la8011:
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
-QC_option: "none" # options: ["none"|"all"]
 te_analysis: false
+QC_option: "none" # options: ["none"|"all"] for fastqc
 GO: false # If switching to true, make sure the database is created, or the required files below are edited
 
 # Species-dependent parameters:
@@ -133,7 +133,6 @@ rna_tracks:
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
 
 # WGBS parameters
-mC_method: "WGBS" # default works for WGBS, replace with Pico or EMSeq when appropriate
 mC_context: "all" # another option should be set for CG-only (changes parameters for methylation extraction step)
 
 # If using the Pico or EMseq kit for DNA methylation, trimming parameters should be changed "-u 10 -q 10 -m 20" for SE and "-u 10 -U 10 -q 10 -m 20" ## Can be added as an option based on "sample" name and PE
@@ -162,7 +161,8 @@ mC_mapping:
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
-srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider replacing --dn_mirna with --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
+srna_mapping_params_fallback: "--mmap u --dicermin 21 --dicermax 24 --no_bigwigs" # If no miRNA are found, ShortStack fails. These parameters are for a fallback run of ShortStack
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps (can add as many as desired as a list, for sizes within the range above). Several sizes do not work well with "type" heatmap scaling or unstranded bed files.
@@ -207,21 +207,25 @@ motifs: true # change to false for motifs on final selected peaks
 allreps: false # change to true for motifs analysis on all single replicates
 jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
 
-# optional targets for extra output
+## optional targets for extra output
+# motifs analysis
 motif_target_file_label: "target_motifs" # This name will be used for the name of the results files and should used in the rule target
 motif_target_file: "data/target_genes.bed" # bed file containing the regions to use for motifs analysis
-motif_ref_genome: "ColCEN" # reference genome to use to extract fasta
 
+# gene expression plots
 rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 rnaseq_target_file: "data/target_genes.txt" # tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored.
 rnaseq_background_file: "default" # tab-delimited file with a column of GID (matching the gene IDs in the reference genome gff). Other columns will be ignored. Will be used as background for GO enrichment analysis. Default is all genes.
 
+# sRNA diffenrential expression analysis
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
 srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. It will be used as LOCIFILE in ShortStack (from ShortStack: Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 
+# heatmaps and profiles
 heatmap_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 heatmap_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
 
+# browsers
 browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
 browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
 browser_TE_file: true # Whether to use a file of TEs or not. The file should be listed in the corresponding reference genome, and be a (potentially gzipped) bed file.
@@ -246,13 +250,13 @@ standard_resources: &standard
 
 heavy_resources: &heavy
   threads: 8
-  mem_mb: 8000
+  mem_mb: 16000
   tmp_mb: 48000
   qos: "slow_nice"
   
 max_resources: &max
   threads: 16
-  mem_mb: 10000
+  mem_mb: 32000
   tmp_mb: 96000
   qos: "slow_nice"
 
@@ -269,6 +273,7 @@ resources:
   check_gtf: *standard
   check_chrom_sizes: *single
   prep_region_file: *low
+  check_te_file: *standard
   # sample_download
   get_fastq_pe: *heavy
   get_fastq_se: *heavy

@@ -7,7 +7,7 @@ latency-wait: 60
 restart-times: 1
 
 sbatch:
-  job-name: "smk_{jobid}"
   cpus-per-task: "{threads}"
   mem: "{resources.mem_mb}"
   qos: "{resources.qos}"
+  slurm_extra: "--job-name={rule}_{jobid}"

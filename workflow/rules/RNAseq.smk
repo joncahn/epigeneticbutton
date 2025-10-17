@@ -84,13 +84,13 @@ def define_final_rna_output(ref_genome):
     elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         
-    results = map_files
+    results = map_files + bigwig_files
     
     if qc_option == "all":
         results += qc_files
         
     if analysis:
-        results += bigwig_files + deg_files
+        results += deg_files
 
     return results
         
@@ -470,6 +470,7 @@ rule call_all_DEGs:
     output:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt",
+        mds_plot = "results/combined/plots/MDS_RNAseq_{analysis_name}_{ref_genome}_d12.pdf",
         touch = "results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DEGs.R"),

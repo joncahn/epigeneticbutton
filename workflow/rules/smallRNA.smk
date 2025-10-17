@@ -51,6 +51,8 @@ def define_srna_target_file(wildcards):
         return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
     elif wildcards.target_name == "protein_coding_genes":
         return f"results/combined/bedfiles/{wildcards.ref_genome}__protein_coding_genes.bed"
+    elif wildcards.target_name == "all_TEs":
+        return f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}__TE_file.bed"
     elif wildcards.target_name == tname:
         return config['srna_target_file']
     else:
@@ -63,6 +65,7 @@ def define_srna_target_file(wildcards):
 def define_final_srna_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
+    te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
     srna_min = config['srna_min_size']
     srna_max = config['srna_max_size']
@@ -71,6 +74,7 @@ def define_final_srna_output(ref_genome):
     qc_files = []
     deg_files = []
     analysis_files = []
+    te_analysis_files = []
     
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
@@ -91,20 +95,25 @@ def define_final_srna_output(ref_genome):
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
                 bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
     
-    if len(filtered_analysis_samples) >= 2:
+    if len(filtered_analysis_samples) >= 2 and any(len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2 for _, row in filtered_analysis_samples.iterrows()):
         analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
         analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_genes.done")
-    elif len(filtered_analysis_samples) == 1:
+        te_analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_TEs.done")
+    elif len(filtered_analysis_samples) >= 1:
         analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_new_clusters/Counts.txt")
         analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_genes/Counts.txt")
+        te_analysis_files.append(f"results/sRNA/clusters/{analysis_name}__{ref_genome}__on_all_TEs/Counts.txt")
     
-    results = map_files
+    results = map_files + bigwig_files
 
     if qc_option == "all":
         results += qc_files
         
     if analysis:
-        results += bigwig_files + analysis_files
+        results += analysis_files
+   
+    if te_analysis:
+        results += te_analysis_files
 
     return results
 
@@ -261,7 +270,8 @@ rule shortstack_map:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        srna_params = config['srna_mapping_params']
+        srna_params = config['srna_mapping_params'],
+        srna_params_fb = config['srna_mapping_params_fallback']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV_SRNA
@@ -276,7 +286,10 @@ rule shortstack_map:
         rm -rf results/sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name} || \
+        (printf "Retrying ShortStack run with fallback parameters\n" && \
+        rm -rf results/sRNA/mapped/{params.sample_name} && \
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})
         samtools index -@ {threads} {output.bam_file}
         }} 2>&1 | tee -a "{log}"
         """

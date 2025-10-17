@@ -17,10 +17,12 @@ def define_combined_target_file(wildcards):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
         file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
+    elif target_name.startswith("all_TEs"):
+        file = f"genomes/{ref_genome}/{ref_genome}__TE_file.bed"
     else:
         raise ValueError(   
-            f"{target_name} does not match possible files. It can be 'combined_peaks'," 
-            " or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
+            f"{target_name} does not match possible files. It can be 'combined_peaks', 'all_genes', 'all_TEs'" 
+            "or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
         )
     
     return file
@@ -206,11 +208,11 @@ def define_key_for_plots(wildcards, string):
                     bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
                     bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}"].extend([bw1, bw2])
-                    grouped_labs[f"sRNA_{size}"].extend([f"{label}_plus", f"{label}_minus"])
-                    unique_srna.add(f"sRNA_{size}")
-                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}"
-                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}"
+                    grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
+                    grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
+                    unique_srna.add(f"sRNA_{size}nt")
+                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
+                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
                     label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                     label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
                 else:
@@ -218,10 +220,10 @@ def define_key_for_plots(wildcards, string):
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                     bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
                     label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}"].append(bw)
-                    grouped_labs[f"sRNA_{size}"].append(f"{label}")
-                    unique_srna.add(f"sRNA_{size}")
-                    label_to_mark[label] = f"sRNA_{size}"
+                    grouped_bw[f"sRNA_{size}nt"].append(bw)
+                    grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
+                    unique_srna.add(f"sRNA_{size}nt")
+                    label_to_mark[label] = f"sRNA_{size}nt"
                     label_to_type[label] = f"{row.line}_{row.tissue}"
         elif row.env == "mC":
             merged = f"{prefix}__merged__{row.ref_genome}"
@@ -249,7 +251,7 @@ def define_key_for_plots(wildcards, string):
         sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
-    marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_plus" for rna in sorted(unique_rna)] + [f"{rna}_minus" for rna in sorted(unique_rna)] + [f"{srna}_plus" for srna in sorted(unique_srna)] + [f"{srna}_minus" for srna in sorted(unique_srna)] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
     marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
@@ -312,11 +314,12 @@ def define_individual_browser_plots(wildcards):
 
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
-    analysis = config['full_analysis']
+    full_analysis = config['full_analysis']
+    te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
     mc_sort = config['heatmap_sort_mc_after_others']
-    text_files = []
     plot_files = []
+    te_plots = []
     
     all_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
     chip_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -338,28 +341,45 @@ def define_final_combined_output(ref_genome):
         if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
             plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")            
+            te_plots.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
         else:
             plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
             plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            te_plots.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
         
         plot_files.append(f"results/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+        te_plots.append(f"results/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
     else:
         plot_files.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        te_plots.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
     
     plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
     plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+    te_plots.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+    te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+    te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
 
-    if analysis:
-        results = plot_files + text_files
+    if full_analysis:
+        results = plot_files
     else:
         results = []
+    if te_analysis:
+        results += te_plots   
     
     return results
 
@@ -393,23 +413,23 @@ checkpoint is_stranded:
         with open(input.header) as h:
             header = h.read().strip()
         
+        has_strand = False
         strand_values = set()
         with open(input.bedfile) as f:
             if header == "yes":
                 next(f)
             for line in f:
                 cols = line.strip().split('\t')
-                if len(cols) < 6:
-                    return False
-                else:
+                if len(cols) >= 6:
+                    has_strand = True
                     strand_values.add(cols[5])
-                    
+
         with open(output.file, "w") as out:
-            if strand_values.issubset({"+","-"}):
-                out.write("stranded" + "\n")
+            if has_strand and strand_values.issubset({"+", "-"}):
+                out.write("stranded\n")
             else:
-                out.write("unstranded" + "\n")
-    
+                out.write("unstranded\n")
+
 ###
 # Rules to prep and then plot the mapping stats:
 rule prepping_mapping_stats:
@@ -1026,7 +1046,8 @@ rule prep_browser_on_region:
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
-        all_genes = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
+        all_genes = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
+        TE_file = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}_TE_file.bed" if config['browser_TE_file'] else None
     output:
         filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
@@ -1035,7 +1056,6 @@ rule prep_browser_on_region:
         htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        temptes = temp("results/combined/matrix/tes_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
         temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
         tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
@@ -1047,8 +1067,6 @@ rule prep_browser_on_region:
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
         trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
         regionID = lambda wildcards: wildcards.regionID,
-        TEtrigger = config['browser_TE_file'],
-        TE_file = lambda wildcards: config[wildcards.ref_genome]['te_file'],
         browser_scales = config['browser_scales'],
         mc_scales = config['fixed_mc_scales'],
         cg_scale = config['fixed_mcg'],
@@ -1098,21 +1116,11 @@ rule prep_browser_on_region:
             printf "No genes in this region\n"
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ {params.TEtrigger} == "none" ]]; then
-            printf "No TE file to use\n"
-            touch {output.temptes}
-            touch {output.tes}
-        elif [[ -s {params.TE_file} ]] && [[ {params.TE_file} == *.bed.gz ]]; then
-            printf "Getting TE track formm gzipped bed file\n"
-            pigz -p {threads} -dc {params.TE_file} > {output.temptes}
-            bedtools intersect -a {output.temptes} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-        elif [[ -s {params.TE_file} ]] && [[ {params.TE_file} == *.bed ]]; then
+        if [[ -n {input.TE_file} && -s {input.TE_file} ]]; then
             printf "Getting TE track\n"
-            bedtools intersect -a {params.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-            touch {output.temptes}
-        else
-            printf "TE file does not exist or is not bed format (.bed extension)\nNo TE file will be used\n"
-            touch {output.temptes}
+            bedtools intersect -a {input.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
+        else [[ -n {input.TE_file} ]]; then
+            printf "No TE file to be included in browser\n"
             touch {output.tes}
         fi
         
