@@ -161,8 +161,8 @@ mC_mapping:
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
-srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna --no_bigwigs" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
-srna_mapping_params_fallback: "--mmap u --dicermin 21 --dicermax 24 --no_bigwigs" # If no miRNA are found, ShortStack fails. These parameters are for a fallback run of ShortStack
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
+srna_mapping_params_fallback: "--mmap u --dicermin 21 --dicermax 24" # If no miRNA are found, ShortStack fails. These parameters are for a fallback run of ShortStack
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24)
 srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps (can add as many as desired as a list, for sizes within the range above). Several sizes do not work well with "type" heatmap scaling or unstranded bed files.
