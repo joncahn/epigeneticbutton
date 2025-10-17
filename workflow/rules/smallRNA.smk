@@ -286,11 +286,7 @@ rule shortstack_map:
         rm -rf results/sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name} || \
-        (printf "Retrying ShortStack run with fallback parameters\n" && \
-        rm -rf results/sRNA/mapped/{params.sample_name} && \
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})
-        samtools index -@ {threads} {output.bam_file}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -325,7 +321,7 @@ rule make_srna_size_stats:
         if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
             zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
         fi
-        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> "{output.report}"
+        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)"_"$1}}' | sort -u | awk -F'_' '{{print $1,$NF}}' | sort -n | awk -v OFS="\t" -v n={params.sample_name} '{{sum[$1]+=$2}} END {{for (i in sum) print n,"mapped",i,sum[i]}}' >> "{output.report}"
         }} 2>&1 | tee -a "{log}"
         """
 
