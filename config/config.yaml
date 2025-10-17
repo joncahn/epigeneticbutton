@@ -250,13 +250,13 @@ standard_resources: &standard
 
 heavy_resources: &heavy
   threads: 8
-  mem_mb: 8000
+  mem_mb: 16000
   tmp_mb: 48000
   qos: "slow_nice"
   
 max_resources: &max
   threads: 16
-  mem_mb: 10000
+  mem_mb: 32000
   tmp_mb: 96000
   qos: "slow_nice"
 
