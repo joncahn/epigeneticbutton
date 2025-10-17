@@ -286,7 +286,10 @@ rule shortstack_map:
         rm -rf results/sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name} || \
+        (printf "Retrying ShortStack run with fallback parameters\n" && \
+        rm -rf results/sRNA/mapped/{params.sample_name} && \
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})        
         }} 2>&1 | tee -a "{log}"
         """
         
