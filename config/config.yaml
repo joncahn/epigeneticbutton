@@ -80,7 +80,7 @@ adapter2:
   RNA: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
   TF: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
   mC: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
-  sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # default netflex
+  sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # default nextflex
 
 # Mapping option default
 chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
