@@ -411,7 +411,7 @@ rule make_srna_stranded_bigwigs:
         """
         {{
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-        basename=${{{input.bamfile}%.bam})
+        basename=${{{input.bamfile}%.bam}})
         ShortTracks --mode simple --stranded --bamfile {input.bamfile}
         mv ${{basename}}_p.bw {output.bw_plus}
         printf "Inverting minus strand (back to positive values)\n"

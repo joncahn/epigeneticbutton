@@ -26,7 +26,7 @@ rule get_fastq_pe:
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
             fastq_files_r1=()
             fastq_files_r2=()
-            for nb in "${{numbers}}"; do
+            for nb in ${{numbers}}; do
                 fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "${{nb}}"
                 fastq_files_r1+=("results/{params.data_type}/fastq/${{nb}}_1.fastq")
                 fastq_files_r2+=("results/{params.data_type}/fastq/${{nb}}_2.fastq")
@@ -85,7 +85,7 @@ rule get_fastq_se:
             printf "Using fasterq-dump for SE {params.sample_name} ({params.seq_id})\n"
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
             fastq_files=()
-            for nb in "${{numbers}}"; do
+            for nb in ${{numbers}}; do
                 fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "${{nb}}"
                 fastq_files+=("results/{params.data_type}/fastq/${{nb}}.fastq")
             done
