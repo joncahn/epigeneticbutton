@@ -393,6 +393,7 @@ rule make_srna_stranded_bigwigs:
     output:
         temp_minus = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus.bg"),
         temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_rev.bg"),
+        temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_sort.bg"),
         bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
         bw_minus = "results/sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
@@ -417,8 +418,9 @@ rule make_srna_stranded_bigwigs:
         mv ${{basename}}_p.bw {output.bw_plus}
         printf "Inverting minus strand (back to positive values)\n"
         bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
-        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} | bedtools sort -g {input.chrom_sizes} > {output.temp_minus_rev}
-        bedGraphToBigWig {output.temp_minus_rev} {input.chrom_sizes} {output.bw_minus}
+        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
+        bedSort {output.temp_minus_rev} {output.temp_minus_sort}
+        bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
         rm -f ${{basename}}_*.bw
         }} 2>&1 | tee -a "{log}"
         """
