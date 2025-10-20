@@ -393,7 +393,7 @@ rule make_srna_stranded_bigwigs:
     output:
         temp_minus = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus.bg"),
         temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_rev.bg"),
-        temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_sort.bg"),
+        temp_minus_sort = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_sort.bg"),
         bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
         bw_minus = "results/sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
