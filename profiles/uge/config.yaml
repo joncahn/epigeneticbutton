@@ -6,9 +6,4 @@ conda-frontend: conda
 latency-wait: 60
 restart-times: 1
 default-resources: []
-cluster-generic-submit-cmd: >-
-  qsub -V -cwd
-       -pe threads {threads}
-       -l m_mem_free={resources.mem_mb}M
-       -l tmp_free={resources.tmp_mb}M
-       -N smk_{rule}_{jobid}
+cluster-generic-submit-cmd: "qsub -V -cwd -pe threads {threads} -l m_mem_free={resources.mem_mb}M -l tmp_free={resources.tmp_mb}M -N smk_{rule}_{jobid}"
