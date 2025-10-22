@@ -502,6 +502,7 @@ rule prep_files_for_differential_srna_clusters:
             
         temp = pd.read_csv(input.count_file, sep="\t", header=0)
         temp = temp.rename(columns=lambda x: x[7:] if x.startswith("clean__") else x)
+        temp = temp.rename(columns=lambda x: x[:-10] if x.endswith("_condensed") else x)
         sRNA_counts = temp[column_order]
         sRNA_counts.to_csv(output.srna_counts, sep="\t", index=False)
 
