@@ -111,7 +111,20 @@ If you do not want all the snakemake output (very talkative), instead of using `
 snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
 ```
 
-3. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
+If you do not want all the snakemake output (very talkative), instead of using `--quiet` I would recommmend redirecting it to a log and putting the run in the background:
+```bash
+snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
+```
+
+3. Other option: To run the pipeline on a UGE cluster (using qsub):
+```bash
+mkdir hpclogs
+snakemake --profile profiles/uge
+```
+
+*The commands for the clusters are specific to the CSHL environement. If using a profile, make sure these parameters are adapted to your cluster too or edit accordingly.*
+
+4. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
 ```bash
 snakemake --dag | dot -Tpng > dag.png
 ```
