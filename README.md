@@ -355,11 +355,11 @@ epigeneticbutton/
 
 ## Known potential issues
 
-1. Relationship between IP and Input\
+1. Relationship between IP and Input for ChIP-seq samples\
 Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, the sample it is compared to must be called 'Input'. It must also be sequenced either paired-end or single-end but the same than the IPs.
 
-2. ShortStack version\
-The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developer created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
+2. Failed run due to `make_srna_stranded_bigwigs`\
+Using the new version of ShortStack (>=4.1) and ShortTracks, if mutltiple instances of the rule `make_srna_stranded_bigwigs` are started by snakemake in parallel, conflicts with the ChromSizes.txt file might occur leading to a failed run. To avoid this, adding the argument: `--ressources shorttracks=1` to the snakemake command (and adding `--rerun-incomplete` as well if needed). It will force a single instance of the rule at once, which might take a bit longer but should not crash the run.
 
 3. small RNA-seq libraries\
 Different small RNAseq libraries have different chemistry and might need to be trimmed differently. For now, the code only works if all your samples were done using the same library preparation, either netflex v3 or not. If you have a mix of libraries, you should run the pipeline with each kind separately, and then rerun the analysis with all the samples you want to anlayze together.
@@ -367,11 +367,14 @@ Different small RNAseq libraries have different chemistry and might need to be t
 4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
-5. Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A patch version exists which is installed from github and works fine for now.
+5. Patched ComplexUpset\
+Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A patch version exists which is installed from github and works fine for now.
 
-6. Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
+6. Quality-Of-Service slurm configuration\
+Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
 
-7. If using local fastq files for paired-end data, the two read files need to end with `*R1*.f(ast)q(.gz)` and `*R2*.f(ast)q(.gz)`, or `_1.f(ast)q(.gz)` and `_2.f(ast)q(.gz)`, i.e. extensions `fq` or `fastq` and gzipped `.gz` or not. The `<seq_id>` should be common between the two files but distinct from all other files in the same folder (i.e. only one file matching the `*<seq_id>*R1*.f(ast)q(.gz)` expression).
+7. Help for local fasq files naming convention\
+If using local fastq files for paired-end data, the two read files need to end with `*R1*.f(ast)q(.gz)` and `*R2*.f(ast)q(.gz)`, or `_1.f(ast)q(.gz)` and `_2.f(ast)q(.gz)`, i.e. extensions `fq` or `fastq` and gzipped `.gz` or not. The `<seq_id>` should be common between the two files but distinct from all other files in the same folder (i.e. only one file matching the `*<seq_id>*R1*.f(ast)q(.gz)` expression).
 
 ## Features under development
 - RAMPAGE
