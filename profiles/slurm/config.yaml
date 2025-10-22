@@ -8,6 +8,7 @@ restart-times: 1
 keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
+default-resources: []
 
 sbatch:
   job-name: "smk-{rule}-{jobid}"
