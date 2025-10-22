@@ -11,9 +11,6 @@ dependencies:
   - deeptools
   - ucsc-bedgraphtobigwig
   - ucsc-bedsort
-  # - seqcluster
-  # - setuptools<81 #version required for seqcluster
-  # - biopython<1.85 #version required for seqcluster
   - seqtk
   - r-base
   - bioconductor-limma
