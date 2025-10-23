@@ -372,7 +372,7 @@ epigeneticbutton/
 Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, the sample it is compared to must be called 'Input'. It must also be sequenced either paired-end or single-end but the same than the IPs.
 
 2. Failed run due to `make_srna_stranded_bigwigs`\
-Using the new version of ShortStack (>=4.1) and ShortTracks, if mutltiple instances of the rule `make_srna_stranded_bigwigs` are started by snakemake in parallel, conflicts with the ChromSizes.txt file might occur leading to a failed run. To avoid this, adding the argument: `--resources shorttracks=1` to the snakemake command (and adding `--rerun-incomplete` as well if needed). It will force a single instance of the rule at once, which might take a bit longer but should not crash the run.
+Using the new version of ShortStack (>=4.1) and ShortTracks, if mutltiple instances of the rule `make_srna_stranded_bigwigs` are started by snakemake in parallel, conflicts with the ChromSizes.txt file might occur leading to a failed run. To avoid this, adding the argument: `--resources bigwigs=1` to the snakemake command (and adding `--rerun-incomplete` as well if needed). It will force a single instance of the rule at once, which might take a bit longer but should not crash the run.
 
 3. small RNA-seq libraries\
 Different small RNAseq libraries have different chemistry and might need to be trimmed differently. For now, the code only works if all your samples were done using the same library preparation, either netflex v3 or not. If you have a mix of libraries, you should run the pipeline with each kind separately, and then rerun the analysis with all the samples you want to anlayze together.
