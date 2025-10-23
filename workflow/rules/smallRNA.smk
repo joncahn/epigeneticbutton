@@ -408,7 +408,7 @@ rule make_srna_stranded_bigwigs:
         mem_mb=config["resources"]["make_srna_stranded_bigwigs"]["mem_mb"],
         tmp_mb=config["resources"]["make_srna_stranded_bigwigs"]["tmp_mb"],
         qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"],
-        shorttracks=1
+        bigwigs=1
     shell:
         """
         {{
