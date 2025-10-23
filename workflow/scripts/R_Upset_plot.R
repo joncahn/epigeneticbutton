@@ -24,6 +24,7 @@ types<-unlist(strsplit(args[4], ":"))
 output<-args[5]
 
 sampleslist<-unique(unlist(strsplit(merged$Samples, ",")))
+size<-length(sampleslist)
 
 mat<-separate_rows(merged, Samples, sep = ",") %>%
 	mutate(value=1) %>%
@@ -121,6 +122,6 @@ plot<-upset(mat, sampleslist, name="Peaks",
       stripes = alpha("white", 0)
 )
 
-pdf(output,10,8)
+pdf(output,length=size*2,width=8)
 print(plot)
 dev.off()
