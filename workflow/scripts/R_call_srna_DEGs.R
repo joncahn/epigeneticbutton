@@ -10,11 +10,11 @@ library(RColorBrewer)
 
 args = commandArgs(trailingOnly=TRUE)
 
-genecount<-read.delim(args[1], header = TRUE, row.names = "Name")
+genecount<-read.delim(args[1], header = TRUE, row.names = "Name", check.names = FALSE)
 keep.exprs<-rowSums(cpm(genecount)>1)>=2
 filtered<-genecount[keep.exprs,]
 
-targets<-read.delim(args[2], header = TRUE)
+targets<-read.delim(args[2], header = TRUE, check.names = FALSE)
 samples<-as.factor(targets$Sample)
 reps<-as.factor(targets$Replicate)
 genotypes<-unique(samples)

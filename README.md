@@ -190,7 +190,7 @@ https://epicc-builder.streamlit.app/
 
 ### Main output options
 - `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true`, will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
-- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome.
+- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome. The name of the TEs (4th column of the bed file) must be unique.
 - `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files.
 
 ###  Intermediate Target Rules
