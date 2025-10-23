@@ -271,6 +271,8 @@ Output is the results folder from Shortstack limited to this loci file, followed
 
 If you only want the results of Shortstack and not the differential analysis, limit the run to the rule `analyze_all_srna_samples_on_target_file` instead, targeting: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt`
 
+The bed or gff file of regions **MUST HAVE** a header with a column called "Name" (the 4th column of a bed file or the 9th column of a gff3).
+
 ### **5. Plotting heatmap on regions**
 Given a bed file, it will plot a heatmap using deeptools.
 Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
