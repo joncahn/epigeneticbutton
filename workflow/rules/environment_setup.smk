@@ -200,5 +200,11 @@ rule check_te_file:
             printf "\nExtension of bed file of TEs unknown, should be .bed(.gz):\n {params.te_file}\n"
             exit 1
         fi
+        tot=$(cat {output.te_file} | wc -l)
+        unique=$(cat {output.te_file} | cut -f4 | sort -u | wc -l)
+        if [[ ${{unique}} -ne ${{tot}} ]]; then
+            printf "\nNot all the names of TEs are unique. This is required for follow-up. Remove redundant rows or add unique identifiers.\n"
+            exit 1
+        fi
         }} 2>&1 | tee -a "{log}"
         """

@@ -10,11 +10,11 @@ library(RColorBrewer)
 
 args = commandArgs(trailingOnly=TRUE)
 
-genecount<-read.delim(args[1], header = TRUE, row.names = "Name")
+genecount<-read.delim(args[1], header = TRUE, row.names = "Name", check.names = FALSE)
 keep.exprs<-rowSums(cpm(genecount)>1)>=2
 filtered<-genecount[keep.exprs,]
 
-targets<-read.delim(args[2], header = TRUE)
+targets<-read.delim(args[2], header = TRUE, check.names = FALSE)
 samples<-as.factor(targets$Sample)
 reps<-as.factor(targets$Replicate)
 genotypes<-unique(samples)
@@ -30,7 +30,7 @@ refgenome<-args[4]
 targetname<-args[5]
 filename<-args[6]
 
-if ( filename %in% c(paste0("results/combined/bedfiles/",refgenome,"__all_genes.bed"), paste0("results/combined/bedfiles/",refgenome,"__protein_coding_genes.bed")) ) {
+if ( filename %in% c(paste0("results/combined/bedfiles/",refgenome,"__all_genes.bed"), paste0("results/combined/bedfiles/",refgenome,"__protein_coding_genes.bed"), paste0("genomes/",refgenome,"/",refgenome,"__TE_file.bed")) ) {
 	region_file<-read.delim(filename, header = FALSE, col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 } else {
 	region_file<-read.delim(filename, header = TRUE)

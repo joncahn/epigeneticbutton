@@ -111,7 +111,20 @@ If you do not want all the snakemake output (very talkative), instead of using `
 snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
 ```
 
-3. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
+If you do not want all the snakemake output (very talkative), instead of using `--quiet` I would recommmend redirecting it to a log and putting the run in the background:
+```bash
+snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
+```
+
+3. Other option: To run the pipeline on a UGE cluster (using qsub):
+```bash
+mkdir hpclogs
+snakemake --profile profiles/uge
+```
+
+*The commands for the clusters are specific to the CSHL environement. If using a profile, make sure these parameters are adapted to your cluster too or edit accordingly.*
+
+4. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
 ```bash
 snakemake --dag | dot -Tpng > dag.png
 ```
@@ -177,7 +190,7 @@ https://epicc-builder.streamlit.app/
 
 ### Main output options
 - `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true`, will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
-- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome.
+- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome. The name of the TEs (4th column of the bed file) must be unique.
 - `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files.
 
 ###  Intermediate Target Rules
@@ -257,6 +270,8 @@ snakemake --profile profiles/slurm results/sRNA/clusters/test_smk__ColCEN__on_mi
 Output is the results folder from Shortstack limited to this loci file, followed by the differential cluster analysis with edgeR.
 
 If you only want the results of Shortstack and not the differential analysis, limit the run to the rule `analyze_all_srna_samples_on_target_file` instead, targeting: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt`
+
+The bed or gff file of regions **MUST HAVE** a header with a column called "Name" (the 4th column of a bed file or the 9th column of a gff3).
 
 ### **5. Plotting heatmap on regions**
 Given a bed file, it will plot a heatmap using deeptools.
@@ -355,11 +370,11 @@ epigeneticbutton/
 
 ## Known potential issues
 
-1. Relationship between IP and Input\
+1. Relationship between IP and Input for ChIP-seq samples\
 Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, the sample it is compared to must be called 'Input'. It must also be sequenced either paired-end or single-end but the same than the IPs.
 
-2. ShortStack version\
-The 'epigenetic button' only works with ShortStack v4.0.x version. From v4.1, the developer created a new "condensed" bam format which breaks downstream analysis. New patches could be done in the future for v4.1 compatibility.
+2. Failed run due to `make_srna_stranded_bigwigs`\
+Using the new version of ShortStack (>=4.1) and ShortTracks, if mutltiple instances of the rule `make_srna_stranded_bigwigs` are started by snakemake in parallel, conflicts with the ChromSizes.txt file might occur leading to a failed run. To avoid this, adding the argument: `--resources bigwigs=1` to the snakemake command (and adding `--rerun-incomplete` as well if needed). It will force a single instance of the rule at once, which might take a bit longer but should not crash the run.
 
 3. small RNA-seq libraries\
 Different small RNAseq libraries have different chemistry and might need to be trimmed differently. For now, the code only works if all your samples were done using the same library preparation, either netflex v3 or not. If you have a mix of libraries, you should run the pipeline with each kind separately, and then rerun the analysis with all the samples you want to anlayze together.
@@ -367,11 +382,14 @@ Different small RNAseq libraries have different chemistry and might need to be t
 4. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
-5. Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A patch version exists which is installed from github and works fine for now.
+5. Patched ComplexUpset\
+Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A patch version exists which is installed from github and works fine for now.
 
-6. Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
+6. Quality-Of-Service slurm configuration\
+Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
 
-7. If using local fastq files for paired-end data, the two read files need to end with `*R1*.f(ast)q(.gz)` and `*R2*.f(ast)q(.gz)`, or `_1.f(ast)q(.gz)` and `_2.f(ast)q(.gz)`, i.e. extensions `fq` or `fastq` and gzipped `.gz` or not. The `<seq_id>` should be common between the two files but distinct from all other files in the same folder (i.e. only one file matching the `*<seq_id>*R1*.f(ast)q(.gz)` expression).
+7. Help for local fasq files naming convention\
+If using local fastq files for paired-end data, the two read files need to end with `*R1*.f(ast)q(.gz)` and `*R2*.f(ast)q(.gz)`, or `_1.f(ast)q(.gz)` and `_2.f(ast)q(.gz)`, i.e. extensions `fq` or `fastq` and gzipped `.gz` or not. The `<seq_id>` should be common between the two files but distinct from all other files in the same folder (i.e. only one file matching the `*<seq_id>*R1*.f(ast)q(.gz)` expression).
 
 ## Features under development
 - RAMPAGE

@@ -5,9 +5,14 @@ use-conda: true
 conda-frontend: conda
 latency-wait: 60
 restart-times: 1
+keep-going: true
+max-jobs-per-second: 2
+max-status-checks-per-second: 5
+default-resources: []
 
 sbatch:
+  job-name: "smk-{rule}-{jobid}"
   cpus-per-task: "{threads}"
   mem: "{resources.mem_mb}"
+  tmp: "{resources.tmp_mb}"
   qos: "{resources.qos}"
-  slurm_extra: "--job-name={rule}_{jobid}"

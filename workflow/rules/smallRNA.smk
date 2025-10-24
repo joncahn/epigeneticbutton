@@ -39,7 +39,7 @@ def define_input_for_grouped_analysis(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
-        bamfiles.append(f"results/sRNA/mapped/{sname}/clean__{sname}.bam")
+        bamfiles.append(f"results/sRNA/mapped/{sname}/clean__{sname}_condensed.bam")
     
     return bamfiles
     
@@ -81,7 +81,7 @@ def define_final_srna_output(ref_genome):
         sname = sample_name_str(row, 'sample')
         map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
         qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-        qc_files.append(f"results/sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+        qc_files.append(f"results/sRNA/reports/clean__{sname}__R0_fastqc.html") # fastqc of trimmed and potentially filtered (Read0) fastq files
         
         for size in range(srna_min, srna_max + 1):
             bigwig_files.append(f"results/sRNA/tracks/{sname}__{size}nt__plus.bw")
@@ -265,8 +265,8 @@ rule shortstack_map:
         indices = get_bt1_indices
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
-        bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
+        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -289,15 +289,14 @@ rule shortstack_map:
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name} || \
         (printf "Retrying ShortStack run with fallback parameters\n" && \
         rm -rf results/sRNA/mapped/{params.sample_name} && \
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})
-        samtools index -@ {threads} {output.bam_file}
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})        
         }} 2>&1 | tee -a "{log}"
         """
         
 rule make_srna_size_stats:
     input:
-        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     output:
         report = "results/sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
@@ -325,14 +324,14 @@ rule make_srna_size_stats:
         if [[ -s results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz ]]; then
             zcat results/sRNA/fastq/filtered__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"filtered",$2,$1}}' >> "{output.report}"
         fi
-        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"mapped",$2,$1}}' >> "{output.report}"
+        samtools view {input.bamfile} | awk '$2==0 || $2==16 {{print length($10)"_"$1}}' | sort -u | awk -F'_' '{{print $1,$NF}}' | sort -n | awk -v OFS="\t" -v n={params.sample_name} '{{sum[$1]+=$2}} END {{for (i in sum) print n,"mapped",i,sum[i]}}' >> "{output.report}"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_size_srna_sample:
     input:
-        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam",
-        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}.bam.bai"
+        bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     output:
         filtered_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam"),
         index_file = temp("results/sRNA/mapped/sized__{size}nt__{sample_name}.bam.bai")
@@ -389,8 +388,12 @@ rule merging_srna_replicates:
 rule make_srna_stranded_bigwigs:
     input: 
         bamfile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam",
-        baifile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam.bai"
+        baifile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam.bai",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
+        temp_minus = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus.bg"),
+        temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_rev.bg"),
+        temp_minus_sort = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_sort.bg"),
         bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
         bw_minus = "results/sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
@@ -404,13 +407,22 @@ rule make_srna_stranded_bigwigs:
     resources:
         mem_mb=config["resources"]["make_srna_stranded_bigwigs"]["mem_mb"],
         tmp_mb=config["resources"]["make_srna_stranded_bigwigs"]["tmp_mb"],
-        qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"]
+        qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"],
+        bigwigs=1
     shell:
         """
         {{
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-        bamCoverage --filterRNAstrand reverse -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_plus}
-        bamCoverage --filterRNAstrand forward -bs 1 -p {threads} --normalizeUsing CPM -b {input.bamfile} -o {output.bw_minus}
+        input_bamfile="{input.bamfile}"
+        basename=${{input_bamfile%.bam}}
+        ShortTracks --mode simple --stranded --bamfile {input.bamfile}
+        mv ${{basename}}_p.bw {output.bw_plus}
+        printf "Inverting minus strand (back to positive values)\n"
+        bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
+        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
+        bedSort {output.temp_minus_rev} {output.temp_minus_sort}
+        bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
+        rm -f ${{basename}}_*.bw
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -490,6 +502,7 @@ rule prep_files_for_differential_srna_clusters:
             
         temp = pd.read_csv(input.count_file, sep="\t", header=0)
         temp = temp.rename(columns=lambda x: x[7:] if x.startswith("clean__") else x)
+        temp = temp.rename(columns=lambda x: x[:-10] if x.endswith("_condensed") else x)
         sRNA_counts = temp[column_order]
         sRNA_counts.to_csv(output.srna_counts, sep="\t", index=False)
 

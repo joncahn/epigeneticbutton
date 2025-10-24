@@ -24,6 +24,7 @@ types<-unlist(strsplit(args[4], ":"))
 output<-args[5]
 
 sampleslist<-unique(unlist(strsplit(merged$Samples, ",")))
+figsize<-length(sampleslist)
 
 mat<-separate_rows(merged, Samples, sep = ",") %>%
 	mutate(value=1) %>%
@@ -42,9 +43,8 @@ for (sampletype in types) {
 	setcols<-colnames(mat)[grep(sampletype, colnames(mat))]
 	combos<-map(seq_along(setcols), ~ combn(setcols, ., FUN = c, simplify = FALSE)) %>% 
 			unlist(recursive = FALSE)
-	
 	tmpqueries<-map(combos, ~ upset_query(intersect = .x, color = colorlist[i], 
-                               fill = colorlist[i], only_components = c('intersections_matrix')))
+                               fill = colorlist[i], only = TRUE, only_components = c('intersections_matrix')))
 	queries<-append(queries, tmpqueries)
 	listcolor<-append(listcolor, colorlist[i])
 	i<-i+1
@@ -64,6 +64,8 @@ for (type in types) {
 }
 mat <- mat %>% relocate(exclusive_mark, .after = Category)
 colmarks["Mix"] <- "black"
+
+## Make the Plot
 
 plot<-upset(mat, sampleslist, name="Peaks", 
       mode='exclusive_intersection',
@@ -86,9 +88,8 @@ plot<-upset(mat, sampleslist, name="Peaks",
             scale_fill_manual(values=colmarks, name="Exclusive marks"))
       ),
       queries = queries,
-	  set_sizes = (upset_set_size() + ylab("Total peaks")),
-	  # set_sizes = (upset_set_size() + ylab("Total peaks") + ## This would be better but updates makes it break
-        # theme(axis.text.x = element_text(angle = 45))),
+	  set_sizes = (upset_set_size() + ylab("Total peaks") +
+        theme(axis.text.x = element_text(angle = 45))),
       matrix = (intersection_matrix(geom = geom_point(shape = "circle", size = 3),
           segment = geom_segment(linewidth = 1.5),
           outline_color = list(active = alpha("white", 0),inactive = alpha("white", 0))) +
@@ -121,6 +122,6 @@ plot<-upset(mat, sampleslist, name="Peaks",
       stripes = alpha("white", 0)
 )
 
-pdf(output,10,8)
+pdf(output,height=max(figsize/2,10),width=10)
 print(plot)
 dev.off()
