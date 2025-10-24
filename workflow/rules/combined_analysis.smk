@@ -96,7 +96,7 @@ def define_peakfiles_per_env_and_ref(wildcards):
     return files
 
 def define_sample_types_for_upset(wildcards):
-    types = []
+    types = set()
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     if globenv == "all_chip":
@@ -105,10 +105,10 @@ def define_sample_types_for_upset(wildcards):
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         if row.env == "ChIP":
-            types.append(row.sample_type)
+            types.add(row.sample_type)
         elif row.env == "TF":
-            types.append(row.extra_info)
-    result = ":".join(types)     
+            types.add(row.extra_info)
+    result = ":".join(sorted(types))
     return result
 
 def assign_colors(keys, cmap_name="tab20"):
