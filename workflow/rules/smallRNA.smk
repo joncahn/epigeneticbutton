@@ -391,15 +391,17 @@ rule make_srna_stranded_bigwigs:
         baifile = lambda wildcards: f"results/sRNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'sized'}__{wildcards.size}nt__{wildcards.sample_name}.bam.bai",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        temp_minus = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus.bg"),
-        temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_rev.bg"),
-        temp_minus_sort = temp("results/sRNA/tracks/{sample_name}__{size}nt__minus_sort.bg"),
+        temp_folder = temp(directory("results/sRNA/tracks/{sample_name}__{size}")),
+        temp_minus = temp("results/sRNA/tracks/{sample_name}__{size}/{sample_name}__{size}nt__minus.bg"),
+        temp_minus_rev = temp("results/sRNA/tracks/{sample_name}__{size}/{sample_name}__{size}nt__minus_rev.bg"),
+        temp_minus_sort = temp("results/sRNA/tracks/{sample_name}__{size}/{sample_name}__{size}nt__minus_sort.bg"),
         bw_plus = "results/sRNA/tracks/{sample_name}__{size}nt__plus.bw",
         bw_minus = "results/sRNA/tracks/{sample_name}__{size}nt__minus.bw"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         size = lambda wildcards: wildcards.size,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        wd = REPO_FOLDER
     log:
         temp(return_log_smallrna("{sample_name}", "making_bigiwig", "{size}"))
     conda: CONDA_ENV_SRNA
@@ -407,11 +409,11 @@ rule make_srna_stranded_bigwigs:
     resources:
         mem_mb=config["resources"]["make_srna_stranded_bigwigs"]["mem_mb"],
         tmp_mb=config["resources"]["make_srna_stranded_bigwigs"]["tmp_mb"],
-        qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"],
-        bigwigs=1
+        qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"]
     shell:
         """
         {{
+        cd {output.temp_folder}
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
         input_bamfile="{input.bamfile}"
         basename=${{input_bamfile%.bam}}
@@ -423,6 +425,7 @@ rule make_srna_stranded_bigwigs:
         bedSort {output.temp_minus_rev} {output.temp_minus_sort}
         bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
         rm -f ${{basename}}_*.bw
+        cd {params.wd}
         }} 2>&1 | tee -a "{log}"
         """
 
