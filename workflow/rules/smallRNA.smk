@@ -417,7 +417,7 @@ rule make_srna_stranded_bigwigs:
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
         input_bamfile="{params.wd}/{input.bamfile}"
         basename=${{input_bamfile%.bam}}
-        ShortTracks --mode simple --stranded --bamfile {input.bamfile}
+        ShortTracks --mode simple --stranded --bamfile "{params.wd}/{input.bamfile}"
         mv ${{basename}}_p.bw "{params.wd}/{output.bw_plus}"
         printf "Inverting minus strand (back to positive values)\n"
         bigWigToBedGraph ${{basename}}_m.bw "{params.wd}/{output.temp_minus}"
