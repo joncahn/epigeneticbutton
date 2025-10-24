@@ -10,12 +10,12 @@ library(RColorBrewer)
 
 args = commandArgs(trailingOnly=TRUE)
 
-genecount<-read.delim(args[1], header = TRUE, row.names = "GID")
+genecount<-read.delim(args[1], header = TRUE, row.names = "GID", check.names = FALSE)
 genecount<-genecount[!grepl("^N_", rownames(genecount)), ]
 keep.exprs<-rowSums(cpm(genecount)>1)>=2
 filtered<-genecount[keep.exprs,]
 
-targets<-read.delim(args[2], header = TRUE)
+targets<-read.delim(args[2], header = TRUE, check.names = FALSE)
 samples<-as.factor(targets$Sample)
 reps<-as.factor(targets$Replicate)
 genotypes<-unique(samples)
@@ -34,7 +34,7 @@ ref_genes<-read.delim(args[5], header = FALSE,
                       col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
   select(-Name, -Value)
-ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
+ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.$")
 
 # EdgeR analysis
 
