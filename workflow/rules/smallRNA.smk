@@ -415,15 +415,15 @@ rule make_srna_stranded_bigwigs:
         {{
         cd {output.temp_folder}
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-        input_bamfile="{input.bamfile}"
+        input_bamfile="{params.wd}/{input.bamfile}"
         basename=${{input_bamfile%.bam}}
         ShortTracks --mode simple --stranded --bamfile {input.bamfile}
-        mv ${{basename}}_p.bw {output.bw_plus}
+        mv ${{basename}}_p.bw "{params.wd}/{output.bw_plus}"
         printf "Inverting minus strand (back to positive values)\n"
-        bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
-        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
-        bedSort {output.temp_minus_rev} {output.temp_minus_sort}
-        bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
+        bigWigToBedGraph ${{basename}}_m.bw "{params.wd}/{output.temp_minus}"
+        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' "{params.wd}/{output.temp_minus}" > "{params.wd}/{output.temp_minus_rev}"
+        bedSort "{params.wd}/{output.temp_minus_rev}" "{params.wd}/{output.temp_minus_sort}"
+        bedGraphToBigWig "{params.wd}/{output.temp_minus_sort}" "{params.wd}/{input.chrom_sizes}" "{params.wd}/{output.bw_minus}"
         rm -f ${{basename}}_*.bw
         cd {params.wd}
         }} 2>&1 | tee -a "{log}"
