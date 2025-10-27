@@ -1119,7 +1119,7 @@ rule prep_browser_on_region:
         if [[ -n {input.TE_file} && -s {input.TE_file} ]]; then
             printf "Getting TE track\n"
             bedtools intersect -a {input.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-        else [[ -n {input.TE_file} ]]; then
+        elif [[ -n {input.TE_file} ]]; then
             printf "No TE file to be included in browser\n"
             touch {output.tes}
         fi
