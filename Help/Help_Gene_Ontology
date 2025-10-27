@@ -9,7 +9,7 @@ The GAF file can usually be downloaded from NCBI, or from species-specific commu
 Help to find the GAF file: https://geneontology.org/docs/download-go-annotations/ 
 The basic gene information file can be generated from a gff file.
 
-Example for for B73 (NAM/v5 version):
+Example for B73 (NAM/v5 version):
 
 File1:
 awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab 
@@ -19,6 +19,7 @@ awk '$1 !~ /^!/' maize.B73.AGPv2.aggregate.gaf.gz > data/B73_v5_infoGO.tab
 File2:
 printf "Chr\tStart\tEnd\tGID\tType\tDescription\n" > data/B73_v5_genes_info.tab
 awk -v OFS="\t" '$3=="gene" {print $1,$4-1,$5,$9,".",$7}' genomes/B73_v5/B73_v5.gff | awk -F"[:;=]" -v OFS="\t" '{print $1,$2,$4,$6}' | awk -v OFS="\t" '{print $1,$2,$3,$5,$6,$7}' >> data/B73_v5_genes_info.tab
+The first column GID must match the GID from the first column of FILE1. 
 
 Then, run the script: R_build_GO_database.R, with the following arguments:
 script="scripts/R_build_GO_database.R"
