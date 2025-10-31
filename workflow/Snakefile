@@ -270,7 +270,7 @@ else:
         pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
         if os.path.exists(pathtoanalysisfile):
             with open(analysis_sample_file) as f:
-            analysis_samples = pd.read_csv(analysis_sample_file, sep="\t", header=0, names=colnames)
+                analysis_samples = pd.read_csv(analysis_sample_file, sep="\t", header=0, names=colnames)
 
     # Add a sample_name column to the analysis_sample file
     analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
