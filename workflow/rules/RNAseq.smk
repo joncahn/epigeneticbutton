@@ -38,6 +38,7 @@ def get_go_database(ref_genome):
 
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
+    start = config['start_from_beginning']
     analysis = config['full_analysis']
     analysis_name = config['analysis_name']
     go_analysis = config['GO']
@@ -92,7 +93,10 @@ def define_final_rna_output(ref_genome):
     if analysis:
         results += deg_files
 
-    return results
+    if start:
+        return results
+    else:
+        return []
         
 rule make_STAR_indices:
     input:
