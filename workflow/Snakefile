@@ -195,7 +195,7 @@ if config['start_from_beginning']:
     with open(config["sample_file"]) as f:
         first_line = f.readline().strip().split("\t")
     if first_line == colnames:
-        samples = pd.read_csv(config["sample_file"], sep="\t", header=0, names=colnames)
+        samples = pd.read_csv(config["sample_file"], sep="\t", header=0)
     else:
         samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
 
@@ -262,14 +262,19 @@ if config['start_from_beginning']:
     analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 else:
     analysis_sample_file = config['analysis_sample_file']
+    colnames = ["env", "data_type", "line", "tissue", "sample_type",  "ref_genome", "paired", "extra_info"]
     if analysis_sample_file.strip() and os.path.exists(analysis_sample_file):
         with open(analysis_sample_file) as f:
-            analysis_samples = pd.read_csv(analysis_sample_file, sep="\t", header=0, names=colnames)
+            first_line = f.readline().strip().split("\t")
+            if first_line == colnames:
+                analysis_samples = pd.read_csv(analysis_sample_file, sep="\t", header=0)
+            else:
+                samples = pd.read_csv(analysis_sample_file, sep="\t", header=None, names=colnames)
     else:
         pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
         if os.path.exists(pathtoanalysisfile):
             with open(pathtoanalysisfile) as f:
-                analysis_samples = pd.read_csv(pathtoanalysisfile, sep="\t", header=0, names=colnames)
+                analysis_samples = pd.read_csv(pathtoanalysisfile, sep="\t", header=0)
         else:
             raise ValueError("The sample file does not exist yet, or is not found\n"
                              "Maybe you wanted to start from the beginning?\n"
