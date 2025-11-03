@@ -28,7 +28,6 @@ def define_DMR_samples(sample_name):
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
-    start = config['start_from_beginning']
     analysis = config['full_analysis']
     map_files = []
     dmr_files = []
@@ -72,10 +71,7 @@ def define_final_mC_output(ref_genome):
     if analysis:
         results += dmr_files 
     
-    if start:
-        return results
-    else:
-        return []
+    return results
 
 rule make_bismark_indices:
     input:

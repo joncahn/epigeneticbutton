@@ -64,7 +64,6 @@ def define_srna_target_file(wildcards):
 
 def define_final_srna_output(ref_genome):
     qc_option = config["QC_option"]
-    start = config['start_from_beginning']
     analysis = config['full_analysis']
     te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
@@ -116,10 +115,7 @@ def define_final_srna_output(ref_genome):
     if te_analysis:
         results += te_analysis_files
 
-    if start:
-        return results
-    else:
-        return []
+    return results
 
 rule deduplicate_srna_netflexv3:
     input:

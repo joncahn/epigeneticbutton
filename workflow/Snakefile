@@ -13,7 +13,6 @@ import colorsys
 import time
 import atexit
 import traceback
-import glob
 from scripts.samplefile_validation import check_table
 
 min_version("9.0")
@@ -124,178 +123,73 @@ def get_sample_names_by_env(env, samples):
     sample_names = samples.loc[samples['env'] == env, "sample_name"].tolist()
     return sample_names
 
-def get_input_for_chip_coverage(samples):
-        list = [ f"results/ChIP/tracks/coverage__{sample_name}.bw" for sample_name in get_sample_names_by_env("ChIP", samples) ]
-        return list
-
-def match_pattern_return_reps(pattern, nb, row):
-    rows = []
-    exist = set()
-    files = glob.glob(pattern)
-    for f in files:
-        filename = os.path.basename(f)
-        parts = filename.split("__")
-        rep = parts[nb]
-        if rep != "merged":
-            key = (row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome, rep)
-            if key not in exist:
-                exist.add(key)
-                rows.append({"data_type": row.data_type, "line": row.line, "tissue": row.tissue, "sample_type": row.sample_type, "ref_genome": row.ref_genome, "replicate": rep})    
-    return rows
-    
-def get_analysis_to_reps_from_analysis_file(samples):
-    error_messages = []
-    all_rows = []
-
-    for i, (_, row) in enumerate(samples.iterrows(), start=1):
-        prefix = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}"
-        if row.env == "ChIP":
-            pattern = f"results/{row.env}/tracks/FC__final__{prefix}__*__{row.ref_genome}.bw"
-            nb = 6
-        elif row.env == "TF":
-            pattern = f"results/{row.env}/tracks/FC__final__{prefix}__*__{row.ref_genome}.bw"
-            nb = 6
-        elif row.env == "RNA":
-            pattern = f"results/{row.env}/tracks/{prefix}__*__{row.ref_genome}__plus.bw"
-            nb = 4
-        elif row.env == "sRNA":
-            pattern = f"results/{row.env}/tracks/{prefix}__*__{row.ref_genome}__*nt__plus.bw"
-            nb = 4
-        elif row.env == "mC":
-            pattern = f"results/{row.env}/tracks/{prefix}__*__{row.ref_genome}__CG.bw"
-            nb = 4
-        rows = match_pattern_return_reps(pattern, nb, row)
-        if not rows:
-            error_messages.append(f'[X] Row #{i} {prefix}: no bigwigs found matching {pattern}')
-        else:
-            all_rows.extend(rows)
-            
-    if error_messages:
-        full_message = "\n".join(error_messages)
-        raise ValueError(f"[X] Validation failed — please fix the errors below in your analysis samplefile and rerun.\n{full_message}\n\n")
-
-    else:
-        df = pd.DataFrame(all_rows)
-        analysis_to_replicates = (
-            df.groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
-            .apply(list)
-            .to_dict()
-        )
-
-        return analysis_to_replicates
-
-if config['start_from_beginning']:
 # Define patterns and envs
-    env_patterns = [
-        ("ChIP*", "ChIP"),
-        ("RNAseq", "RNA"),
-        ("RAMPAGE", "RNA"),
-        ("sRNA", "sRNA"),
-        ("mC", "mC"),
-        ("TF_*", "TF"),
-    ]
+env_patterns = [
+    ("ChIP*", "ChIP"),
+    ("RNAseq", "RNA"),
+    ("RAMPAGE", "RNA"),
+    ("sRNA", "sRNA"),
+    ("mC", "mC"),
+    ("TF_*", "TF"),
+]
 
-    # Define sample metadata and avoid header if present
-    colnames = ["data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome"]
-    with open(config["sample_file"]) as f:
-        first_line = f.readline().strip().split("\t")
-    if first_line == colnames:
-        samples = pd.read_csv(config["sample_file"], sep="\t", header=0)
-    else:
-        samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
-
-    samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).reset_index(drop=True)
-
-    check_table(samples)
-
-    # Create an "env" column based on the string patterns in data_type
-    conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]
-    choices = [env for _, env in env_patterns]
-    samples["env"] = np.select(conditions, choices, default="unknown")
-        
-    # Check for unknown envs and exit if any
-    unknowns = samples.loc[samples["env"] == "unknown", "data_type"].unique()
-    if len(unknowns) > 0:
-        unknown_list = "\n".join(f"  - {dt}" for dt in unknowns)
-        raise ValueError(f"Type of data unknown for the following data types:\n"
-                         f"{unknown_list}\n\n"
-                         "Please check your sample file or update the env_patterns.")
-
-    # Add a sample_name column to the sample file
-    samples["sample_name"] = samples.apply(lambda row: sample_name_str(row, 'sample'), axis=1)
-
-    # Add an extra_info column to the sample file
-    samples["extra_info"] = samples.apply(extract_extra_info, axis=1)
-
-    # # Create a dictionary to store the information for each sample
-    # sample_info_map = {
-        # (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["replicate"], row["ref_genome"]): {
-            # "seq_id": row["seq_id"],
-            # "fastq_path": row["fastq_path"],
-            # "paired": row["paired"],
-            # "env": row["env"],
-            # "sample_name": row["sample_name"],
-            # "extra_info": row["extra_info"]
-        # }
-        # for _, row in samples.iterrows()
-    # }
-
-    # Define reference genomes, data types and environments
-    REF_GENOMES = set(samples["ref_genome"].unique())
-    DATA_TYPES = set(samples["data_type"].unique())
-    UNIQUE_ENVS = samples["env"].unique().tolist()
-
-    # To assign all replicates to each sample
-    analysis_to_replicates = (
-        samples
-        .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
-        .apply(list)
-        .to_dict()
-    )
-
-    # Load the sample metadata and perform all operations in a single chain
-    analysis_samples = (
-        samples
-        .query("sample_type != 'Input'") # filter Input samples
-        [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]]
-        .drop_duplicates()
-    )
-    pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
-    analysis_samples.to_csv(pathtoanalysisfile, sep="\t", index=False)
-    
-    # Add a sample_name column to the analysis_sample file
-    analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
+# Define sample metadata and avoid header if present
+colnames = ["data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome"]
+with open(config["sample_file"]) as f:
+    first_line = f.readline().strip().split("\t")
+if first_line == colnames:
+    samples = pd.read_csv(config["sample_file"], sep="\t", header=0, names=colnames)
 else:
-    colnames = ["env", "data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome", "sample_name", "extra_info"]
-    samples = pd.DataFrame(columns=colnames)
-    analysis_sample_file = config['analysis_sample_file']
-    colnames2 = ["env", "data_type", "line", "tissue", "sample_type",  "ref_genome", "paired", "extra_info"]
-    if analysis_sample_file.strip() and os.path.exists(analysis_sample_file):
-        with open(analysis_sample_file) as f:
-            first_line = f.readline().strip().split("\t")
-            if first_line == colnames2:
-                analysis_samples = pd.read_csv(analysis_sample_file, sep="\t", header=0)
-            else:
-                samples = pd.read_csv(analysis_sample_file, sep="\t", header=None, names=colnames2)
-    else:
-        pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
-        if os.path.exists(pathtoanalysisfile):
-            with open(pathtoanalysisfile) as f:
-                analysis_samples = pd.read_csv(pathtoanalysisfile, sep="\t", header=0)
-        else:
-            raise ValueError("The sample file does not exist yet, or is not found\n"
-                             "Maybe you wanted to start from the beginning?\n"
-                             "If so, use --config start_from_beginning=true")
+    samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
 
-    # Add a sample_name column to the analysis_sample file
-    analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
+samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).reset_index(drop=True)
+
+check_table(samples)
+
+# Create an "env" column based on the string patterns in data_type
+conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]
+choices = [env for _, env in env_patterns]
+samples["env"] = np.select(conditions, choices, default="unknown")
+        
+# Check for unknown envs and exit if any
+unknowns = samples.loc[samples["env"] == "unknown", "data_type"].unique()
+if len(unknowns) > 0:
+    unknown_list = "\n".join(f"  - {dt}" for dt in unknowns)
+    raise ValueError(f"Type of data unknown for the following data types:\n"
+                     f"{unknown_list}\n\n"
+                     "Please check your sample file or update the env_patterns.")
+
+# Add a sample_name column to the sample file
+samples["sample_name"] = samples.apply(lambda row: sample_name_str(row, 'sample'), axis=1)
+
+# Add an extra_info column to the sample file
+samples["extra_info"] = samples.apply(extract_extra_info, axis=1)
+
+# Define reference genomes, data types and environments
+REF_GENOMES = set(samples["ref_genome"].unique())
+DATA_TYPES = set(samples["data_type"].unique())
+UNIQUE_ENVS = samples["env"].unique().tolist()
+
+# To assign all replicates to each sample
+analysis_to_replicates = (
+    samples
+    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
+    .apply(list)
+    .to_dict()
+)
+
+# Load the sample metadata and perform all operations in a single chain
+analysis_samples = (
+    samples
+    .query("sample_type != 'Input'") # filter Input samples
+    [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]]
+    .drop_duplicates()
+)
+pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
+analysis_samples.to_csv(pathtoanalysisfile, sep="\t", index=False)
     
-    # Define reference genomes, data types and environments
-    REF_GENOMES = set(analysis_samples["ref_genome"].unique())
-    DATA_TYPES = set(analysis_samples["data_type"].unique())
-    UNIQUE_ENVS = analysis_samples["env"].unique().tolist()
-
-    analysis_to_replicates = get_analysis_to_reps_from_analysis_file(analysis_samples)
+# Add a sample_name column to the analysis_sample file
+analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 
 # Include all rule files
 include: "rules/environment_setup.smk"
@@ -323,7 +217,10 @@ rule map_only:
 # Rule to specify final target if only chip coverage is wanted
 rule coverage_chip:
     input: 
-        get_input_for_chip_coverage
+        [
+            f"results/ChIP/tracks/coverage__{sample_name}.bw"
+            for sample_name in get_sample_names_by_env("ChIP", samples)
+        ]
     localrule: True
 
 # Rule to perform combined analysis

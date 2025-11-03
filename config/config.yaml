@@ -7,10 +7,6 @@ analysis_name: "epicc"
 # Path to the sample metadata file
 sample_file: "config/all_samples.tsv"
 
-# Path to the analysis samplefile. Leave empty if starting from scratch, only replace by a compatible analysis file format if needed
-# File should be tab-separated and have the following columns:         [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]]
-analysis_sample_file: ""
-
 # Path to the annotation files for each reference genome
 ColCEN: 
   species: "thaliana"  
@@ -40,7 +36,6 @@ la8011:
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
-start_from_beginning: false # if all the samples were already run (or if the bigwigs are already available to avoid redoing everything)
 full_analysis: true
 te_analysis: false
 QC_option: "none" # options: ["none"|"all"] for fastqc

@@ -197,7 +197,6 @@ def define_logs_final_input(wildcards):
 
 def define_final_chip_output(ref_genome):
     qc_option = config["QC_option"]
-    start = config['start_from_beginning']
     analysis = config['full_analysis']
     motifs = config['motifs']
     allreps = config['allreps']
@@ -274,10 +273,7 @@ def define_final_chip_output(ref_genome):
     if allreps:
         results += allrep_files
     
-    if start:
-        return results
-    else:
-        return []
+    return results
         
 rule make_bt2_indices:
     input:
