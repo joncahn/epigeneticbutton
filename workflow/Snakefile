@@ -266,7 +266,7 @@ if config['start_from_beginning']:
     # Add a sample_name column to the analysis_sample file
     analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 else:
-    colnames = ["data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome"]
+    colnames = ["env", "data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome", "sample_name", "extra_info"]
     samples = pd.DataFrame(columns=colnames)
     analysis_sample_file = config['analysis_sample_file']
     colnames2 = ["env", "data_type", "line", "tissue", "sample_type",  "ref_genome", "paired", "extra_info"]
