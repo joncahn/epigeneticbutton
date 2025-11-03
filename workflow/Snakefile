@@ -137,7 +137,7 @@ def match_pattern_return_reps(pattern, nb, row):
             if key not in exist:
                 exist.add(key)
                 rows.append({"data_type": row.data_type, "line": row.line, "tissue": row.tissue, "sample_type": row.sample_type, "ref_genome": row.ref_genome, "replicate": rep})    
-    return rows.unique()
+    return rows
     
 def get_analysis_to_reps_from_analysis_file(samples):
     error_messages = []
