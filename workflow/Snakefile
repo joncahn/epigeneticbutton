@@ -266,6 +266,7 @@ if config['start_from_beginning']:
     # Add a sample_name column to the analysis_sample file
     analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 else:
+    samples = []
     analysis_sample_file = config['analysis_sample_file']
     colnames = ["env", "data_type", "line", "tissue", "sample_type",  "ref_genome", "paired", "extra_info"]
     if analysis_sample_file.strip() and os.path.exists(analysis_sample_file):
