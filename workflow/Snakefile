@@ -124,6 +124,10 @@ def get_sample_names_by_env(env, samples):
     sample_names = samples.loc[samples['env'] == env, "sample_name"].tolist()
     return sample_names
 
+def get_input_for_chip_coverage(samples):
+        list = [ f"results/ChIP/tracks/coverage__{sample_name}.bw" for sample_name in get_sample_names_by_env("ChIP", samples) ]
+        return list
+
 def match_pattern_return_reps(pattern, nb, row):
     rows = []
     exist = set()
@@ -317,10 +321,7 @@ rule map_only:
 # Rule to specify final target if only chip coverage is wanted
 rule coverage_chip:
     input: 
-        [
-            f"results/ChIP/tracks/coverage__{sample_name}.bw"
-            for sample_name in get_sample_names_by_env("ChIP", samples)
-        ]
+        get_input_for_chip_coverage
     localrule: True
 
 # Rule to perform combined analysis
