@@ -126,6 +126,7 @@ def get_sample_names_by_env(env, samples):
 
 def match_pattern_return_reps(pattern, nb, row):
     rows = []
+    exist = set()
     files = glob.glob(pattern)
     for f in files:
         filename = os.path.basename(f)
