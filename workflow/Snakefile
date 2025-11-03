@@ -268,8 +268,8 @@ else:
     else:
         pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
         if os.path.exists(pathtoanalysisfile):
-            with open(analysis_sample_file) as f:
-                analysis_samples = pd.read_csv(analysis_sample_file, sep="\t", header=0, names=colnames)
+            with open(pathtoanalysisfile) as f:
+                analysis_samples = pd.read_csv(pathtoanalysisfile, sep="\t", header=0, names=colnames)
         else:
             raise ValueError("The sample file does not exist yet, or is not found\n"
                              "Maybe you wanted to start from the beginning?\n"
