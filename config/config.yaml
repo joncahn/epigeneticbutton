@@ -35,6 +35,14 @@ la8011:
   gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz"
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
   
+CabSauv:
+  species: "vitifera"
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz"
+  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.gff3.gz"
+  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"  
+  
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
 te_analysis: false
@@ -60,6 +68,10 @@ aequinoctialis:
   star_index: "--genomeSAindexNbases 12"
   genomesize: 8.0e8
 
+vitifera:
+  star_index: "--genomeSAindexNbases 12"
+  genomesize: 5.0e8
+  
 # Trimming and processing parameters:
 trimming_quality:
   ChIP: "-q 10 -m 20"
