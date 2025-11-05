@@ -270,8 +270,7 @@ rule shortstack_map:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        srna_params = config['srna_mapping_params'],
-        srna_params_fb = config['srna_mapping_params_fallback']
+        srna_params = config['srna_mapping_params']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV_SRNA
@@ -410,6 +409,7 @@ rule make_srna_stranded_bigwigs:
         """
         {{
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
+        input_bamfile="{input.bamfile}"
         basename=${{input_bamfile%.bam}}
         ShortTracks --mode simple --stranded --bamfile {input.bamfile}
         mv ${{basename}}_p.bw {output.bw_plus}
