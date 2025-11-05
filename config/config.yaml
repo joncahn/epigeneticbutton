@@ -40,7 +40,7 @@ CabSauv:
   fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
   gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
   gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz"
-  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.gff3.gz"
+  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"  
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
@@ -79,6 +79,7 @@ trimming_quality:
   TF: "-q 10 -m 20"
   mC: "-q 10 -m 20"
   sRNA: "-q 10 -m 15"
+  ATAC: "-q 10 -m 20"
 
 adapter1:
   ChIP: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
@@ -86,6 +87,7 @@ adapter1:
   TF: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
   mC: "AGATCGGAAGAGCACACGTCTGAAC" # default illumina
   sRNA: "TGGAATTCTCGGGTGCCAAGG" # default nextflex
+  ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG" # default nextera
 
 adapter2:
   ChIP: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
@@ -93,6 +95,7 @@ adapter2:
   TF: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
   mC: "AGATCGGAAGAGCGTCGTGTAGGGA" # default illumina
   sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # default nextflex
+  ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG" # default nextera
 
 # Mapping option default
 chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
