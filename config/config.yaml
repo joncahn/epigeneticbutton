@@ -345,6 +345,7 @@ resources:
   make_bowtie1_indices: *single
   make_bowtie1_indices_large: *single
   shortstack_map: *heavy
+  make_cluster_bedfiles: *low
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
   merging_srna_replicates: *standard
