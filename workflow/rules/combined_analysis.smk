@@ -64,6 +64,7 @@ def define_sort_options(wildcards):
 def define_samplenames_per_env_and_ref(wildcards):
     names = []
     ref_genome = wildcards.ref_genome
+    srna_sizes = config['srna_heatmap_sizes']
     globenv = wildcards.env
     if globenv == "all_chip":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -71,17 +72,22 @@ def define_samplenames_per_env_and_ref(wildcards):
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
-        file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
         if row.env == "TF":
-            label=f"{row.line}_{row.tissue}_{row.extra_info}"
-        else:
-            label=f"{row.line}_{row.tissue}_{row.sample_type}"
+            file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
+            label = f"{row.line}_{row.tissue}_{row.extra_info}"
+        elif row.env == "ChIP":
+            file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
+            label = f"{row.line}_{row.tissue}_{row.sample_type}"
+        elif row.env == "sRNA":
+            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
+                file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
+                label = f"{row.line}_{row.tissue}_{replicate}_{size}nt"
         
         names.append(f"{label}:{file}")
     
     return names
 
-def define_peakfiles_per_env_and_ref(wildcards):
+def define_bedfiles_per_env_and_ref(wildcards):
     files = []
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
@@ -91,7 +97,11 @@ def define_peakfiles_per_env_and_ref(wildcards):
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
-        files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
+        if globenv in ["all_chip", "ChIP", "TF"]:
+            files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
+        elif globenv == "sRNA":
+            files.extend(f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed" 
+                                      for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
     
     return files
 
@@ -101,15 +111,36 @@ def define_sample_types_for_upset(wildcards):
     globenv = wildcards.env
     if globenv == "all_chip":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    else:    
+    elif globenv in ["ChIP", "TF"]:    
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    for _, row in filtered_analysis_samples.iterrows():
-        if row.env == "ChIP":
-            types.add(row.sample_type)
-        elif row.env == "TF":
-            types.add(row.extra_info)
-    result = ":".join(sorted(types))
+    else: 
+        filtered_analysis_samples = None
+    
+    if filtered_analysis_samples is not None:
+        for _, row in filtered_analysis_samples.iterrows():
+            if row.env == "ChIP":
+                types.add(row.sample_type)
+            elif row.env == "TF":
+                types.add(row.extra_info)
+
+    if globenv == "sRNA":
+        srna_min = config['srna_min_size']
+        srna_max = config['srna_max_size']
+        types = [f"{s}nt" for s in range(srna_min, srna_max + 1)]
+        types += ["MIRNA", "Others"]
+        result = ":".join(types)
+    else:
+        result = ":".join(sorted(types))
     return result
+
+def define_upset_script(wildcards):
+    globenv = wildcards.env
+    if globenv in ["all_chip", "ChIP", "TF"]:
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_peaks.R")
+    elif globenv == "sRNA":
+        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_clusters.R")
+    
+    return script
 
 def assign_colors(keys, cmap_name="tab20"):
     cmap = plt.get_cmap(cmap_name)
@@ -572,12 +603,52 @@ rule plotting_srna_sizes_stats:
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
         """
 
+####
+
+## To do: New rule for combining cluster files, with in the merged file the label + size (size already column x: col 4=l_$x; type = sizes; 1 file per sample, colorcoded by size in upset; new script for upset srna, chose script conditionally). ADD new rules to config resources.
+
 ###
 # Rules to prep and plot ChIP upset plots
+rule combine_clusterfiles:
+    input:
+        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        clusterfiles = lambda wildcards: define_bedfiles_per_env_and_ref(wildcards)
+    output:
+        temp1_file = temp("results/combined/bedfiles/temp1_combined_cluster__{env}__{analysis_name}__{ref_genome}.bed"),
+        temp2_file = temp("results/combined/bedfiles/temp2_combined_cluster__{env}__{analysis_name}__{ref_genome}.bed"),
+        merged_file = "results/combined/bedfiles/combined_clusters__{env}__{analysis_name}__{ref_genome}.bed"
+    params:
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        env = lambda wildcards: wildcards.env,
+        names = lambda wildcards: define_samplenames_per_env_and_ref(wildcards),
+        analysis_name = config['analysis_name']
+    log:
+        temp(return_log_combined("{analysis_name}", "{ref_genome}", "combined_clusters_{env}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["combine_clusterfiles"]["threads"]
+    resources:
+        mem_mb=config["resources"]["combine_clusterfiles"]["mem_mb"],
+        tmp_mb=config["resources"]["combine_clusterfiles"]["tmp_mb"],
+        qos=config["resources"]["combine_clusterfiles"]["qos"]
+    shell:
+        """
+        {{
+        printf "Merging peakfiles for {params.env} {params.analysis_name} {params.ref_genome}\n"
+        for pair in {params.names}; do
+            label=$(echo ${{pair}} | cut -d":" -f1)
+            file=$(echo ${{pair}} | cut -d":" -f2)
+            awk -v OFS="\t" -v l=${{label}} '{{print $1,$2,$3,l"_"$4}}' ${{file}} >> {output.temp1_file}
+        done
+        sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
+        printf "Chr\tStart\tStop\tPeakID\tSamples\n" > {output.merged_file}
+        bedtools merge -i {output.temp2_file} -c 4 -o distinct | bedtools sort -g {input.chrom_sizes} | awk -v OFS="\t" -v e={params.env} -v a={params.analysis_name} '{{print $1,$2,$3,"combined_clusters_"e"_"a"_"NR,$4}}' >> {output.merged_file}
+        }} 2>&1 | tee -a "{log}"
+        """
+        
 rule combine_peakfiles:
     input:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
-        peakfiles = lambda wildcards: define_peakfiles_per_env_and_ref(wildcards)
+        peakfiles = lambda wildcards: define_bedfiles_per_env_and_ref(wildcards)
     output:
         temp1_file = temp("results/combined/bedfiles/temp1_combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"),
         temp2_file = temp("results/combined/bedfiles/temp2_combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"),
@@ -606,7 +677,7 @@ rule combine_peakfiles:
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
         printf "Chr\tStart\tStop\tPeakID\tSamples\n" > {output.merged_file}
-        bedtools merge -i {output.temp2_file} -c 4 -o distinct | bedtools sort -g {input.chrom_sizes} | awk -v OFS="\t" -v e={params.env} -v a={params.analysis_name} '{{print $1,$2,$3,"combined_peak_"e"_"a"_"NR,$4}}' >> {output.merged_file}
+        bedtools merge -i {output.temp2_file} -c 4 -o distinct | bedtools sort -g {input.chrom_sizes} | awk -v OFS="\t" -v e={params.env} -v a={params.analysis_name} '{{print $1,$2,$3,"combined_peaks_"e"_"a"_"NR,$4}}' >> {output.merged_file}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -639,7 +710,7 @@ rule get_annotations_for_bedfile:
         else
             awk -v OFS="\t" -v n={params.target_name} 'NR>1 {{if ($4=="") $4=n"_"NR; print $1,$2,$3,$4}}' {input.bedfile} > {output.temp_bedfile}
         fi
-        printf "Chr\tStart\tStop\tPeakID\tDistance\tGene_strand\tGID\tCategory\n" > {output.annotated_file}
+        printf "Chr\tStart\tStop\tRegionID\tDistance\tGene_strand\tGID\tCategory\n" > {output.annotated_file}
         bedtools closest -a {output.temp_bedfile} -b {input.region_file} -g {input.chrom_sizes} -D ref | awk -v OFS="\t" '{{if ($10=="+") print $1,$2,$3,$4,$11,$10,$8; else print $1,$2,$3,$4,-$11,$10,$8}}' | awk -F"[=;]" -v OFS="\t" '{{print $1,$2}}' | sed 's/gene://' | awk -v OFS="\t" '{{if ($5<-2000) {{d="Distal_downstream"}} else if ($5<0) {{d="Terminator"}} else if ($5==0) {{d="Gene_body"}} else if ($5>2000) {{d="Distal_upstream"}} else {{d="Promoter"}}; print $1,$2,$3,$4,$5,$6,$8,d}}' >> {output.annotated_file}
         }} 2>&1 | tee -a "{log}"
         """
@@ -653,7 +724,7 @@ rule plotting_upset_peaks:
     params:
         env = lambda wildcards: wildcards.env,
         types = lambda wildcards: define_sample_types_for_upset(wildcards),
-        script=os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot.R")
+        script = lambda wildcards: define_upset_script(wildcards)
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_upset_{target_name}_{env}"))
     conda: CONDA_ENV_UPSET

@@ -265,6 +265,7 @@ rule shortstack_map:
         indices = get_bt1_indices
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
+        cluster_bedfile = "results/sRNA/mapped/{sample_name}/clusters.bed",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
         bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     params:
@@ -286,6 +287,32 @@ rule shortstack_map:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}        
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_cluster_bedfiles:
+    input:
+        count_file = "results/sRNA/mapped/{sample_name}/Results.txt"
+    output:
+        cluster_bedfile = "results/sRNA/mapped/{sample_name}/clusters.bed"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        srna_min = config['srna_min_size'],
+        srna_max = config['srna_max_size']
+    log:
+        temp(return_log_smallrna("{sample_name}", "make_cluster_bedfiles", "all"))
+    conda: CONDA_ENV_SRNA
+    threads: config["resources"]["make_cluster_bedfiles"]["threads"]
+    resources:
+        mem_mb=config["resources"]["make_cluster_bedfiles"]["mem_mb"],
+        tmp_mb=config["resources"]["make_cluster_bedfiles"]["tmp_mb"],
+        qos=config["resources"]["make_cluster_bedfiles"]["qos"]
+    shell:
+        """
+        {{
+        ## To create a bedfile of clusters for Upset plots
+        awk -v OFS="\t" -v m={params.srna_min} -v n={params.srna_max} 'NR>1 {{if ($20=="Y") t="MIRNA"; else if ($19>=m && $19<=n) t=$19"nt"; else t="Others"; print $1,$4-1,$5,t}}' {input.count_file} > {output.cluster_bedfile}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -418,7 +445,8 @@ rule make_srna_stranded_bigwigs:
         awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
         bedSort {output.temp_minus_rev} {output.temp_minus_sort}
         bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
-        rm -f ${{basename}}_*.bw
+        rm -f ${{basename}}_m.*
+        rm -f ${{basename}}_p.*
         }} 2>&1 | tee -a "{log}"
         """
 
