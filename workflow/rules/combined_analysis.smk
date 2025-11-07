@@ -15,13 +15,15 @@ def define_combined_target_file(wildcards):
         return config['browser_target_file']
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
+    elif target_name.startswith("combined_clusters"):
+        file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
         file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
     elif target_name.startswith("all_TEs"):
         file = f"genomes/{ref_genome}/{ref_genome}__TE_file.bed"
     else:
         raise ValueError(   
-            f"{target_name} does not match possible files. It can be 'combined_peaks', 'all_genes', 'all_TEs'" 
+            f"{target_name} does not match possible files. It can be 'combined_peaks', 'combined_clusters', 'all_genes', 'all_TEs'" 
             "or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
         )
     
@@ -368,6 +370,9 @@ def define_final_combined_output(ref_genome):
     if len(chip_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
+    if len(srna_analysis_samples) >=1:
+        plot_files.append(f"results/combined/plots/Upset_combined_clusters__sRNA__{analysis_name}__{ref_genome}.pdf")
+    
     if len(mc_analysis_samples) >=1:
         if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
             plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
@@ -602,10 +607,6 @@ rule plotting_srna_sizes_stats:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
         """
-
-####
-
-## To do: New rule for combining cluster files, with in the merged file the label + size (size already column x: col 4=l_$x; type = sizes; 1 file per sample, colorcoded by size in upset; new script for upset srna, chose script conditionally). ADD new rules to config resources.
 
 ###
 # Rules to prep and plot ChIP upset plots
