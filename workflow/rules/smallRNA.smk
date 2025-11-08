@@ -445,8 +445,8 @@ rule make_srna_stranded_bigwigs:
         awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
         bedSort {output.temp_minus_rev} {output.temp_minus_sort}
         bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
-        rm -f ${{basename}}_m.*
-        rm -f ${{basename}}_p.*
+        rm -f ${{basename}}_m*
+        rm -f ${{basename}}_p*
         }} 2>&1 | tee -a "{log}"
         """
 
