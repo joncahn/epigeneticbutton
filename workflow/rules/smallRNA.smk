@@ -265,7 +265,6 @@ rule shortstack_map:
         indices = get_bt1_indices
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
-        cluster_bedfile = "results/sRNA/mapped/{sample_name}/clusters.bed",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
         bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
     params:
