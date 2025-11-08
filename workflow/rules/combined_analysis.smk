@@ -716,7 +716,7 @@ rule get_annotations_for_bedfile:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule plotting_upset_peaks:
+rule plotting_upset_regions:
     input:
         mergedfile = "results/combined/bedfiles/{target_name}__{env}__{analysis_name}__{ref_genome}.bed",
         annotatedfile = "results/combined/bedfiles/annotated__{target_name}__{env}__{analysis_name}__{ref_genome}.bed"
@@ -729,11 +729,11 @@ rule plotting_upset_peaks:
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_upset_{target_name}_{env}"))
     conda: CONDA_ENV_UPSET
-    threads: config["resources"]["plotting_upset_peaks"]["threads"]
+    threads: config["resources"]["plotting_upset_regions"]["threads"]
     resources:
-        mem_mb=config["resources"]["plotting_upset_peaks"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_upset_peaks"]["tmp_mb"],
-        qos=config["resources"]["plotting_upset_peaks"]["qos"]
+        mem_mb=config["resources"]["plotting_upset_regions"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_upset_regions"]["tmp_mb"],
+        qos=config["resources"]["plotting_upset_regions"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.mergedfile}" "{input.annotatedfile}" "{params.env}" "{params.types}" "{output.plot}"
