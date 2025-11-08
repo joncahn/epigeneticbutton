@@ -311,7 +311,7 @@ rule make_cluster_bedfiles:
         """
         {{
         ## To create a bedfile of clusters for Upset plots
-        awk -v OFS="\t" -v m={params.srna_min} -v n={params.srna_max} 'NR>1 {{if ($20=="Y") t="MIRNA"; else if ($19>=m && $19<=n) t=$19"nt"; else t="Others"; print $1,$4-1,$5,t}}' {input.count_file} > {output.cluster_bedfile}
+        awk -v OFS="\t" -v m={params.srna_min} -v n={params.srna_max} 'NR>1 {{if ($20=="Y") t="MIRNA"; else if ($19>=m && $19<=n) t=$19"nt"; else t="Others"; print $3,$4-1,$5,t}}' {input.count_file} > {output.cluster_bedfile}
         }} 2>&1 | tee -a "{log}"
         """
         
