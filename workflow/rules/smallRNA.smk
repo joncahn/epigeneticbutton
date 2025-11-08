@@ -293,7 +293,7 @@ rule make_cluster_bedfiles:
     input:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt"
     output:
-        cluster_bedfile = "results/sRNA/mapped/{sample_name}/clusters.bed"
+        cluster_bedfile = "results/sRNA/mapped/{sample_name}/clusters.bed"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
