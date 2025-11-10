@@ -311,7 +311,7 @@ rule make_cluster_bedfiles:
         """
         {{
         ## To create a bedfile of clusters for Upset plots
-        awk -v OFS="\t" -v m={params.srna_min} -v n={params.srna_max} 'NR>1 {{if ($20=="Y") t="MIRNA"; else if ($19>=m && $19<=n) t=$19"nt"; else t="Others"; print $3,$4-1,$5,t}}' {input.count_file} > {output.cluster_bedfile}
+        awk -v OFS="\t" -v m={params.srna_min} -v n={params.srna_max} 'NR==1 {{for (i=1; i<=NF; i++) {{if ($i=="DicerCall") dicer_col=i; if ($i=="MIRNA") mirna_col=i}}}} NR>1 {{if ($mirna_col=="Y") t="MIRNA"; else if ($dicer_col>=m && $dicer_col<=n) t=$dicer_col"nt"; else t="Others"; print $3, $4-1, $5, t}}' {input.count_file} > {output.cluster_bedfile}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -461,7 +461,9 @@ rule analyze_all_srna_samples_on_target_file:
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        target_name = lambda wildcards: wildcards.target_name
+        target_name = lambda wildcards: wildcards.target_name,
+        srna_min = config['srna_min_size'],
+        srna_max = config['srna_max_size']
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_analysis", "{target_name}"))
     conda: CONDA_ENV_SRNA
@@ -477,11 +479,11 @@ rule analyze_all_srna_samples_on_target_file:
         if [[ "{params.target_name}" == "new_clusters" ]]; then
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
             ShortStack --version
-            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --dicermin {params.srna_min} --dicermax {params.srna_max} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         else
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
             ShortStack --version
-            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --dicermin {params.srna_min} --dicermax {params.srna_max} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         fi
         if [[ ! -e {output.count_file} ]]; then
             touch {output.count_file}
