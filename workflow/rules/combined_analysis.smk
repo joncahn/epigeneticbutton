@@ -77,15 +77,16 @@ def define_samplenames_per_env_and_ref(wildcards):
         if row.env == "TF":
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
             label = f"{row.line}_{row.tissue}_{row.extra_info}"
+            names.append(f"{label}:{file}")
         elif row.env == "ChIP":
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
             label = f"{row.line}_{row.tissue}_{row.sample_type}"
+            names.append(f"{label}:{file}")
         elif row.env == "sRNA":
             for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                 file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
                 label = f"{row.line}_{row.tissue}_{replicate}"
-        
-        names.append(f"{label}:{file}")
+                names.append(f"{label}:{file}")
     
     return names
 
