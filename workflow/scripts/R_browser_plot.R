@@ -8,7 +8,7 @@ library(txdbmaker)
 args = commandArgs(trailingOnly=TRUE)
 
 filenames<-read.delim(args[1], header=TRUE)
-if ( file.exists(args[2]) ) {
+if ( file.info(args[2])$size > 0 ) {
 	genes<-txdbmaker::makeTxDbFromGFF(args[2], format="gff")
 } else {
 	genes<-c()

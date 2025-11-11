@@ -17,7 +17,7 @@ args = commandArgs(trailingOnly=TRUE)
 merged<-read.delim(args[1], header = TRUE)
 annotated<-read.delim(args[2], header = TRUE) %>%
 	mutate(distance=abs(Distance)+1) %>%
-	select("PeakID","Category",Gap=distance) %>%
+	select(ClusterID=RegionID,Category,Gap=distance) %>%
 	rename(Distance=Gap)
 env<-args[3]
 types<-unlist(strsplit(args[4], ":"))
@@ -29,7 +29,7 @@ figsize<-length(sampleslist)
 mat<-separate_rows(merged, Samples, sep = ",") %>%
 	mutate(value=1) %>%
 	pivot_wider(names_from = Samples, values_from = value, values_fill = 0) %>%
-	merge(annotated, by="PeakID")
+	merge(annotated, by="ClusterID")
 	
 mat$Category<-factor(mat$Category, levels=c("Distal_downstream","Terminator","Gene_body","Promoter","Distal_upstream"))
 
@@ -67,13 +67,13 @@ colmarks["Mix"] <- "black"
 
 ## Make the Plot
 
-plot<-upset(mat, sampleslist, name="Peaks", 
+plot<-upset(mat, sampleslist, name="Cluster", 
       mode='exclusive_intersection',
       n_intersections=30, 
       sort_sets=FALSE,
       height_ratio = 0.75,
       base_annotations = list(
-        'Shared peaks'=intersection_size(
+        'Shared clusters'=intersection_size(
           counts=FALSE, mapping=aes(fill=Category)) +
           scale_fill_manual(values=c("Distal_downstream"="#B8B5B3","Terminator"="#B233FF",
                                      "Gene_body"="#3358FF","Promoter"="#FF33E0","Distal_upstream"="#2e2e2e"),
@@ -88,7 +88,7 @@ plot<-upset(mat, sampleslist, name="Peaks",
             scale_fill_manual(values=colmarks, name="Exclusive marks"))
       ),
       queries = queries,
-	  set_sizes = (upset_set_size() + ylab("Total peaks") +
+	  set_sizes = (upset_set_size() + ylab("Total clusters") +
         theme(axis.text.x = element_text(angle = 45))),
       matrix = (intersection_matrix(geom = geom_point(shape = "circle", size = 3),
           segment = geom_segment(linewidth = 1.5),

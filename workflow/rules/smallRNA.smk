@@ -270,8 +270,7 @@ rule shortstack_map:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        srna_params = config['srna_mapping_params'],
-        srna_params_fb = config['srna_mapping_params_fallback']
+        srna_params = config['srna_mapping_params']
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV_SRNA
@@ -286,10 +285,33 @@ rule shortstack_map:
         rm -rf results/sRNA/mapped/{params.sample_name}
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name} || \
-        (printf "Retrying ShortStack run with fallback parameters\n" && \
-        rm -rf results/sRNA/mapped/{params.sample_name} && \
-        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params_fb} --outdir results/sRNA/mapped/{params.sample_name})        
+        ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}        
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_cluster_bedfiles:
+    input:
+        count_file = "results/sRNA/mapped/{sample_name}/Results.txt"
+    output:
+        cluster_bedfile = "results/sRNA/mapped/{sample_name}/clusters.bed"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        srna_min = config['srna_min_size'],
+        srna_max = config['srna_max_size']
+    log:
+        temp(return_log_smallrna("{sample_name}", "make_cluster_bedfiles", "all"))
+    conda: CONDA_ENV_SRNA
+    threads: config["resources"]["make_cluster_bedfiles"]["threads"]
+    resources:
+        mem_mb=config["resources"]["make_cluster_bedfiles"]["mem_mb"],
+        tmp_mb=config["resources"]["make_cluster_bedfiles"]["tmp_mb"],
+        qos=config["resources"]["make_cluster_bedfiles"]["qos"]
+    shell:
+        """
+        {{
+        ## To create a bedfile of clusters for Upset plots
+        awk -v OFS="\t" -v m={params.srna_min} -v n={params.srna_max} 'NR==1 {{for (i=1; i<=NF; i++) {{if ($i=="DicerCall") dicer_col=i; if ($i=="MIRNA") mirna_col=i}}}} NR>1 {{if ($mirna_col=="Y") t="MIRNA"; else if ($dicer_col>=m && $dicer_col<=n) t=$dicer_col"nt"; else t="Others"; print $3, $4-1, $5, t}}' {input.count_file} > {output.cluster_bedfile}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -400,8 +422,7 @@ rule make_srna_stranded_bigwigs:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         size = lambda wildcards: wildcards.size,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        wd = REPO_FOLDER
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_smallrna("{sample_name}", "making_bigiwig", "{size}"))
     conda: CONDA_ENV_SRNA
@@ -413,19 +434,18 @@ rule make_srna_stranded_bigwigs:
     shell:
         """
         {{
-        cd {output.temp_folder}
         printf "Getting stranded coverage for {params.sample_name} {params.size}nt\n"
-        input_bamfile="{params.wd}/{input.bamfile}"
+        input_bamfile="{input.bamfile}"
         basename=${{input_bamfile%.bam}}
-        ShortTracks --mode simple --stranded --bamfile "{params.wd}/{input.bamfile}"
-        mv ${{basename}}_p.bw "{params.wd}/{output.bw_plus}"
+        ShortTracks --mode simple --stranded --bamfile {input.bamfile}
+        mv ${{basename}}_p.bw {output.bw_plus}
         printf "Inverting minus strand (back to positive values)\n"
-        bigWigToBedGraph ${{basename}}_m.bw "{params.wd}/{output.temp_minus}"
-        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' "{params.wd}/{output.temp_minus}" > "{params.wd}/{output.temp_minus_rev}"
-        bedSort "{params.wd}/{output.temp_minus_rev}" "{params.wd}/{output.temp_minus_sort}"
-        bedGraphToBigWig "{params.wd}/{output.temp_minus_sort}" "{params.wd}/{input.chrom_sizes}" "{params.wd}/{output.bw_minus}"
-        rm -f ${{basename}}_*.bw
-        cd {params.wd}
+        bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
+        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
+        bedSort {output.temp_minus_rev} {output.temp_minus_sort}
+        bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
+        rm -f ${{basename}}_m*
+        rm -f ${{basename}}_p*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -441,7 +461,9 @@ rule analyze_all_srna_samples_on_target_file:
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        target_name = lambda wildcards: wildcards.target_name
+        target_name = lambda wildcards: wildcards.target_name,
+        srna_min = config['srna_min_size'],
+        srna_max = config['srna_max_size']
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_analysis", "{target_name}"))
     conda: CONDA_ENV_SRNA
@@ -457,11 +479,11 @@ rule analyze_all_srna_samples_on_target_file:
         if [[ "{params.target_name}" == "new_clusters" ]]; then
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} with Shortstack version:\n"
             ShortStack --version
-            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --dicermin {params.srna_min} --dicermax {params.srna_max} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         else
             printf "\nAnalyszing all samples from {params.analysis_name} on {params.ref_genome} limited to {params.target_name} with Shortstack version:\n"
             ShortStack --version
-            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
+            ShortStack --bamfile {input.bamfiles} --genomefile {input.fasta} --threads {threads} --dicermin {params.srna_min} --dicermax {params.srna_max} --locifile {input.target_file} --outdir results/sRNA/clusters/{params.analysis_name}__{params.ref_genome}__on_{params.target_name}
         fi
         if [[ ! -e {output.count_file} ]]; then
             touch {output.count_file}
