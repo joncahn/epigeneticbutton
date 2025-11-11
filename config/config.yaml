@@ -179,7 +179,7 @@ structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
-srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps. Can add as many as desired as a list, for sizes within the range above.
+srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps and browsers. Can add as many as desired as a list, for sizes within the range above.
 
 # For deeptools heatmaps and profiles
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
