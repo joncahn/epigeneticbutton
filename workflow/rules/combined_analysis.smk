@@ -1187,6 +1187,7 @@ rule prep_browser_on_region:
             bedtools intersect -wb -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' > {output.genes}
         else
             printf "No genes in this region\n"
+            touch {output.genes}
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
         if [[ -n {input.TE_file} && -s {input.TE_file} ]]; then
@@ -1197,7 +1198,7 @@ rule prep_browser_on_region:
             touch {output.tes}
         fi
         
-        printf "Testing if all bw have data on the chromosome\n"
+        printf "Testing if all bw have data in this region\n"
         filelist2=()
         rm -rf "{params.trackfolder}" && mkdir "{params.trackfolder}"
         while read bw lab back track plus minus mark
@@ -1205,10 +1206,10 @@ rule prep_browser_on_region:
             path="{params.trackfolder}/${{lab}}_empty"
             bigWigToBedGraph -chrom=${{chr}} -start=${{start}} -end=${{end}} ${{bw}} "${{path}}.bg"
             if [[ -s "${{path}}.bg" ]]; then
-                printf "${{lab}} has data on ${{chr}}\n"
+                printf "${{lab}} has data on ${{chr}}:${{start}}-${{end}}\n"
                 filelist2+=("${{bw}}")
             else
-                printf "${{lab}} is empty on ${{chr}}\n"
+                printf "${{lab}} is empty on ${{chr}}:${{start}}-${{end}}\n"
                 grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
                 bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
                 filelist2+=("${{path}}.bw")
