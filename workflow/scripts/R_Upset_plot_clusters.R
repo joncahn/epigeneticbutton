@@ -36,22 +36,21 @@ mat$Category<-factor(mat$Category, levels=c("Distal_downstream","Terminator","Ge
 ## To create queries to color when the same mark is shared in the intersection matrix
 qual_col_pals<-brewer.pal.info[brewer.pal.info$category == 'qual',]
 colorlist<-unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
-i <- 1
-queries <- c()
-listcolor <- c()
+i<-1
+queries<-c()
+listcolor<-c()
 for (sampletype in types) {
-    setcols <- colnames(mat)[grep(sampletype, colnames(mat))]
-    max_k <- length(setcols)
-    k_values <- seq_len(max_k)
+    setcols<-colnames(mat)[grep(sampletype, colnames(mat))]
+    max_k<-length(setcols)
+    k_values<-seq_len(max_k)
     # check if not too large number of combinations
-	combo_sizes <- sapply(k_values, function(k) {
+	combo_sizes<-sapply(k_values, function(k) {
         suppressWarnings(choose(max_k, k))
     })
-    too_large <- any(is.na(combo_sizes) |
-                     combo_sizes > .Machine$integer.max)
+    too_large<-any(is.na(combo_sizes) | combo_sizes > .Machine$integer.max)
     if (too_large) {
-        listcolor <- append(listcolor, "black")
-        i <- i + 1
+        listcolor<-append(listcolor, "black")
+        i<-i+1
     } else {
 		combos<-map(seq_len(length(setcols)), ~ combn(setcols, ., FUN = c, simplify = FALSE)) %>% 
 				unlist(recursive = FALSE)
@@ -59,12 +58,13 @@ for (sampletype in types) {
 						fill = colorlist[i], only  = TRUE, only_components = c("intersections_matrix")))
 		queries<-append(queries, tmpqueries)
 		listcolor<-append(listcolor, colorlist[i])
-		i <- i + 1
+		i<-i+1
+	}
 }
 colmarks<-setNames(listcolor, types)
 
-type_cols <- lapply(types, function(t) { grep(t, colnames(mat), value = TRUE) })
-names(type_cols) <- types
+type_cols<-lapply(types, function(t) { grep(t, colnames(mat), value = TRUE) })
+names(type_cols)<-types
 
 ## To add a exclusive_mark column when all the sample of a the set contains the same mark in the violin plot
 
@@ -74,8 +74,8 @@ for (type in types) {
 	exclu<-rowSums(mat[, type_cols_subset, drop=FALSE]) == rowSums(mat[, sampleslist, drop=FALSE])
 	mat$exclusive_mark[exclu]<-type
 }
-mat <- mat %>% relocate(exclusive_mark, .after = Category)
-colmarks["Mix"] <- "black"
+mat<-mat %>% relocate(exclusive_mark, .after = Category)
+colmarks["Mix"]<-"black"
 
 ## Make the Plot
 
