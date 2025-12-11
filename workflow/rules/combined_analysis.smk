@@ -595,7 +595,9 @@ rule plotting_srna_sizes_stats:
         plot2 = "results/combined/plots/srna_sizes_stats_zoom_{analysis_name}_{env}.pdf"
     params:
         analysis_name = lambda wildcards: wildcards.analysis_name,
-        script=os.path.join(REPO_FOLDER,"workflow","scripts","R_sizes_stats.R")
+        script=os.path.join(REPO_FOLDER,"workflow","scripts","R_sizes_stats.R"),
+        zoommin=config['srna_min_size'],
+        zoommax=config['srna_max_size']
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "plot_srna_sizes"))
     conda: CONDA_ENV
@@ -606,7 +608,7 @@ rule plotting_srna_sizes_stats:
         qos=config["resources"]["plotting_srna_sizes_stats"]["qos"]
     shell:
         """
-        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}"
+        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{params.zoommin}" "{params.zoommax}"
         """
 
 ###

@@ -8,6 +8,8 @@ args = commandArgs(trailingOnly=TRUE)
 
 statfile<-args[1]
 analysisname<-args[2]
+zoommin<-args[3]
+zoommax<-args[4]
 
 summary_stats<-read.delim(statfile, header = TRUE)
 summary_stats$Count<-as.numeric(summary_stats$Count)
@@ -67,5 +69,5 @@ plot.sRNA.sizes(summary_stats, minsize, maxsize)
 dev.off()
 
 pdf(paste0("results/combined/plots/srna_sizes_stats_zoom_",analysisname,"_sRNA.pdf"), height=tot*2, width=12)
-plot.sRNA.sizes(summary_stats, 20, 25)
+plot.sRNA.sizes(summary_stats, zoommin, zoommax)
 dev.off()
