@@ -186,7 +186,7 @@ if (length(keepDEG) >= 2) {
 ### To make R object for later plotting gene expression
 
 norm<-cpm(y, normalized.lib.size=T)
-genextable<-data.frame(norm, stringsAsFactors = FALSE)
+genextable<-data.frame(norm, stringsAsFactors = FALSE, check.names = FALSE)
 genextable<-mutate(genextable, GID=row.names(genextable))
 
 plot.Expression <- function(gene, label) {

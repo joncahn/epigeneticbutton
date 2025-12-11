@@ -76,7 +76,7 @@ def define_final_rna_output(ref_genome):
     if len(filtered_analysis_samples2['Sample'].drop_duplicates()) >= 2:   
         deg_files.append(f"results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
-        deg_files.append(f"results/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__unique_DEGs.pdf")
+        deg_files.append(f"results/combined/plots/plot_expression__{analysis_name}__{ref_genome}__unique_DEGs.pdf")
         
         if go_analysis:
             deg_files.append(f"results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__unique_DEGs.done")
@@ -525,7 +525,7 @@ rule plot_expression_levels:
         rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards)
     output:
-        plot = "results/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__{target_name}.pdf"
+        plot = "results/combined/plots/plot_expression__{analysis_name}__{ref_genome}__{target_name}.pdf"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_plot_expression_level.R"),
         analysis_name = config['analysis_name'],
