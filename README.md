@@ -66,7 +66,7 @@ https://epicc-builder.streamlit.app/
 
 1. Prepare your sample metadata file (default to `config/all_samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
-   - `line`: Sample line (e.g., B73)
+   - `line`: Sample line (e.g. B73)
    - `tissue`: Tissue type
    - `sample_type`: Sample identifier
    - `replicate`: Replicate ID
