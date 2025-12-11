@@ -158,7 +158,7 @@ for (sample1 in genotypes) {
 	stat_table<-rbind(stat_table, nunique)
 }
 
-write.table(stat_table,paste0("results/RNA/reports/summary_DEG_stats__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(stat_table,paste0("results/RNA/DEG/summary_DEG_stats__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 #### To create heatmaps over all DEGs (by count per million and z-score)
 
@@ -186,7 +186,7 @@ if (length(keepDEG) >= 2) {
 ### To make R object for later plotting gene expression
 
 norm<-cpm(y, normalized.lib.size=T)
-genextable<-data.frame(norm, stringsAsFactors = FALSE)
+genextable<-data.frame(norm, stringsAsFactors = FALSE, check.names = FALSE)
 genextable<-mutate(genextable, GID=row.names(genextable))
 
 plot.Expression <- function(gene, label) {
