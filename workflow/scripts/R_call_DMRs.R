@@ -22,7 +22,7 @@ methylationDatasample2pool<-readBismarkPool(list_sample2)
 
 DMRsCGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CG", method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 if ( length(DMRsCGpool) > 0 ) {
-	CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=elementMetadata(DMRsCGpool)[,3],secondsample=elementMetadata(DMRsCGpool)[,6], Pvalue=elementMetadata(DMRsCGpool)[,10]) %>%
+	CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=mcols(DMRsCGpool)$proportion1,secondsample=mcols(DMRsCGpool)$proportion2, Pvalue=mcols(DMRsCGpool)$pValue) %>%
 			mutate(Delta=firstsample-secondsample)
 
 	write.table(CGpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
@@ -37,7 +37,7 @@ if ( length(DMRsCGpool) > 0 ) {
 if (context == "all") {
 	DMRsCHHpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHH", method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 	if ( length(DMRsCHHpool) > 0 ) {
-		CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),firstsample=elementMetadata(DMRsCHHpool)[,3],secondsample=elementMetadata(DMRsCHHpool)[,6], Pvalue=elementMetadata(DMRsCHHpool)[,10]) %>%
+		CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),firstsample=mcols(DMRsCHHpool)$proportion1,secondsample=mcols(DMRsCHHpool)$proportion2, Pvalue=mcols(DMRsCHHpool)$pValue) %>%
 				mutate(Delta=firstsample-secondsample)
 		write.table(CHHpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	
@@ -50,7 +50,7 @@ if (context == "all") {
 	
 	DMRsCHGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHG", method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 	if ( length(DMRsCHGpool) > 0 ) {
-		CHGpool<-data.frame(Chr=seqnames(DMRsCHGpool),Start=start(DMRsCHGpool)-1,End=end(DMRsCHGpool),firstsample=elementMetadata(DMRsCHGpool)[,3],secondsample=elementMetadata(DMRsCHGpool)[,6], Pvalue=elementMetadata(DMRsCHGpool)[,10]) %>%
+		CHGpool<-data.frame(Chr=seqnames(DMRsCHGpool),Start=start(DMRsCHGpool)-1,End=end(DMRsCHGpool),firstsample=mcols(DMRsCHGpool)$proportion1,secondsample=mcols(DMRsCHGpool)$proportion2, Pvalue=mcols(DMRsCHGpool)$pValue) %>%
 				mutate(Delta=firstsample-secondsample)
 		write.table(CHGpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHG_DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	

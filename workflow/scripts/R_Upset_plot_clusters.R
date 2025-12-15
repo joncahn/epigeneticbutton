@@ -24,7 +24,7 @@ types<-unlist(strsplit(args[4], ":"))
 output<-args[5]
 
 sampleslist<-unique(unlist(strsplit(merged$Samples, ",")))
-figsize<-length(sampleslist)
+figsize<-min(length(sampleslist),50)-10
 
 mat<-separate_rows(merged, Samples, sep = ",") %>%
 	mutate(value=1) %>%
