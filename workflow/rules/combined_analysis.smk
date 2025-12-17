@@ -396,7 +396,8 @@ def define_final_combined_output(ref_genome):
         te_plots.append(f"results/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
         te_plots.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
         te_plots.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-    else:
+
+    if len(all_analysis_samples) >1:
         plot_files.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
         plot_files.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
@@ -404,12 +405,12 @@ def define_final_combined_output(ref_genome):
         te_plots.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
         te_plots.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
     
-    plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-    plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-    te_plots.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-    te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-    te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        te_plots.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
 
     if full_analysis:
         results = plot_files
