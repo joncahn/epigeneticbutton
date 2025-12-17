@@ -11,6 +11,8 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 - Peak calling and differential expression analysis
 - Data integration and visualization
 
+Proper documentation under development: [Read the docs](https://epicc-documentation.readthedocs.io/en/latest/)
+
 ## Features
 
 - **Multiple Data Types Support**:
