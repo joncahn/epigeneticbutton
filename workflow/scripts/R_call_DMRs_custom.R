@@ -51,7 +51,7 @@ for ( meth in c("noise_filter", "bins")) {
 					group_by(Type, Method, Binsize) %>%
 					summarize(CHH_DMRs=n(), .groups = "drop")
 			} else {
-				summary_file<-tibble::tibble(Type=c("hyper", "hypo"), Method=meth, Binsize=bs, CHH_DMRs=c(0, 0))
+				summary_fileCHH<-tibble::tibble(Type=c("hyper", "hypo"), Method=c(meth,meth), Binsize=c(bs,bs), CHH_DMRs=c(0, 0))
 			}
 					
 			DMRsCHGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHG", method=meth, binSize=bs, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
@@ -64,11 +64,11 @@ for ( meth in c("noise_filter", "bins")) {
 					group_by(Type, Method, Binsize) %>%
 					summarize(CHG_DMRs=n(), .groups = "drop")
 			} else {
-				summary_file<-tibble::tibble(Type=c("hyper", "hypo"), Method=meth, Binsize=bs, CHG_DMRs=c(0, 0))
+				summary_fileCHG<-tibble::tibble(Type=c("hyper", "hypo"), Method=meth, Binsize=bs, CHG_DMRs=c(0, 0))
 			}
 					
-		summary_file<-merge(summary_file, summary_fileCHG, by=c("Type"))
-		summary_file<-merge(summary_file, summary_fileCHH, by=c("Type"))
+		summary_file<-merge(summary_file, summary_fileCHG, by=c("Type", "Method", "Binsize"))
+		summary_file<-merge(summary_file, summary_fileCHH, by=c("Type", "Method", "Binsize"))
 		}
 	}
 }
