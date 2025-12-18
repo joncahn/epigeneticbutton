@@ -20,6 +20,7 @@ chrs<-GRanges(seqnames = chromsizes$chr, ranges = IRanges(start = 1, end = chrom
 methylationDatasample1pool<-readBismarkPool(list_sample1)
 methylationDatasample2pool<-readBismarkPool(list_sample2)
 
+tot_file <- NULL
 for ( meth in c("noise_filter", "bins")) {
 	
 	for ( bs in c(100, 200, 500) ) {
@@ -70,6 +71,7 @@ for ( meth in c("noise_filter", "bins")) {
 		summary_file<-merge(summary_file, summary_fileCHG, by=c("Type", "Method", "Binsize"))
 		summary_file<-merge(summary_file, summary_fileCHH, by=c("Type", "Method", "Binsize"))
 		}
+		tot_file <- bind_rows(tot_file, summary_file)
 	}
 }
 
