@@ -41,19 +41,6 @@ for ( meth in c("noise_filter", "bins")) {
 		
 		if (context == "all") {
 		
-			DMRsCHHpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHH", method=meth, binSize=bs, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
-			if ( length(DMRsCHHpool) > 0 ) {
-				CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),firstsample=mcols(DMRsCHHpool)$proportion1,secondsample=mcols(DMRsCHHpool)$proportion2, Pvalue=mcols(DMRsCHHpool)$pValue) %>%
-				mutate(Delta=firstsample-secondsample)
-				write.table(CHHpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
-	
-				summary_fileCHH<-mutate(CHHpool, Type=ifelse(Delta>0, "hyper", "hypo"), Method=meth, Binsize=bs) %>%
-					group_by(Type, Method, Binsize) %>%
-					summarize(CHH_DMRs=n(), .groups = "drop")
-			} else {
-				summary_fileCHH<-tibble::tibble(Type=c("hyper", "hypo"), Method=c(meth,meth), Binsize=c(bs,bs), CHH_DMRs=c(0, 0))
-			}
-					
 			DMRsCHGpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHG", method=meth, binSize=bs, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
 			if ( length(DMRsCHGpool) > 0 ) {
 				CHGpool<-data.frame(Chr=seqnames(DMRsCHGpool),Start=start(DMRsCHGpool)-1,End=end(DMRsCHGpool),firstsample=mcols(DMRsCHGpool)$proportion1,secondsample=mcols(DMRsCHGpool)$proportion2, Pvalue=mcols(DMRsCHGpool)$pValue) %>%
@@ -65,6 +52,19 @@ for ( meth in c("noise_filter", "bins")) {
 					summarize(CHG_DMRs=n(), .groups = "drop")
 			} else {
 				summary_fileCHG<-tibble::tibble(Type=c("hyper", "hypo"), Method=meth, Binsize=bs, CHG_DMRs=c(0, 0))
+			}
+			
+			DMRsCHHpool<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context="CHH", method=meth, binSize=bs, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads)
+			if ( length(DMRsCHHpool) > 0 ) {
+				CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),firstsample=mcols(DMRsCHHpool)$proportion1,secondsample=mcols(DMRsCHHpool)$proportion2, Pvalue=mcols(DMRsCHHpool)$pValue) %>%
+				mutate(Delta=firstsample-secondsample)
+				write.table(CHHpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	
+				summary_fileCHH<-mutate(CHHpool, Type=ifelse(Delta>0, "hyper", "hypo"), Method=meth, Binsize=bs) %>%
+					group_by(Type, Method, Binsize) %>%
+					summarize(CHH_DMRs=n(), .groups = "drop")
+			} else {
+				summary_fileCHH<-tibble::tibble(Type=c("hyper", "hypo"), Method=c(meth,meth), Binsize=c(bs,bs), CHH_DMRs=c(0, 0))
 			}
 					
 		summary_file<-merge(summary_file, summary_fileCHG, by=c("Type", "Method", "Binsize"))
