@@ -30,7 +30,7 @@ def script_DMRs():
     script_dmrs = config['custom_script_dmrs']
     default = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R")
     custom = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs_custom.R")
-    return custom if script_drms else default
+    return custom if script_dmrs else default
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
