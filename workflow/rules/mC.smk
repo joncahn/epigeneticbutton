@@ -25,6 +25,12 @@ def define_DMR_samples(sample_name):
     
     return [ f"results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
                     for replicate in replicates ]
+                    
+def script_DMRs():
+    script_dmrs = config['custom_script_dmrs']
+    default = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R")
+    custom = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs_custom.R")
+    return custom if script_drms else default
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
@@ -375,7 +381,7 @@ rule call_DMRs_pairwise:
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
-        script = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R"),
+        script = script_DMRs(),
         context = config['mC_context'],
         sample1 = lambda wildcards: wildcards.sample1,
         sample2 = lambda wildcards: wildcards.sample2,

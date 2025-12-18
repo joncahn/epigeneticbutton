@@ -173,6 +173,9 @@ mC_mapping:
     process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
 
+# Whether to use the custom version of the script to call DMRs
+custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
+
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
