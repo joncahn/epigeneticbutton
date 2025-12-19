@@ -75,5 +75,5 @@ for ( meth in c("noise_filter", "bins")) {
 	}
 }
 
-summary_file<-mutate(summary_file, Sample=paste0(sample1,"_vs_",sample2)) %>% select(Sample, everything())
-write.table(summary_file,paste0("results/mC/DMRs/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+tot_file<-mutate(tot_file, Sample=paste0(sample1,"_vs_",sample2)) %>% select(Sample, everything())
+write.table(tot_file,paste0("results/mC/DMRs/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
