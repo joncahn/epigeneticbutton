@@ -191,6 +191,11 @@ analysis_samples.to_csv(pathtoanalysisfile, sep="\t", index=False)
 # Add a sample_name column to the analysis_sample file
 analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 
+# Logic for intermediate target
+map_only_envs = [env for env in UNIQUE_ENVS if env in ["RNA", "mC"]]
+if not config["aligned_bams"]:
+    map_only_envs += [env for env in UNIQUE_ENVS if env in ["ChIP", "TF"]]
+
 # Include all rule files
 include: "rules/environment_setup.smk"
 include: "rules/sample_download.smk"
@@ -210,7 +215,7 @@ rule all:
 # Rule to specify final target if only mapping is required
 rule map_only:
     input:
-        expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","RNA","mC"]]),
+        expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=map_only_envs),
         expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
     localrule: True
 
