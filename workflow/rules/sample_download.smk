@@ -139,7 +139,8 @@ rule process_fastq_pe:
         data_type = lambda wildcards: wildcards.data_type,
         adapter1 = lambda wildcards: config['adapter1'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
         adapter2 = lambda wildcards: config['adapter2'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
-        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')]
+        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        trimmed_fastqs = config['trimmed_fastqs']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))
     conda: CONDA_ENV
@@ -151,10 +152,17 @@ rule process_fastq_pe:
     shell:
         """
         {{
-		#### Trimming illumina adapters with Cutadapt
-		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
-		cutadapt --version
-		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" 2>&1 | tee "{output.metrics}"
+		if [[ params.trimmed_fastqs == "True" ]; then
+            printf "\nFastq for {params.sample_name} is already trimmed\n"
+            cp {input.raw_fastq1} {output.fastq1}
+            cp {input.raw_fastq2} {output.fastq2}
+            touch {output.metrics}
+        else
+            #### Trimming illumina adapters with Cutadapt
+            printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
+            cutadapt --version
+            cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" 2>&1 | tee "{output.metrics}"
+        fi
         }} 2>&1 | tee -a "{log}"        
         """
         
@@ -168,7 +176,8 @@ rule process_fastq_se:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         adapter1 = lambda wildcards: config['adapter1'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
-        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')]
+        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        trimmed_fastqs = config['trimmed_fastqs']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "SE"))
     conda: CONDA_ENV
@@ -180,9 +189,45 @@ rule process_fastq_se:
     shell:
         """
         {{
-		#### Trimming illumina adapters with Cutadapt
-		printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
-		cutadapt --version
-		cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" 2>&1 | tee "{output.metrics}"
+        if [[ params.trimmed_fastqs == "True" ]; then
+            printf "\n{Fastq for params.sample_name} is already trimmed\n"
+            cp {input.raw_fastq} {output.fastq}
+            touch {output.metrics} ## to replace with count of total reads in a usable output for stats
+        else
+            printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
+            cutadapt --version
+            cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" 2>&1 | tee "{output.metrics}"
+        fi
         }} 2>&1 | tee -a "{log}"
+        """
+
+rule get_available_bam:
+    output: 
+        bam = temp("results/{data_type}/mapped/copied__{sample_name}.bam")
+    params:
+        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
+        bam_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
+        sample_name = lambda wildcards: wildcards.sample_name,
+        data_type = lambda wildcards: wildcards.data_type
+    log:
+        temp(return_log_sample("{data_type}","{sample_name}", "copy_bam", "either"))
+    conda: CONDA_ENV
+    threads: config["resources"]["get_available_bam"]["threads"]
+    resources:
+        mem_mb=config["resources"]["get_available_bam"]["mem_mb"],
+        tmp_mb=config["resources"]["get_available_bam"]["tmp_mb"],
+        qos=config["resources"]["get_available_bam"]["qos"]
+    shell:
+        """
+        {{
+        if ls "{params.bam_path}"/*"{params.seq_id}"*.bam 1> /dev/null 2>&1; then
+            printf "\nCopying bam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
+            samtools sort -@ {threads} -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.bam
+        elif ls "{params.bam_path}"/*"{params.seq_id}"*.sam 1> /dev/null 2>&1; then
+            printf "\nCopying and gzipping sam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
+            samtools sort -@ {threads} -b -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.sam 
+        else
+            printf "Error: No bam or sam file found for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
+        fi
+        }} >> 2>&1  | tee -a "{log}"
         """

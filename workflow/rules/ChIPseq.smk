@@ -8,12 +8,16 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
     env = get_sample_info_from_name(sname, samples, 'env')
     paired = get_sample_info_from_name(sname, samples, 'paired')
-    if paired == "PE":
-        rule_obj = getattr(rules, f"{rulename}_pe")
-    elif paired == "SE":
-        rule_obj = getattr(rules, f"{rulename}_se")
+    aligned_bams = config['aligned_bams']
+    if aligned_bams:
+        return f"results/{env}/mapped/copied__{sname}.bam"
+    else:
+        if paired == "PE":
+            rule_obj = getattr(rules, f"{rulename}_pe")
+        elif paired == "SE":
+            rule_obj = getattr(rules, f"{rulename}_se")
         
-    return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
+        return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
@@ -200,6 +204,8 @@ def define_final_chip_output(ref_genome):
     analysis = config['full_analysis']
     motifs = config['motifs']
     allreps = config['allreps']
+    trimmed_fastqs = config['trimmed_fastqs']
+    aligned_bams = config['aligned_bams']
     map_files = []
     stat_files = []
     qc_files = []
@@ -212,16 +218,18 @@ def define_final_chip_output(ref_genome):
         sname = sample_name_str(row, 'sample')
         paired = get_sample_info_from_name(sname, samples, 'paired')
         env = get_sample_info_from_name(sname, samples, 'env')
-        if paired == "PE":
-            map_files.append(f"results/{env}/logs/process_chip_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
-            qc_files.append(f"results/{env}/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"results/{env}/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+        if paired == "PE" and not aligned_bams:
             qc_files.append(f"results/{env}/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"results/{env}/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
-        else:
-            map_files.append(f"results/{env}/logs/process_chip_se_sample__{sname}.log") # mapping stats for each single-end replicate
-            qc_files.append(f"results/{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            map_files.append(f"results/{env}/logs/process_chip_pe_sample__{sname}.log") # mapping stats for each paired-end replicate
+            if not trimmed_fastqs:
+                qc_files.append(f"results/{env}/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+                qc_files.append(f"results/{env}/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+        elif paired == "SE" and not aligned_bams:
             qc_files.append(f"results/{env}/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            map_files.append(f"results/{env}/logs/process_chip_se_sample__{sname}.log") # mapping stats for each single-end replicate
+            if not trimmed_fastqs:
+                qc_files.append(f"results/{env}/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             
     filtered_rep_samples_no_input = filtered_rep_samples[ (filtered_rep_samples['sample_type'] != "Input") ].copy()
     for _, row in filtered_rep_samples_no_input.iterrows():
@@ -261,7 +269,7 @@ def define_final_chip_output(ref_genome):
         
     results = map_files + bigwig_files
     
-    if qc_option == "all":
+    if qc_option == "all" :
         results += qc_files
         
     if analysis:
@@ -391,7 +399,6 @@ rule filter_chip_pe:
         samtools fixmate -@ {threads} -m "results/{params.env}/mapped/temp1_{params.sample_name}.bam" "results/{params.env}/mapped/temp2_{params.sample_name}.bam"
         samtools sort -@ {threads} -o "results/{params.env}/mapped/temp3_{params.sample_name}.bam" "results/{params.env}/mapped/temp2_{params.sample_name}.bam"
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "results/{params.env}/mapped/temp3_{params.sample_name}.bam" "{output.bamfile}"
-        samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
         rm -f results/{params.env}/mapped/temp*"_{params.sample_name}.bam"
@@ -428,7 +435,6 @@ rule filter_chip_se:
         samtools view -@ {threads} -b -h -q 10 -F 256 -o "results/{params.env}/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
         samtools sort -@ {threads} -o "results/{params.env}/mapped/temp2_{params.sample_name}.bam" "results/{params.env}/mapped/temp1_{params.sample_name}.bam"
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "results/{params.env}/mapped/temp2_{params.sample_name}.bam" "{output.bamfile}"
-        samtools index -@ {threads} "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
         rm -f results/{params.env}/mapped/temp*"_{params.sample_name}.bam"
@@ -450,7 +456,8 @@ rule make_chip_stats_pe:
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
-        ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
+        ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
+        trimmed_fastq = config['trimmed_fastqs']
     threads: config["resources"]["make_chip_stats_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["make_chip_stats_pe"]["mem_mb"],
@@ -459,7 +466,11 @@ rule make_chip_stats_pe:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        if [[ {params.trimmed_fastq} == "False" ]; then
+            tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        else
+            tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
+        fi
         filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
         multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
@@ -485,7 +496,8 @@ rule make_chip_stats_se:
         tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
-        ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome')
+        ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
+        trimmed_fastq = config['trimmed_fastqs']
     threads: config["resources"]["make_chip_stats_se"]["threads"]
     resources:
         mem_mb=config["resources"]["make_chip_stats_se"]["mem_mb"],
@@ -494,7 +506,11 @@ rule make_chip_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        if [[ {params.trimmed_fastq} == "False" ]; then
+            tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        else
+            tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
+        fi
         filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
         multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
         single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
@@ -509,14 +525,20 @@ rule pe_or_se_chip_dispatch:
         lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
     output:
         bam = "results/{env}/mapped/final__{sample_name}.bam",
+        bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
         touch = temp("results/{env}/chkpts/map_chip__{sample_name}.done")
     wildcard_constraints:
         env = "ChIP|TF"
-    localrule: True
+    conda: CONDA_ENV_CHIP
+    threads: config["resources"]["pe_or_se_chip_dispatch"]["threads"]
+    resources:
+        mem_mb=config["resources"]["pe_or_se_chip_dispatch"]["mem_mb"],
+        tmp_mb=config["resources"]["pe_or_se_chip_dispatch"]["tmp_mb"],
+        qos=config["resources"]["pe_or_se_chip_dispatch"]["qos"]
     shell:
         """
         mv {input} {output.bam}
-        mv {input}.bai {output.bam}.bai
+        samtools index -@ {threads} "{output.bam}"
         touch {output.touch} 
         """
     

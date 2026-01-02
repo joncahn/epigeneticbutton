@@ -49,6 +49,10 @@ te_analysis: false
 QC_option: "none" # options: ["none"|"all"] for fastqc
 GO: false # If switching to true, make sure the database is created, or the required files below are edited
 
+# Input options: By default, will perform the analysis from the raw fastqs. If intermediate files are already available, switch the corresponding format to "true".
+trimmed_fastqs: false # if fastqs are already trimmed (fastq file(s) (can be gzipped) required in the `fastq_path` folder of the metadata samplefile, 1 matching the `seq_id` if SE, 2 ending in R1 and R2 if PE)
+aligned_bams: false # if ChIP-seq alignments are already performed (a single sam or bam file matching the `seq_id` is required in the `fastq_path` folder of the metadata samplefile). Only works for ChIP-seq data (histone or TF) since other ouput from the alignment steps are necessary for the other data types (e.g. conut table for RNA-seq)
+
 # Species-dependent parameters:
 thaliana:
   star_index: "--genomeSAindexNbases 12"
@@ -297,6 +301,7 @@ resources:
   run_fastqc: *single
   process_fastq_pe: *heavy
   process_fastq_se: *heavy
+  get_available_bam: *standard
   # ChIPseq
   make_bt2_indices: *heavy
   bowtie2_map_pe: *heavy
@@ -305,6 +310,7 @@ resources:
   filter_chip_se: *heavy
   make_chip_stats_pe: *low
   make_chip_stats_se: *low
+  pe_or_se_chip_dispatch: *standard
   make_coverage_chip: *heavy 
   make_bigwig_chip: *heavy
   make_fingerprint_plot: *heavy

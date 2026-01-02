@@ -69,6 +69,7 @@ def define_final_srna_output(ref_genome):
     analysis_name = config['analysis_name']
     srna_min = config['srna_min_size']
     srna_max = config['srna_max_size']
+    trimmed_fastqs = config['trimmed_fastqs']
     map_files = []
     bigwig_files = []
     qc_files = []
@@ -79,9 +80,10 @@ def define_final_srna_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
-        map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
-        qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
         qc_files.append(f"results/sRNA/reports/clean__{sname}__R0_fastqc.html") # fastqc of trimmed and potentially filtered (Read0) fastq files
+        map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
+        if not trimmed_fastqs:
+            qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
         
         for size in range(srna_min, srna_max + 1):
             bigwig_files.append(f"results/sRNA/tracks/{sname}__{size}nt__plus.bw")

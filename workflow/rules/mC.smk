@@ -35,6 +35,7 @@ def script_DMRs():
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
+    trimmed_fastqs = config['trimmed_fastqs']
     map_files = []
     dmr_files = []
     bigwig_files = []
@@ -47,14 +48,16 @@ def define_final_mC_output(ref_genome):
         bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
         if paired == "PE":
             map_files.append(f"results/mC/reports/final_report_pe__{sname}.html")
-            qc_files.append(f"results/mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"results/mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"results/mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"results/mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+            if not trimmed_fastqs:
+                qc_files.append(f"results/mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+                qc_files.append(f"results/mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
         else:
             map_files.append(f"results/mC/reports/final_report_se__{sname}.html")
-            qc_files.append(f"results/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
             qc_files.append(f"results/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            if not trimmed_fastqs:
+                qc_files.append(f"results/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
     
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -215,7 +218,8 @@ rule make_mc_stats_pe:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
+        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
+        trimmed_fastq = config['trimmed_fastqs']
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "PE"))
     conda: CONDA_ENV_MC
@@ -227,7 +231,11 @@ rule make_mc_stats_pe:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        if [[ {params.trimmed_fastq} == "False" ]; then
+            tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        else
+            tot=$(grep "Sequence pairs analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
+        fi
         filt=$(grep "Sequence pairs analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
         multi=$(grep "Sequence pairs did not map uniquely" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Number of paired-end alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -260,7 +268,8 @@ rule make_mc_stats_se:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}"
+        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
+        trimmed_fastq = config['trimmed_fastqs']
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "SE"))
     conda: CONDA_ENV_MC
@@ -272,7 +281,11 @@ rule make_mc_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        if [[ {params.trimmed_fastq} == "False" ]; then
+            tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        else
+            tot=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
+        fi
         filt=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
         multi=$(grep "Sequences did not map uniquely" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Number of alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')

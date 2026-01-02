@@ -346,12 +346,24 @@ def define_individual_browser_plots(wildcards):
         files.append(f"results/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
     return files
 
+def define_final_stats_output():
+    aligned_bams = config['aligned_bams']
+    stat_files = []    
+    if not aligned_bams:
+        stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
+    
+    stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA","mC"]])
+    stat_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
+    stat_files += expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
+    
+    return stat_files
+
 def define_final_combined_output(ref_genome):
     qc_option = config["QC_option"]
     full_analysis = config['full_analysis']
     te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
-    mc_sort = config['heatmap_sort_mc_after_others']
+    mc_sort = config['heatmap_sort_mc_after_others']    
     plot_files = []
     te_plots = []
     
@@ -361,7 +373,7 @@ def define_final_combined_output(ref_genome):
     mc_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     srna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    
+        
     if len(chip_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
     
@@ -419,10 +431,11 @@ def define_final_combined_output(ref_genome):
         te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
         te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
 
+    results = []
+    
     if full_analysis:
-        results = plot_files
-    else:
-        results = []
+        results += plot_files
+        
     if te_analysis:
         results += te_plots   
     
@@ -1327,9 +1340,7 @@ rule merge_region_browser_plots:
 # final rule
 rule all_combined:
     input:
-        expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","RNA","mC"]]),
-        expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]]),
-        expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]]),
+        stats = define_final_stats_output,
         final = lambda wildcards: define_final_combined_output(wildcards.ref_genome)
     output:
         touch = "results/combined/chkpts/combined_analysis__{analysis_name}__{ref_genome}.done"
