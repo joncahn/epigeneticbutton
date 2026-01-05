@@ -1340,7 +1340,7 @@ rule merge_region_browser_plots:
 # final rule
 rule all_combined:
     input:
-        stats = define_final_stats_output,
+        stats = define_final_stats_output(),
         final = lambda wildcards: define_final_combined_output(wildcards.ref_genome)
     output:
         touch = "results/combined/chkpts/combined_analysis__{analysis_name}__{ref_genome}.done"
