@@ -152,7 +152,7 @@ rule process_fastq_pe:
     shell:
         """
         {{
-		if [[ params.trimmed_fastqs == "True" ]; then
+		if [[ params.trimmed_fastqs == "True" ]]; then
             printf "\nFastq for {params.sample_name} is already trimmed\n"
             cp {input.raw_fastq1} {output.fastq1}
             cp {input.raw_fastq2} {output.fastq2}
@@ -189,7 +189,7 @@ rule process_fastq_se:
     shell:
         """
         {{
-        if [[ params.trimmed_fastqs == "True" ]; then
+        if [[ params.trimmed_fastqs == "True" ]]; then
             printf "\n{Fastq for params.sample_name} is already trimmed\n"
             cp {input.raw_fastq} {output.fastq}
             touch {output.metrics} ## to replace with count of total reads in a usable output for stats
