@@ -192,7 +192,6 @@ rule process_fastq_se:
         if [[ params.trimmed_fastqs == "True" ]]; then
             printf "\n{Fastq for params.sample_name} is already trimmed\n"
             cp {input.raw_fastq} {output.fastq}
-            touch {output.metrics} ## to replace with count of total reads in a usable output for stats
         else
             printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
             cutadapt --version
