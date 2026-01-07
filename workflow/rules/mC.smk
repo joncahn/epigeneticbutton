@@ -377,9 +377,26 @@ rule make_mc_bigwig_files:
             done
             rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
         elif [[ "{params.context}" == "CG-only" ]]; then
-            printf "Script for CG-only not ready yet\n" ## To update for CG-only!
+            zcat {input.cx_report} | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "results/mC/tracks/"{params.sample_name}"__CG.bedGraph"
+            for strand in plus minus; do
+                case "${{strand}}" in 
+                    plus)	sign="+";;
+                    minus)	sign="-";;
+                esac
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "results/mC/tracks/"{params.sample_name}"__CG__"${{strand}}".bedGraph"
+            done
+            printf "\nMaking bigwig files of CG context for {params.sample_name}\n"
+            LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__CG.bedGraph > results/mC/tracks/sorted__{params.sample_name}__CG.bedGraph
+            bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__CG.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG.bw
+            for strand in plus minus
+            do
+                printf "\nMaking ${{strand}} strand bigwig files of CG context for {params.sample_name}\n"
+                LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph
+                bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
+            done
             touch {output.bigwigchg} # they are required for downstream rules
             touch {output.bigwigchh} # they are required for downstream rules
+            rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
         else
             printf "Unknown sequence context selection! Check the config file and set 'mC_context' to either 'all' or 'CG-only'\n"
             exit 1

@@ -206,18 +206,21 @@ heatmaps_plot_params:
 heatmaps:
   regions:
     base: "scale-regions -q --missingDataAsZero --skipZeros"
+    base_mc: "scale-regions -q"
     bs: 50
     before: 2000
     middle: "-m 5000"
     after: 2000
   tss:
     base: "reference-point --referencePoint 'TSS' -q --missingDataAsZero --skipZeros"
+    base_mc: "reference-point --referencePoint 'TSS' -q"
     bs: 50
     before: 2000
     middle: ""
     after: 6000
   tes:
     base: "reference-point --referencePoint 'TES' -q --missingDataAsZero --skipZeros"
+    base_mc: "reference-point --referencePoint 'TES' -q"
     bs: 50
     before: 6000
     middle: ""

@@ -202,7 +202,7 @@ https://epicc-builder.streamlit.app/
 	- 1) run the pipeline once with the samples to run from scratch - potentially switching `full_analysis` to `false` for less output. 
 	- 2) add the samples you already have intermediate files for in the samplefile and change the corresponding parameters in the config file. 
 	- 3) run the pipeline normally again.
-	These steps can be repeated if you have raw data, trimmed fastqs and bam files, in the fastq files then bam file order.
+	These steps can be repeated if you have raw data, trimmed fastqs and bam files, first creating all the fastq files and then the bam files.
 
 ###  Intermediate Target Rules
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.

@@ -785,6 +785,7 @@ rule making_stranded_matrix_on_targetfile:
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
         params = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base'),
+        params_mc = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base_mc'),
         bs = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'bs'),
         before = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'before'),
         after = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'after'),
@@ -814,10 +815,15 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
+        if [[ "{params.env}" == "mC" ]];
+            base={params.params_mc}
+        else
+            base={params.params}
+        fi
         echo "{params.labels}" | xargs -n1 > "results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         echo "{params.marks}" | xargs -n1 > "results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
-        computeMatrix {params.params} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
+        computeMatrix ${{base}} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         }} 2>&1 | tee -a "{log}"
         """
                 
