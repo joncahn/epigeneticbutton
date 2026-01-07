@@ -268,7 +268,8 @@ rule shortstack_map:
     output:
         count_file = "results/sRNA/mapped/{sample_name}/Results.txt",
         bam_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
-        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
+        bai_file = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi",
+        touch_file = "results/sRNA/chkpts/map_sRNA__{sample_name}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],

@@ -529,11 +529,11 @@ rule make_chip_stats_se:
 
 rule pe_or_se_chip_dispatch:
     input:
-        lambda wildcards: assign_bam_file(wildcards)
+        assign_bam_file
     output:
         bam = "results/{env}/mapped/final__{sample_name}.bam",
         bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
-        touch = temp("results/{env}/chkpts/map_chip__{sample_name}.done")
+        touch = temp("results/{env}/chkpts/map_{env}__{sample_name}.done")
     wildcard_constraints:
         env = "ChIP|TF"
     conda: CONDA_ENV_CHIP

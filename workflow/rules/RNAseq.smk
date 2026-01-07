@@ -345,7 +345,7 @@ rule pe_or_se_rna_dispatch:
     output:
         bam_file = "results/RNA/mapped/final__{sample_name}.bam",
         count_file = "results/RNA/DEG/counts__{sample_name}.tab",
-        touch = "results/RNA/chkpts/map_rna__{sample_name}.done"
+        touch = "results/RNA/chkpts/map_RNA__{sample_name}.done"
     localrule: True
     shell:
         """

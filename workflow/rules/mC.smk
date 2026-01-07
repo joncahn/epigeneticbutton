@@ -195,7 +195,7 @@ rule pe_or_se_mc_dispatch:
         lambda wildcards: assign_mapping_paired(wildcards, "bismark_map", "cx_report")
     output:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        touch = "results/mC/chkpts/map__{sample_name}.done"
+        touch = "results/mC/chkpts/map_mC__{sample_name}.done"
     localrule: True
     shell:
         """
