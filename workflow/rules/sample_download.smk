@@ -11,8 +11,8 @@ rule get_fastq_pe:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         trimmed_fastqs = config['trimmed_fastqs'],
-        exist_fastq1 = lambda wilcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
-        exist_fastq2 = lambda wilcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz"
+        exist_fastq1 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
+        exist_fastq2 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz"
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
     conda: CONDA_ENV
@@ -78,8 +78,8 @@ rule get_fastq_se:
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
-        exist_fastq0 = lambda wilcards: f"results/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz",
-        trimmed_fastqs = config['trimmed_fastqs']
+        trimmed_fastqs = config['trimmed_fastqs'],
+        exist_fastq0 = lambda wildcards: f"results/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz"
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
     conda: CONDA_ENV
