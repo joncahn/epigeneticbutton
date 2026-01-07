@@ -9,7 +9,10 @@ rule get_fastq_pe:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: wildcards.data_type
+        data_type = lambda wildcards: wildcards.data_type,
+        trimmed_fastqs = config['trimmed_fastqs'],
+        exist_fastq1 = lambda wilcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
+        exist_fastq2 = lambda wilcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz"
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
     conda: CONDA_ENV
@@ -22,7 +25,11 @@ rule get_fastq_pe:
     shell:
         """
         {{
-        if [[ "{params.fastq_path}" == "SRA" ]]; then
+        if [[ "{params.trimmed_fastq}" == "True" && -e "{params.exist_fastq1}" && -e "{params.exist_fastq2}" ]]; then
+            printf "Fastqs already exist for PE {params.sample_name}\n"
+            cp {params.exist_fastq1} {output.fastq1}
+            cp {params.exist_fastq2} {output.fastq2}
+        elif [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for PE {params.sample_name} ({params.seq_id})\n"
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
             fastq_files_r1=()
@@ -70,7 +77,9 @@ rule get_fastq_se:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: wildcards.data_type
+        data_type = lambda wildcards: wildcards.data_type,
+        exist_fastq0 = lambda wilcards: f"results/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz",
+        trimmed_fastqs = config['trimmed_fastqs']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
     conda: CONDA_ENV
@@ -83,7 +92,10 @@ rule get_fastq_se:
     shell:
         """
         {{
-        if [[ "{params.fastq_path}" == "SRA" ]]; then
+        if [[ "{params.trimmed_fastq}" == "True" && -e "{params.exist_fastq0}" ]]; then
+            printf "Fastq already existing for SE {params.sample_name}\n"
+            cp {params.exist_fastq0} {output.fastq0}
+        elif [[ "{params.fastq_path}" == "SRA" ]]; then
             printf "Using fasterq-dump for SE {params.sample_name} ({params.seq_id})\n"
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
             fastq_files=()
@@ -154,7 +166,7 @@ rule process_fastq_pe:
     shell:
         """
         {{
-		if [[ params.trimmed_fastqs == "True" ]]; then
+		if [[ "{params.trimmed_fastqs}" == "True" ]]; then
             printf "\nFastq for {params.sample_name} is already trimmed\n"
             cp {input.raw_fastq1} {output.fastq1}
             cp {input.raw_fastq2} {output.fastq2}
@@ -191,7 +203,7 @@ rule process_fastq_se:
     shell:
         """
         {{
-        if [[ params.trimmed_fastqs == "True" ]]; then
+        if [[ "{params.trimmed_fastqs}" == "True" ]]; then
             printf "\n{Fastq for params.sample_name} is already trimmed\n"
             cp {input.raw_fastq} {output.fastq}
         else
@@ -209,7 +221,9 @@ rule get_available_bam:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         bam_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
-        data_type = lambda wildcards: wildcards.data_type
+        data_type = lambda wildcards: wildcards.data_type,
+        aligned_bams = config['aligned_bams'],
+        exist_bam = lambda wildcards: f"results/{wildcards.data_type}/mapped/final__{wildcards.sample_name}.bam"
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "copy_bam", "either"))
     conda: CONDA_ENV
@@ -221,9 +235,9 @@ rule get_available_bam:
     shell:
         """
         {{
-        if ls results/{params.data_type}/mapped/final__{params.sample_name}.bam 1> /dev/null 2>&1; then
+        if [[ "{params.aligned_bams}" == "True" && -e "{params.exist_bam}" ]]; then
             printf "\nFinal bam file already exists for {params.sample_name}\n"
-            cp results/{params.data_type}/mapped/final__{params.sample_name}.bam {output.bam}
+            cp {params.exist_bam} {output.bam}
         elif ls "{params.bam_path}"/*"{params.seq_id}"*.bam 1> /dev/null 2>&1; then
             printf "\nCopying bam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
             samtools sort -@ {threads} -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.bam
