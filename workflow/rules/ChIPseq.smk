@@ -16,18 +16,17 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
         
     return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
 
-def assign_bam_file(wildcards, string):
+def assign_bam_file(wildcards):
     sname = wildcards.sample_name
     env = get_sample_info_from_name(sname, samples, 'env')
     aligned_bams = config['aligned_bams']
-    old_bam = f"results/{env}/mapped/final__{sname}.bam"
     new_bam = assign_mapping_paired(wildcards, "filter_chip", "bamfile")
-    if os.path.exists(old_bam):
-        return "exists" if string == "params" else []
+    if os.path.exists(new_bam):
+        return []
     elif aligned_bams:
-        return "copied" if string == "params" else f"results/{env}/mapped/copied__{sname}.bam"
+        return f"results/{env}/mapped/copied__{sname}.bam"
     else:
-        return "new" if string == "params" else new_bam
+        return new_bam
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
@@ -532,13 +531,11 @@ rule make_chip_stats_se:
 
 rule pe_or_se_chip_dispatch:
     input:
-        lambda wildcards: assign_bam_file(wildcards, "input")
+        assign_bam_file
     output:
         bam = "results/{env}/mapped/final__{sample_name}.bam",
         bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
         touch = temp("results/{env}/chkpts/map_chip__{sample_name}.done")
-    params:
-        status = lambda wildcards: assign_bam_file(wildcards, "params")
     wildcard_constraints:
         env = "ChIP|TF"
     conda: CONDA_ENV_CHIP
@@ -549,13 +546,9 @@ rule pe_or_se_chip_dispatch:
         qos=config["resources"]["pe_or_se_chip_dispatch"]["qos"]
     shell:
         """
-        if [[ {params.status} == "exists" ]]; then
-            touch {output.touch}
-        else
-            mv {input} {output.bam}
-            samtools index -@ {threads} "{output.bam}"
-            touch {output.touch}
-        fi
+        mv {input} {output.bam}
+        samtools index -@ {threads} "{output.bam}"
+        touch {output.touch}
         """
     
 rule make_coverage_chip:
