@@ -228,5 +228,5 @@ rule get_available_bam:
         else
             printf "Error: No bam or sam file found for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
         fi
-        }} >> 2>&1  | tee -a "{log}"
+        }} 2>&1 | tee -a "{log}"
         """
