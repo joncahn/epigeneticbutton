@@ -28,7 +28,7 @@ plot.peak.stats<-function(stattable, name) {
   
   plot<-ggplot(table, aes(Sample,Number,fill=Peak_type)) +
     geom_bar(stat="identity", position="dodge", color="black", show.legend = T) +
-    labs(title=paste("Number of peaks in each Histone ChIPseq sample of",analysisname), 
+    labs(title=paste("Number of peaks in each",env,"sample of",analysisname), 
          x="",y="Number of peaks", fill="Peaks in:") +
     scale_fill_manual(values = brewer.pal(6,"Paired"), guide = "legend") +
     facet_grid(~Line+Tissue, scales = "free") +
