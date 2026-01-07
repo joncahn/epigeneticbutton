@@ -204,7 +204,7 @@ rule process_fastq_se:
         """
         {{
         if [[ "{params.trimmed_fastqs}" == "True" ]]; then
-            printf "\n{Fastq for params.sample_name} is already trimmed\n"
+            printf "\nFastq for {params.sample_name} is already trimmed\n"
             cp {input.raw_fastq} {output.fastq}
         else
             printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
