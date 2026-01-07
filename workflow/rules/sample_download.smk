@@ -25,7 +25,7 @@ rule get_fastq_pe:
     shell:
         """
         {{
-        if [[ "{params.trimmed_fastq}" == "True" && -e "{params.exist_fastq1}" && -e "{params.exist_fastq2}" ]]; then
+        if [[ "{params.trimmed_fastqs}" == "True" && -e "{params.exist_fastq1}" && -e "{params.exist_fastq2}" ]]; then
             printf "Fastqs already exist for PE {params.sample_name}\n"
             cp {params.exist_fastq1} {output.fastq1}
             cp {params.exist_fastq2} {output.fastq2}
@@ -92,7 +92,7 @@ rule get_fastq_se:
     shell:
         """
         {{
-        if [[ "{params.trimmed_fastq}" == "True" && -e "{params.exist_fastq0}" ]]; then
+        if [[ "{params.trimmed_fastqs}" == "True" && -e "{params.exist_fastq0}" ]]; then
             printf "Fastq already existing for SE {params.sample_name}\n"
             cp {params.exist_fastq0} {output.fastq0}
         elif [[ "{params.fastq_path}" == "SRA" ]]; then
