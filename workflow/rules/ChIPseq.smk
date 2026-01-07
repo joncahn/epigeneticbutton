@@ -26,7 +26,7 @@ def assign_bam_file(wildcards):
         return new_bam
     elif aligned_bams:
         return f"results/{env}/mapped/copied__{sname}.bam"
-    else
+    else:
         return new_bam
 
 def assign_chip_input(wildcards):
