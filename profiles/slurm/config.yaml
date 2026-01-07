@@ -4,7 +4,6 @@ jobs: 16
 use-conda: true
 conda-frontend: conda
 latency-wait: 60
-restart-times: 1
 keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5

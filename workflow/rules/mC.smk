@@ -146,6 +146,7 @@ rule bismark_map_pe:
         bismark_methylation_extractor -p --comprehensive -o results/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f results/mC/mapped/C*context_PE__{params.sample_name}*
         rm -f results/mC/mapped/PE__{params.sample_name}*bismark.cov*
+        rm -f results/mC/mapped/PE__{params.sample_name}*bedGraph*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -185,6 +186,7 @@ rule bismark_map_se:
         bismark_methylation_extractor -s --comprehensive -o results/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f results/mC/mapped/C*context_SE__{params.sample_name}*
         rm -f results/mC/mapped/SE__{params.sample_name}*bismark.cov*
+        rm -f results/mC/mapped/SE__{params.sample_name}*bedGraph*
         }} 2>&1 | tee -a "{log}"
         """
 

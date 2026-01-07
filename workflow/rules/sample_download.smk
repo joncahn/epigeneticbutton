@@ -18,6 +18,7 @@ rule get_fastq_pe:
         mem_mb=config["resources"]["get_fastq_pe"]["mem_mb"],
         tmp_mb=config["resources"]["get_fastq_pe"]["tmp_mb"],
         qos=config["resources"]["get_fastq_pe"]["qos"]
+    retries: 3
     shell:
         """
         {{
@@ -78,6 +79,7 @@ rule get_fastq_se:
         mem_mb=config["resources"]["get_fastq_se"]["mem_mb"],
         tmp_mb=config["resources"]["get_fastq_se"]["tmp_mb"],
         qos=config["resources"]["get_fastq_se"]["qos"]
+    retries: 3
     shell:
         """
         {{
