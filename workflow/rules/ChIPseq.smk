@@ -549,9 +549,7 @@ rule pe_or_se_chip_dispatch:
         qos=config["resources"]["pe_or_se_chip_dispatch"]["qos"]
     shell:
         """
-        if [[ {params.status} == "exists" ]]; then
-            touch {output.bam}
-            touch {output.bai}
+        if [[ {params.status} != "exists" ]]; then
             touch {output.touch}
         else
             mv {input} {output.bam}
