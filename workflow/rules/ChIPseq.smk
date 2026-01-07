@@ -9,15 +9,25 @@ def assign_mapping_paired(wildcards, rulename, outputfile):
     env = get_sample_info_from_name(sname, samples, 'env')
     paired = get_sample_info_from_name(sname, samples, 'paired')
     aligned_bams = config['aligned_bams']
-    if aligned_bams:
-        return f"results/{env}/mapped/copied__{sname}.bam"
-    else:
-        if paired == "PE":
-            rule_obj = getattr(rules, f"{rulename}_pe")
-        elif paired == "SE":
-            rule_obj = getattr(rules, f"{rulename}_se")
+    if paired == "PE":
+        rule_obj = getattr(rules, f"{rulename}_pe")
+    elif paired == "SE":
+        rule_obj = getattr(rules, f"{rulename}_se")
         
-        return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
+    return getattr(rule_obj.output, outputfile).format(sample_name=sname, env=env)
+
+def assign_bam_file(wildcards):
+    sname = wildcards.sample_name
+    env = get_sample_info_from_name(sname, samples, 'env')
+    paired = get_sample_info_from_name(sname, samples, 'paired')
+    aligned_bams = config['aligned_bams']
+    new_bam = assign_mapping_paired(wildcards, "filter_chip", "bamfile")
+    if os.path.exists(new_bam):
+        return new_bam
+    elif aligned_bams:
+        return f"results/{env}/mapped/copied__{sname}.bam"
+    else
+        return new_bam
 
 def assign_chip_input(wildcards):
     inputname = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__Input__{wildcards.replicate}__{wildcards.ref_genome}"
@@ -522,7 +532,7 @@ rule make_chip_stats_se:
 
 rule pe_or_se_chip_dispatch:
     input:
-        lambda wildcards: assign_mapping_paired(wildcards, "filter_chip", "bamfile")
+        assign_bam_file
     output:
         bam = "results/{env}/mapped/final__{sample_name}.bam",
         bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
