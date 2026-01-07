@@ -21,9 +21,7 @@ def assign_bam_file(wildcards):
     env = get_sample_info_from_name(sname, samples, 'env')
     aligned_bams = config['aligned_bams']
     new_bam = assign_mapping_paired(wildcards, "filter_chip", "bamfile")
-    if os.path.exists(new_bam):
-        return []
-    elif aligned_bams:
+    if aligned_bams:
         return f"results/{env}/mapped/copied__{sname}.bam"
     else:
         return new_bam
@@ -531,7 +529,7 @@ rule make_chip_stats_se:
 
 rule pe_or_se_chip_dispatch:
     input:
-        assign_bam_file
+        lambda wildcards: assign_bam_file(wildcards)
     output:
         bam = "results/{env}/mapped/final__{sample_name}.bam",
         bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
