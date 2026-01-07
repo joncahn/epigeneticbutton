@@ -21,7 +21,10 @@ def assign_bam_file(wildcards):
     env = get_sample_info_from_name(sname, samples, 'env')
     aligned_bams = config['aligned_bams']
     new_bam = assign_mapping_paired(wildcards, "filter_chip", "bamfile")
-    if aligned_bams:
+    old_bam = f"results/{env}/mapped/final__{sname}.bam"
+    if os.path.exists(old_bam):
+        return []
+    elif aligned_bams:
         return f"results/{env}/mapped/copied__{sname}.bam"
     else:
         return new_bam
