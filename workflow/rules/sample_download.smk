@@ -223,7 +223,7 @@ rule get_available_bam:
         {{
         if ls results/{params.data_type}/mapped/final__{params.sample_name}.bam 1> /dev/null 2>&1; then
             printf "\nFinal bam file already exist for {params.sample_name}\n"
-            touch {output.bam}
+            cp results/{params.data_type}/mapped/final__{params.sample_name}.bam {output.bam}
         elif ls "{params.bam_path}"/*"{params.seq_id}"*.bam 1> /dev/null 2>&1; then
             printf "\nCopying bam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
             samtools sort -@ {threads} -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.bam

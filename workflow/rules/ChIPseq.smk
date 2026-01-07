@@ -21,10 +21,7 @@ def assign_bam_file(wildcards):
     env = get_sample_info_from_name(sname, samples, 'env')
     aligned_bams = config['aligned_bams']
     new_bam = assign_mapping_paired(wildcards, "filter_chip", "bamfile")
-    old_bam = f"results/{env}/mapped/final__{sname}.bam"
-    if os.path.exists(old_bam):
-        return []
-    elif aligned_bams:
+    if aligned_bams:
         return f"results/{env}/mapped/copied__{sname}.bam"
     else:
         return new_bam
@@ -536,7 +533,7 @@ rule pe_or_se_chip_dispatch:
     output:
         bam = "results/{env}/mapped/final__{sample_name}.bam",
         bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
-        touch = temp("results/{env}/chkpts/map_{env}__{sample_name}.done")
+        touch = "results/{env}/chkpts/map_{env}__{sample_name}.done"
     wildcard_constraints:
         env = "ChIP|TF"
     conda: CONDA_ENV_CHIP
@@ -547,7 +544,7 @@ rule pe_or_se_chip_dispatch:
         qos=config["resources"]["pe_or_se_chip_dispatch"]["qos"]
     shell:
         """
-        mv {input} {output.bam}
+        cp {input} {output.bam}
         samtools index -@ {threads} "{output.bam}"
         touch {output.touch}
         """

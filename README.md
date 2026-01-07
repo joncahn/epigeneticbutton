@@ -198,7 +198,11 @@ https://epicc-builder.streamlit.app/
 ### Intermediate input formats
 - `trimmed_fastqs`: When `false` (default), the analysis runs from raw, untrimmed fastq files and performs adapter trimming. If you already have trimmed fastqs, you can switch this config entry to `true` and no additional trimming will be performed (still compatible with nextflex_v3 deduplication and structural RNAs filtering for small RNAs).
 - `aligned_bams`: When `true` you can directly provide alignment files for ChIP-seq data (either histone modifications or TF). A single SAM or BAM file must be present in the `fastq_path` folder matching the `seq_id` value in the metadat samplefile (same logic than when providing raw fastq file locally). No mapping stats plot will be available when providing bam files this way. Default is `false`.
-- Note: These settings are applied to *all* samples in the analysis. If you have some samples to analyze from scratch and other already in an intermediate file, run the pipeline once with the new data - potentially switching `full_analysis` to `false` for less output - and run it again after switching the available format to `true`.
+- Note: These settings are applied to *all* samples in the analysis. If you have some samples to analyze from scratch and other already in an intermediate file: 
+	- 1) run the pipeline once with the samples to run from scratch - potentially switching `full_analysis` to `false` for less output. 
+	- 2) add the samples you already have intermediate files for in the samplefile and change the corresponding parameters in the config file. 
+	- 3) run the pipeline normally again.
+	These steps can be repeated if you have raw data, trimmed fastqs and bam files, in the fastq files then bam file order.
 
 ###  Intermediate Target Rules
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
