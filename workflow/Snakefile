@@ -192,7 +192,7 @@ analysis_samples.to_csv(pathtoanalysisfile, sep="\t", index=False)
 analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
 
 # Logic for intermediate target
-def all_map_only_input():
+def all_map_only_input(wildcards):
     map_files = []
     chkpt_files = []
     
