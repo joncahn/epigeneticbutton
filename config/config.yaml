@@ -127,7 +127,7 @@ chip_mapping:
 # For bigwigs
 chip_tracks:
   binsize: 1
-  params: "--scaleFactorsMethod 'None' --normalizeUsing CPM --extendReads 300"
+  params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"
 
 # For peaks
 chip_callpeaks:
@@ -194,37 +194,37 @@ stranded_heatmaps: true # chose whether the heatmap should be done with stranded
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
 heatmap_sort_mc_after_others: true # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
 profiles_scale: "mean" # options: [ 'mean' | median' ] 
-profiles_plot_params: "--plotType 'lines'"
+profiles_plot_params: "--plotType lines"
 heatmaps_plot_params:
-  all: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-  most: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-  ChIP: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-  TF: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-  RNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-  sRNA: "--colorMap 'seismic' --interpolationMethod 'bilinear'"
-  mC: "--colorMap 'Oranges' --missingDataColor 'grey' --interpolationMethod 'nearest'"
+  all: "--colorMap seismic --interpolationMethod bilinear"
+  most: "--colorMap seismic --interpolationMethod bilinear"
+  ChIP: "--colorMap seismic --interpolationMethod bilinear"
+  TF: "--colorMap seismic --interpolationMethod bilinear"
+  RNA: "--colorMap seismic --interpolationMethod bilinear"
+  sRNA: "--colorMap seismic --interpolationMethod bilinear"
+  mC: "--colorMap Oranges --missingDataColor grey --interpolationMethod nearest"
 heatmaps:
   regions:
     base: "scale-regions --missingDataAsZero --skipZeros"
     bs: 50
-    base_mc: "scale-regions --skipZeros"
-    bs_mc: 200
+    base_mc: "scale-regions"
+    bs_mc: 50
     before: 2000
     middle: "-m 5000"
     after: 2000
   tss:
-    base: "reference-point --referencePoint 'TSS' --missingDataAsZero --skipZeros"
+    base: "reference-point --referencePoint TSS --missingDataAsZero --skipZeros"
     bs: 50
-    base_mc: "reference-point --referencePoint 'TSS'"
-    bs_mc: 200
+    base_mc: "reference-point --referencePoint TSS"
+    bs_mc: 50
     before: 2000
     middle: ""
     after: 6000
   tes:
-    base: "reference-point --referencePoint 'TES' --missingDataAsZero --skipZeros"
+    base: "reference-point --referencePoint TES --missingDataAsZero --skipZeros"
     bs: 50
-    base_mc: "reference-point --referencePoint 'TES'"
-    bs_mc: 200
+    base_mc: "reference-point --referencePoint TES"
+    bs_mc: 50
     before: 6000
     middle: ""
     after: 2000
