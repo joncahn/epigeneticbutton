@@ -205,25 +205,25 @@ heatmaps_plot_params:
   mC: "--colorMap 'Oranges' --missingDataColor 'grey' --interpolationMethod 'nearest'"
 heatmaps:
   regions:
-    base: "scale-regions -q --missingDataAsZero --skipZeros"
+    base: "scale-regions --missingDataAsZero --skipZeros"
     bs: 50
-    base_mc: "scale-regions -q --skipZeros"
+    base_mc: "scale-regions --skipZeros"
     bs_mc: 200
     before: 2000
-    middle: "-m 5000"
+    middle: "-m 1000"
     after: 2000
   tss:
-    base: "reference-point --referencePoint 'TSS' -q --missingDataAsZero --skipZeros"
+    base: "reference-point --referencePoint 'TSS' --missingDataAsZero --skipZeros"
     bs: 50
-    base_mc: "reference-point --referencePoint 'TSS' -q"
+    base_mc: "reference-point --referencePoint 'TSS'"
     bs_mc: 200
     before: 2000
     middle: ""
     after: 6000
   tes:
-    base: "reference-point --referencePoint 'TES' -q --missingDataAsZero --skipZeros"
+    base: "reference-point --referencePoint 'TES' --missingDataAsZero --skipZeros"
     bs: 50
-    base_mc: "reference-point --referencePoint 'TES' -q"
+    base_mc: "reference-point --referencePoint 'TES'"
     bs_mc: 200
     before: 6000
     middle: ""
