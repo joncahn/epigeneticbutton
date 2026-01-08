@@ -815,10 +815,10 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
-        if [[ "{params.env}" == "mC" ]];
-            base={params.params_mc}
+        if [[ "{params.env}" == "mC" ]]; then
+            base="{params.params_mc}"
         else
-            base={params.params}
+            base="{params.params}"
         fi
         echo "{params.labels}" | xargs -n1 > "results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         echo "{params.marks}" | xargs -n1 > "results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
