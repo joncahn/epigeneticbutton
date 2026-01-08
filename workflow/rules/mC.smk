@@ -233,7 +233,7 @@ rule make_mc_stats_pe:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        if [[ {params.trimmed_fastq} == "False" ]; then
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
             tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         else
             tot=$(grep "Sequence pairs analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -283,7 +283,7 @@ rule make_mc_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        if [[ {params.trimmed_fastq} == "False" ]; then
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
             tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         else
             tot=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')

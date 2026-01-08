@@ -285,7 +285,7 @@ rule make_rna_stats_pe:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        if [[ {params.trimmed_fastq} == "False" ]]; then
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
             tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         else
             tot=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -323,7 +323,7 @@ rule make_rna_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        if [[ {params.trimmed_fastq} == "False" ]]; then
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
             tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         else
             tot=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -411,10 +411,10 @@ rule make_rna_stranded_bigwigs:
         STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "results/RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
-        if [[ {params.multimap} == "multiple" ]]; then
+        if [[ "{params.multimap}" == "multiple" ]]; then
             bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg"
             bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str2.out.bg"
-        elif [[ {params.multimap} == "unique" ]]; then
+        elif [[ "{params.multimap}" == "unique" ]]; then
             bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
             bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str2.out.bg"
         fi        

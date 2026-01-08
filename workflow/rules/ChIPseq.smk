@@ -473,7 +473,7 @@ rule make_chip_stats_pe:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        if [[ {params.trimmed_fastq} == "False" ]]; then
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
             tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         else
             tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
@@ -513,7 +513,7 @@ rule make_chip_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        if [[ {params.trimmed_fastq} == "False" ]]; then
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
             tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
         else
             tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
