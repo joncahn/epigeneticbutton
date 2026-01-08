@@ -785,8 +785,9 @@ rule making_stranded_matrix_on_targetfile:
         matrix = lambda wildcards: wildcards.matrix_param,
         strand = lambda wildcards: wildcards.strand,
         base = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base'),
-        base_mc = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base_mc'),
         bs = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'bs'),
+        base_mc = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'base_mc'),
+        bs_mc = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'bs_mc'),
         before = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'before'),
         after = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'after'),
         middle = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'middle')
@@ -819,7 +820,7 @@ rule making_stranded_matrix_on_targetfile:
         echo "{params.marks}" | xargs -n1 > "results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         if [[ "{params.env}" == "mC" ]]; then
-            computeMatrix {params.base_mc} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
+            computeMatrix {params.base_mc} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs_mc} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         else
             computeMatrix {params.base} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
         fi
