@@ -210,7 +210,7 @@ heatmaps:
     base_mc: "scale-regions --skipZeros"
     bs_mc: 200
     before: 2000
-    middle: "-m 1000"
+    middle: "-m 5000"
     after: 2000
   tss:
     base: "reference-point --referencePoint 'TSS' --missingDataAsZero --skipZeros"
