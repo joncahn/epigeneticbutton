@@ -192,7 +192,7 @@ srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for pl
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
-heatmap_sort_mc_after_others: true # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
+heatmap_sort_mc_after_others: false # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
 profiles_scale: "mean" # options: [ 'mean' | median' ] 
 profiles_plot_params: "--plotType lines"
 heatmaps_plot_params:
@@ -208,7 +208,7 @@ heatmaps:
     base: "scale-regions --missingDataAsZero --skipZeros"
     bs: 50
     base_mc: "scale-regions"
-    bs_mc: 50
+    bs_mc: 100
     before: 2000
     middle: "-m 5000"
     after: 2000
@@ -216,7 +216,7 @@ heatmaps:
     base: "reference-point --referencePoint TSS --missingDataAsZero --skipZeros"
     bs: 50
     base_mc: "reference-point --referencePoint TSS"
-    bs_mc: 50
+    bs_mc: 100
     before: 2000
     middle: ""
     after: 6000
@@ -224,7 +224,7 @@ heatmaps:
     base: "reference-point --referencePoint TES --missingDataAsZero --skipZeros"
     bs: 50
     base_mc: "reference-point --referencePoint TES"
-    bs_mc: 50
+    bs_mc: 100
     before: 6000
     middle: ""
     after: 2000
