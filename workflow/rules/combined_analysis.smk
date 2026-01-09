@@ -331,12 +331,10 @@ def define_individual_browser_plots(wildcards):
     analysis_name = wildcards.analysis_name    
     env = wildcards.env
     target_name = wildcards.target_name
+    target_file = define_combined_target_file(wildcards)
     
-    chkpt = checkpoints.is_stranded.get(
-        bedfile=define_combined_target_file(wildcards)
-    )
-    target_file = chkpt.input.bedfile
-        
+    checkpoints.is_stranded.get(bedfile=target_file)
+    
     with open(target_file) as f:
         first_line = f.readline().strip().split("\t")
     try:
@@ -1175,7 +1173,6 @@ rule prep_chromosomes_for_browser:
     input: 
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
     output:
-        tmp_bedfile = temp("results/combined/bedfiles/tmp_{ref_genome}__all_chromosomes.bed"),
         bedfile = "results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
     log:
         temp(return_log_combined("bedfile", "{ref_genome}", "prep_chromosomes"))
@@ -1188,11 +1185,7 @@ rule prep_chromosomes_for_browser:
     shell:
         """
         {{
-        while read chr end
-        do
-            awk -v OFS="\t" -v c=${{chr}} -v e=${{end}} '{{b=e/1e6; print c,"1",e,c,b}}' >> {output.tmp_bedfile}
-        done < {input.chrom_sizes}
-        head -n 50 {output.tmp_bedfile} > {output.bedfile}
+        awk -v OFS="\t" 'NR <= 50 {{b=$2/1e6; print $1,"1",$2,$1,b}}' {input.chrom_sizes} > {output.bedfile}
         }} 2>&1 | tee -a "{log}" 
         """
         
