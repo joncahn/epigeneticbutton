@@ -289,6 +289,7 @@ rule shortstack_map:
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} --outdir results/sRNA/mapped/{params.sample_name}        
+        touch {output.touch_file}
         }} 2>&1 | tee -a "{log}"
         """
 
