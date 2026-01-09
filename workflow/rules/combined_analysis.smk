@@ -968,13 +968,13 @@ rule computing_matrix_scales:
                 zmini=$(grep "${{sample}}" {output.temp_values} | awk '{{if ($5 != "nan") print $5; else print 0}}')
                 zmaxi=$(grep "${{sample}}" {output.temp_values} | awk '{{if ($6 != "nan") print $6; else print 0}}')
                 test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-                if [[ "${{test}}" == "yes" && ${{mark}} == "mCG" ]]; then
+                if [[ "${{test}}" == "yes" && "${{sample}}" =~ mCG ]]; then
                     zmins+=("0")
                     zmaxi+=("{params.cg_scale}")
-                elif [[ "${{test}}" == "yes" && ${{mark}} == "mCHG" ]]; then
+                elif [[ "${{test}}" == "yes" && "${{sample}}" =~ mCHG ]]; then
                     zmini="0"
                     zmaxi="{params.chg_scale}"
-                elif [[ "${{test}}" == "yes" && ${{mark}} == "mCHH" ]]; then
+                elif [[ "${{test}}" == "yes" && "${{sample}}" =~ mCHH ]]; then
                     zmini="0"
                     zmaxi="{params.chh_scale}"
                 elif [[ "${{test}}" == "yes" ]]; then

@@ -202,7 +202,7 @@ heatmaps_plot_params:
   TF: "--colorMap seismic --interpolationMethod bilinear"
   RNA: "--colorMap seismic --interpolationMethod bilinear"
   sRNA: "--colorMap seismic --interpolationMethod bilinear"
-  mC: "--colorMap Oranges --missingDataColor 0.95 --interpolationMethod nearest"
+  mC: "--colorMap Oranges --missingDataColor 0.9 --interpolationMethod nearest"
 heatmaps:
   regions:
     base: "scale-regions --missingDataAsZero --skipZeros"
