@@ -26,7 +26,7 @@ def define_combined_target_file(wildcards):
     else:
         raise ValueError(   
             f"{target_name} does not match possible files. It can be 'combined_peaks', 'combined_clusters', 'all_genes', 'all_TEs'" 
-            "or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
+            "'full_chromosomes' or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
         )
     
     return file
@@ -327,13 +327,16 @@ def define_key_for_plots(wildcards, string):
         return table_name
 
 def define_individual_browser_plots(wildcards):
-    files = []
     ref_genome = wildcards.ref_genome
     analysis_name = wildcards.analysis_name    
     env = wildcards.env
-    target_file = define_combined_target_file(wildcards)
     target_name = wildcards.target_name
     
+    chkpt = checkpoints.is_stranded.get(
+        bedfile=define_combined_target_file(wildcards)
+    )
+    target_file = chkpt.input.bedfile
+        
     with open(target_file) as f:
         first_line = f.readline().strip().split("\t")
     try:
@@ -343,6 +346,7 @@ def define_individual_browser_plots(wildcards):
 
     regions = pd.read_csv(target_file, sep="\t", header=0 if header=="yes" else None)
     
+    files = []
     starter = 2 if header == "yes" else 1
     for row_number, _ in enumerate(regions.itertuples(index=False),start=starter):
         files.append(f"results/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
