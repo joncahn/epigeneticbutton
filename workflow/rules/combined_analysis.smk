@@ -1260,7 +1260,10 @@ rule prep_browser_on_region:
         
         ### To get genes in the region
         bedtools intersect -a {input.all_genes} -b {output.templocus} | awk '{{print $4}}' > {output.tempgenes}
-        if [[ -s "{output.tempgenes}" ]]; then
+        if [[ "{params.target_name}" == "full_chromosomes" ]]; then
+            printf "Do not include genes in whole chromosomes\n"
+            touch {output.genes}
+        elif [[ -s "{output.tempgenes}" ]]; then
             printf "Getting gene track\n"
             bedtools intersect -wb -a {input.gff} -b {output.templocus} | awk -v OFS="\t" '{{if ($7!="+" && $7!="-") $7="*"; print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' > {output.genes}
         else
@@ -1268,7 +1271,7 @@ rule prep_browser_on_region:
             touch {output.genes}
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ -n {input.TE_file} && -s {input.TE_file} ]]; then
+        if [[ -n {input.TE_file} && -s {input.TE_file} && "{params.target_name}" != "full_chromosomes" ]]; then
             printf "Getting TE track\n"
             bedtools intersect -a {input.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
         elif [[ -n {input.TE_file} ]]; then
