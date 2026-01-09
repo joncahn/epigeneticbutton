@@ -13,7 +13,7 @@ def define_combined_target_file(wildcards):
         return config['heatmap_target_file']
     elif target_name == browsername:
         return config['browser_target_file']
-    elif target_name.startswith("full_chromosomes"):
+    elif target_name == "full_chromosomes":
         return f"results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
@@ -1191,7 +1191,6 @@ rule prep_chromosomes_for_browser:
         head -n 50 {output.tmp_bedfile} > {output.bedfile}
         }} 2>&1 | tee -a "{log}" 
         """
-        
         
 rule prep_browser_on_region:
     input:
