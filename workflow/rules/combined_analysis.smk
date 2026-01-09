@@ -878,7 +878,10 @@ rule computing_matrix_scales:
         target_name = lambda wildcards: wildcards.target_name,
         matrix = lambda wildcards: wildcards.matrix_param,
         scales = config['heatmaps_scales'],
-        profile = config['profiles_scale']
+        profile = config['profiles_scale'],
+        cg_scale = config['heat_mcg'],
+        chg_scale = config['heat_mchg'],
+        chh_scale = config['heat_mchh']
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
@@ -915,14 +918,22 @@ rule computing_matrix_scales:
             ymaxs=()
             while read mark
             do
-                zmini=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=999999}} {{a=$5; if (a<m) m=a;}} END {{print m}}')
-                zmaxi=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=-999999}} {{a=$6; if (a>m) m=a;}} END {{print m}}')
+                zmini=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=999999}} {{a=$5; if (a != "nan" && a<m) m=a;}} END {{if (m != 999999) print m; else print 0}}')
+                zmaxi=$(grep "${{mark}}" {output.temp_values} | awk 'BEGIN {{m=-999999}} {{a=$6; if (a != "nan" && a>m) m=a;}} END {{if (m != -999999) print m; else print 0}}')
                 test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-                if [[ "${{test}}" == "yes" ]]; then
+                if [[ "${{test}}" == "yes" && ${{mark}} == "mCG" ]]; then
+                    zmini="0"
+                    zmaxi="{params.cg_scale}"
+                elif [[ "${{test}}" == "yes" && ${{mark}} == "mCHG" ]]; then
+                    zmini="0"
+                    zmaxi="{params.chg_scale}"
+                elif [[ "${{test}}" == "yes" && ${{mark}} == "mCHH" ]]; then
+                    zmini="0"
+                    zmaxi="{params.chh_scale}"
+                elif [[ "${{test}}" == "yes" ]]; then
                     zmini="0"
                     zmaxi="0.005"
                 fi
-                
                 ymini=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i<m) m=$i; print m}}' | awk 'BEGIN {{m=99999}} {{if ($1<m) m=$1}} END {{if (m<0) a=m*1.2; else a=m*0.8; print a}}')
                 ymaxi=$(grep "${{mark}}" {output.temp_profile_values} | awk '{{m=$3; for (i=3;i<=NF;i++) if ($i>m) m=$i; print m}}' | awk 'BEGIN {{m=-99999}} {{if ($1>m) m=$1}} END {{if (m<0) a=m*0.8; else a=m*1.2; print a}}')
                 test=$(awk -v a=${{ymini}} -v b=${{ymaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
@@ -954,10 +965,19 @@ rule computing_matrix_scales:
             ymaxs=()
             while read sample
             do
-                zmini=$(grep "${{sample}}" {output.temp_values} | awk '{{print $5}}')
-                zmaxi=$(grep "${{sample}}" {output.temp_values} | awk '{{print $6}}')
+                zmini=$(grep "${{sample}}" {output.temp_values} | awk '{{if ($5 != "nan") print $5; else print 0}}')
+                zmaxi=$(grep "${{sample}}" {output.temp_values} | awk '{{if ($6 != "nan") print $6; else print 0}}')
                 test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
-                if [[ "${{test}}" == "yes" ]]; then
+                if [[ "${{test}}" == "yes" && ${{mark}} == "mCG" ]]; then
+                    zmins+=("0")
+                    zmaxi+=("{params.cg_scale}")
+                elif [[ "${{test}}" == "yes" && ${{mark}} == "mCHG" ]]; then
+                    zmini="0"
+                    zmaxi="{params.chg_scale}"
+                elif [[ "${{test}}" == "yes" && ${{mark}} == "mCHH" ]]; then
+                    zmini="0"
+                    zmaxi="{params.chh_scale}"
+                elif [[ "${{test}}" == "yes" ]]; then
                     zmins+=("0")
                     zmaxs+=("0.005")
                 else

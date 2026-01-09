@@ -192,8 +192,8 @@ srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for pl
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
 heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
-heatmap_sort_mc_after_others: false # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
-profiles_scale: "mean" # options: [ 'mean' | median' ] 
+heatmap_sort_mc_after_others: true # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
+profiles_scale: "mean" # options: [ 'mean' | median' ]
 profiles_plot_params: "--plotType lines"
 heatmaps_plot_params:
   all: "--colorMap seismic --interpolationMethod bilinear"
@@ -202,7 +202,7 @@ heatmaps_plot_params:
   TF: "--colorMap seismic --interpolationMethod bilinear"
   RNA: "--colorMap seismic --interpolationMethod bilinear"
   sRNA: "--colorMap seismic --interpolationMethod bilinear"
-  mC: "--colorMap Oranges --missingDataColor grey --interpolationMethod nearest"
+  mC: "--colorMap Oranges --missingDataColor 0.95 --interpolationMethod nearest"
 heatmaps:
   regions:
     base: "scale-regions --missingDataAsZero --skipZeros"
@@ -228,6 +228,10 @@ heatmaps:
     before: 6000
     middle: ""
     after: 2000
+heat_mcg: 100
+heat_mchg: 60
+heat_mchh: 40
+
 
 # For TF motifs analysis using meme
 motifs: true # change to false for motifs on final selected peaks
