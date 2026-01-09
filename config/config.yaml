@@ -390,6 +390,7 @@ resources:
   plotting_heatmap_on_targetfile: *single
   plotting_sorted_heatmap_on_targetfile: *single
   plotting_profile_on_targetfile: *single
+  prep_chromosomes_for_browser: *low
   prep_browser_on_region: *heavy
   make_single_loci_browser_plot: *single
   merge_region_browser_plots: *low

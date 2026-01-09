@@ -13,6 +13,8 @@ def define_combined_target_file(wildcards):
         return config['heatmap_target_file']
     elif target_name == browsername:
         return config['browser_target_file']
+    elif target_name.startswith("full_chromosomes"):
+        return f"results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
     elif target_name.startswith("combined_peaks"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("combined_clusters"):
@@ -374,6 +376,9 @@ def define_final_combined_output(ref_genome):
     rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     srna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
         
+    if len(all_analysis_samples) >=1:
+        plot_files.append(f"results/combined/plots/Browser_full_chromosomes__all__{analysis_name}__{ref_genome}.pdf")
+    
     if len(chip_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
     
@@ -1162,6 +1167,32 @@ rule plotting_profile_on_targetfile:
 
 ###
 # rules to plot browser shots
+rule prep_chromosomes_for_browser:
+    input: 
+        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
+    output:
+        tmp_bedfile = temp("results/combined/bedfiles/tmp_{ref_genome}__all_chromosomes.bed"),
+        bedfile = "results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
+    log:
+        temp(return_log_combined("bedfile", "{ref_genome}", "prep_chromosomes"))
+    conda: CONDA_ENV
+    threads: config["resources"]["prep_chromosomes_for_browser"]["threads"]
+    resources:
+        mem_mb=config["resources"]["prep_chromosomes_for_browser"]["mem_mb"],
+        tmp_mb=config["resources"]["prep_chromosomes_for_browser"]["tmp_mb"],
+        qos=config["resources"]["prep_chromosomes_for_browser"]["qos"]
+    shell:
+        """
+        {{
+        while read chr end
+        do
+            awk -v OFS="\t" -v c=${{chr}} -v e=${{end}} '{{b=e/1e6; print c,"1",e,c,b}}' >> {output.tmp_bedfile}
+        done < {input.chrom_sizes}
+        head -n 50 {output.tmp_bedfile} > {output.bedfile}
+        }} 2>&1 | tee -a "{log}" 
+        """
+        
+        
 rule prep_browser_on_region:
     input:
         bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
