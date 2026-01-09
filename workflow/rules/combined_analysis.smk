@@ -970,13 +970,13 @@ rule computing_matrix_scales:
                 test=$(awk -v a=${{zmini}} -v b=${{zmaxi}} 'BEGIN {{if (a==0 && b==0) c="yes"; else c="no"; print c}}')
                 if [[ "${{test}}" == "yes" && "${{sample}}" =~ mCG ]]; then
                     zmins+=("0")
-                    zmaxi+=("{params.cg_scale}")
+                    zmaxs+=("{params.cg_scale}")
                 elif [[ "${{test}}" == "yes" && "${{sample}}" =~ mCHG ]]; then
-                    zmini="0"
-                    zmaxi="{params.chg_scale}"
+                    zmins+=("0")
+                    zmaxs+=("{params.chg_scale}")
                 elif [[ "${{test}}" == "yes" && "${{sample}}" =~ mCHH ]]; then
-                    zmini="0"
-                    zmaxi="{params.chh_scale}"
+                    zmins+=("0")
+                    zmaxs+=("{params.chh_scale}")
                 elif [[ "${{test}}" == "yes" ]]; then
                     zmins+=("0")
                     zmaxs+=("0.005")
