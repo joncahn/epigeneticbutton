@@ -261,6 +261,7 @@ browser_target_file_label: "target_loci" # This name will be used for the name o
 browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
 browser_TE_file: true # Whether to use a file of TEs or not. The file should be listed in the corresponding reference genome, and be a (potentially gzipped) bed file.
 browser_scales: "sample" # options: [ 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
+chromosome_bs: 1000000 # default to 1Mb bins for full chromosome browsers 
 fixed_mc_scales: true # Whether the scales for mC should be fixed to the value below
 fixed_mcg: 100
 fixed_mchg: 80

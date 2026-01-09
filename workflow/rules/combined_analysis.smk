@@ -1174,6 +1174,8 @@ rule prep_chromosomes_for_browser:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
     output:
         bedfile = "results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
+    params:
+        chromosome_bs = config['chromosome_bs']
     log:
         temp(return_log_combined("bedfile", "{ref_genome}", "prep_chromosomes"))
     conda: CONDA_ENV
@@ -1185,7 +1187,7 @@ rule prep_chromosomes_for_browser:
     shell:
         """
         {{
-        awk -v OFS="\t" 'NR <= 50 {{b=$2/1e6; print $1,"1",$2,$1,b}}' {input.chrom_sizes} > {output.bedfile}
+        awk -v OFS="\t" -v c={params.chromosome_bs) 'NR <= 50 {{if ($2/c > 1) b=c; else b=int($2/500); print $1,"1",$2,$1,b}}' {input.chrom_sizes} > {output.bedfile}
         }} 2>&1 | tee -a "{log}" 
         """
         
