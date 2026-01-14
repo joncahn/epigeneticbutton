@@ -345,13 +345,13 @@ def define_key_for_plots(wildcards, string):
             else:
                 for rep in reps:
                     for context in ["CG","CHG","CHH"]:
-                    bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{context}.bw"
-                    label = f"{row.line}_{row.tissue}_{rep}_m{context}"
-                    grouped_bw[f"m{context}"].append(bw)
-                    grouped_labs[f"m{context}"].append(f"{label}")
-                    unique_mc.add(f"m{context}")
-                    label_to_mark[label] = f"m{context}"
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{context}.bw"
+                        label = f"{row.line}_{row.tissue}_{rep}_m{context}"
+                        grouped_bw[f"m{context}"].append(bw)
+                        grouped_labs[f"m{context}"].append(f"{label}")
+                        unique_mc.add(f"m{context}")
+                        label_to_mark[label] = f"m{context}"
+                        label_to_type[label] = f"{row.line}_{row.tissue}"
 
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 

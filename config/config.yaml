@@ -188,6 +188,8 @@ srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg 
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
 srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps and browsers. Can add as many as desired as a list, for sizes within the range above.
 
+# For all plots (heatmaps, metaplots, browsers)
+plot_allreps: false # whether to use data from all individual replicates or form merged samples when multiple replicates are present. Default to false (using merged replicates).
 # For deeptools heatmaps and profiles
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
@@ -232,7 +234,6 @@ heat_mcg: 100
 heat_mchg: 60
 heat_mchh: 40
 
-
 # For TF motifs analysis using meme
 motifs: true # change to false for motifs on final selected peaks
 motifs_allreps: false # change to true for motifs analysis on all replicates for TF ChIP-seq
@@ -252,8 +253,6 @@ rnaseq_background_file: "default" # tab-delimited file with a column of GID (mat
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
 srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. It will be used as LOCIFILE in ShortStack (from ShortStack: Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 
-# heatmaps and profiles and browser
-plot_allreps: false # whether to use data from all individual replicates or form merged samples when multiple replicates are present. Used for heatmaps, metaplots and browser. Default to false (using merged replicates).
 # heatmaps and profiles
 heatmap_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 heatmap_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
