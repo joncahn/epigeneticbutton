@@ -208,6 +208,9 @@ https://epicc-builder.streamlit.app/
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
 - `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`).
 
+###  Plotting parameters
+- `plot_allreps`: When `true`, all individual replicates are shown on heatmaps, metaplots and browsers (can be heavy). When `false` (default), one sample with all merged replicates is used for each sample.
+
 ### ChIP Mapping Parameters
 - `default`: Standard mapping parameters
 - `repeat`: Centromere-specific mapping (more sensitive)
