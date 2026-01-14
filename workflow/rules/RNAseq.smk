@@ -41,6 +41,7 @@ def define_final_rna_output(ref_genome):
     analysis = config['full_analysis']
     analysis_name = config['analysis_name']
     go_analysis = config['GO']
+    trimmed_fastqs = config['trimmed_fastqs']
     map_files = []
     bigwig_files = []
     qc_files = []
@@ -51,15 +52,17 @@ def define_final_rna_output(ref_genome):
         sname = sample_name_str(row, 'sample')        
         paired = get_sample_info_from_name(sname, samples, 'paired')
         if paired == "PE":
-            map_files.append(f"results/RNA/logs/process_rna_pe_sample__{sname}.log")
-            qc_files.append(f"results/RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-            qc_files.append(f"results/RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             qc_files.append(f"results/RNA/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"results/RNA/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
-        else:
-            map_files.append(f"results/RNA/logs/process_rna_se_sample__{sname}.log")
-            qc_files.append(f"results/RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            map_files.append(f"results/RNA/logs/process_rna_pe_sample__{sname}.log")
+            if not trimmed_fastqs:
+                qc_files.append(f"results/RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+                qc_files.append(f"results/RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+        elif paired == "SE":
             qc_files.append(f"results/RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+            map_files.append(f"results/RNA/logs/process_rna_se_sample__{sname}.log")
+            if not trimmed_fastqs:
+                qc_files.append(f"results/RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
         
         bigwig_files.append(f"results/RNA/tracks/{sname}__plus.bw")
         bigwig_files.append(f"results/RNA/tracks/{sname}__minus.bw")
@@ -272,7 +275,8 @@ rule make_rna_stats_pe:
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        trimmed_fastq = config['trimmed_fastqs']
     threads: config["resources"]["make_rna_stats_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["make_rna_stats_pe"]["mem_mb"],
@@ -281,7 +285,11 @@ rule make_rna_stats_pe:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
+            tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        else
+            tot=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
+        fi
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -305,7 +313,8 @@ rule make_rna_stats_se:
         tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        trimmed_fastq = config['trimmed_fastqs']
     threads: config["resources"]["make_rna_stats_se"]["threads"]
     resources:
         mem_mb=config["resources"]["make_rna_stats_se"]["mem_mb"],
@@ -314,7 +323,11 @@ rule make_rna_stats_se:
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
-        tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        if [[ "{params.trimmed_fastq}" == "False" ]]; then
+            tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+        else
+            tot=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
+        fi
         filt=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
         multi=$(grep "Number of reads mapped to multiple loci" "{input.metrics_map}" | awk '{{print $NF}}')
         single=$(grep "Uniquely mapped reads number" "{input.metrics_map}" | awk '{{print $NF}}')
@@ -332,7 +345,7 @@ rule pe_or_se_rna_dispatch:
     output:
         bam_file = "results/RNA/mapped/final__{sample_name}.bam",
         count_file = "results/RNA/DEG/counts__{sample_name}.tab",
-        touch = "results/RNA/chkpts/map_rna__{sample_name}.done"
+        touch = "results/RNA/chkpts/map_RNA__{sample_name}.done"
     localrule: True
     shell:
         """
@@ -398,10 +411,10 @@ rule make_rna_stranded_bigwigs:
         STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{input.bamfile}" --outWigStrand Stranded {params.param_bg} --outFileNamePrefix "results/RNA/tracks/bg_{params.sample_name}_"
         ### Converting to bigwig files
         printf "\nConverting bedGraphs to bigWigs\n"
-        if [[ {params.multimap} == "multiple" ]]; then
+        if [[ "{params.multimap}" == "multiple" ]]; then
             bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg"
             bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str2.out.bg"
-        elif [[ {params.multimap} == "unique" ]]; then
+        elif [[ "{params.multimap}" == "unique" ]]; then
             bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
             bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str2.out.bg"
         fi        

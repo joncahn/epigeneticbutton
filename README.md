@@ -3,6 +3,8 @@
 
 A Snakemake-based pipeline for analyzing and integrating various types of (epi)genomics datasets, including histone and transcription factor ChIP-seq, RNA-seq, RAMPAGE, small RNA-seq, and methylC-seq.
 
+## Complete documentation: [Read the docs](https://epicc-documentation.readthedocs.io/en/latest/)
+
 ## Overview
 
 EpigeneticButton is a comprehensive pipeline that processes and analyzes multiple types of genomics data. It provides an automated workflow for:
@@ -10,8 +12,6 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 - Read mapping and alignment
 - Peak calling and differential expression analysis
 - Data integration and visualization
-
-Proper documentation under development: [Read the docs](https://epicc-documentation.readthedocs.io/en/latest/)
 
 ## Features
 
@@ -191,13 +191,25 @@ More details can be found on the epicc-builder app or commented within the `conf
 https://epicc-builder.streamlit.app/
 
 ### Main output options
-- `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true`, will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
-- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome. The name of the TEs (4th column of the bed file) must be unique.
-- `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files.
+- `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true` (default), will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
+- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples on TEs. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome. The name of each TE (4th column of the bed file) must be unique. Default is `false`.
+- `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files. Default is `false`.
+
+### Intermediate input formats
+- `trimmed_fastqs`: When `false` (default), the analysis runs from raw, untrimmed fastq files and performs adapter trimming. If you already have trimmed fastqs, you can switch this config entry to `true` and no additional trimming will be performed (still compatible with nextflex_v3 deduplication and structural RNAs filtering for small RNAs).
+- `aligned_bams`: When `true` you can directly provide alignment files for ChIP-seq data (either histone modifications or TF). A single SAM or BAM file must be present in the `fastq_path` folder matching the `seq_id` value in the metadata samplefile (same logic than when providing raw fastq file locally). No mapping stats plot will be available when providing bam files this way. Default is `false`.
+- Note: These settings are applied to *all* samples in the analysis. If you have some samples to analyze from scratch and other already in an intermediate file: 
+	- 1) run the pipeline once with the samples to run from scratch - potentially switching `full_analysis` to `false` for less output. 
+	- 2) add the samples you already have intermediate files for in the samplefile and change the corresponding parameters in the config file. 
+	- 3) run the pipeline normally again.
+	These steps can be repeated if you have raw data, trimmed fastqs and bam files, first creating all the fastq files and then the bam files.
 
 ###  Intermediate Target Rules
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
 - `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`).
+
+###  Plotting parameters
+- `plot_allreps`: When `true`, all individual replicates are shown on heatmaps, metaplots and browsers (can be heavy). When `false` (default), one sample with all merged replicates is used for each sample.
 
 ### ChIP Mapping Parameters
 - `default`: Standard mapping parameters
@@ -208,10 +220,11 @@ https://epicc-builder.streamlit.app/
 ### DMRs parameters
 - By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
 - DMRs are called with the R package [DMRcaller](https://www.bioconductor.org/packages/release/bioc/html/DMRcaller.html) (DOI: 10.18129/B9.bioc.DMRcaller) for CG, CHG and CHH and the following (stringent) parameters:
-	- CG: `method="noise-filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
-	- CHG: `method="noise_filter", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
-	- CHH: `method="bins", binSize=100, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
-- Modify the script `scripts/R_call_DMRs.R` if other paramteres/contexts should be performed, or make a copy such as `scripts/R_call_DMRs_custom.R` and replace it in the rule `call_DMRs_pairwise` in the `mC.smk` file.
+	- CG: `method="noise-filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
+	- CHG: `method="noise_filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
+	- CHH: `method="bins", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
+	These parameters were selected based on the most optimal results obtained by the authors [Catoni et al. 2018](https://academic.oup.com/nar/article/46/19/e114/5050634).
+- A deeper analysis is available to try different parameters and methods to call the DMRs. Toggle the `use custom_script_dmrs` on the config file to use it. Feel free to edit it as well for different parameters.
 
 ##  Additional output options
 Below is a list of *cool* outputs that can be generated once whole pipeline ran once. You'll find a basic structure for how to tell snakemake to generate them, feel free to replace the --cores 1 with the HPC profile you would rather use.
