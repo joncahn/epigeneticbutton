@@ -335,8 +335,8 @@ resources:
   make_peak_stats: *low
   # mC
   make_bismark_indices: *heavy
-  bismark_map_pe: *max
-  bismark_map_se: *max
+  bismark_map_pe: *heavy
+  bismark_map_se: *heavy
   make_mc_stats_pe: *low
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
