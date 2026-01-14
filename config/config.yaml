@@ -235,7 +235,7 @@ heat_mchh: 40
 
 # For TF motifs analysis using meme
 motifs: true # change to false for motifs on final selected peaks
-allreps: false # change to true for motifs analysis on all single replicates
+motifs_allreps: false # change to true for motifs analysis on all replicates for TF ChIP-seq
 jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
 
 ## optional targets for extra output
@@ -252,6 +252,8 @@ rnaseq_background_file: "default" # tab-delimited file with a column of GID (mat
 srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
 srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. It will be used as LOCIFILE in ShortStack (from ShortStack: Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
 
+# heatmaps and profiles and browser
+plot_allreps: false # whether to use data from all individual replicates or form merged samples when multiple replicates are present. Used for heatmaps, metaplots and browser. Default to false (using merged replicates).
 # heatmaps and profiles
 heatmap_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
 heatmap_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.

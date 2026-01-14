@@ -177,6 +177,7 @@ def define_key_for_plots(wildcards, string):
     label_to_mark = {}
     label_to_type = {}
     srna_sizes = config['srna_heatmap_sizes']
+    plot_allreps = config['plot_allreps']
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     strand = getattr(wildcards, "strand", "unstranded")
@@ -191,87 +192,166 @@ def define_key_for_plots(wildcards, string):
         prefix = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}"
         reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
         if row.env == "ChIP":
-            merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
-            onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
-            bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
-            label = f"{row.line}_{row.tissue}_{row.sample_type}"
-            grouped_bw[f"chip_{row.sample_type}"].append(bw)
-            grouped_labs[f"chip_{row.sample_type}"].append(label)
-            unique_chip.add(row.sample_type)
-            label_to_mark[label] = row.sample_type
-            label_to_type[label] = f"{row.line}_{row.tissue}"
+            if not plot_allreps:
+                merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
+                onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"                
+                bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
+                label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                grouped_bw[f"chip_{row.sample_type}"].append(bw)
+                grouped_labs[f"chip_{row.sample_type}"].append(label)
+                unique_chip.add(row.sample_type)
+                label_to_mark[label] = row.sample_type
+                label_to_type[label] = f"{row.line}_{row.tissue}"
+            else:
+                for rep in reps:
+                    bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                    grouped_bw[f"chip_{row.sample_type}"].append(bw)
+                    grouped_labs[f"chip_{row.sample_type}"].append(label)
+                    unique_chip.add(row.sample_type)
+                    label_to_mark[label] = row.sample_type
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
             
         elif row.env == "TF":
-            merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
-            onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
-            bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
-            label = f"{row.line}_{row.tissue}_{row.extra_info}"
-            grouped_bw[f"tf_{row.extra_info}"].append(bw)
-            grouped_labs[f"tf_{row.extra_info}"].append(label)
-            unique_tf.add(row.extra_info)
-            label_to_mark[label] = row.extra_info
-            label_to_type[label] = f"{row.line}_{row.tissue}"
+            if not plot_allreps:
+                merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
+                onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
+                bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
+                label = f"{row.line}_{row.tissue}_{row.extra_info}"
+                grouped_bw[f"tf_{row.extra_info}"].append(bw)
+                grouped_labs[f"tf_{row.extra_info}"].append(label)
+                unique_tf.add(row.extra_info)
+                label_to_mark[label] = row.extra_info
+                label_to_type[label] = f"{row.line}_{row.tissue}"
+            else:
+                for rep in reps:
+                    bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
+                    label = f"{row.line}_{row.tissue}_{row.extra_info}_{rep}"
+                    grouped_bw[f"tf_{row.extra_info}"].append(bw)
+                    grouped_labs[f"tf_{row.extra_info}"].append(label)
+                    unique_tf.add(row.extra_info)
+                    label_to_mark[label] = row.extra_info
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
             
         elif row.env == "RNA":
             if strand == "unstranded":
-                merged = f"{prefix}__merged__{row.ref_genome}"
-                onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                bw1 = f"results/{row.env}/tracks/{merged}__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__plus.bw"
-                bw2 = f"results/{row.env}/tracks/{merged}__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__minus.bw"
-                label = f"{row.line}_{row.tissue}_{row.sample_type}"
-                grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
-                grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
-                unique_rna.add(row.data_type)
-                label_to_mark[f"{label}_plus"] = row.data_type
-                label_to_mark[f"{label}_minus"] = row.data_type
-                label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
-                label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
-            else:
-                merged = f"{prefix}__merged__{row.ref_genome}"
-                onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
-                label = f"{row.line}_{row.tissue}_{row.sample_type}"
-                grouped_bw[f"{row.data_type}"].append(bw)
-                grouped_labs[f"{row.data_type}"].append(f"{label}")
-                unique_rna.add(row.data_type)
-                label_to_mark[label] = row.data_type
-                label_to_type[label] = f"{row.line}_{row.tissue}"
-        elif row.env == "sRNA":
-            for size in srna_sizes:
-                if strand == "unstranded":
+                if not plot_allreps:
                     merged = f"{prefix}__merged__{row.ref_genome}"
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
-                    bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
-                    label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
-                    grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
-                    unique_srna.add(f"sRNA_{size}nt")
-                    label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
-                    label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
+                    bw1 = f"results/{row.env}/tracks/{merged}__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__plus.bw"
+                    bw2 = f"results/{row.env}/tracks/{merged}__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__minus.bw"
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                    grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
+                    grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
+                    unique_rna.add(row.data_type)
+                    label_to_mark[f"{label}_plus"] = row.data_type
+                    label_to_mark[f"{label}_minus"] = row.data_type
                     label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                     label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
                 else:
+                    for rep in reps:
+                        bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__plus.bw"
+                        bw2 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__minus.bw"
+                        label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                        grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
+                        grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
+                        unique_rna.add(row.data_type)
+                        label_to_mark[f"{label}_plus"] = row.data_type
+                        label_to_mark[f"{label}_minus"] = row.data_type
+                        label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                        label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+            else:
+                if not plot_allreps:
                     merged = f"{prefix}__merged__{row.ref_genome}"
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
-                    label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
-                    grouped_bw[f"sRNA_{size}nt"].append(bw)
-                    grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
-                    unique_srna.add(f"sRNA_{size}nt")
-                    label_to_mark[label] = f"sRNA_{size}nt"
+                    bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                    grouped_bw[f"{row.data_type}"].append(bw)
+                    grouped_labs[f"{row.data_type}"].append(f"{label}")
+                    unique_rna.add(row.data_type)
+                    label_to_mark[label] = row.data_type
                     label_to_type[label] = f"{row.line}_{row.tissue}"
+                else:
+                    for rep in reps:
+                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{strand}.bw"
+                        label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                        grouped_bw[f"{row.data_type}"].append(bw)
+                        grouped_labs[f"{row.data_type}"].append(f"{label}")
+                        unique_rna.add(row.data_type)
+                        label_to_mark[label] = row.data_type
+                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                        
+        elif row.env == "sRNA":
+            for size in srna_sizes:
+                if strand == "unstranded":
+                    if not plot_allreps:
+                        merged = f"{prefix}__merged__{row.ref_genome}"
+                        onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
+                        bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
+                        bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
+                        label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
+                        grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
+                        grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
+                        unique_srna.add(f"sRNA_{size}nt")
+                        label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
+                        label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
+                        label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                        label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                    else:
+                        for rep in reps:
+                            bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__plus.bw"
+                            bw2 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__minus.bw"
+                            label = f"{row.line}_{row.tissue}_sRNA_{rep}_{size}nt"
+                            grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
+                            grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
+                            unique_srna.add(f"sRNA_{size}nt")
+                            label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
+                            label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
+                            label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
+                            label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                else:
+                    if not plot_allreps:
+                        merged = f"{prefix}__merged__{row.ref_genome}"
+                        onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
+                        bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
+                        label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
+                        grouped_bw[f"sRNA_{size}nt"].append(bw)
+                        grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
+                        unique_srna.add(f"sRNA_{size}nt")
+                        label_to_mark[label] = f"sRNA_{size}nt"
+                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                    else:
+                        for rep in reps:
+                            bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__{strand}.bw"
+                            label = f"{row.line}_{row.tissue}_sRNA_{rep}_{size}nt"
+                            grouped_bw[f"sRNA_{size}nt"].append(bw)
+                            grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
+                            unique_srna.add(f"sRNA_{size}nt")
+                            label_to_mark[label] = f"sRNA_{size}nt"
+                            label_to_type[label] = f"{row.line}_{row.tissue}"
+                        
         elif row.env == "mC":
-            merged = f"{prefix}__merged__{row.ref_genome}"
-            onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-            for context in ["CG","CHG","CHH"]:
-                bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}.bw"
-                label = f"{row.line}_{row.tissue}_m{context}"
-                grouped_bw[f"m{context}"].append(bw)
-                grouped_labs[f"m{context}"].append(f"{label}")
-                unique_mc.add(f"m{context}")
-                label_to_mark[label] = f"m{context}"
-                label_to_type[label] = f"{row.line}_{row.tissue}"
+            if not plot_allreps:
+                merged = f"{prefix}__merged__{row.ref_genome}"
+                onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
+                for context in ["CG","CHG","CHH"]:
+                    bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}.bw"
+                    label = f"{row.line}_{row.tissue}_m{context}"
+                    grouped_bw[f"m{context}"].append(bw)
+                    grouped_labs[f"m{context}"].append(f"{label}")
+                    unique_mc.add(f"m{context}")
+                    label_to_mark[label] = f"m{context}"
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
+            else:
+                for rep in reps:
+                    for context in ["CG","CHG","CHH"]:
+                    bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{context}.bw"
+                    label = f"{row.line}_{row.tissue}_{rep}_m{context}"
+                    grouped_bw[f"m{context}"].append(bw)
+                    grouped_labs[f"m{context}"].append(f"{label}")
+                    unique_mc.add(f"m{context}")
+                    label_to_mark[label] = f"m{context}"
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
 
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 

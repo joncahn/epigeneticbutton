@@ -210,7 +210,7 @@ def define_final_chip_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
     motifs = config['motifs']
-    allreps = config['allreps']
+    motifs_allreps = config['motifs_allreps']
     trimmed_fastqs = config['trimmed_fastqs']
     aligned_bams = config['aligned_bams']
     map_files = []
@@ -285,7 +285,7 @@ def define_final_chip_output(ref_genome):
     if motifs:
         results += motif_files
     
-    if allreps:
+    if motifs_allreps:
         results += allrep_files
     
     return results
