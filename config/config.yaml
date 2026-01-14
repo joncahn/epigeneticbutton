@@ -281,7 +281,7 @@ standard_resources: &standard
   qos: "default"
 
 heavy_resources: &heavy
-  threads: 8
+  threads: 4
   mem_mb: 16000
   tmp_mb: 48000
   qos: "slow_nice"
