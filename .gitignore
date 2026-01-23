@@ -41,3 +41,6 @@ output/
 *.tmp
 *.temp
 *.bak
+
+# Local notes
+NOTES.local.md
