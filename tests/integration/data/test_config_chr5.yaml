@@ -1,0 +1,124 @@
+# Test configuration for ONT methylation integration tests
+# Uses minimal ColCEN Chr5 reference for faster testing
+
+repo_folder: "/grid/martienssen/home/eernst/src/epigeneticbutton"
+analysis_name: "test_chr5"
+sample_file: "tests/integration/data/test_samples_chr5.tsv"
+
+# Minimal reference genome configuration for ColCEN_Chr5
+ColCEN_Chr5:
+  species: "thaliana"
+  fasta_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.fa.gz"
+  gff_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gff3.gz"
+  gtf_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gtf.gz"
+  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+
+# Species-specific parameters
+thaliana:
+  star_index: "--genomeSAindexNbases 12"
+  genomesize: 2.9e7  # Chr5 only
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+
+# Methylation context
+mC_context: "all"
+
+# ONT direct methylation parameters
+ont_methylation:
+  alignment:
+    preset: "lr:hqae"
+  pileup:
+    combine_mods: true
+    min_coverage: 3
+
+# DMR calling method
+dmr_method: "auto"
+
+# Trimming parameters (not used for ONT but required)
+trimming_quality:
+  mC: "-q 10 -m 20"
+
+adapter1:
+  mC: "AGATCGGAAGAGCACACGTCTGAAC"
+
+adapter2:
+  mC: "AGATCGGAAGAGCGTCGTGTAGGGA"
+
+# Bismark mapping parameters (for non-ONT samples)
+mC_mapping:
+  default:
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--ignore_r2 2 --buffer_size 16G"
+    process_se: "--buffer_size 16G"
+  ONT:
+    map_pe: ""
+    map_se: ""
+    process_pe: ""
+    process_se: ""
+
+# Resource allocation
+low_resources: &low
+  threads: 1
+  mem_mb: 1000
+  tmp_mb: 1000
+  qos: "default"
+
+standard_resources: &standard
+  threads: 2
+  mem_mb: 2000
+  tmp_mb: 2000
+  qos: "default"
+
+heavy_resources: &heavy
+  threads: 4
+  mem_mb: 8000
+  tmp_mb: 16000
+  qos: "default"
+
+max_resources: &max
+  threads: 8
+  mem_mb: 16000
+  tmp_mb: 32000
+  qos: "default"
+
+single_thread: &single
+  threads: 1
+  mem_mb: 8000
+  tmp_mb: 16000
+  qos: "default"
+
+resources:
+  # Environment setup
+  check_fasta: *standard
+  check_gff: *standard
+  check_gtf: *standard
+  check_chrom_sizes: *low
+  prep_region_file: *low
+
+  # ONT methylation rules
+  make_modkit_context_beds: *heavy
+  get_modbam: *standard
+  get_bedmethyl: *low
+  align_modbam: *max
+  modkit_summary: *heavy
+  modkit_pileup: *heavy
+  split_bedmethyl_by_context: *heavy
+  make_ont_bigwig_files: *single
+  call_DMRs_modkit: *max
+
+  # Bismark rules (for comparison/mixed workflows)
+  make_bismark_indices: *heavy
+  bismark_map_pe: *heavy
+  bismark_map_se: *heavy
+  make_mc_stats_pe: *low
+  make_mc_stats_se: *low
+  merging_mc_replicates: *heavy
+  make_mc_bigwig_files: *single
+  call_DMRs_pairwise: *max

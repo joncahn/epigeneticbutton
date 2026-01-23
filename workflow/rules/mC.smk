@@ -477,6 +477,49 @@ rule all_mc:
 ################################################################################
 
 CONDA_ENV_ONT=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_ont.yaml")
+MODKIT_VERSION = "0.6.1"
+MODKIT_BIN = os.path.join(REPO_FOLDER, "workflow", "bin", "modkit")
+
+rule download_modkit:
+    """Download modkit binary from GitHub releases (not available via conda)."""
+    output:
+        binary = os.path.join(REPO_FOLDER, "workflow", "bin", "modkit")
+    params:
+        version = MODKIT_VERSION,
+        bin_dir = os.path.join(REPO_FOLDER, "workflow", "bin")
+    log:
+        temp(os.path.join(REPO_FOLDER, "results", "logs", "download_modkit.log"))
+    shell:
+        """
+        {{
+        mkdir -p {params.bin_dir}
+
+        # Download modkit release (u16 = Ubuntu 16 build, compatible with CentOS 7+)
+        MODKIT_URL="https://github.com/nanoporetech/modkit/releases/download/v{params.version}/modkit_v{params.version}_u16_x86_64.tar.gz"
+        printf "Downloading modkit v{params.version} from $MODKIT_URL\n"
+
+        curl -fSL "$MODKIT_URL" -o /tmp/modkit.tar.gz
+        tar -xzf /tmp/modkit.tar.gz -C {params.bin_dir}
+        rm -f /tmp/modkit.tar.gz
+
+        # Move modkit binary from extracted subdirectory to bin/
+        # The tarball extracts to dist_modkit_v<version>_<hash>/modkit
+        extracted_modkit=$(find {params.bin_dir} -name "modkit" -type f | head -1)
+        if [[ -n "$extracted_modkit" && "$extracted_modkit" != "{output.binary}" ]]; then
+            mv "$extracted_modkit" {output.binary}
+            # Cleanup extracted directory
+            rm -rf {params.bin_dir}/dist_modkit_*
+        fi
+
+        # Make executable
+        chmod +x {output.binary}
+
+        # Verify installation
+        {output.binary} --version
+
+        printf "modkit installed successfully at {output.binary}\n"
+        }} > {log} 2>&1
+        """
 
 def get_ont_pileup_input(wildcards):
     """Determine input for modkit_pileup based on sample type."""
@@ -502,13 +545,21 @@ def define_ont_DMR_samples(sample_name):
                     for replicate in replicates ]
 
 rule make_modkit_context_beds:
-    """Generate CG/CHG/CHH context BED files for a reference genome using modkit."""
+    """Generate sorted, tabix-indexed CG/CHG/CHH context BED files for a reference genome.
+
+    These are only needed for bedMethyl sample_type inputs. For ONT samples,
+    modkit_pileup filters by context directly using --motif.
+    """
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        modkit = MODKIT_BIN
     output:
         cg_bed = "genomes/{ref_genome}/modkit_CG.bed.gz",
+        cg_tbi = "genomes/{ref_genome}/modkit_CG.bed.gz.tbi",
         chg_bed = "genomes/{ref_genome}/modkit_CHG.bed.gz",
-        chh_bed = "genomes/{ref_genome}/modkit_CHH.bed.gz"
+        chg_tbi = "genomes/{ref_genome}/modkit_CHG.bed.gz.tbi",
+        chh_bed = "genomes/{ref_genome}/modkit_CHH.bed.gz",
+        chh_tbi = "genomes/{ref_genome}/modkit_CHH.bed.gz.tbi"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -522,18 +573,24 @@ rule make_modkit_context_beds:
     shell:
         """
         {{
-        printf "\nGenerating methylation context BED files for {params.ref_genome}\n"
+        printf "\nGenerating sorted, indexed methylation context BED files for {params.ref_genome}\n"
 
-        # Generate CG context bed
-        modkit motif bed {input.fasta} CG 0 | pigz -p {threads} > {output.cg_bed}
+        # Generate CG context bed (sorted and bgzipped for tabix)
+        printf "Generating CG context...\n"
+        {input.modkit} motif bed {input.fasta} CG 0 | sort -k1,1 -k2,2n | bgzip -@ {threads} > {output.cg_bed}
+        tabix -p bed {output.cg_bed}
 
         # Generate CHG context bed (CAG, CTG, CCG)
-        modkit motif bed {input.fasta} CHG 0 | pigz -p {threads} > {output.chg_bed}
+        printf "Generating CHG context...\n"
+        {input.modkit} motif bed {input.fasta} CHG 0 | sort -k1,1 -k2,2n | bgzip -@ {threads} > {output.chg_bed}
+        tabix -p bed {output.chg_bed}
 
         # Generate CHH context bed (CAA, CAT, CAC, CTA, CTT, CTC, CCA, CCT, CCC)
-        modkit motif bed {input.fasta} CHH 0 | pigz -p {threads} > {output.chh_bed}
+        printf "Generating CHH context...\n"
+        {input.modkit} motif bed {input.fasta} CHH 0 | sort -k1,1 -k2,2n | bgzip -@ {threads} > {output.chh_bed}
+        tabix -p bed {output.chh_bed}
 
-        printf "\nContext BED files created successfully\n"
+        printf "\nContext BED files created and indexed successfully\n"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -660,19 +717,25 @@ rule align_modbam:
             # Check chromosome overlap with reference
             bam_chroms=$(samtools view -H {input.modbam} | grep "^@SQ" | cut -f2 | sed 's/SN://' | sort | head -20)
             ref_chroms=$(cut -f1 {input.chrom_sizes} | sort | head -20)
+            n_ref_chroms=$(wc -l < {input.chrom_sizes})
             overlap=$(comm -12 <(echo "$bam_chroms") <(echo "$ref_chroms") | wc -l)
-            if [[ "$overlap" -lt 5 ]]; then
-                printf "Low chromosome overlap with reference, will realign\n"
+            # Require overlap of at least min(5, number of ref chromosomes)
+            min_overlap=5
+            if [[ "$n_ref_chroms" -lt "$min_overlap" ]]; then
+                min_overlap=$n_ref_chroms
+            fi
+            if [[ "$overlap" -lt "$min_overlap" ]]; then
+                printf "Low chromosome overlap ($overlap/$n_ref_chroms) with reference, will realign\n"
                 needs_realign=true
             fi
         fi
 
         if [[ "$needs_realign" == "true" ]]; then
-            printf "Aligning modBAM to {wildcards.ref_genome} with mm2plus\n"
+            printf "Aligning modBAM to {wildcards.ref_genome} with minimap2\n"
 
-            # Extract reads preserving MM/ML tags, align with mm2plus, sort
+            # Extract reads preserving MM/ML tags, align with minimap2, sort
             samtools fastq -T MM,ML {input.modbam} | \
-                mm2plus -ax {params.preset} -t {threads} -y {input.fasta} - | \
+                minimap2 -ax {params.preset} -t {threads} -y {input.fasta} - | \
                 samtools sort -@ {threads} -o {output.aligned_bam} -
 
             samtools index -@ {threads} {output.aligned_bam}
@@ -689,7 +752,8 @@ rule align_modbam:
 rule modkit_summary:
     """Generate QC statistics from modBAM using modkit summary."""
     input:
-        bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam"
+        bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
+        modkit = MODKIT_BIN
     output:
         summary = "results/mC/ont/summary__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.txt"
     params:
@@ -707,7 +771,7 @@ rule modkit_summary:
         {{
         printf "\nGenerating modkit summary for {params.sample_name}\n"
 
-        modkit summary --threads {threads} {input.bam} > {output.summary}
+        {input.modkit} summary --threads {threads} {input.bam} > {output.summary}
 
         printf "\nSummary complete\n"
         }} 2>&1 | tee -a "{log}"
@@ -749,16 +813,22 @@ rule modkit_summary_bedmethyl:
         """
 
 rule modkit_pileup:
-    """Generate bedMethyl from modBAM using modkit pileup with --combine-mods."""
+    """Generate context-specific bedMethyl files using modkit pileup with --motif filtering.
+
+    This is more efficient than running a single pileup and splitting afterwards,
+    as modkit filters during processing rather than requiring slow bedtools intersect.
+    """
     input:
         bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
         bai = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam.bai",
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        modkit = MODKIT_BIN
     output:
-        bedmethyl = "results/mC/ont/pileup__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bedmethyl.gz"
+        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG.bed.gz",
+        chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CHG.bed.gz",
+        chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CHH.bed.gz"
     params:
         sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__ONT__{wildcards.replicate}__{wildcards.ref_genome}",
-        min_cov = config.get('ont_methylation', {}).get('pileup', {}).get('min_coverage', 3),
         combine_mods = "--combine-mods" if config.get('ont_methylation', {}).get('pileup', {}).get('combine_mods', True) else ""
     log:
         temp(return_log_mc("{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}", "modkit_pileup", "ONT"))
@@ -771,24 +841,42 @@ rule modkit_pileup:
     shell:
         """
         {{
-        printf "\nRunning modkit pileup for {params.sample_name}\n"
+        printf "\nRunning modkit pileup with context filtering for {params.sample_name}\n"
 
-        # Create temp output file
-        temp_bed="results/mC/ont/pileup__{params.sample_name}.bedmethyl"
-
-        modkit pileup \
+        # CG context pileup
+        printf "Processing CG context...\n"
+        {input.modkit} pileup \
             --threads {threads} \
             --ref {input.fasta} \
             {params.combine_mods} \
             --filter-threshold 0.75 \
+            --motif CG 0 \
             {input.bam} \
-            "$temp_bed"
+            /dev/stdout | pigz -p {threads} > {output.cg_bed}
 
-        # Compress output
-        pigz -p {threads} -c "$temp_bed" > {output.bedmethyl}
-        rm -f "$temp_bed"
+        # CHG context pileup
+        printf "Processing CHG context...\n"
+        {input.modkit} pileup \
+            --threads {threads} \
+            --ref {input.fasta} \
+            {params.combine_mods} \
+            --filter-threshold 0.75 \
+            --motif CHG 0 \
+            {input.bam} \
+            /dev/stdout | pigz -p {threads} > {output.chg_bed}
 
-        printf "\nPileup complete\n"
+        # CHH context pileup
+        printf "Processing CHH context...\n"
+        {input.modkit} pileup \
+            --threads {threads} \
+            --ref {input.fasta} \
+            {params.combine_mods} \
+            --filter-threshold 0.75 \
+            --motif CHH 0 \
+            {input.bam} \
+            /dev/stdout | pigz -p {threads} > {output.chh_bed}
+
+        printf "\nPileup complete for all contexts\n"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -805,20 +893,28 @@ rule copy_bedmethyl_for_pileup:
         """
 
 rule split_bedmethyl_by_context:
-    """Split bedMethyl file by methylation context (CG, CHG, CHH)."""
+    """Split pre-computed bedMethyl file by methylation context using tabix for fast lookups.
+
+    This rule is only used for bedMethyl sample_type inputs where we don't have the original
+    modBAM to re-run modkit pileup with --motif filtering. For ONT samples, modkit_pileup
+    handles context splitting directly.
+    """
     input:
-        bedmethyl = "results/mC/ont/pileup__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bedmethyl.gz",
+        bedmethyl = "results/mC/ont/pileup__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.bedmethyl.gz",
         cg_bed = "genomes/{ref_genome}/modkit_CG.bed.gz",
+        cg_tbi = "genomes/{ref_genome}/modkit_CG.bed.gz.tbi",
         chg_bed = "genomes/{ref_genome}/modkit_CHG.bed.gz",
-        chh_bed = "genomes/{ref_genome}/modkit_CHH.bed.gz"
+        chg_tbi = "genomes/{ref_genome}/modkit_CHG.bed.gz.tbi",
+        chh_bed = "genomes/{ref_genome}/modkit_CHH.bed.gz",
+        chh_tbi = "genomes/{ref_genome}/modkit_CHH.bed.gz.tbi"
     output:
-        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bed.gz",
-        chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bed.gz",
-        chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bed.gz"
+        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CG.bed.gz",
+        chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CHG.bed.gz",
+        chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CHH.bed.gz"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}"
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}"
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "split_bedmethyl", "ONT"))
+        temp(return_log_mc("{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}", "split_bedmethyl", "ONT"))
     conda: CONDA_ENV_ONT
     threads: config["resources"]["split_bedmethyl_by_context"]["threads"]
     resources:
@@ -830,17 +926,24 @@ rule split_bedmethyl_by_context:
         {{
         printf "\nSplitting bedMethyl by context for {params.sample_name}\n"
 
-        # Split by CG context
+        # Sort and index bedmethyl for tabix lookups
+        printf "Preparing bedMethyl for context lookup...\n"
+        sorted_bed="results/mC/ont/tmp_sorted_{params.sample_name}.bed.gz"
+        zcat {input.bedmethyl} | sort -k1,1 -k2,2n | bgzip -@ {threads} > "$sorted_bed"
+        tabix -p bed "$sorted_bed"
+
+        # Use tabix intersect for fast lookups (context BEDs are pre-indexed)
         printf "Extracting CG context...\n"
-        bedtools intersect -a {input.bedmethyl} -b {input.cg_bed} -u | pigz -p {threads} > {output.cg_bed}
+        tabix "$sorted_bed" -R {input.cg_bed} 2>/dev/null | pigz -p {threads} > {output.cg_bed}
 
-        # Split by CHG context
         printf "Extracting CHG context...\n"
-        bedtools intersect -a {input.bedmethyl} -b {input.chg_bed} -u | pigz -p {threads} > {output.chg_bed}
+        tabix "$sorted_bed" -R {input.chg_bed} 2>/dev/null | pigz -p {threads} > {output.chg_bed}
 
-        # Split by CHH context
         printf "Extracting CHH context...\n"
-        bedtools intersect -a {input.bedmethyl} -b {input.chh_bed} -u | pigz -p {threads} > {output.chh_bed}
+        tabix "$sorted_bed" -R {input.chh_bed} 2>/dev/null | pigz -p {threads} > {output.chh_bed}
+
+        # Cleanup temp files
+        rm -f "$sorted_bed" "$sorted_bed.tbi"
 
         printf "\nContext splitting complete\n"
         }} 2>&1 | tee -a "{log}"
@@ -918,7 +1021,8 @@ rule call_DMRs_modkit:
     input:
         sample1_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample1),
         sample2_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample2),
-        fasta = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}.fa"
+        fasta = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}.fa",
+        modkit = MODKIT_BIN
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
@@ -946,7 +1050,7 @@ rule call_DMRs_modkit:
         zcat {input.sample2_beds} | sort -k1,1 -k2,2n > "$sample2_merged"
 
         # Run modkit dmr pair with segmentation
-        modkit dmr pair \
+        {input.modkit} dmr pair \
             --threads {threads} \
             --ref {input.fasta} \
             --segment \
