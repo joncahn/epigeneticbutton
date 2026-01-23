@@ -25,15 +25,31 @@ def define_cx_report_input(wildcards):
         return f"results/mC/methylcall/{name}.deduplicated.CX_report.txt.gz"
 
 def define_DMR_samples(sample_name):
+    """Get CX_report files for DMR analysis.
+
+    For Bismark samples: returns deduplicated CX_report files
+    For ONT/bedMethyl samples: returns converted CX_report files (from bedMethyl)
+    """
     data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
     line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
     tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
     sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
     ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
+
+    # Return empty list if sample not found (prevents None in paths)
+    if any(x is None for x in [data_type, line, tissue, sample_type, ref_genome]):
+        return []
+
     replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
-    
-    return [ f"results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
-                    for replicate in replicates ]
+
+    if sample_type in ["ONT", "bedMethyl"]:
+        # ONT samples: use converted CX_report files from bedMethyl
+        return [ f"results/mC/ont/cx_report__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.CX_report.txt.gz"
+                        for replicate in replicates ]
+    else:
+        # Bismark samples: use deduplicated CX_report files
+        return [ f"results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
+                        for replicate in replicates ]
                     
 def script_DMRs():
     script_dmrs = config['custom_script_dmrs']
@@ -83,12 +99,27 @@ def define_final_mC_output(ref_genome):
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             bigwig_files.append(f"results/mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
 
+    ont_dmr_method = config.get('ont_dmr_method', 'dmrcaller')
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
         a_dict = a._asdict()
         b_dict = b._asdict()
         sample1 = sample_name_str(a_dict, 'analysis')
         sample2 = sample_name_str(b_dict, 'analysis')
-        dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
+
+        # Determine DMR output file based on sample types and config
+        sample1_is_ont = a_dict['sample_type'] in ["ONT", "bedMethyl"]
+        sample2_is_ont = b_dict['sample_type'] in ["ONT", "bedMethyl"]
+
+        if sample1_is_ont and sample2_is_ont and ont_dmr_method == "modkit":
+            # ONT vs ONT with modkit method
+            dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs_modkit.txt")
+        elif sample1_is_ont != sample2_is_ont:
+            # Mixed comparison (ONT vs Bismark) - skip or warn
+            # For now, we skip mixed comparisons as they require special handling
+            pass
+        else:
+            # Bismark vs Bismark, or ONT vs ONT with dmrcaller method
+            dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
 
     results = map_files + bigwig_files + ont_files
 
@@ -431,18 +462,31 @@ rule make_mc_bigwig_files:
         }} 2>&1 | tee -a "{log}"
         """
 
+def use_dmrcaller_for_sample(sample_name):
+    """Check if DMRcaller should be used for this sample.
+
+    Returns True for:
+    - All Bismark samples (always use DMRcaller)
+    - ONT/bedMethyl samples when ont_dmr_method is "dmrcaller" (default)
+    """
+    sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
+    if sample_type in ["ONT", "bedMethyl"]:
+        return config.get('ont_dmr_method', 'dmrcaller') == 'dmrcaller'
+    return True  # Bismark samples always use DMRcaller
+
 rule call_DMRs_pairwise:
-    """Call DMRs between two Bismark samples using DMRcaller."""
+    """Call DMRs between two samples using DMRcaller.
+
+    Works with both Bismark and ONT/bedMethyl samples:
+    - Bismark: uses CX_report files from bismark_methylation_extractor
+    - ONT/bedMethyl: uses CX_report files converted from bedMethyl format
+    """
     input:
         sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
-        chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+        chrom_sizes = lambda wildcards: (lambda rg: f"genomes/{rg}/chrom.sizes" if rg else [])(get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome'))
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
-    wildcard_constraints:
-        # Only match Bismark samples (exclude ONT/bedMethyl)
-        sample1 = r"(?!.*__(ONT|bedMethyl)__).*",
-        sample2 = r"(?!.*__(ONT|bedMethyl)__).*"
     params:
         script = script_DMRs(),
         context = config['mC_context'],
@@ -1103,15 +1147,57 @@ rule make_ont_bigwig_files:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule convert_bedmethyl_to_cx_report:
+    """Convert ONT bedMethyl format to Bismark CX_report format for DMRcaller.
+
+    This enables using DMRcaller (the same tool as Bismark workflow) for ONT samples.
+    The conversion extracts methylated/unmethylated counts from bedMethyl columns.
+    """
+    input:
+        bedmethyl = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__{context}.bed.gz"
+    output:
+        cx_report = "results/mC/ont/cx_report__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__{context}.CX_report.txt.gz"
+    wildcard_constraints:
+        sample_type = r"(ONT|bedMethyl)",
+        context = r"(CG|CHG|CHH)"
+    params:
+        script = os.path.join(REPO_FOLDER, "workflow", "scripts", "bedmethyl_to_cx_report.py"),
+        context = lambda wildcards: wildcards.context
+    log:
+        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__{context}", "bedmethyl_to_cx", "ONT"))
+    conda: CONDA_ENV_ONT
+    threads: 1
+    resources:
+        mem_mb=config["resources"]["split_bedmethyl_by_context"]["mem_mb"],
+        tmp_mb=config["resources"]["split_bedmethyl_by_context"]["tmp_mb"],
+        qos=config["resources"]["split_bedmethyl_by_context"]["qos"]
+    shell:
+        """
+        {{
+        printf "Converting bedMethyl to CX_report format for DMRcaller...\n"
+        printf "Input: {input.bedmethyl}\n"
+        printf "Output: {output.cx_report}\n"
+        printf "Context: {params.context}\n"
+
+        python {params.script} {input.bedmethyl} {output.cx_report} {params.context}
+
+        printf "Conversion complete\n"
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule call_DMRs_modkit:
-    """Call DMRs between two ONT/bedMethyl samples using modkit dmr pair."""
+    """Call DMRs between two ONT/bedMethyl samples using modkit dmr pair.
+
+    This rule is only used when ont_dmr_method is set to "modkit" in config.
+    The default method (dmrcaller) uses call_DMRs_pairwise instead.
+    """
     input:
         sample1_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample1),
         sample2_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample2),
         fasta = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}.fa",
         modkit = MODKIT_BIN
     output:
-        dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+        dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs_modkit.txt"
     wildcard_constraints:
         # Only match ONT/bedMethyl samples
         sample1 = r".*__(ONT|bedMethyl)__.*",

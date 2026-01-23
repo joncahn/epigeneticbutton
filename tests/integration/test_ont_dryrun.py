@@ -301,8 +301,8 @@ class TestONTDMRWorkflow:
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_dmr_includes_modkit_dmr_rule(self, snakemake_available, repo_root, test_config, dmr_target):
-        """Test that DMR workflow uses modkit for ONT samples."""
+    def test_dmr_uses_dmrcaller_by_default(self, snakemake_available, repo_root, test_config, dmr_target):
+        """Test that DMR workflow uses DMRcaller (same as Bismark) for ONT samples by default."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
@@ -312,8 +312,10 @@ class TestONTDMRWorkflow:
 
         output = result.stdout + result.stderr
 
-        # Check for modkit DMR rule
-        assert "call_DMRs_modkit" in output, "Expected modkit DMR rule for ONT samples"
+        # Default uses DMRcaller (call_DMRs_pairwise) with bedMethyl-to-CX_report conversion
+        assert "call_DMRs_pairwise" in output, "Expected DMRcaller rule for ONT samples by default"
+        assert "convert_bedmethyl_to_cx_report" in output, "Expected bedMethyl conversion for DMRcaller"
+        assert "R_call_DMRs.R" in output, "Expected DMRcaller R script"
 
 
 class TestDAGStructure:
