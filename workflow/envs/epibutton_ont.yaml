@@ -1,0 +1,13 @@
+name: epibutton_ont
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - modkit>=0.5.1
+  - mm2plus>=1.2
+  - samtools>=1.17
+  - bedtools>=2.31
+  - ucsc-bedgraphtobigwig
+  - htslib>=1.17
+  - pigz
+  - python>=3.10

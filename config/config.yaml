@@ -180,6 +180,19 @@ mC_mapping:
 # Whether to use the custom version of the script to call DMRs
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
 
+# ONT direct methylation parameters
+# For sample_type "ONT" (modBAM input) or "bedMethyl" (pre-computed bedMethyl input)
+ont_methylation:
+  alignment:
+    preset: "lr:hqae"  # mm2plus preset for ONT reads
+  pileup:
+    combine_mods: true  # Combine 5mC and 5hmC into total methylation
+    min_coverage: 3     # Minimum read coverage for methylation calls
+
+# DMR calling method selection
+# Options: "dmrcaller" (R package, for Bismark samples), "modkit" (native ONT tool), "auto" (auto-select based on sample type)
+dmr_method: "auto"  # auto = modkit for ONT samples, dmrcaller for Bismark samples
+
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
@@ -343,6 +356,16 @@ resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
+  # ONT methylation
+  make_modkit_context_beds: *heavy
+  get_modbam: *standard
+  get_bedmethyl: *low
+  align_modbam: *max
+  modkit_summary: *heavy
+  modkit_pileup: *heavy
+  split_bedmethyl_by_context: *heavy
+  make_ont_bigwig_files: *single
+  call_DMRs_modkit: *max
   # RNAseq
   make_STAR_indices: *heavy
   STAR_map_pe: *heavy
