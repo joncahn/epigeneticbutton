@@ -432,12 +432,17 @@ rule make_mc_bigwig_files:
         """
 
 rule call_DMRs_pairwise:
+    """Call DMRs between two Bismark samples using DMRcaller."""
     input:
         sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
         chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+    wildcard_constraints:
+        # Only match Bismark samples (exclude ONT/bedMethyl)
+        sample1 = r"(?!.*__(ONT|bedMethyl)__).*",
+        sample2 = r"(?!.*__(ONT|bedMethyl)__).*"
     params:
         script = script_DMRs(),
         context = config['mC_context'],
@@ -533,7 +538,10 @@ def get_ont_pileup_input(wildcards):
         return f"results/mC/ont/aligned__{sample_name}.bam"
 
 def define_ont_DMR_samples(sample_name):
-    """Get bedMethyl files for ONT DMR analysis."""
+    """Get CG context bedMethyl files for ONT DMR analysis.
+
+    Uses CG context beds from modkit pileup (for ONT) or split_bedmethyl (for bedMethyl).
+    """
     data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
     line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
     tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
@@ -541,7 +549,8 @@ def define_ont_DMR_samples(sample_name):
     ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
     replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
 
-    return [ f"results/mC/ont/pileup__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bedmethyl.gz"
+    # Use CG context beds (from modkit_pileup for ONT, or split_bedmethyl for bedMethyl)
+    return [ f"results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bed.gz"
                     for replicate in replicates ]
 
 rule make_modkit_context_beds:
@@ -1095,7 +1104,7 @@ rule make_ont_bigwig_files:
         """
 
 rule call_DMRs_modkit:
-    """Call DMRs between two ONT samples using modkit dmr pair."""
+    """Call DMRs between two ONT/bedMethyl samples using modkit dmr pair."""
     input:
         sample1_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample1),
         sample2_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample2),
@@ -1103,6 +1112,10 @@ rule call_DMRs_modkit:
         modkit = MODKIT_BIN
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+    wildcard_constraints:
+        # Only match ONT/bedMethyl samples
+        sample1 = r".*__(ONT|bedMethyl)__.*",
+        sample2 = r".*__(ONT|bedMethyl)__.*"
     params:
         sample1 = lambda wildcards: wildcards.sample1,
         sample2 = lambda wildcards: wildcards.sample2,
@@ -1120,21 +1133,36 @@ rule call_DMRs_modkit:
         {{
         printf "\nRunning modkit DMR analysis: {params.sample1} vs {params.sample2}\n"
 
-        # Merge sample bedmethyl files if multiple replicates
-        sample1_merged="results/mC/DMRs/tmp__{params.sample1}.merged.bed"
-        sample2_merged="results/mC/DMRs/tmp__{params.sample2}.merged.bed"
+        # Prepare output directory
+        mkdir -p results/mC/DMRs
 
-        zcat {input.sample1_beds} | sort -k1,1 -k2,2n > "$sample1_merged"
-        zcat {input.sample2_beds} | sort -k1,1 -k2,2n > "$sample2_merged"
+        # Merge and prepare sample bedmethyl files (modkit dmr requires bgzipped + tabix indexed)
+        sample1_bed="results/mC/DMRs/tmp__{params.sample1}.bed.gz"
+        sample2_bed="results/mC/DMRs/tmp__{params.sample2}.bed.gz"
+
+        # Merge replicates (if multiple), sort, bgzip, and index
+        printf "Preparing sample 1 bedMethyl...\n"
+        zcat {input.sample1_beds} | sort -k1,1 -k2,2n | bgzip -@ {threads} > "$sample1_bed"
+        tabix -p bed "$sample1_bed"
+
+        printf "Preparing sample 2 bedMethyl...\n"
+        zcat {input.sample2_beds} | sort -k1,1 -k2,2n | bgzip -@ {threads} > "$sample2_bed"
+        tabix -p bed "$sample2_bed"
+
+        # Define output paths
+        dmr_output="results/mC/DMRs/dmr__{params.sample1}__vs__{params.sample2}.bed"
+        segment_output="results/mC/DMRs/segments__{params.sample1}__vs__{params.sample2}.bed"
 
         # Run modkit dmr pair with segmentation
+        printf "Running modkit dmr pair...\n"
         {input.modkit} dmr pair \
             --threads {threads} \
             --ref {input.fasta} \
-            --segment \
-            -a "$sample1_merged" {params.sample1} \
-            -b "$sample2_merged" {params.sample2} \
-            -o results/mC/DMRs/dmr__{params.sample1}__vs__{params.sample2}
+            --base C \
+            -a "$sample1_bed" \
+            -b "$sample2_bed" \
+            --segment "$segment_output" \
+            -o "$dmr_output"
 
         # Create summary file
         printf "DMR Analysis Summary\n" > {output.dmr_summary}
@@ -1145,16 +1173,22 @@ rule call_DMRs_modkit:
         printf "\n" >> {output.dmr_summary}
 
         # Add DMR counts
-        if [[ -f "results/mC/DMRs/dmr__{params.sample1}__vs__{params.sample2}.bed" ]]; then
-            dmr_count=$(wc -l < "results/mC/DMRs/dmr__{params.sample1}__vs__{params.sample2}.bed")
-            printf "Total DMRs identified: $dmr_count\n" >> {output.dmr_summary}
-            cat "results/mC/DMRs/dmr__{params.sample1}__vs__{params.sample2}.bed" >> {output.dmr_summary}
+        if [[ -f "$dmr_output" ]]; then
+            dmr_count=$(wc -l < "$dmr_output")
+            printf "Per-site DMRs: $dmr_count\n" >> {output.dmr_summary}
+        fi
+
+        if [[ -f "$segment_output" ]]; then
+            segment_count=$(wc -l < "$segment_output")
+            printf "Segmented DMRs: $segment_count\n" >> {output.dmr_summary}
+            printf "\nSegmented regions:\n" >> {output.dmr_summary}
+            head -100 "$segment_output" >> {output.dmr_summary}
         else
-            printf "No DMR output file found\n" >> {output.dmr_summary}
+            printf "No segmented DMR output found\n" >> {output.dmr_summary}
         fi
 
         # Cleanup temp files
-        rm -f "$sample1_merged" "$sample2_merged"
+        rm -f "$sample1_bed" "$sample1_bed.tbi" "$sample2_bed" "$sample2_bed.tbi"
 
         printf "\nDMR analysis complete\n"
         }} 2>&1 | tee -a "{log}"

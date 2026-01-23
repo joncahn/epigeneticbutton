@@ -286,10 +286,12 @@ class TestONTDMRWorkflow:
 
     @pytest.fixture
     def dmr_target(self):
-        """Return target for DMR analysis output."""
-        return "results/mC/DMRs/summary__mC__WT__leaf__ONT__merged__test_genome__vs__mC__mutant__leaf__ONT__merged__test_genome__DMRs.txt"
+        """Return target for DMR analysis output.
 
-    @pytest.mark.skip(reason="DMR rule needs refactoring for new --motif filtering workflow")
+        Note: DMR targets use analysis-level names (without replicate).
+        """
+        return "results/mC/DMRs/summary__mC__WT__leaf__ONT__test_genome__vs__mC__mutant__leaf__ONT__test_genome__DMRs.txt"
+
     def test_dmr_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmr_target):
         """Test that dry-run succeeds for DMR analysis."""
         if not snakemake_available:
@@ -299,7 +301,6 @@ class TestONTDMRWorkflow:
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    @pytest.mark.skip(reason="DMR rule needs refactoring for new --motif filtering workflow")
     def test_dmr_includes_modkit_dmr_rule(self, snakemake_available, repo_root, test_config, dmr_target):
         """Test that DMR workflow uses modkit for ONT samples."""
         if not snakemake_available:
@@ -523,14 +524,13 @@ class TestMultipleReplicates:
             result = run_snakemake_dryrun(repo_root, test_config, target)
             assert result.returncode == 0, f"Replicate processing failed for {target}: {result.stderr}"
 
-    @pytest.mark.skip(reason="DMR rule needs refactoring for new --motif filtering workflow")
     def test_merged_replicates_dmr(self, snakemake_available, repo_root, test_config):
-        """Test that merged replicates work for DMR calling."""
+        """Test that DMR calling works with multiple replicates (merged automatically)."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        # DMR analysis uses merged replicates
-        target = "results/mC/DMRs/summary__mC__WT__leaf__ONT__merged__test_genome__vs__mC__mutant__leaf__ONT__merged__test_genome__DMRs.txt"
+        # DMR analysis uses analysis-level names (replicates merged automatically in the rule)
+        target = "results/mC/DMRs/summary__mC__WT__leaf__ONT__test_genome__vs__mC__mutant__leaf__ONT__test_genome__DMRs.txt"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
         assert result.returncode == 0, f"Merged replicate DMR failed: {result.stderr}"
