@@ -731,11 +731,11 @@ rule align_modbam:
         fi
 
         if [[ "$needs_realign" == "true" ]]; then
-            printf "Aligning modBAM to {wildcards.ref_genome} with minimap2\n"
+            printf "Aligning modBAM to {wildcards.ref_genome} with mm2plus\n"
 
-            # Extract reads preserving MM/ML tags, align with minimap2, sort
+            # Extract reads preserving MM/ML tags, align with mm2plus (accelerated minimap2), sort
             samtools fastq -T MM,ML {input.modbam} | \
-                minimap2 -ax {params.preset} -t {threads} -y {input.fasta} - | \
+                mm2plus -ax {params.preset} -t {threads} -y {input.fasta} - | \
                 samtools sort -@ {threads} -o {output.aligned_bam} -
 
             samtools index -@ {threads} {output.aligned_bam}
@@ -817,6 +817,10 @@ rule modkit_pileup:
 
     This is more efficient than running a single pileup and splitting afterwards,
     as modkit filters during processing rather than requiring slow bedtools intersect.
+
+    For CG context, generates both:
+    - Strand-combined output (--cpg --combine-strands): one entry per CpG dinucleotide
+    - Stranded output (--motif CG 0): separate entries for + and - strand cytosines
     """
     input:
         bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
@@ -825,6 +829,7 @@ rule modkit_pileup:
         modkit = MODKIT_BIN
     output:
         cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG.bed.gz",
+        cg_stranded_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG_stranded.bed.gz",
         chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CHG.bed.gz",
         chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CHH.bed.gz"
     params:
@@ -843,34 +848,50 @@ rule modkit_pileup:
         {{
         printf "\nRunning modkit pileup with context filtering for {params.sample_name}\n"
 
-        # CG context pileup
-        printf "Processing CG context...\n"
+        # CG context pileup - strand-combined for primary output (one entry per CpG dinucleotide)
+        # --modified-bases C with --combine-mods combines 5mC+5hmC into total cytosine methylation
+        printf "Processing CG context (strand-combined)...\n"
         {input.modkit} pileup \
             --threads {threads} \
             --ref {input.fasta} \
             {params.combine_mods} \
+            --modified-bases C \
             --filter-threshold 0.75 \
-            --motif CG 0 \
+            --cpg --combine-strands \
             {input.bam} \
             /dev/stdout | pigz -p {threads} > {output.cg_bed}
 
-        # CHG context pileup
+        # CG context pileup - stranded for strand-specific bigwigs (separate + and - entries)
+        printf "Processing CG context (stranded)...\n"
+        {input.modkit} pileup \
+            --threads {threads} \
+            --ref {input.fasta} \
+            {params.combine_mods} \
+            --modified-bases C \
+            --filter-threshold 0.75 \
+            --motif CG 0 \
+            {input.bam} \
+            /dev/stdout | pigz -p {threads} > {output.cg_stranded_bed}
+
+        # CHG context pileup (inherently stranded - not palindromic)
         printf "Processing CHG context...\n"
         {input.modkit} pileup \
             --threads {threads} \
             --ref {input.fasta} \
             {params.combine_mods} \
+            --modified-bases C \
             --filter-threshold 0.75 \
             --motif CHG 0 \
             {input.bam} \
             /dev/stdout | pigz -p {threads} > {output.chg_bed}
 
-        # CHH context pileup
+        # CHH context pileup (inherently stranded - not palindromic)
         printf "Processing CHH context...\n"
         {input.modkit} pileup \
             --threads {threads} \
             --ref {input.fasta} \
             {params.combine_mods} \
+            --modified-bases C \
             --filter-threshold 0.75 \
             --motif CHH 0 \
             {input.bam} \
@@ -949,23 +970,47 @@ rule split_bedmethyl_by_context:
         }} 2>&1 | tee -a "{log}"
         """
 
+def get_ont_bigwig_inputs(wildcards):
+    """Get inputs for ONT bigwig generation, including stranded CG bed for ONT samples."""
+    base_inputs = {
+        "cg_bed": f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CG.bed.gz",
+        "chg_bed": f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CHG.bed.gz",
+        "chh_bed": f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CHH.bed.gz",
+        "chrom_sizes": f"genomes/{wildcards.ref_genome}/chrom.sizes"
+    }
+    # ONT samples have a dedicated stranded CG bed from modkit_pileup
+    if wildcards.sample_type == "ONT":
+        base_inputs["cg_stranded_bed"] = f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CG_stranded.bed.gz"
+    return base_inputs
+
 rule make_ont_bigwig_files:
-    """Generate bigwig files from ONT bedMethyl data (column 11 = percent modified)."""
+    """Generate bigwig files from ONT bedMethyl data (column 11 = percent modified).
+
+    For CG context, generates both combined and strand-specific bigwigs (matching Bismark output).
+    - Combined CG bigwig: from strand-combined bed (one value per CpG dinucleotide)
+    - Strand-specific bigwigs: from stranded bed (ONT) or filtered by strand column (bedMethyl)
+    """
     input:
-        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bed.gz",
-        chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bed.gz",
-        chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bed.gz",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        unpack(get_ont_bigwig_inputs)
     output:
         bigwig_cg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bw",
+        bigwig_cg_plus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG__plus.bw",
+        bigwig_cg_minus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG__minus.bw",
         bigwig_chg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
+        bigwig_chg_plus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG__plus.bw",
+        bigwig_chg_minus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG__minus.bw",
         bigwig_chh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
+        bigwig_chh_plus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH__plus.bw",
+        bigwig_chh_minus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH__minus.bw",
         touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
     wildcard_constraints:
         sample_type = r"(ONT|bedMethyl)"  # Only match ONT and bedMethyl samples
     params:
         sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        context = config['mC_context']
+        sample_type = lambda wildcards: wildcards.sample_type,
+        context = config['mC_context'],
+        # Pass stranded CG bed path as param since it's only available for ONT samples
+        cg_stranded_bed = lambda wildcards: f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CG_stranded.bed.gz" if wildcards.sample_type == "ONT" else ""
     log:
         temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "ont_bigwig", "ONT"))
     conda: CONDA_ENV_ONT
@@ -979,33 +1024,66 @@ rule make_ont_bigwig_files:
         {{
         printf "\nMaking bigwig files for {params.sample_name}\n"
 
+        # Helper function to create bigwig from bedGraph
+        make_bigwig() {{
+            local input_bed="$1"
+            local output_bw="$2"
+            local strand_filter="$3"  # "+" or "-" or "" for all
+
+            if [[ -n "$strand_filter" ]]; then
+                # Filter by strand (column 6) then extract columns 1,2,3,11
+                zcat "$input_bed" | awk -v OFS="\t" -v strand="$strand_filter" \
+                    'NF>=11 && $6==strand {{print $1,$2,$3,$11}}' | \
+                    LC_COLLATE=C sort -k1,1 -k2,2n > "${{output_bw}}.bedGraph"
+            else
+                # No strand filter
+                zcat "$input_bed" | awk -v OFS="\t" 'NF>=11 {{print $1,$2,$3,$11}}' | \
+                    LC_COLLATE=C sort -k1,1 -k2,2n > "${{output_bw}}.bedGraph"
+            fi
+
+            if [[ -s "${{output_bw}}.bedGraph" ]]; then
+                bedGraphToBigWig "${{output_bw}}.bedGraph" {input.chrom_sizes} "$output_bw"
+            else
+                # Create empty bigwig placeholder if no data
+                touch "$output_bw"
+            fi
+            rm -f "${{output_bw}}.bedGraph"
+        }}
+
         if [[ "{params.context}" == "all" || "{params.context}" == "CG-only" ]]; then
-            # CG context - extract column 11 (percent modified)
-            printf "Creating CG bigwig...\n"
-            zcat {input.cg_bed} | awk -v OFS="\t" 'NF>=11 {{print $1,$2,$3,$11}}' | \
-                LC_COLLATE=C sort -k1,1 -k2,2n > results/mC/tracks/{params.sample_name}__CG.bedGraph
-            bedGraphToBigWig results/mC/tracks/{params.sample_name}__CG.bedGraph {input.chrom_sizes} {output.bigwig_cg}
-            rm -f results/mC/tracks/{params.sample_name}__CG.bedGraph
+            # CG combined bigwig (strand-combined, one value per CpG)
+            printf "Creating CG combined bigwig...\n"
+            make_bigwig "{input.cg_bed}" "{output.bigwig_cg}" ""
+
+            # CG strand-specific bigwigs
+            printf "Creating CG strand-specific bigwigs...\n"
+            if [[ "{params.sample_type}" == "ONT" ]]; then
+                # ONT: use dedicated stranded bed file (path passed via params)
+                make_bigwig "{params.cg_stranded_bed}" "{output.bigwig_cg_plus}" "+"
+                make_bigwig "{params.cg_stranded_bed}" "{output.bigwig_cg_minus}" "-"
+            else
+                # bedMethyl: filter combined bed by strand column
+                make_bigwig "{input.cg_bed}" "{output.bigwig_cg_plus}" "+"
+                make_bigwig "{input.cg_bed}" "{output.bigwig_cg_minus}" "-"
+            fi
         fi
 
         if [[ "{params.context}" == "all" ]]; then
-            # CHG context
-            printf "Creating CHG bigwig...\n"
-            zcat {input.chg_bed} | awk -v OFS="\t" 'NF>=11 {{print $1,$2,$3,$11}}' | \
-                LC_COLLATE=C sort -k1,1 -k2,2n > results/mC/tracks/{params.sample_name}__CHG.bedGraph
-            bedGraphToBigWig results/mC/tracks/{params.sample_name}__CHG.bedGraph {input.chrom_sizes} {output.bigwig_chg}
-            rm -f results/mC/tracks/{params.sample_name}__CHG.bedGraph
+            # CHG bigwigs (combined and strand-specific)
+            printf "Creating CHG bigwigs...\n"
+            make_bigwig "{input.chg_bed}" "{output.bigwig_chg}" ""
+            make_bigwig "{input.chg_bed}" "{output.bigwig_chg_plus}" "+"
+            make_bigwig "{input.chg_bed}" "{output.bigwig_chg_minus}" "-"
 
-            # CHH context
-            printf "Creating CHH bigwig...\n"
-            zcat {input.chh_bed} | awk -v OFS="\t" 'NF>=11 {{print $1,$2,$3,$11}}' | \
-                LC_COLLATE=C sort -k1,1 -k2,2n > results/mC/tracks/{params.sample_name}__CHH.bedGraph
-            bedGraphToBigWig results/mC/tracks/{params.sample_name}__CHH.bedGraph {input.chrom_sizes} {output.bigwig_chh}
-            rm -f results/mC/tracks/{params.sample_name}__CHH.bedGraph
+            # CHH bigwigs (combined and strand-specific)
+            printf "Creating CHH bigwigs...\n"
+            make_bigwig "{input.chh_bed}" "{output.bigwig_chh}" ""
+            make_bigwig "{input.chh_bed}" "{output.bigwig_chh_plus}" "+"
+            make_bigwig "{input.chh_bed}" "{output.bigwig_chh_minus}" "-"
         elif [[ "{params.context}" == "CG-only" ]]; then
             # Create empty placeholder files for CHG/CHH
-            touch {output.bigwig_chg}
-            touch {output.bigwig_chh}
+            touch {output.bigwig_chg} {output.bigwig_chg_plus} {output.bigwig_chg_minus}
+            touch {output.bigwig_chh} {output.bigwig_chh_plus} {output.bigwig_chh_minus}
         else
             printf "Unknown sequence context selection! Check config 'mC_context'\n"
             exit 1

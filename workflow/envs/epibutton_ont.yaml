@@ -5,7 +5,7 @@ channels:
 dependencies:
   # Note: modkit is installed via binary download in the workflow
   # (not available on conda, get from https://github.com/nanoporetech/modkit/releases)
-  - minimap2>=2.28
+  - mm2plus>=1.2  # Accelerated minimap2, drop-in replacement
   - samtools>=1.17
   - bedtools>=2.31
   - ucsc-bedgraphtobigwig
