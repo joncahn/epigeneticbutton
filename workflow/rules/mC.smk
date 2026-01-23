@@ -138,6 +138,8 @@ rule bismark_map_pe:
         cx_report = temp("results/mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
         metrics_alignement = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
+    wildcard_constraints:
+        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -178,6 +180,8 @@ rule bismark_map_se:
         cx_report = temp("results/mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
         metrics_map = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
+    wildcard_constraints:
+        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -214,6 +218,8 @@ rule pe_or_se_mc_dispatch:
     output:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         touch = "results/mC/chkpts/map_mC__{sample_name}.done"
+    wildcard_constraints:
+        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
     localrule: True
     shell:
         """
@@ -358,6 +364,8 @@ rule make_mc_bigwig_files:
         bigwigchg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
         bigwigchh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
         touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    wildcard_constraints:
+        sample_type = r"(mC|WGBS|Pico|EMseq|merged)"  # Only Bismark sample types (ONT/bedMethyl handled by make_ont_bigwig_files)
     params:
         sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -578,7 +586,7 @@ rule get_bedmethyl:
     """Acquire and validate a pre-computed bedMethyl file."""
     input:
         bedmethyl = lambda wildcards: get_sample_info_from_name(
-            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}",
             samples, 'fastq_path'
         ),
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
@@ -850,6 +858,8 @@ rule make_ont_bigwig_files:
         bigwig_chg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
         bigwig_chh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
         touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+    wildcard_constraints:
+        sample_type = r"(ONT|bedMethyl)"  # Only match ONT and bedMethyl samples
     params:
         sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         context = config['mC_context']
