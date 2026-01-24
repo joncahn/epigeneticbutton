@@ -394,6 +394,7 @@ def define_key_for_plots(wildcards, string):
         return marks
     elif string == "table":
         table_name = f"results/combined/matrix/sample_table__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.tab"
+        os.makedirs(os.path.dirname(table_name), exist_ok=True)
         tab = pd.DataFrame({
             "bigwigs": bigwigs,
             "labels": labels,
