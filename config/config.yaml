@@ -18,14 +18,6 @@ ColCEN:
   te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
 
-ColCEN_Chr5:
-  species: "thaliana"
-  fasta_file: "genomes/ColCEN_Chr5/ColCEN_Chr5.fa"
-  gff_file: "genomes/ColCEN_Chr5/ColCEN_Chr5.gff3"
-  gtf_file: "genomes/ColCEN_Chr5/ColCEN_Chr5.gtf"
-  te_file: ""
-  structural_rna_fafile: ""
-
 B73_v5:
   species: "mays" 
   fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not

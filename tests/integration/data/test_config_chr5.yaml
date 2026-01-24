@@ -37,8 +37,8 @@ ont_methylation:
     combine_mods: true
     min_coverage: 3
 
-# DMR calling method
-dmr_method: "auto"
+# DMR calling method for ONT samples: "dmrcaller" (default) or "modkit"
+ont_dmr_method: "dmrcaller"
 
 # Trimming parameters (not used for ONT but required)
 trimming_quality:
