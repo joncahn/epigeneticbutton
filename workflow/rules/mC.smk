@@ -265,6 +265,8 @@ rule make_mc_stats_pe:
         metrics_dedup = "results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+    wildcard_constraints:
+        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
     output:
         stat_file = "results/mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "results/mC/reports/final_report_pe__{sample_name}.html"
@@ -315,6 +317,8 @@ rule make_mc_stats_se:
         metrics_dedup = "results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+    wildcard_constraints:
+        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
     output:
         stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "results/mC/reports/final_report_se__{sample_name}.html"
@@ -827,6 +831,157 @@ rule modkit_summary:
         {input.modkit} summary --threads {threads} {input.bam} > {output.summary}
 
         printf "\nSummary complete\n"
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_mc_stats_ont:
+    """Generate mapping stats for ONT samples in Bismark-compatible format.
+
+    Produces stats file compatible with prepping_mapping_stats rule for combined reports.
+    """
+    input:
+        bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
+        bai = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam.bai",
+        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG.bed.gz",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+    output:
+        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.txt"
+    params:
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__ONT__{wildcards.replicate}__{wildcards.ref_genome}",
+        line = lambda wildcards: wildcards.line,
+        tissue = lambda wildcards: wildcards.tissue,
+        sample_type = "ONT",
+        replicate = lambda wildcards: wildcards.replicate,
+        ref_genome = lambda wildcards: wildcards.ref_genome
+    log:
+        temp(return_log_mc("{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}", "making_stats", "ONT"))
+    conda: CONDA_ENV_ONT
+    threads: config["resources"]["modkit_summary"]["threads"]
+    resources:
+        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
+        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
+        qos=config["resources"]["modkit_summary"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nMaking mapping statistics summary for ONT sample {params.sample_name}\n"
+
+        # Get read counts from BAM
+        flagstat=$(samtools flagstat {input.bam})
+        tot=$(echo "$flagstat" | grep "in total" | awk '{{print $1}}')
+        mapped=$(echo "$flagstat" | grep "mapped (" | head -1 | awk '{{print $1}}')
+        # For ONT, use MAPQ >= 20 as "uniquely mapped" proxy
+        uniq=$(samtools view -c -q 20 {input.bam})
+
+        # Get genome size and coverage stats from CG context bed
+        genome_size=$(awk '{{sum+=$2}} END {{print sum}}' {input.chrom_sizes})
+        # Count covered positions and compute coverage from bedMethyl (col 10 = coverage)
+        cov_stats=$(zcat {input.cg_bed} | awk -v gs="$genome_size" '
+            BEGIN {{total_cov=0; n_sites=0; n_sites_3x=0}}
+            {{
+                cov = $10;  # coverage column in bedMethyl
+                total_cov += cov;
+                n_sites += 1;
+                if (cov >= 3) n_sites_3x += 1;
+            }}
+            END {{
+                if (n_sites > 0) {{
+                    pct_cov = n_sites / gs * 100;
+                    pct_cov_3x = n_sites_3x / gs * 100;
+                    avg_cov_all = total_cov / gs;
+                    avg_cov_covered = total_cov / n_sites;
+                }} else {{
+                    pct_cov = 0; pct_cov_3x = 0; avg_cov_all = 0; avg_cov_covered = 0;
+                }}
+                printf "%.4f\\t%.4f\\t%.4f\\t%.4f", pct_cov, pct_cov_3x, avg_cov_all, avg_cov_covered;
+            }}
+        ')
+
+        pct_cov=$(echo "$cov_stats" | cut -f1)
+        pct_cov_3x=$(echo "$cov_stats" | cut -f2)
+        avg_cov_all=$(echo "$cov_stats" | cut -f3)
+        avg_cov_covered=$(echo "$cov_stats" | cut -f4)
+
+        # Calculate percentages
+        if [ "$tot" -gt 0 ]; then
+            pct_mapped=$(awk "BEGIN {{printf \\"%.2f\\", $mapped/$tot*100}}")
+            pct_uniq=$(awk "BEGIN {{printf \\"%.2f\\", $uniq/$tot*100}}")
+        else
+            pct_mapped="0.00"
+            pct_uniq="0.00"
+        fi
+
+        # Write header and data (matching Bismark format, NA for non-conversion rate)
+        printf "Line\\tTissue\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
+        printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\t$tot\\t$tot (${{pct_mapped}}%%)\\t$mapped (${{pct_mapped}}%%)\\t$uniq (${{pct_uniq}}%%)\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
+
+        printf "\nONT stats complete\\n"
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule make_mc_stats_bedmethyl:
+    """Generate mapping stats for bedMethyl samples in Bismark-compatible format.
+
+    For pre-computed bedMethyl inputs, we have limited stats (no BAM available).
+    """
+    input:
+        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CG.bed.gz",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+    output:
+        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.txt"
+    params:
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}",
+        line = lambda wildcards: wildcards.line,
+        tissue = lambda wildcards: wildcards.tissue,
+        sample_type = "bedMethyl",
+        replicate = lambda wildcards: wildcards.replicate,
+        ref_genome = lambda wildcards: wildcards.ref_genome
+    log:
+        temp(return_log_mc("{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}", "making_stats", "bedMethyl"))
+    conda: CONDA_ENV_ONT
+    threads: 1
+    resources:
+        mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
+        tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
+        qos=config["resources"]["get_bedmethyl"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nMaking mapping statistics summary for bedMethyl sample {params.sample_name}\n"
+
+        # Get genome size and coverage stats from CG context bed
+        genome_size=$(awk '{{sum+=$2}} END {{print sum}}' {input.chrom_sizes})
+        cov_stats=$(zcat {input.cg_bed} | awk -v gs="$genome_size" '
+            BEGIN {{total_cov=0; n_sites=0; n_sites_3x=0}}
+            {{
+                cov = $10;
+                total_cov += cov;
+                n_sites += 1;
+                if (cov >= 3) n_sites_3x += 1;
+            }}
+            END {{
+                if (n_sites > 0) {{
+                    pct_cov = n_sites / gs * 100;
+                    pct_cov_3x = n_sites_3x / gs * 100;
+                    avg_cov_all = total_cov / gs;
+                    avg_cov_covered = total_cov / n_sites;
+                }} else {{
+                    pct_cov = 0; pct_cov_3x = 0; avg_cov_all = 0; avg_cov_covered = 0;
+                }}
+                printf "%.4f\\t%.4f\\t%.4f\\t%.4f", pct_cov, pct_cov_3x, avg_cov_all, avg_cov_covered;
+            }}
+        ')
+
+        pct_cov=$(echo "$cov_stats" | cut -f1)
+        pct_cov_3x=$(echo "$cov_stats" | cut -f2)
+        avg_cov_all=$(echo "$cov_stats" | cut -f3)
+        avg_cov_covered=$(echo "$cov_stats" | cut -f4)
+
+        # Write header and data (NA for read counts since no BAM available)
+        printf "Line\\tTissue\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
+        printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
+
+        printf "\nBedMethyl stats complete\\n"
         }} 2>&1 | tee -a "{log}"
         """
 
