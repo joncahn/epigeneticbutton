@@ -1,0 +1,33 @@
+# Test configuration for ChIP + ONT methylation integration test
+# Uses full ColCEN reference genome
+
+repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
+analysis_name: "test_colcen"
+sample_file: "tests/integration/data/test_samples_colcen.tsv"
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+
+# Methylation context
+mC_context: "all"
+
+# ONT direct methylation parameters
+ont_methylation:
+  alignment:
+    preset: "lr:hqae"
+  pileup:
+    combine_mods: true
+    min_coverage: 3
+
+# DMR calling method for ONT samples: "dmrcaller" (default) or "modkit"
+ont_dmr_method: "dmrcaller"
+
+# Custom DMR script
+custom_script_dmrs: false
+
+# Resource allocation (use defaults from main config)
