@@ -38,8 +38,9 @@ results/
 output/
 genomes/
 
-# Test logs
+# Test logs and data
 tests/integration/*.log
+test-data-prep/
 
 # Temporary files
 *.tmp
@@ -48,3 +49,7 @@ tests/integration/*.log
 
 # Local notes
 NOTES.local.md
+
+# Auto-generated config files
+config/analysis_samplefile_*.tsv
+config/config_test_local.yaml
