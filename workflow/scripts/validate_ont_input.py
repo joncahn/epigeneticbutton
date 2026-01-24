@@ -41,27 +41,37 @@ def validate_modbam(bam_path: str, chrom_sizes: str = None) -> tuple[bool, str]:
     if not bam_path.exists():
         return False, f"File not found: {bam_path}"
 
-    # Check for MM/ML tags in first 1000 reads
+    # Check for MM/ML tags in first 1000 reads (use head to limit reads from large files)
     try:
-        result = subprocess.run(
+        # Use pipe to limit reads instead of loading entire BAM into memory
+        samtools_proc = subprocess.Popen(
             ["samtools", "view", str(bam_path)],
-            capture_output=True,
-            text=True,
-            timeout=120
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
         )
-        if result.returncode != 0:
-            return False, f"Failed to read BAM file: {result.stderr}"
+        head_proc = subprocess.Popen(
+            ["head", "-n", "1000"],
+            stdin=samtools_proc.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        samtools_proc.stdout.close()  # Allow samtools to receive SIGPIPE
 
-        lines = result.stdout.strip().split('\n')
+        stdout, stderr = head_proc.communicate(timeout=120)
+        samtools_proc.terminate()  # Clean up samtools process
+
+        lines = stdout.strip().split('\n')
         if not lines or lines == ['']:
             return False, "BAM file contains no reads"
 
-        # Check for MM tag in reads (sample first 1000)
+        # Check for MM tag in reads
         mm_found = False
         ml_found = False
         read_count = 0
 
-        for line in lines[:1000]:
+        for line in lines:
             if not line or line.startswith('@'):
                 continue
             read_count += 1
@@ -82,6 +92,8 @@ def validate_modbam(bam_path: str, chrom_sizes: str = None) -> tuple[bool, str]:
             return False, "No ML (methylation likelihood) tags found in BAM file. Ensure this is a modBAM with base modifications."
 
     except subprocess.TimeoutExpired:
+        samtools_proc.terminate()
+        head_proc.terminate()
         return False, "Timeout while reading BAM file"
     except Exception as e:
         return False, f"Error validating BAM file: {str(e)}"
