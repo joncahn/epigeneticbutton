@@ -12,6 +12,7 @@ dependencies:
   - bedtools
   - deeptools
   - ucsc-bedgraphtobigwig
+  - ucsc-bigwigtobedgraph
   - poppler
   - r-dplyr
   - r-tidyr
