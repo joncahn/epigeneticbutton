@@ -11,7 +11,7 @@ ChIP	rdr126ddm1hp5	leaf	CenH3	rep1	hp5_CenH3_IP_Rep1	/grid/martienssen/data/eern
 ChIP	rdr126ddm1hp5	leaf	CenH3	rep2	hp5_CenH3_IP_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
 ChIP	rdr126ddm1hp5	leaf	Input	rep1	hp5_CenH3_Input_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
 ChIP	rdr126ddm1hp5	leaf	Input	rep2	hp5_CenH3_Input_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-mC	rdr126ddm1	leaf	dmC	rep1	as5-1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbases3/as5-1/modbam-aln.bam	SE	ColCEN
-mC	rdr126ddm1het	leaf	dmC	rep1	as5-1-wt	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbases3/as5-1-wt/modbam-aln.bam	SE	ColCEN
-mC	rdr126ddm1hp5	leaf	dmC	rep1	as6-1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbases3/as6-1/modbam-aln.bam	SE	ColCEN
-mC	rdr126ddm1hethp5	leaf	dmC	rep1	as6-1-wt	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbases3/as6-1-wt/modbam-aln.bam	SE	ColCEN
+mC	rdr126ddm1	leaf	dmC	rep1	as5-1_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
+mC	rdr126ddm1het	leaf	dmC	rep1	as5-1-wt_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
+mC	rdr126ddm1hp5	leaf	dmC	rep1	as6-1_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
+mC	rdr126ddm1hethp5	leaf	dmC	rep1	as6-1-wt_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN

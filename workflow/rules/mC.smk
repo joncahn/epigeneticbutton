@@ -580,13 +580,13 @@ rule get_dmc_input:
     - modBAM: BAM files with MM/ML methylation tags
     - bedMethyl: pre-computed methylation calls in BED format
 
+    Supports both:
+    - Direct file paths: /path/to/sample.bam
+    - Directory paths: /path/to/dir (finds file matching seq_id)
+
     Creates a marker file indicating the detected type for downstream rules.
     """
     input:
-        dmc_input = lambda wildcards: get_sample_info_from_name(
-            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
-            samples, 'fastq_path'
-        ),
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
         type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
@@ -595,6 +595,14 @@ rule get_dmc_input:
         sample_type = r"dmC"
     params:
         sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        dmc_path = lambda wildcards: get_sample_info_from_name(
+            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+            samples, 'fastq_path'
+        ),
+        seq_id = lambda wildcards: get_sample_info_from_name(
+            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+            samples, 'seq_id'
+        ),
         validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_ont_input.py")
     log:
         temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "get_dmc_input", "dmC"))
@@ -609,23 +617,60 @@ rule get_dmc_input:
         {{
         printf "\nDetecting and validating dmC input for {params.sample_name}\n"
 
+        # Resolve input path: can be a file or a directory
+        dmc_path="{params.dmc_path}"
+        seq_id="{params.seq_id}"
+
+        if [[ -f "$dmc_path" ]]; then
+            # Direct file path provided
+            input_file="$dmc_path"
+            printf "Using direct file path: $input_file\n"
+        elif [[ -d "$dmc_path" ]]; then
+            # Directory path provided - find file matching seq_id
+            # Uses *seq_id* pattern consistent with sample_download.smk
+            printf "Searching directory for seq_id '$seq_id'...\n"
+
+            # Try to find modBAM (.bam) or bedMethyl (.bed.gz, .bed, .bedmethyl) files
+            input_file=""
+            for ext in .bam .bed.gz .bedmethyl .bed; do
+                # Count matches using *seq_id* pattern (seq_id anywhere in filename)
+                match_count=$(ls -1 "$dmc_path"/*"$seq_id"*"$ext" 2>/dev/null | wc -l)
+                if [[ "$match_count" -eq 1 ]]; then
+                    input_file=$(ls "$dmc_path"/*"$seq_id"*"$ext")
+                    printf "Found: $input_file\n"
+                    break
+                elif [[ "$match_count" -gt 1 ]]; then
+                    printf "Error: Multiple files found matching seq_id '$seq_id' with extension '$ext':\n"
+                    ls -1 "$dmc_path"/*"$seq_id"*"$ext"
+                    printf "Please use a more specific seq_id or provide a direct file path.\n"
+                    exit 1
+                fi
+            done
+
+            if [[ -z "$input_file" ]]; then
+                printf "Error: No dmC file found matching seq_id '$seq_id' in '$dmc_path'\n"
+                printf "Looked for patterns: *$seq_id*.bam, *$seq_id*.bed.gz, *$seq_id*.bedmethyl, *$seq_id*.bed\n"
+                printf "Available files:\n"
+                ls -la "$dmc_path"
+                exit 1
+            fi
+        else
+            printf "Error: Path does not exist: $dmc_path\n"
+            exit 1
+        fi
+
         # Auto-detect input type
-        input_type=$(python {params.validate_script} detect {input.dmc_input})
+        input_type=$(python {params.validate_script} detect "$input_file")
         printf "Detected input type: $input_type\n"
 
         # Write type marker for downstream rules
         echo "$input_type" > {output.type_marker}
 
         # Validate based on detected type
-        python {params.validate_script} "$input_type" {input.dmc_input} {input.chrom_sizes}
+        python {params.validate_script} "$input_type" "$input_file" {input.chrom_sizes}
 
-        # Create a link/copy to the validated input
-        if [[ "$input_type" == "modBAM" ]]; then
-            ln -sf $(realpath {input.dmc_input}) {output.validated}
-        else
-            # For bedMethyl, copy or link
-            ln -sf $(realpath {input.dmc_input}) {output.validated}
-        fi
+        # Create a symlink to the validated input
+        ln -sf $(realpath "$input_file") {output.validated}
 
         printf "\nInput validated successfully\n"
         }} 2>&1 | tee -a "{log}"
