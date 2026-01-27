@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Convert modkit bedMethyl format to Bismark CX_report format for DMRcaller.
+"""Convert modkit bedMethyl format to Bismark CX_report format.
+
+Determines methylation context (CG/CHG/CHH) from the reference genome.
 
 bedMethyl columns (modkit output):
     0: chrom
@@ -24,26 +26,78 @@ CX_report format (Bismark):
     6: trinucleotide sequence
 
 Usage:
-    python bedmethyl_to_cx_report.py input.bed.gz output.CX_report.txt.gz context
+    python bedmethyl_to_cx_report.py input.bed.gz reference.fa output.CX_report.txt.gz
 """
 
 import sys
 import gzip
+import pysam
 from contextlib import ExitStack
 
 
-def convert_bedmethyl_to_cx_report(input_file, output_file, context):
-    """Convert bedMethyl to CX_report format."""
+def get_context_and_trinuc(fasta, chrom, pos, strand):
+    """Determine methylation context and trinucleotide from reference.
 
-    # Generate placeholder trinucleotide based on context
-    if context == "CG":
-        trinuc = "CGA"
-    elif context == "CHG":
-        trinuc = "CAG"
-    elif context == "CHH":
-        trinuc = "CAA"
+    Args:
+        fasta: pysam.FastaFile object
+        chrom: chromosome name
+        pos: 0-based position of the C
+        strand: '+' or '-'
+
+    Returns:
+        (context, trinucleotide) tuple
+    """
+    try:
+        chrom_len = fasta.get_reference_length(chrom)
+    except KeyError:
+        return ("CNN", "CNN")
+
+    if strand == '+':
+        # Forward strand: look at C and next 2 bases
+        end = min(pos + 3, chrom_len)
+        seq = fasta.fetch(chrom, pos, end).upper()
+        if len(seq) < 2:
+            return ("CHH", seq + "N" * (3 - len(seq)))
+
+        trinuc = seq[:3] if len(seq) >= 3 else seq + "N" * (3 - len(seq))
+
+        # Determine context
+        if len(seq) >= 2 and seq[1] == 'G':
+            context = "CG"
+        elif len(seq) >= 3 and seq[2] == 'G':
+            context = "CHG"
+        else:
+            context = "CHH"
     else:
-        trinuc = "CNN"
+        # Reverse strand: C is actually a G on forward strand
+        # Look at 2 bases before and the G position
+        start = max(0, pos - 2)
+        seq = fasta.fetch(chrom, start, pos + 1).upper()
+
+        # Reverse complement
+        comp = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'N': 'N'}
+        seq_rc = ''.join(comp.get(b, 'N') for b in reversed(seq))
+
+        if len(seq_rc) < 3:
+            seq_rc = "N" * (3 - len(seq_rc)) + seq_rc
+        trinuc = seq_rc[:3]
+
+        # Determine context (same logic as forward, but on rev comp)
+        if len(trinuc) >= 2 and trinuc[1] == 'G':
+            context = "CG"
+        elif len(trinuc) >= 3 and trinuc[2] == 'G':
+            context = "CHG"
+        else:
+            context = "CHH"
+
+    return (context, trinuc)
+
+
+def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
+    """Convert bedMethyl to CX_report format with context from reference."""
+
+    # Open reference genome
+    fasta = pysam.FastaFile(reference_file)
 
     with ExitStack() as stack:
         # Handle gzipped or plain input
@@ -52,8 +106,10 @@ def convert_bedmethyl_to_cx_report(input_file, output_file, context):
         else:
             infile = stack.enter_context(open(input_file, 'r'))
 
-        # Handle gzipped or plain output
-        if output_file.endswith('.gz'):
+        # Handle stdout or file output
+        if output_file == '/dev/stdout':
+            outfile = sys.stdout
+        elif output_file.endswith('.gz'):
             outfile = stack.enter_context(gzip.open(output_file, 'wt'))
         else:
             outfile = stack.enter_context(open(output_file, 'w'))
@@ -72,33 +128,33 @@ def convert_bedmethyl_to_cx_report(input_file, output_file, context):
             n_mod = int(fields[11])
             n_canonical = int(fields[12])
 
-            # Convert to 1-based position
-            position = start + 1
-
             # Handle combined strand data (strand = '.')
             # For combined CpG, report as + strand
             if strand == '.':
                 strand = '+'
 
+            # Get context and trinucleotide from reference
+            context, trinuc = get_context_and_trinuc(fasta, chrom, start, strand)
+
+            # Convert to 1-based position for CX_report
+            position = start + 1
+
             # Write CX_report format
             outfile.write(f"{chrom}\t{position}\t{strand}\t{n_mod}\t{n_canonical}\t{context}\t{trinuc}\n")
+
+    fasta.close()
 
 
 def main():
     if len(sys.argv) != 4:
-        print(f"Usage: {sys.argv[0]} input.bed.gz output.CX_report.txt.gz context")
-        print("  context: CG, CHG, or CHH")
+        print(f"Usage: {sys.argv[0]} input.bed.gz reference.fa output.CX_report.txt.gz")
         sys.exit(1)
 
     input_file = sys.argv[1]
-    output_file = sys.argv[2]
-    context = sys.argv[3].upper()
+    reference_file = sys.argv[2]
+    output_file = sys.argv[3]
 
-    if context not in ["CG", "CHG", "CHH"]:
-        print(f"Error: context must be CG, CHG, or CHH (got '{context}')")
-        sys.exit(1)
-
-    convert_bedmethyl_to_cx_report(input_file, output_file, context)
+    convert_bedmethyl_to_cx_report(input_file, reference_file, output_file)
 
 
 if __name__ == "__main__":

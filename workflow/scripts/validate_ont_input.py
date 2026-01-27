@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """
-Validation script for ONT methylation inputs.
+Validation script for direct methylation (dmC) inputs.
 
-Validates:
-- modBAM files: checks for MM/ML tags and read count > 0
-- bedMethyl files: validates column count and format
+Supports automatic detection and validation of:
+- modBAM files: BAM files with MM/ML methylation tags from ONT basecalling
+- bedMethyl files: pre-computed methylation calls in BED format
 
 Usage:
     python validate_ont_input.py <input_type> <input_file> [<chrom_sizes>]
+    python validate_ont_input.py detect <input_file>
 
 Arguments:
-    input_type: Either "modBAM" or "bedMethyl"
+    input_type: "modBAM", "bedMethyl", or "detect" (auto-detect type)
     input_file: Path to the input file
     chrom_sizes: Path to chrom.sizes file (optional, for reference validation)
 
 Exit codes:
-    0: Validation passed
-    1: Validation failed
+    0: Validation passed (or detection succeeded)
+    1: Validation failed (or detection failed)
+
+When using "detect" mode, the detected type is printed to stdout.
 """
 
 import sys
@@ -270,6 +273,74 @@ def validate_bedmethyl(bedmethyl_path: str, chrom_sizes: str = None) -> tuple[bo
     return True, f"Valid bedMethyl format ({valid_lines} lines validated, {len(chroms_found)} chromosomes)"
 
 
+def detect_input_type(input_path: str) -> tuple[str, str]:
+    """
+    Automatically detect whether a file is modBAM or bedMethyl.
+
+    Detection logic:
+    1. Check file extension (.bam -> modBAM, .bed/.bedmethyl -> bedMethyl)
+    2. For ambiguous cases, peek at file content
+
+    Args:
+        input_path: Path to the input file
+
+    Returns:
+        Tuple of (detected_type, message) where detected_type is "modBAM", "bedMethyl", or "unknown"
+    """
+    input_path = Path(input_path)
+
+    if not input_path.exists():
+        return "unknown", f"File not found: {input_path}"
+
+    # Get the full name (handling .gz suffix)
+    name = input_path.name.lower()
+    if name.endswith('.gz'):
+        name = name[:-3]
+
+    # Check extension-based detection
+    if name.endswith('.bam'):
+        return "modBAM", "Detected modBAM from .bam extension"
+
+    if name.endswith('.bed') or name.endswith('.bedmethyl'):
+        return "bedMethyl", "Detected bedMethyl from .bed/.bedmethyl extension"
+
+    # For ambiguous extensions, try to peek at content
+    try:
+        # Try to read as BAM first (check for BAM magic number)
+        with open(input_path, 'rb') as f:
+            magic = f.read(4)
+            # BAM magic number is "BAM\1" (0x42414d01)
+            if magic[:3] == b'BAM':
+                return "modBAM", "Detected modBAM from BAM magic number"
+            # Check for gzip magic (0x1f8b) which could be gzipped BAM or bedMethyl
+            if magic[:2] == b'\x1f\x8b':
+                # Try to decompress and check content
+                f.seek(0)
+                try:
+                    with gzip.open(input_path, 'rt') as gz:
+                        first_line = gz.readline().strip()
+                        # bedMethyl is tab-separated text, BAM would fail to decode
+                        if first_line and ('\t' in first_line or first_line.startswith('#')):
+                            return "bedMethyl", "Detected bedMethyl from gzipped text content"
+                except (UnicodeDecodeError, gzip.BadGzipFile):
+                    # Likely a gzipped BAM
+                    return "modBAM", "Detected modBAM from gzipped binary content"
+
+        # Try reading as text (bedMethyl)
+        try:
+            with open(input_path, 'r') as f:
+                first_line = f.readline().strip()
+                if first_line and ('\t' in first_line or first_line.startswith('#')):
+                    return "bedMethyl", "Detected bedMethyl from text content"
+        except UnicodeDecodeError:
+            return "modBAM", "Detected modBAM from binary content"
+
+    except Exception as e:
+        return "unknown", f"Error detecting file type: {str(e)}"
+
+    return "unknown", "Could not determine file type from extension or content"
+
+
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
@@ -279,12 +350,34 @@ def main():
     input_file = sys.argv[2]
     chrom_sizes = sys.argv[3] if len(sys.argv) > 3 else None
 
+    # Handle detection mode
+    if input_type == "detect":
+        detected_type, message = detect_input_type(input_file)
+        if detected_type == "unknown":
+            print(f"FAIL: {message}", file=sys.stderr)
+            sys.exit(1)
+        else:
+            # Print just the type to stdout for easy parsing
+            print(detected_type)
+            print(f"INFO: {message}", file=sys.stderr)
+            sys.exit(0)
+
+    # Handle auto mode (detect then validate)
+    if input_type == "auto":
+        detected_type, detect_msg = detect_input_type(input_file)
+        if detected_type == "unknown":
+            print(f"FAIL: Could not detect file type - {detect_msg}")
+            sys.exit(1)
+        print(f"INFO: {detect_msg}", file=sys.stderr)
+        input_type = detected_type
+
+    # Validate based on type
     if input_type == "modBAM":
         is_valid, message = validate_modbam(input_file, chrom_sizes)
     elif input_type == "bedMethyl":
         is_valid, message = validate_bedmethyl(input_file, chrom_sizes)
     else:
-        print(f"Unknown input type: {input_type}. Expected 'modBAM' or 'bedMethyl'")
+        print(f"Unknown input type: {input_type}. Expected 'modBAM', 'bedMethyl', 'detect', or 'auto'")
         sys.exit(1)
 
     if is_valid:

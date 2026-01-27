@@ -5,30 +5,36 @@ def return_log_mc(sample_name, step, paired):
      
 def parameters_for_mc(sample_name):
     temp = parse_sample_name(sample_name)['sample_type']
-    options = {"WGBS", "Pico", "EMseq", "ONT", "bedMethyl"}
+    options = {"WGBS", "Pico", "EMseq", "dmC"}
     return temp if temp in options else "default"
 
-def is_ont_sample(sample_name):
-    """Check if a sample uses ONT direct methylation workflow."""
-    return parse_sample_name(sample_name)['sample_type'] in ["ONT", "bedMethyl"]
-
-def get_ont_input_type(sample_name):
-    """Return the input type for ONT samples: 'bedMethyl' or 'modBAM'."""
-    sample_type = parse_sample_name(sample_name)['sample_type']
-    return "bedMethyl" if sample_type == "bedMethyl" else "modBAM"
+def is_dmc_sample(sample_name):
+    """Check if a sample uses direct methylation (dmC) workflow (vs bisulfite)."""
+    return parse_sample_name(sample_name)['sample_type'] == "dmC"
 
 def define_cx_report_input(wildcards):
+    """Get CX_report path for a sample (used by bigwig generation and replicate merging).
+
+    Routes to appropriate path based on sample_type:
+    - Bismark samples: results/mC/methylcall/...deduplicated.CX_report.txt.gz
+    - dmC (direct methylation): results/mC/dmc/cx_report__...CX_report.txt.gz
+    - Merged replicates: results/mC/methylcall/...merged.CX_report.txt.gz
+    """
     name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}"
     if wildcards.replicate == "merged":
         return f"results/mC/methylcall/{name}.merged.CX_report.txt.gz"
+    elif wildcards.sample_type == "dmC":
+        # dmC samples: use converted CX_report from bedMethyl
+        return f"results/mC/dmc/cx_report__{name}.CX_report.txt.gz"
     else:
+        # Bismark samples: use deduplicated CX_report
         return f"results/mC/methylcall/{name}.deduplicated.CX_report.txt.gz"
 
 def define_DMR_samples(sample_name):
     """Get CX_report files for DMR analysis.
 
     For Bismark samples: returns deduplicated CX_report files
-    For ONT/bedMethyl samples: returns converted CX_report files (from bedMethyl)
+    For dmC samples: returns converted CX_report files (from bedMethyl)
     """
     data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
     line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
@@ -42,9 +48,9 @@ def define_DMR_samples(sample_name):
 
     replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
 
-    if sample_type in ["ONT", "bedMethyl"]:
-        # ONT samples: use converted CX_report files from bedMethyl
-        return [ f"results/mC/ont/cx_report__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.CX_report.txt.gz"
+    if sample_type == "dmC":
+        # dmC samples: use converted CX_report files (unified format with all contexts)
+        return [ f"results/mC/dmc/cx_report__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.CX_report.txt.gz"
                         for replicate in replicates ]
     else:
         # Bismark samples: use deduplicated CX_report files
@@ -73,10 +79,10 @@ def define_final_mC_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         sample_type = parse_sample_name(sname)['sample_type']
 
-        # ONT samples use different workflow
-        if sample_type in ["ONT", "bedMethyl"]:
+        # dmC samples use direct methylation workflow
+        if sample_type == "dmC":
             bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
-            ont_files.append(f"results/mC/ont/summary__{sname}.txt")  # modkit summary
+            ont_files.append(f"results/mC/dmc/summary__{sname}.txt")  # modkit summary
         else:
             # Bismark workflow
             bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
@@ -99,27 +105,13 @@ def define_final_mC_output(ref_genome):
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             bigwig_files.append(f"results/mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
 
-    ont_dmr_method = config.get('ont_dmr_method', 'dmrcaller')
+    # DMR analysis: all sample types use DMRcaller via unified CX_report format
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
         a_dict = a._asdict()
         b_dict = b._asdict()
         sample1 = sample_name_str(a_dict, 'analysis')
         sample2 = sample_name_str(b_dict, 'analysis')
-
-        # Determine DMR output file based on sample types and config
-        sample1_is_ont = a_dict['sample_type'] in ["ONT", "bedMethyl"]
-        sample2_is_ont = b_dict['sample_type'] in ["ONT", "bedMethyl"]
-
-        if sample1_is_ont and sample2_is_ont and ont_dmr_method == "modkit":
-            # ONT vs ONT with modkit method
-            dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs_modkit.txt")
-        elif sample1_is_ont != sample2_is_ont:
-            # Mixed comparison (ONT vs Bismark) - skip or warn
-            # For now, we skip mixed comparisons as they require special handling
-            pass
-        else:
-            # Bismark vs Bismark, or ONT vs ONT with dmrcaller method
-            dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
+        dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
 
     results = map_files + bigwig_files + ont_files
 
@@ -170,7 +162,7 @@ rule bismark_map_pe:
         metrics_alignement = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
     wildcard_constraints:
-        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
+        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -212,7 +204,7 @@ rule bismark_map_se:
         metrics_map = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
     wildcard_constraints:
-        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
+        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -250,7 +242,7 @@ rule pe_or_se_mc_dispatch:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         touch = "results/mC/chkpts/map_mC__{sample_name}.done"
     wildcard_constraints:
-        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
+        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
     localrule: True
     shell:
         """
@@ -266,7 +258,7 @@ rule make_mc_stats_pe:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     wildcard_constraints:
-        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
+        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
     output:
         stat_file = "results/mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "results/mC/reports/final_report_pe__{sample_name}.html"
@@ -318,7 +310,7 @@ rule make_mc_stats_se:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     wildcard_constraints:
-        sample_name = r"(?!.*__(ONT|bedMethyl)__).*"  # Exclude ONT/bedMethyl samples
+        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
     output:
         stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "results/mC/reports/final_report_se__{sample_name}.html"
@@ -362,10 +354,26 @@ rule make_mc_stats_se:
         mv {params.prefix}/trim__"{params.sample_name}"*.txt results/mC/reports/
         """
 
+def get_cx_reports_for_merging(wildcards):
+    """Get CX_report paths for all replicates of a sample, for merging.
+
+    Routes to appropriate paths based on sample_type:
+    - Bismark samples: results/mC/methylcall/...deduplicated.CX_report.txt.gz
+    - dmC (direct methylation): results/mC/dmc/cx_report__...CX_report.txt.gz
+    """
+    replicates = analysis_to_replicates.get(
+        (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+
+    if wildcards.sample_type == "dmC":
+        return [f"results/mC/dmc/cx_report__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{rep}__{wildcards.ref_genome}.CX_report.txt.gz"
+                for rep in replicates]
+    else:
+        return [f"results/mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{rep}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz"
+                for rep in replicates]
+
 rule merging_mc_replicates:
     input:
-        report_files = lambda wildcards: [ f"results/mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz" 
-                                      for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
+        report_files = get_cx_reports_for_merging
     output:
         bedfile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
         tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt"),
@@ -391,6 +399,10 @@ rule merging_mc_replicates:
         """    
 
 rule make_mc_bigwig_files:
+    """Generate bigwig files from CX_report data.
+
+    Handles all sample types (Bismark and dmC) via unified CX_report format.
+    """
     input:
         cx_report = define_cx_report_input,
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
@@ -399,8 +411,6 @@ rule make_mc_bigwig_files:
         bigwigchg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
         bigwigchh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
         touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    wildcard_constraints:
-        sample_type = r"(mC|WGBS|Pico|EMseq|merged)"  # Only Bismark sample types (ONT/bedMethyl handled by make_ont_bigwig_files)
     params:
         sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -466,29 +476,17 @@ rule make_mc_bigwig_files:
         }} 2>&1 | tee -a "{log}"
         """
 
-def use_dmrcaller_for_sample(sample_name):
-    """Check if DMRcaller should be used for this sample.
-
-    Returns True for:
-    - All Bismark samples (always use DMRcaller)
-    - ONT/bedMethyl samples when ont_dmr_method is "dmrcaller" (default)
-    """
-    sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
-    if sample_type in ["ONT", "bedMethyl"]:
-        return config.get('ont_dmr_method', 'dmrcaller') == 'dmrcaller'
-    return True  # Bismark samples always use DMRcaller
-
 rule call_DMRs_pairwise:
     """Call DMRs between two samples using DMRcaller.
 
-    Works with both Bismark and ONT/bedMethyl samples:
+    Works with both Bismark and dmC (direct methylation) samples:
     - Bismark: uses CX_report files from bismark_methylation_extractor
-    - ONT/bedMethyl: uses CX_report files converted from bedMethyl format
+    - dmC: uses CX_report files converted from bedMethyl format
     """
     input:
         sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
-        chrom_sizes = lambda wildcards: (lambda rg: f"genomes/{rg}/chrom.sizes" if rg else [])(get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome'))
+        chrom_sizes = lambda wildcards: (lambda rg: f"genomes/{rg}/chrom.sizes")(get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome'))
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
@@ -526,10 +524,11 @@ rule all_mc:
         """
 
 ################################################################################
-# ONT Direct Methylation Rules
+# Direct Methylation (dmC) Rules
+# Handles both modBAM (ONT basecalls) and pre-computed bedMethyl inputs
 ################################################################################
 
-CONDA_ENV_ONT=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_ont.yaml")
+CONDA_ENV_DMC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_ont.yaml")
 MODKIT_VERSION = "0.6.1"
 MODKIT_BIN = os.path.join(REPO_FOLDER, "workflow", "bin", "modkit")
 
@@ -574,100 +573,32 @@ rule download_modkit:
         }} > {log} 2>&1
         """
 
-def get_ont_pileup_input(wildcards):
-    """Determine input for modkit_pileup based on sample type."""
-    sample_name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}"
-    sample_type = wildcards.sample_type
-    if sample_type == "bedMethyl":
-        # bedMethyl input - skip pileup, go directly to split
-        return f"results/mC/ont/validated__{sample_name}.bedmethyl.gz"
-    else:
-        # modBAM input - need alignment check
-        return f"results/mC/ont/aligned__{sample_name}.bam"
+rule get_dmc_input:
+    """Acquire and validate a direct methylation input file (modBAM or bedMethyl).
 
-def define_ont_DMR_samples(sample_name):
-    """Get CG context bedMethyl files for ONT DMR analysis.
+    Automatically detects the input type based on file extension and content:
+    - modBAM: BAM files with MM/ML methylation tags
+    - bedMethyl: pre-computed methylation calls in BED format
 
-    Uses CG context beds from modkit pileup (for ONT) or split_bedmethyl (for bedMethyl).
-    """
-    data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
-    line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
-    tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
-    sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
-    ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
-    replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
-
-    # Use CG context beds (from modkit_pileup for ONT, or split_bedmethyl for bedMethyl)
-    return [ f"results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bed.gz"
-                    for replicate in replicates ]
-
-rule make_modkit_context_beds:
-    """Generate sorted, tabix-indexed CG/CHG/CHH context BED files for a reference genome.
-
-    These are only needed for bedMethyl sample_type inputs. For ONT samples,
-    modkit_pileup filters by context directly using --motif.
+    Creates a marker file indicating the detected type for downstream rules.
     """
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        modkit = MODKIT_BIN
-    output:
-        cg_bed = "genomes/{ref_genome}/modkit_CG.bed.gz",
-        cg_tbi = "genomes/{ref_genome}/modkit_CG.bed.gz.tbi",
-        chg_bed = "genomes/{ref_genome}/modkit_CHG.bed.gz",
-        chg_tbi = "genomes/{ref_genome}/modkit_CHG.bed.gz.tbi",
-        chh_bed = "genomes/{ref_genome}/modkit_CHH.bed.gz",
-        chh_tbi = "genomes/{ref_genome}/modkit_CHH.bed.gz.tbi"
-    params:
-        ref_genome = lambda wildcards: wildcards.ref_genome
-    log:
-        temp(os.path.join(REPO_FOLDER,"results","logs","modkit_context_beds_{ref_genome}.log"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["make_modkit_context_beds"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_modkit_context_beds"]["mem_mb"],
-        tmp_mb=config["resources"]["make_modkit_context_beds"]["tmp_mb"],
-        qos=config["resources"]["make_modkit_context_beds"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nGenerating sorted, indexed methylation context BED files for {params.ref_genome}\n"
-
-        # Generate CG context bed (sorted and bgzipped for tabix)
-        printf "Generating CG context...\n"
-        {input.modkit} motif bed {input.fasta} CG 0 | sort -k1,1 -k2,2n | bgzip -@ {threads} > {output.cg_bed}
-        tabix -p bed {output.cg_bed}
-
-        # Generate CHG context bed (CAG, CTG, CCG)
-        printf "Generating CHG context...\n"
-        {input.modkit} motif bed {input.fasta} CHG 0 | sort -k1,1 -k2,2n | bgzip -@ {threads} > {output.chg_bed}
-        tabix -p bed {output.chg_bed}
-
-        # Generate CHH context bed (CAA, CAT, CAC, CTA, CTT, CTC, CCA, CCT, CCC)
-        printf "Generating CHH context...\n"
-        {input.modkit} motif bed {input.fasta} CHH 0 | sort -k1,1 -k2,2n | bgzip -@ {threads} > {output.chh_bed}
-        tabix -p bed {output.chh_bed}
-
-        printf "\nContext BED files created and indexed successfully\n"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule get_modbam:
-    """Acquire and validate a modBAM file with MM/ML methylation tags."""
-    input:
-        modbam = lambda wildcards: get_sample_info_from_name(
-            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        dmc_input = lambda wildcards: get_sample_info_from_name(
+            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
             samples, 'fastq_path'
         ),
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        validated_bam = "results/mC/ont/validated__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam",
-        validated_bai = "results/mC/ont/validated__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bam.bai"
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
+        validated = "results/mC/dmc/validated__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.input"
+    wildcard_constraints:
+        sample_type = r"dmC"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
         validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_ont_input.py")
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "get_modbam", "ONT"))
-    conda: CONDA_ENV_ONT
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "get_dmc_input", "dmC"))
+    conda: CONDA_ENV_DMC
     threads: config["resources"]["get_modbam"]["threads"]
     resources:
         mem_mb=config["resources"]["get_modbam"]["mem_mb"],
@@ -676,81 +607,74 @@ rule get_modbam:
     shell:
         """
         {{
-        printf "\nValidating modBAM for {params.sample_name}\n"
+        printf "\nDetecting and validating dmC input for {params.sample_name}\n"
 
-        # Validate MM/ML tags exist
-        python {params.validate_script} modBAM {input.modbam} {input.chrom_sizes}
+        # Auto-detect input type
+        input_type=$(python {params.validate_script} detect {input.dmc_input})
+        printf "Detected input type: $input_type\n"
 
-        # Link or copy the validated BAM
-        if [[ "{input.modbam}" == *.bam ]]; then
-            ln -sf $(realpath {input.modbam}) {output.validated_bam}
+        # Write type marker for downstream rules
+        echo "$input_type" > {output.type_marker}
+
+        # Validate based on detected type
+        python {params.validate_script} "$input_type" {input.dmc_input} {input.chrom_sizes}
+
+        # Create a link/copy to the validated input
+        if [[ "$input_type" == "modBAM" ]]; then
+            ln -sf $(realpath {input.dmc_input}) {output.validated}
         else
-            # If not a .bam extension, copy it
-            cp {input.modbam} {output.validated_bam}
+            # For bedMethyl, copy or link
+            ln -sf $(realpath {input.dmc_input}) {output.validated}
         fi
 
-        # Index the BAM
-        samtools index -@ {threads} {output.validated_bam}
-
-        printf "\nmodBAM validated and indexed\n"
+        printf "\nInput validated successfully\n"
         }} 2>&1 | tee -a "{log}"
         """
 
-rule get_bedmethyl:
-    """Acquire and validate a pre-computed bedMethyl file."""
+def get_dmc_input_type(wildcards):
+    """Get the input type (modBAM or bedMethyl) for a dmC sample by reading the marker file."""
+    sample_name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
+    marker_file = f"results/mC/dmc/input_type__{sample_name}.txt"
+    # This function is called during DAG building, marker file may not exist yet
+    # Return a checkpoint-compatible path
+    return marker_file
+
+checkpoint dmc_input_checkpoint:
+    """Checkpoint to determine dmC input type for branching workflow."""
     input:
-        bedmethyl = lambda wildcards: get_sample_info_from_name(
-            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}",
-            samples, 'fastq_path'
-        ),
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
     output:
-        validated_bed = "results/mC/ont/validated__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.bedmethyl.gz"
-    params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}",
-        validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_ont_input.py")
-    log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}", "get_bedmethyl", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["get_bedmethyl"]["threads"]
-    resources:
-        mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
-        tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
-        qos=config["resources"]["get_bedmethyl"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nValidating bedMethyl for {params.sample_name}\n"
+        touch = touch("results/mC/dmc/checkpoint__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.done")
+    localrule: True
 
-        # Validate bedMethyl format
-        python {params.validate_script} bedMethyl {input.bedmethyl} {input.chrom_sizes}
+def get_pileup_input_for_dmc(wildcards):
+    """Determine pileup input based on detected input type."""
+    checkpoint_output = checkpoints.dmc_input_checkpoint.get(**wildcards).output[0]
+    sample_name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
+    type_marker = f"results/mC/dmc/input_type__{sample_name}.txt"
+    with open(type_marker) as f:
+        input_type = f.read().strip()
+    if input_type == "modBAM":
+        return f"results/mC/dmc/pileup_modbam__{sample_name}.bedmethyl.gz"
+    else:
+        return f"results/mC/dmc/pileup_bedmethyl__{sample_name}.bedmethyl.gz"
 
-        # Copy/compress the validated file
-        if [[ "{input.bedmethyl}" == *.gz ]]; then
-            cp {input.bedmethyl} {output.validated_bed}
-        else
-            pigz -p {threads} -c {input.bedmethyl} > {output.validated_bed}
-        fi
-
-        printf "\nbedMethyl validated\n"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule align_modbam:
-    """Realign modBAM to reference genome if unaligned or reference mismatch."""
+rule prepare_modbam_for_pileup:
+    """Prepare modBAM input: index and optionally realign."""
     input:
-        modbam = "results/mC/ont/validated__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
+        validated = "results/mC/dmc/validated__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.input",
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        aligned_bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
-        aligned_bai = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam.bai"
+        aligned_bam = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam",
+        aligned_bai = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam.bai"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__ONT__{wildcards.replicate}__{wildcards.ref_genome}",
-        preset = config.get('ont_methylation', {}).get('alignment', {}).get('preset', 'lr:hqae')
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        preset = config.get('dmc_methylation', {}).get('alignment', {}).get('preset', 'lr:hqae')
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}", "align_modbam", "ONT"))
-    conda: CONDA_ENV_ONT
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "prepare_modbam", "dmC"))
+    conda: CONDA_ENV_DMC
     threads: config["resources"]["align_modbam"]["threads"]
     resources:
         mem_mb=config["resources"]["align_modbam"]["mem_mb"],
@@ -759,10 +683,18 @@ rule align_modbam:
     shell:
         """
         {{
+        # Check if input is modBAM
+        input_type=$(cat {input.type_marker})
+        if [[ "$input_type" != "modBAM" ]]; then
+            printf "Skipping - input is not modBAM (is $input_type)\n"
+            touch {output.aligned_bam} {output.aligned_bai}
+            exit 0
+        fi
+
         printf "\nChecking alignment status for {params.sample_name}\n"
 
         # Check if BAM is aligned by looking for @SQ headers
-        has_sq=$(samtools view -H {input.modbam} | grep -c "^@SQ" || true)
+        has_sq=$(samtools view -H {input.validated} | grep -c "^@SQ" || true)
 
         # Check if aligned to correct reference
         needs_realign=false
@@ -772,11 +704,10 @@ rule align_modbam:
             needs_realign=true
         else
             # Check chromosome overlap with reference
-            bam_chroms=$(samtools view -H {input.modbam} | grep "^@SQ" | cut -f2 | sed 's/SN://' | sort | head -20)
+            bam_chroms=$(samtools view -H {input.validated} | grep "^@SQ" | cut -f2 | sed 's/SN://' | sort | head -20)
             ref_chroms=$(cut -f1 {input.chrom_sizes} | sort | head -20)
             n_ref_chroms=$(wc -l < {input.chrom_sizes})
             overlap=$(comm -12 <(echo "$bam_chroms") <(echo "$ref_chroms") | wc -l)
-            # Require overlap of at least min(5, number of ref chromosomes)
             min_overlap=5
             if [[ "$n_ref_chroms" -lt "$min_overlap" ]]; then
                 min_overlap=$n_ref_chroms
@@ -789,16 +720,13 @@ rule align_modbam:
 
         if [[ "$needs_realign" == "true" ]]; then
             printf "Aligning modBAM to {wildcards.ref_genome} with mm2plus\n"
-
-            # Extract reads preserving MM/ML tags, align with mm2plus (accelerated minimap2), sort
-            samtools fastq -T MM,ML {input.modbam} | \
+            samtools fastq -T MM,ML {input.validated} | \
                 mm2plus -ax {params.preset} -t {threads} -y {input.fasta} - | \
                 samtools sort -@ {threads} -o {output.aligned_bam} -
-
             samtools index -@ {threads} {output.aligned_bam}
         else
             printf "BAM is already aligned to compatible reference, linking\n"
-            ln -sf $(realpath {input.modbam}) {output.aligned_bam}
+            ln -sf $(realpath {input.validated}) {output.aligned_bam}
             samtools index -@ {threads} {output.aligned_bam}
         fi
 
@@ -806,246 +734,22 @@ rule align_modbam:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule modkit_summary:
-    """Generate QC statistics from modBAM using modkit summary."""
+rule modkit_pileup_dmc:
+    """Generate bedMethyl file from aligned modBAM using modkit pileup."""
     input:
-        bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
-        modkit = MODKIT_BIN
-    output:
-        summary = "results/mC/ont/summary__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.txt"
-    params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__ONT__{wildcards.replicate}__{wildcards.ref_genome}"
-    log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}", "modkit_summary", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["modkit_summary"]["threads"]
-    resources:
-        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
-        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
-        qos=config["resources"]["modkit_summary"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nGenerating modkit summary for {params.sample_name}\n"
-
-        {input.modkit} summary --threads {threads} {input.bam} > {output.summary}
-
-        printf "\nSummary complete\n"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule make_mc_stats_ont:
-    """Generate mapping stats for ONT samples in Bismark-compatible format.
-
-    Produces stats file compatible with prepping_mapping_stats rule for combined reports.
-    """
-    input:
-        bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
-        bai = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam.bai",
-        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG.bed.gz",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
-    output:
-        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.txt"
-    params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__ONT__{wildcards.replicate}__{wildcards.ref_genome}",
-        line = lambda wildcards: wildcards.line,
-        tissue = lambda wildcards: wildcards.tissue,
-        sample_type = "ONT",
-        replicate = lambda wildcards: wildcards.replicate,
-        ref_genome = lambda wildcards: wildcards.ref_genome
-    log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}", "making_stats", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["modkit_summary"]["threads"]
-    resources:
-        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
-        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
-        qos=config["resources"]["modkit_summary"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nMaking mapping statistics summary for ONT sample {params.sample_name}\n"
-
-        # Get read counts from BAM
-        flagstat=$(samtools flagstat {input.bam})
-        tot=$(echo "$flagstat" | grep "in total" | awk '{{print $1}}')
-        mapped=$(echo "$flagstat" | grep "mapped (" | head -1 | awk '{{print $1}}')
-        # For ONT, use MAPQ >= 20 as "uniquely mapped" proxy
-        uniq=$(samtools view -c -q 20 {input.bam})
-
-        # Get genome size and coverage stats from CG context bed
-        genome_size=$(awk '{{sum+=$2}} END {{print sum}}' {input.chrom_sizes})
-        # Count covered positions and compute coverage from bedMethyl (col 10 = coverage)
-        cov_stats=$(zcat {input.cg_bed} | awk -v gs="$genome_size" '
-            BEGIN {{total_cov=0; n_sites=0; n_sites_3x=0}}
-            {{
-                cov = $10;  # coverage column in bedMethyl
-                total_cov += cov;
-                n_sites += 1;
-                if (cov >= 3) n_sites_3x += 1;
-            }}
-            END {{
-                if (n_sites > 0) {{
-                    pct_cov = n_sites / gs * 100;
-                    pct_cov_3x = n_sites_3x / gs * 100;
-                    avg_cov_all = total_cov / gs;
-                    avg_cov_covered = total_cov / n_sites;
-                }} else {{
-                    pct_cov = 0; pct_cov_3x = 0; avg_cov_all = 0; avg_cov_covered = 0;
-                }}
-                printf "%.4f\\t%.4f\\t%.4f\\t%.4f", pct_cov, pct_cov_3x, avg_cov_all, avg_cov_covered;
-            }}
-        ')
-
-        pct_cov=$(echo "$cov_stats" | cut -f1)
-        pct_cov_3x=$(echo "$cov_stats" | cut -f2)
-        avg_cov_all=$(echo "$cov_stats" | cut -f3)
-        avg_cov_covered=$(echo "$cov_stats" | cut -f4)
-
-        # Calculate percentages
-        if [ "$tot" -gt 0 ]; then
-            pct_mapped=$(awk "BEGIN {{printf \\"%.2f\\", $mapped/$tot*100}}")
-            pct_uniq=$(awk "BEGIN {{printf \\"%.2f\\", $uniq/$tot*100}}")
-        else
-            pct_mapped="0.00"
-            pct_uniq="0.00"
-        fi
-
-        # Write header and data (matching Bismark format, NA for non-conversion rate)
-        printf "Line\\tTissue\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
-        printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\t$tot\\t$tot (${{pct_mapped}}%%)\\t$mapped (${{pct_mapped}}%%)\\t$uniq (${{pct_uniq}}%%)\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
-
-        printf "\nONT stats complete\\n"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule make_mc_stats_bedmethyl:
-    """Generate mapping stats for bedMethyl samples in Bismark-compatible format.
-
-    For pre-computed bedMethyl inputs, we have limited stats (no BAM available).
-    """
-    input:
-        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CG.bed.gz",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
-    output:
-        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.txt"
-    params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}",
-        line = lambda wildcards: wildcards.line,
-        tissue = lambda wildcards: wildcards.tissue,
-        sample_type = "bedMethyl",
-        replicate = lambda wildcards: wildcards.replicate,
-        ref_genome = lambda wildcards: wildcards.ref_genome
-    log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}", "making_stats", "bedMethyl"))
-    conda: CONDA_ENV_ONT
-    threads: 1
-    resources:
-        mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
-        tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
-        qos=config["resources"]["get_bedmethyl"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nMaking mapping statistics summary for bedMethyl sample {params.sample_name}\n"
-
-        # Get genome size and coverage stats from CG context bed
-        genome_size=$(awk '{{sum+=$2}} END {{print sum}}' {input.chrom_sizes})
-        cov_stats=$(zcat {input.cg_bed} | awk -v gs="$genome_size" '
-            BEGIN {{total_cov=0; n_sites=0; n_sites_3x=0}}
-            {{
-                cov = $10;
-                total_cov += cov;
-                n_sites += 1;
-                if (cov >= 3) n_sites_3x += 1;
-            }}
-            END {{
-                if (n_sites > 0) {{
-                    pct_cov = n_sites / gs * 100;
-                    pct_cov_3x = n_sites_3x / gs * 100;
-                    avg_cov_all = total_cov / gs;
-                    avg_cov_covered = total_cov / n_sites;
-                }} else {{
-                    pct_cov = 0; pct_cov_3x = 0; avg_cov_all = 0; avg_cov_covered = 0;
-                }}
-                printf "%.4f\\t%.4f\\t%.4f\\t%.4f", pct_cov, pct_cov_3x, avg_cov_all, avg_cov_covered;
-            }}
-        ')
-
-        pct_cov=$(echo "$cov_stats" | cut -f1)
-        pct_cov_3x=$(echo "$cov_stats" | cut -f2)
-        avg_cov_all=$(echo "$cov_stats" | cut -f3)
-        avg_cov_covered=$(echo "$cov_stats" | cut -f4)
-
-        # Write header and data (NA for read counts since no BAM available)
-        printf "Line\\tTissue\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
-        printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
-
-        printf "\nBedMethyl stats complete\\n"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule modkit_summary_bedmethyl:
-    """Generate placeholder summary for bedMethyl inputs."""
-    input:
-        bedmethyl = "results/mC/ont/validated__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.bedmethyl.gz"
-    output:
-        summary = "results/mC/ont/summary__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.txt"
-    params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}"
-    log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}", "modkit_summary_bedmethyl", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: 1
-    resources:
-        mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
-        tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
-        qos=config["resources"]["get_bedmethyl"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nGenerating summary for pre-computed bedMethyl {params.sample_name}\n"
-
-        # Count lines and contexts
-        total_sites=$(zcat {input.bedmethyl} | grep -v "^#" | wc -l)
-        printf "Sample: {params.sample_name}\n" > {output.summary}
-        printf "Input type: pre-computed bedMethyl\n" >> {output.summary}
-        printf "Total methylation sites: $total_sites\n" >> {output.summary}
-
-        # Count by context if name column contains context info
-        printf "\nContext counts (from name column):\n" >> {output.summary}
-        zcat {input.bedmethyl} | grep -v "^#" | cut -f4 | sort | uniq -c | sort -rn >> {output.summary} || true
-
-        printf "\nSummary complete\n"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule modkit_pileup:
-    """Generate context-specific bedMethyl files using modkit pileup with --motif filtering.
-
-    This is more efficient than running a single pileup and splitting afterwards,
-    as modkit filters during processing rather than requiring slow bedtools intersect.
-
-    For CG context, generates both:
-    - Strand-combined output (--cpg --combine-strands): one entry per CpG dinucleotide
-    - Stranded output (--motif CG 0): separate entries for + and - strand cytosines
-    """
-    input:
-        bam = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam",
-        bai = "results/mC/ont/aligned__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}.bam.bai",
+        bam = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam",
+        bai = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam.bai",
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
         modkit = MODKIT_BIN
     output:
-        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG.bed.gz",
-        cg_stranded_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CG_stranded.bed.gz",
-        chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CHG.bed.gz",
-        chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}__CHH.bed.gz"
+        bedmethyl = "results/mC/dmc/pileup_modbam__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__ONT__{wildcards.replicate}__{wildcards.ref_genome}",
-        combine_mods = "--combine-mods" if config.get('ont_methylation', {}).get('pileup', {}).get('combine_mods', True) else ""
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        combine_mods = "--combine-mods" if config.get('dmc_methylation', {}).get('pileup', {}).get('combine_mods', True) else ""
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__ONT__{replicate}__{ref_genome}", "modkit_pileup", "ONT"))
-    conda: CONDA_ENV_ONT
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "modkit_pileup", "dmC"))
+    conda: CONDA_ENV_DMC
     threads: config["resources"]["modkit_pileup"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_pileup"]["mem_mb"],
@@ -1054,383 +758,246 @@ rule modkit_pileup:
     shell:
         """
         {{
-        printf "\nRunning modkit pileup with context filtering for {params.sample_name}\n"
+        printf "\nRunning modkit pileup for {params.sample_name}\n"
 
-        # CG context pileup - strand-combined for primary output (one entry per CpG dinucleotide)
-        # --modified-bases C with --combine-mods combines 5mC+5hmC into total cytosine methylation
-        printf "Processing CG context (strand-combined)...\n"
         {input.modkit} pileup \
             --threads {threads} \
             --ref {input.fasta} \
             {params.combine_mods} \
             --modified-bases C \
             --filter-threshold 0.75 \
-            --cpg --combine-strands \
             {input.bam} \
-            /dev/stdout | pigz -p {threads} > {output.cg_bed}
+            /dev/stdout | pigz -p {threads} > {output.bedmethyl}
 
-        # CG context pileup - stranded for strand-specific bigwigs (separate + and - entries)
-        printf "Processing CG context (stranded)...\n"
-        {input.modkit} pileup \
-            --threads {threads} \
-            --ref {input.fasta} \
-            {params.combine_mods} \
-            --modified-bases C \
-            --filter-threshold 0.75 \
-            --motif CG 0 \
-            {input.bam} \
-            /dev/stdout | pigz -p {threads} > {output.cg_stranded_bed}
-
-        # CHG context pileup (inherently stranded - not palindromic)
-        printf "Processing CHG context...\n"
-        {input.modkit} pileup \
-            --threads {threads} \
-            --ref {input.fasta} \
-            {params.combine_mods} \
-            --modified-bases C \
-            --filter-threshold 0.75 \
-            --motif CHG 0 \
-            {input.bam} \
-            /dev/stdout | pigz -p {threads} > {output.chg_bed}
-
-        # CHH context pileup (inherently stranded - not palindromic)
-        printf "Processing CHH context...\n"
-        {input.modkit} pileup \
-            --threads {threads} \
-            --ref {input.fasta} \
-            {params.combine_mods} \
-            --modified-bases C \
-            --filter-threshold 0.75 \
-            --motif CHH 0 \
-            {input.bam} \
-            /dev/stdout | pigz -p {threads} > {output.chh_bed}
-
-        printf "\nPileup complete for all contexts\n"
+        printf "\nPileup complete\n"
         }} 2>&1 | tee -a "{log}"
         """
 
-rule copy_bedmethyl_for_pileup:
+rule copy_bedmethyl_input:
     """Copy pre-computed bedMethyl to pileup location for consistent downstream processing."""
     input:
-        bedmethyl = "results/mC/ont/validated__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.bedmethyl.gz"
+        validated = "results/mC/dmc/validated__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.input",
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
     output:
-        bedmethyl = "results/mC/ont/pileup__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.bedmethyl.gz"
+        bedmethyl = "results/mC/dmc/pileup_bedmethyl__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz"
+    params:
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
+    log:
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "copy_bedmethyl", "dmC"))
+    conda: CONDA_ENV_DMC
+    threads: config["resources"]["get_bedmethyl"]["threads"]
+    resources:
+        mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
+        tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
+        qos=config["resources"]["get_bedmethyl"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nCopying bedMethyl input for {params.sample_name}\n"
+
+        # Copy/compress the validated file
+        if [[ "{input.validated}" == *.gz ]]; then
+            cp {input.validated} {output.bedmethyl}
+        else
+            pigz -p {threads} -c {input.validated} > {output.bedmethyl}
+        fi
+
+        printf "\nbedMethyl copied\n"
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule merge_pileup_sources:
+    """Create unified pileup path regardless of input type."""
+    input:
+        pileup = get_pileup_input_for_dmc
+    output:
+        bedmethyl = "results/mC/dmc/pileup__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz"
     localrule: True
     shell:
         """
-        cp {input.bedmethyl} {output.bedmethyl}
+        ln -sf $(basename {input.pileup}) {output.bedmethyl}
         """
 
-rule split_bedmethyl_by_context:
-    """Split pre-computed bedMethyl file by methylation context using tabix for fast lookups.
-
-    This rule is only used for bedMethyl sample_type inputs where we don't have the original
-    modBAM to re-run modkit pileup with --motif filtering. For ONT samples, modkit_pileup
-    handles context splitting directly.
-    """
+rule modkit_summary_dmc:
+    """Generate QC statistics from modBAM using modkit summary."""
     input:
-        bedmethyl = "results/mC/ont/pileup__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}.bedmethyl.gz",
-        cg_bed = "genomes/{ref_genome}/modkit_CG.bed.gz",
-        cg_tbi = "genomes/{ref_genome}/modkit_CG.bed.gz.tbi",
-        chg_bed = "genomes/{ref_genome}/modkit_CHG.bed.gz",
-        chg_tbi = "genomes/{ref_genome}/modkit_CHG.bed.gz.tbi",
-        chh_bed = "genomes/{ref_genome}/modkit_CHH.bed.gz",
-        chh_tbi = "genomes/{ref_genome}/modkit_CHH.bed.gz.tbi"
+        bam = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam",
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
+        modkit = MODKIT_BIN
     output:
-        cg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CG.bed.gz",
-        chg_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CHG.bed.gz",
-        chh_bed = "results/mC/ont/context__{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}__CHH.bed.gz"
+        summary = "results/mC/dmc/summary__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__bedMethyl__{wildcards.replicate}__{wildcards.ref_genome}"
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__bedMethyl__{replicate}__{ref_genome}", "split_bedmethyl", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["split_bedmethyl_by_context"]["threads"]
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "modkit_summary", "dmC"))
+    conda: CONDA_ENV_DMC
+    threads: config["resources"]["modkit_summary"]["threads"]
     resources:
-        mem_mb=config["resources"]["split_bedmethyl_by_context"]["mem_mb"],
-        tmp_mb=config["resources"]["split_bedmethyl_by_context"]["tmp_mb"],
-        qos=config["resources"]["split_bedmethyl_by_context"]["qos"]
+        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
+        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
+        qos=config["resources"]["modkit_summary"]["qos"]
     shell:
         """
         {{
-        printf "\nSplitting bedMethyl by context for {params.sample_name}\n"
+        input_type=$(cat {input.type_marker})
 
-        # Sort and index bedmethyl for tabix lookups
-        printf "Preparing bedMethyl for context lookup...\n"
-        sorted_bed="results/mC/ont/tmp_sorted_{params.sample_name}.bed.gz"
-        zcat {input.bedmethyl} | sort -k1,1 -k2,2n | bgzip -@ {threads} > "$sorted_bed"
-        tabix -p bed "$sorted_bed"
+        if [[ "$input_type" == "modBAM" ]]; then
+            printf "\nGenerating modkit summary for {params.sample_name}\n"
+            {input.modkit} summary --threads {threads} {input.bam} > {output.summary}
+        else
+            printf "\nGenerating summary for pre-computed bedMethyl {params.sample_name}\n"
+            printf "Sample: {params.sample_name}\n" > {output.summary}
+            printf "Input type: pre-computed bedMethyl\n" >> {output.summary}
+            printf "Note: Limited statistics available for bedMethyl input\n" >> {output.summary}
+        fi
 
-        # Use tabix intersect for fast lookups (context BEDs are pre-indexed)
-        printf "Extracting CG context...\n"
-        tabix "$sorted_bed" -R {input.cg_bed} 2>/dev/null | pigz -p {threads} > {output.cg_bed}
-
-        printf "Extracting CHG context...\n"
-        tabix "$sorted_bed" -R {input.chg_bed} 2>/dev/null | pigz -p {threads} > {output.chg_bed}
-
-        printf "Extracting CHH context...\n"
-        tabix "$sorted_bed" -R {input.chh_bed} 2>/dev/null | pigz -p {threads} > {output.chh_bed}
-
-        # Cleanup temp files
-        rm -f "$sorted_bed" "$sorted_bed.tbi"
-
-        printf "\nContext splitting complete\n"
+        printf "\nSummary complete\n"
         }} 2>&1 | tee -a "{log}"
         """
 
-def get_ont_bigwig_inputs(wildcards):
-    """Get inputs for ONT bigwig generation, including stranded CG bed for ONT samples."""
-    base_inputs = {
-        "cg_bed": f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CG.bed.gz",
-        "chg_bed": f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CHG.bed.gz",
-        "chh_bed": f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CHH.bed.gz",
-        "chrom_sizes": f"genomes/{wildcards.ref_genome}/chrom.sizes"
-    }
-    # ONT samples have a dedicated stranded CG bed from modkit_pileup
-    if wildcards.sample_type == "ONT":
-        base_inputs["cg_stranded_bed"] = f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CG_stranded.bed.gz"
-    return base_inputs
+rule make_mc_stats_dmc:
+    """Generate mapping stats for dmC samples in Bismark-compatible format.
 
-rule make_ont_bigwig_files:
-    """Generate bigwig files from ONT bedMethyl data (column 11 = percent modified).
-
-    For CG context, generates both combined and strand-specific bigwigs (matching Bismark output).
-    - Combined CG bigwig: from strand-combined bed (one value per CpG dinucleotide)
-    - Strand-specific bigwigs: from stranded bed (ONT) or filtered by strand column (bedMethyl)
+    Produces stats file compatible with prepping_mapping_stats rule for combined reports.
+    Uses CX_report file (unified format) for coverage statistics.
     """
     input:
-        unpack(get_ont_bigwig_inputs)
+        cx_report = "results/mC/dmc/cx_report__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.CX_report.txt.gz",
+        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
+        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
     output:
-        bigwig_cg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bw",
-        bigwig_cg_plus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG__plus.bw",
-        bigwig_cg_minus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG__minus.bw",
-        bigwig_chg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
-        bigwig_chg_plus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG__plus.bw",
-        bigwig_chg_minus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG__minus.bw",
-        bigwig_chh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
-        bigwig_chh_plus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH__plus.bw",
-        bigwig_chh_minus = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH__minus.bw",
-        touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
-    wildcard_constraints:
-        sample_type = r"(ONT|bedMethyl)"  # Only match ONT and bedMethyl samples
+        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        sample_type = lambda wildcards: wildcards.sample_type,
-        context = config['mC_context'],
-        # Pass stranded CG bed path as param since it's only available for ONT samples
-        cg_stranded_bed = lambda wildcards: f"results/mC/ont/context__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}__CG_stranded.bed.gz" if wildcards.sample_type == "ONT" else ""
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        line = lambda wildcards: wildcards.line,
+        tissue = lambda wildcards: wildcards.tissue,
+        sample_type = "dmC",
+        replicate = lambda wildcards: wildcards.replicate,
+        ref_genome = lambda wildcards: wildcards.ref_genome
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "ont_bigwig", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["make_ont_bigwig_files"]["threads"]
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "making_stats", "dmC"))
+    conda: CONDA_ENV_DMC
+    threads: config["resources"]["modkit_summary"]["threads"]
     resources:
-        mem_mb=config["resources"]["make_ont_bigwig_files"]["mem_mb"],
-        tmp_mb=config["resources"]["make_ont_bigwig_files"]["tmp_mb"],
-        qos=config["resources"]["make_ont_bigwig_files"]["qos"]
+        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
+        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
+        qos=config["resources"]["modkit_summary"]["qos"]
     shell:
         """
         {{
-        printf "\nMaking bigwig files for {params.sample_name}\n"
+        printf "\nMaking mapping statistics summary for dmC sample {params.sample_name}\n"
 
-        # Helper function to create bigwig from bedGraph
-        make_bigwig() {{
-            local input_bed="$1"
-            local output_bw="$2"
-            local strand_filter="$3"  # "+" or "-" or "" for all
+        input_type=$(cat {input.type_marker})
 
-            if [[ -n "$strand_filter" ]]; then
-                # Filter by strand (column 6) then extract columns 1,2,3,11
-                zcat "$input_bed" | awk -v OFS="\t" -v strand="$strand_filter" \
-                    'NF>=11 && $6==strand {{print $1,$2,$3,$11}}' | \
-                    LC_COLLATE=C sort -k1,1 -k2,2n > "${{output_bw}}.bedGraph"
+        # Get genome size and coverage stats from CX_report (CG sites only for consistency)
+        genome_size=$(awk '{{sum+=$2}} END {{print sum}}' {input.chrom_sizes})
+        cov_stats=$(zcat {input.cx_report} | awk -v gs="$genome_size" '
+            BEGIN {{total_cov=0; n_sites=0; n_sites_3x=0}}
+            $6 == "CG" {{
+                cov = $4 + $5;
+                total_cov += cov;
+                n_sites += 1;
+                if (cov >= 3) n_sites_3x += 1;
+            }}
+            END {{
+                if (n_sites > 0) {{
+                    pct_cov = n_sites / gs * 100;
+                    pct_cov_3x = n_sites_3x / gs * 100;
+                    avg_cov_all = total_cov / gs;
+                    avg_cov_covered = total_cov / n_sites;
+                }} else {{
+                    pct_cov = 0; pct_cov_3x = 0; avg_cov_all = 0; avg_cov_covered = 0;
+                }}
+                printf "%.4f\\t%.4f\\t%.4f\\t%.4f", pct_cov, pct_cov_3x, avg_cov_all, avg_cov_covered;
+            }}
+        ')
+
+        pct_cov=$(echo "$cov_stats" | cut -f1)
+        pct_cov_3x=$(echo "$cov_stats" | cut -f2)
+        avg_cov_all=$(echo "$cov_stats" | cut -f3)
+        avg_cov_covered=$(echo "$cov_stats" | cut -f4)
+
+        # Write header
+        printf "Line\\tTissue\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
+
+        # For modBAM input, we can get read counts from the aligned BAM
+        if [[ "$input_type" == "modBAM" ]]; then
+            bam_file="results/mC/dmc/aligned__{params.sample_name}.bam"
+            if [[ -f "$bam_file" ]]; then
+                flagstat=$(samtools flagstat "$bam_file")
+                tot=$(echo "$flagstat" | grep "in total" | awk '{{print $1}}')
+                mapped=$(echo "$flagstat" | grep "mapped (" | head -1 | awk '{{print $1}}')
+                uniq=$(samtools view -c -q 20 "$bam_file")
+                if [ "$tot" -gt 0 ]; then
+                    pct_mapped=$(awk "BEGIN {{printf \\"%.2f\\", $mapped/$tot*100}}")
+                    pct_uniq=$(awk "BEGIN {{printf \\"%.2f\\", $uniq/$tot*100}}")
+                else
+                    pct_mapped="0.00"
+                    pct_uniq="0.00"
+                fi
+                printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\t$tot\\t$tot (${{pct_mapped}}%%)\\t$mapped (${{pct_mapped}}%%)\\t$uniq (${{pct_uniq}}%%)\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
             else
-                # No strand filter
-                zcat "$input_bed" | awk -v OFS="\t" 'NF>=11 {{print $1,$2,$3,$11}}' | \
-                    LC_COLLATE=C sort -k1,1 -k2,2n > "${{output_bw}}.bedGraph"
+                printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
             fi
-
-            if [[ -s "${{output_bw}}.bedGraph" ]]; then
-                bedGraphToBigWig "${{output_bw}}.bedGraph" {input.chrom_sizes} "$output_bw"
-            else
-                # Create empty bigwig placeholder if no data
-                touch "$output_bw"
-            fi
-            rm -f "${{output_bw}}.bedGraph"
-        }}
-
-        if [[ "{params.context}" == "all" || "{params.context}" == "CG-only" ]]; then
-            # CG combined bigwig (strand-combined, one value per CpG)
-            printf "Creating CG combined bigwig...\n"
-            make_bigwig "{input.cg_bed}" "{output.bigwig_cg}" ""
-
-            # CG strand-specific bigwigs
-            printf "Creating CG strand-specific bigwigs...\n"
-            if [[ "{params.sample_type}" == "ONT" ]]; then
-                # ONT: use dedicated stranded bed file (path passed via params)
-                make_bigwig "{params.cg_stranded_bed}" "{output.bigwig_cg_plus}" "+"
-                make_bigwig "{params.cg_stranded_bed}" "{output.bigwig_cg_minus}" "-"
-            else
-                # bedMethyl: filter combined bed by strand column
-                make_bigwig "{input.cg_bed}" "{output.bigwig_cg_plus}" "+"
-                make_bigwig "{input.cg_bed}" "{output.bigwig_cg_minus}" "-"
-            fi
-        fi
-
-        if [[ "{params.context}" == "all" ]]; then
-            # CHG bigwigs (combined and strand-specific)
-            printf "Creating CHG bigwigs...\n"
-            make_bigwig "{input.chg_bed}" "{output.bigwig_chg}" ""
-            make_bigwig "{input.chg_bed}" "{output.bigwig_chg_plus}" "+"
-            make_bigwig "{input.chg_bed}" "{output.bigwig_chg_minus}" "-"
-
-            # CHH bigwigs (combined and strand-specific)
-            printf "Creating CHH bigwigs...\n"
-            make_bigwig "{input.chh_bed}" "{output.bigwig_chh}" ""
-            make_bigwig "{input.chh_bed}" "{output.bigwig_chh_plus}" "+"
-            make_bigwig "{input.chh_bed}" "{output.bigwig_chh_minus}" "-"
-        elif [[ "{params.context}" == "CG-only" ]]; then
-            # Create empty placeholder files for CHG/CHH
-            touch {output.bigwig_chg} {output.bigwig_chg_plus} {output.bigwig_chg_minus}
-            touch {output.bigwig_chh} {output.bigwig_chh_plus} {output.bigwig_chh_minus}
         else
-            printf "Unknown sequence context selection! Check config 'mC_context'\n"
-            exit 1
+            # For bedMethyl input, no BAM stats available
+            printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
         fi
 
-        touch {output.touch}
-        printf "\nBigwig creation complete\n"
+        printf "\ndmC stats complete\\n"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule convert_bedmethyl_to_cx_report:
-    """Convert ONT bedMethyl format to Bismark CX_report format for DMRcaller.
+    """Convert bedMethyl format to Bismark CX_report format.
 
-    This enables using DMRcaller (the same tool as Bismark workflow) for ONT samples.
-    The conversion extracts methylated/unmethylated counts from bedMethyl columns.
+    Determines context (CG/CHG/CHH) from the reference genome and outputs
+    a single CX_report file matching the Bismark output format. This enables
+    unified downstream processing with merging_mc_replicates, make_mc_bigwig_files,
+    and call_DMRs_pairwise.
+
+    When mC_context is 'CG-only', filters output to only include CG context.
     """
     input:
-        bedmethyl = "results/mC/ont/context__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__{context}.bed.gz"
+        bedmethyl = "results/mC/dmc/pileup__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz",
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        fai = "genomes/{ref_genome}/{ref_genome}.fa.fai"
     output:
-        cx_report = "results/mC/ont/cx_report__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__{context}.CX_report.txt.gz"
-    wildcard_constraints:
-        sample_type = r"(ONT|bedMethyl)",
-        context = r"(CG|CHG|CHH)"
+        cx_report = "results/mC/dmc/cx_report__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.CX_report.txt.gz"
     params:
         script = os.path.join(REPO_FOLDER, "workflow", "scripts", "bedmethyl_to_cx_report.py"),
-        context = lambda wildcards: wildcards.context
+        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        context = config['mC_context']
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__{context}", "bedmethyl_to_cx", "ONT"))
-    conda: CONDA_ENV_ONT
+        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "bedmethyl_to_cx", "dmC"))
+    conda: CONDA_ENV_DMC
     threads: 1
     resources:
-        mem_mb=config["resources"]["split_bedmethyl_by_context"]["mem_mb"],
-        tmp_mb=config["resources"]["split_bedmethyl_by_context"]["tmp_mb"],
-        qos=config["resources"]["split_bedmethyl_by_context"]["qos"]
+        mem_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["mem_mb"],
+        tmp_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["tmp_mb"],
+        qos=config["resources"]["convert_bedmethyl_to_cx_report"]["qos"]
     shell:
         """
         {{
-        printf "Converting bedMethyl to CX_report format for DMRcaller...\n"
-        printf "Input: {input.bedmethyl}\n"
-        printf "Output: {output.cx_report}\n"
-        printf "Context: {params.context}\n"
+        printf "Converting bedMethyl to CX_report format for {params.sample_name}...\n"
+        printf "Context mode: {params.context}\n"
 
-        python {params.script} {input.bedmethyl} {output.cx_report} {params.context}
+        # Convert bedMethyl to CX_report (context determined from reference)
+        python {params.script} {input.bedmethyl} {input.fasta} /dev/stdout > results/mC/dmc/tmp__{params.sample_name}.cx
+
+        # Filter by context if CG-only mode
+        if [[ "{params.context}" == "CG-only" ]]; then
+            printf "Filtering to CG context only...\n"
+            awk -F'\\t' '$6 == "CG"' results/mC/dmc/tmp__{params.sample_name}.cx > results/mC/dmc/tmp__{params.sample_name}_filtered.cx
+            mv results/mC/dmc/tmp__{params.sample_name}_filtered.cx results/mC/dmc/tmp__{params.sample_name}.cx
+        fi
+
+        # Sort by chromosome and position, then compress
+        printf "Sorting and compressing...\n"
+        sort -k1,1 -k2,2n results/mC/dmc/tmp__{params.sample_name}.cx | pigz -p {threads} > {output.cx_report}
+        rm -f results/mC/dmc/tmp__{params.sample_name}.cx
 
         printf "Conversion complete\n"
         }} 2>&1 | tee -a "{log}"
         """
 
-rule call_DMRs_modkit:
-    """Call DMRs between two ONT/bedMethyl samples using modkit dmr pair.
-
-    This rule is only used when ont_dmr_method is set to "modkit" in config.
-    The default method (dmrcaller) uses call_DMRs_pairwise instead.
-    """
-    input:
-        sample1_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample1),
-        sample2_beds = lambda wildcards: define_ont_DMR_samples(wildcards.sample2),
-        fasta = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}.fa",
-        modkit = MODKIT_BIN
-    output:
-        dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs_modkit.txt"
-    wildcard_constraints:
-        # Only match ONT/bedMethyl samples
-        sample1 = r".*__(ONT|bedMethyl)__.*",
-        sample2 = r".*__(ONT|bedMethyl)__.*"
-    params:
-        sample1 = lambda wildcards: wildcards.sample1,
-        sample2 = lambda wildcards: wildcards.sample2,
-        ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')
-    log:
-        temp(return_log_mc("{sample1}__vs__{sample2}", "modkit_DMRs", "ONT"))
-    conda: CONDA_ENV_ONT
-    threads: config["resources"]["call_DMRs_modkit"]["threads"]
-    resources:
-        mem_mb=config["resources"]["call_DMRs_modkit"]["mem_mb"],
-        tmp_mb=config["resources"]["call_DMRs_modkit"]["tmp_mb"],
-        qos=config["resources"]["call_DMRs_modkit"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nRunning modkit DMR analysis: {params.sample1} vs {params.sample2}\n"
-
-        # Prepare output directory
-        mkdir -p results/mC/DMRs
-
-        # Merge and prepare sample bedmethyl files (modkit dmr requires bgzipped + tabix indexed)
-        sample1_bed="results/mC/DMRs/tmp__{params.sample1}.bed.gz"
-        sample2_bed="results/mC/DMRs/tmp__{params.sample2}.bed.gz"
-
-        # Merge replicates (if multiple), sort, bgzip, and index
-        printf "Preparing sample 1 bedMethyl...\n"
-        zcat {input.sample1_beds} | sort -k1,1 -k2,2n | bgzip -@ {threads} > "$sample1_bed"
-        tabix -p bed "$sample1_bed"
-
-        printf "Preparing sample 2 bedMethyl...\n"
-        zcat {input.sample2_beds} | sort -k1,1 -k2,2n | bgzip -@ {threads} > "$sample2_bed"
-        tabix -p bed "$sample2_bed"
-
-        # Define output paths
-        dmr_output="results/mC/DMRs/dmr__{params.sample1}__vs__{params.sample2}.bed"
-        segment_output="results/mC/DMRs/segments__{params.sample1}__vs__{params.sample2}.bed"
-
-        # Run modkit dmr pair with segmentation
-        printf "Running modkit dmr pair...\n"
-        {input.modkit} dmr pair \
-            --threads {threads} \
-            --ref {input.fasta} \
-            --base C \
-            -a "$sample1_bed" \
-            -b "$sample2_bed" \
-            --segment "$segment_output" \
-            -o "$dmr_output"
-
-        # Create summary file
-        printf "DMR Analysis Summary\n" > {output.dmr_summary}
-        printf "Sample 1: {params.sample1}\n" >> {output.dmr_summary}
-        printf "Sample 2: {params.sample2}\n" >> {output.dmr_summary}
-        printf "Reference: {params.ref_genome}\n" >> {output.dmr_summary}
-        printf "Method: modkit dmr pair --segment\n" >> {output.dmr_summary}
-        printf "\n" >> {output.dmr_summary}
-
-        # Add DMR counts
-        if [[ -f "$dmr_output" ]]; then
-            dmr_count=$(wc -l < "$dmr_output")
-            printf "Per-site DMRs: $dmr_count\n" >> {output.dmr_summary}
-        fi
-
-        if [[ -f "$segment_output" ]]; then
-            segment_count=$(wc -l < "$segment_output")
-            printf "Segmented DMRs: $segment_count\n" >> {output.dmr_summary}
-            printf "\nSegmented regions:\n" >> {output.dmr_summary}
-            head -100 "$segment_output" >> {output.dmr_summary}
-        else
-            printf "No segmented DMR output found\n" >> {output.dmr_summary}
-        fi
-
-        # Cleanup temp files
-        rm -f "$sample1_bed" "$sample1_bed.tbi" "$sample2_bed" "$sample2_bed.tbi"
-
-        printf "\nDMR analysis complete\n"
-        }} 2>&1 | tee -a "{log}"
-        """        

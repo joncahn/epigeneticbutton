@@ -358,15 +358,12 @@ resources:
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
   # ONT methylation
-  make_modkit_context_beds: *heavy
   get_modbam: *standard
   get_bedmethyl: *low
   align_modbam: *max
   modkit_summary: *heavy
   modkit_pileup: *heavy
-  split_bedmethyl_by_context: *heavy
-  make_ont_bigwig_files: *single
-  call_DMRs_modkit: *max
+  convert_bedmethyl_to_cx_report: *standard
   # RNAseq
   make_STAR_indices: *heavy
   STAR_map_pe: *heavy

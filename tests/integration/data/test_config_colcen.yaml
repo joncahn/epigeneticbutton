@@ -1,4 +1,4 @@
-# Test configuration for ChIP + ONT methylation integration test
+# Test configuration for ChIP + direct methylation (dmC) integration test
 # Uses full ColCEN reference genome
 
 repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
@@ -16,16 +16,14 @@ aligned_bams: false
 # Methylation context
 mC_context: "all"
 
-# ONT direct methylation parameters
-ont_methylation:
+# Direct methylation (dmC) parameters
+# Supports both modBAM (ONT basecalls) and pre-computed bedMethyl inputs
+dmc_methylation:
   alignment:
     preset: "lr:hqae"
   pileup:
     combine_mods: true
     min_coverage: 3
-
-# DMR calling method for ONT samples: "dmrcaller" (default) or "modkit"
-ont_dmr_method: "dmrcaller"
 
 # Custom DMR script
 custom_script_dmrs: false
