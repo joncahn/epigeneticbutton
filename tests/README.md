@@ -1,6 +1,6 @@
 # EpigeneticButton Test Suite
 
-Comprehensive test suite for the EpigeneticButton (EPICC) bioinformatics pipeline, with emphasis on the direct methylation (dmC) analysis feature.
+Comprehensive test suite for the EpigeneticButton (EPICC) bioinformatics pipeline, with emphasis on the direct methylation (dmC) analysis feature for native base modification detection from long-read sequencing.
 
 ## Quick Start
 
@@ -50,11 +50,12 @@ tests/
 Fast, isolated tests for individual functions and modules. No external dependencies required.
 
 **Coverage:**
-- Input validation for modBAM files
-- Input validation for bedMethyl files
-- Sample name parsing
-- dmC sample detection
-- Parameter selection logic
+- Input validation for modBAM files (MM/ML tag detection, alignment validation)
+- Input validation for bedMethyl files (format, coordinates, coverage values)
+- Automatic format detection (modBAM vs bedMethyl)
+- Sample name parsing and type detection
+- dmC vs Bismark sample identification
+- Parameter selection logic for different methylation assay types
 
 **Run unit tests:**
 ```bash

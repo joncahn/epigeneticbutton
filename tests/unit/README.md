@@ -1,13 +1,13 @@
 # Unit Tests for Direct Methylation (dmC) Feature
 
-This directory contains unit tests for the direct methylation (dmC) analysis feature added to the EpigeneticButton pipeline.
+This directory contains unit tests for the direct methylation (dmC) analysis feature added to the EpigeneticButton pipeline. The dmC feature enables processing of native base modification data from long-read sequencing platforms (Oxford Nanopore, PacBio) without bisulfite conversion.
 
 ## Overview
 
 The tests cover:
 
-1. **validate_dmc_input.py** - Validation of dmC input files (modBAM and bedMethyl)
-2. **mC.smk helpers** - Helper functions for determining sample types and parameters
+1. **validate_dmc_input.py** - Validation of dmC input files (modBAM with MM/ML tags and bedMethyl format)
+2. **mC.smk helpers** - Helper functions for sample type detection, input format determination, and parameter selection
 
 ## Test Files
 

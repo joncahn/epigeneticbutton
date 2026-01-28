@@ -55,7 +55,7 @@ tests/
 
 ## What's Tested
 
-### ONT Input Validation (42 tests)
+### dmC Input Validation (42 tests)
 
 **bedMethyl validation:**
 - Format validation (10/11 columns)
@@ -76,8 +76,8 @@ tests/
 ### Helper Functions (30 tests)
 
 **Sample detection:**
-- `is_ont_sample()` - Identifies ONT vs Bismark samples
-- `get_ont_input_type()` - Determines modBAM vs bedMethyl
+- `is_dmc_sample()` - Identifies dmC vs Bismark samples
+- `get_dmc_input_type()` - Determines modBAM vs bedMethyl
 - `parameters_for_mc()` - Selects parameter sets
 
 **Sample parsing:**

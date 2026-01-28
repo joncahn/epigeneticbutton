@@ -181,17 +181,35 @@ mC_mapping:
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
 
 # Direct methylation (dmC) parameters
-# For sample_type "dmC" - supports modBAM input or pre-computed bedMethyl input
+# For sample_type "dmC" - native base modification detection from long-read sequencing (Oxford Nanopore, PacBio)
+# Supports two input formats that are automatically detected:
+#   - modBAM: BAM files with MM/ML tags from modified basecalling (e.g., Dorado, Guppy)
+#   - bedMethyl: Pre-computed methylation calls in bedMethyl format (e.g., from prior modkit pileup)
 dmc_methylation:
   alignment:
-    preset: "lr:hqae"  # mm2plus preset for long reads
+    # Minimap2 preset for alignment (used by mm2plus, an accelerated minimap2 fork)
+    # "lr:hqae" = long-read, high-quality, accurate end-to-end alignment
+    # Optimized for high-accuracy ONT basecalls (e.g., Guppy SUP, Dorado HAC/SUP models)
+    # Alternative presets: "map-ont" (standard ONT), "map-hifi" (PacBio HiFi)
+    preset: "lr:hqae"
   pileup:
-    combine_mods: true  # Combine 5mC and 5hmC into total methylation
-    min_coverage: 3     # Minimum read coverage for methylation calls
+    # Combine 5mC (5-methylcytosine) and 5hmC (5-hydroxymethylcytosine) into total methylation
+    # This matches bisulfite sequencing behavior, which cannot distinguish these modifications
+    # Set to false to analyze them separately (requires changes to downstream bigwig generation)
+    combine_mods: true
+    # Minimum read coverage threshold for reporting a methylation call
+    # Sites with fewer reads are excluded from bedMethyl output
+    min_coverage: 3
 
-# DMR calling method for dmC samples
-# Options: "dmrcaller" (default, R package - same as Bismark), "modkit" (native tool with HMM segmentation)
-# Bismark samples always use dmrcaller regardless of this setting
+# DMR (Differentially Methylated Region) calling method for dmC samples
+# Options:
+#   - "dmrcaller": R/Bioconductor DMRcaller package (default)
+#     Same method used for Bismark samples, enables unified dmC vs Bismark comparisons
+#     Uses sliding window approach with statistical testing
+#   - "modkit": Native modkit DMR caller with HMM-based segmentation (experimental)
+#     Only suitable for dmC vs dmC comparisons, not compatible with Bismark samples
+#     May provide better sensitivity for long-read specific patterns
+# Note: Bismark samples always use dmrcaller regardless of this setting
 dmc_dmr_method: "dmrcaller"
 
 # small RNA parameters

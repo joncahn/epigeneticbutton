@@ -20,7 +20,8 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Transcription Factor ChIP-seq
   - RNA-seq
   - small RNA-seq
-  - MethylC-seq (mC)
+  - MethylC-seq (mC) - Bisulfite sequencing via Bismark
+  - Direct Methylation (dmC) - Long-read native methylation (ONT, PacBio)
   - RAMPAGE *\*in development*
 
 - **Automated Analysis**:
@@ -183,7 +184,17 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 
 ### Whole Genome Bisulfite Sequencing
 - Col1: *data_type*: `mC`. No other options.
-- Col4: *sample_type*: `mC`. Can also be `WGBS`, `ONT`, `Pico` or `EMseq`. Not yet relevant except for the file names, but will be used in future release to define the type of data.
+- Col4: *sample_type*: `mC`, `WGBS`, `Pico`, or `EMseq`. These labels help identify the chemical or enzymatic conversion method, but all are processed through the Bismark pipeline.
+
+### Direct Methylation (Long-Read Sequencing)
+- Col1: *data_type*: `mC`. No other options.
+- Col4: *sample_type*: `dmC`. This identifies samples with native base modifications (Oxford Nanopore, PacBio) that have not undergone bisulfite conversion or other enzymatic treatments. However, this sample type can also be used with any upstream methylation analysis that produces modBAM or bedMethyl files.
+- Col7: *fastq_path*: Path to input file or directory containing input files. Supports:
+  - **modBAM**: BAM files with MM/ML methylation tags from basecalling (e.g., Dorado, Guppy)
+  - **bedMethyl**: Pre-computed methylation calls in bedMethyl format (e.g., from modkit pileup)
+- Col6: *seq_id*: Unique identifier used to locate files in the fastq_path directory. When fastq_path is a directory, files matching `*seq_id*.bam` (for modBAM) or `*seq_id*.bed*` (for bedMethyl) will be automatically detected. If both formats exist, bedMethyl is preferred as it's pre-computed. When fastq_path is a direct file path, seq_id serves as a sample identifier.
+- Col8: *paired*: Only `SE` is currently supported for dmC samples (we assume long-read sequencing).
+- Note: The pipeline automatically detects whether input is modBAM or bedMethyl format. modBAM files are aligned if necessary and processed through modkit pileup. Both formats are converted to a unified Bismark-compatible CX_report format for downstream analysis (bigwig generation, DMR calling) compatible with bisulfite samples.
 
 ## Configuration Options
 
@@ -406,7 +417,6 @@ If using local fastq files for paired-end data, the two read files need to end w
 ## Features under development
 - RAMPAGE
 - ATAC-seq
-- ONT for direct methylation calling
 
 ## FAQ
 

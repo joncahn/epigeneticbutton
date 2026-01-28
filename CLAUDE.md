@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-EpigeneticButton (EPICC - Epigenetic Pipeline for Integrative Chromatin Characterization) is a Snakemake-based bioinformatics pipeline for analyzing and integrating epigenomics datasets: ChIP-seq, RNA-seq, small RNA-seq, and methylC-seq (bisulfite sequencing).
+EpigeneticButton (EPICC - Epigenetic Pipeline for Integrative Chromatin Characterization) is a Snakemake-based bioinformatics pipeline for analyzing and integrating epigenomics datasets: ChIP-seq, RNA-seq, small RNA-seq, bisulfite methylC-seq, and direct methylation from long-read sequencing.
 
 ## Running the Pipeline
 
@@ -57,6 +57,10 @@ snakemake --profile profiles/slurm coverage_chip
 Samples are identified by a compound name: `{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}` (double underscore separators).
 
 Data types: `ChIP`, `ChIP_<group>`, `TF_<name>`, `RNAseq`, `sRNA`, `mC`
+
+Sample types for mC data_type:
+- Bisulfite sequencing: `mC`, `WGBS`, `Pico`, `EMseq` (processed via Bismark)
+- Direct methylation: `dmC` (native base modifications from Oxford Nanopore/PacBio; processed via modkit)
 
 ### Configuration
 
