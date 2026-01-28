@@ -1,17 +1,17 @@
-# Unit Tests for ONT Methylation Feature
+# Unit Tests for Direct Methylation (dmC) Feature
 
-This directory contains unit tests for the ONT direct methylation analysis feature added to the EpigeneticButton pipeline.
+This directory contains unit tests for the direct methylation (dmC) analysis feature added to the EpigeneticButton pipeline.
 
 ## Overview
 
 The tests cover:
 
-1. **validate_ont_input.py** - Validation of modBAM and bedMethyl input files
+1. **validate_dmc_input.py** - Validation of dmC input files (modBAM and bedMethyl)
 2. **mC.smk helpers** - Helper functions for determining sample types and parameters
 
 ## Test Files
 
-- `test_validate_ont_input.py` - Tests for input validation script
+- `test_validate_dmc_input.py` - Tests for input validation script
 - `test_mC_helpers.py` - Tests for Snakemake helper functions
 
 ## Prerequisites
@@ -43,7 +43,7 @@ pytest unit/ -v
 
 ```bash
 # Test only the validation script
-pytest tests/unit/test_validate_ont_input.py -v
+pytest tests/unit/test_validate_dmc_input.py -v
 
 # Test only the helper functions
 pytest tests/unit/test_mC_helpers.py -v
@@ -53,10 +53,10 @@ pytest tests/unit/test_mC_helpers.py -v
 
 ```bash
 # Run all tests in a class
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl -v
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl -v
 
 # Run a single test function
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns -v
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns -v
 ```
 
 ### Run Tests with Coverage
@@ -81,7 +81,7 @@ pytest tests/unit/ -n auto
 
 ## Test Structure
 
-### test_validate_ont_input.py
+### test_validate_dmc_input.py
 
 Tests are organized into classes by function:
 
@@ -249,21 +249,21 @@ If tests fail:
 
 ```bash
 # Verbose output
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl -v
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl -v
 
 # Drop into debugger on failure
-pytest tests/unit/test_validate_ont_input.py --pdb
+pytest tests/unit/test_validate_dmc_input.py --pdb
 ```
 
 ## Test Coverage Goals
 
 Target coverage metrics:
-- **validate_ont_input.py**: >90% line coverage
+- **validate_dmc_input.py**: >90% line coverage
 - **mC.smk helper functions**: >95% line coverage
 
 Current coverage can be checked with:
 ```bash
-pytest tests/unit/ --cov=workflow/scripts/validate_ont_input --cov-report=term-missing
+pytest tests/unit/ --cov=workflow/scripts/validate_dmc_input --cov-report=term-missing
 ```
 
 ## Contributing

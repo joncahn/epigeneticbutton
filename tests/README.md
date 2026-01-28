@@ -1,6 +1,6 @@
 # EpigeneticButton Test Suite
 
-Comprehensive test suite for the EpigeneticButton (EPICC) bioinformatics pipeline, with emphasis on the ONT direct methylation analysis feature.
+Comprehensive test suite for the EpigeneticButton (EPICC) bioinformatics pipeline, with emphasis on the direct methylation (dmC) analysis feature.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ pip install -r tests/requirements-test.txt
 ./tests/run_tests.sh --cov
 
 # Run specific tests
-pytest tests/unit/test_validate_ont_input.py -v
+pytest tests/unit/test_validate_dmc_input.py -v
 ```
 
 ## Directory Structure
@@ -29,7 +29,7 @@ tests/
 │
 ├── unit/                               # Unit tests
 │   ├── README.md                       # Unit test documentation
-│   ├── test_validate_ont_input.py     # Tests for ONT input validation
+│   ├── test_validate_dmc_input.py     # Tests for dmC input validation
 │   └── test_mC_helpers.py             # Tests for mC.smk helper functions
 │
 ├── integration/                        # Integration tests (future)
@@ -69,9 +69,9 @@ Tests for complete workflows and pipelines. May require external tools (samtools
 
 ## Test Files
 
-### validate_ont_input.py Tests
+### validate_dmc_input.py Tests
 
-`tests/unit/test_validate_ont_input.py` - 40+ tests covering:
+`tests/unit/test_validate_dmc_input.py` - 40+ tests covering:
 
 - **Valid inputs:** 11-column bedMethyl, 10-column bedMethyl, gzipped files
 - **Invalid inputs:** Wrong column counts, bad coordinates, invalid values
@@ -98,13 +98,13 @@ Tests for complete workflows and pipelines. May require external tools (samtools
 pytest tests/unit/ -v
 
 # Single test file
-pytest tests/unit/test_validate_ont_input.py
+pytest tests/unit/test_validate_dmc_input.py
 
 # Single test class
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl
 
 # Single test function
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns
 ```
 
 ### With Coverage
@@ -260,12 +260,12 @@ jobs:
 
 Target coverage percentages:
 
-- **validate_ont_input.py**: >90%
+- **validate_dmc_input.py**: >90%
 - **mC.smk helper functions**: >95%
 
 Check current coverage:
 ```bash
-pytest tests/unit/ --cov=workflow/scripts/validate_ont_input --cov-report=term-missing
+pytest tests/unit/ --cov=workflow/scripts/validate_dmc_input --cov-report=term-missing
 ```
 
 ## Troubleshooting

@@ -1,6 +1,6 @@
 # Test Data Files
 
-This directory contains mock data files used for unit testing the ONT methylation feature.
+This directory contains mock data files used for unit testing the direct methylation (dmC) feature.
 
 ## Files
 
@@ -39,7 +39,7 @@ The bedMethyl format used by ONT modkit has 11 columns:
 ## Usage in Tests
 
 These files are used by:
-- `tests/unit/test_validate_ont_input.py` - For testing bedMethyl validation
+- `tests/unit/test_validate_dmc_input.py` - For testing bedMethyl validation
 - Integration tests that need realistic sample data
 
 ## Adding New Test Data

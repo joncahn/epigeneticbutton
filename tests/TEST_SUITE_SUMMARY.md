@@ -1,8 +1,8 @@
-# ONT Methylation Test Suite - Implementation Summary
+# Direct Methylation (dmC) Test Suite - Implementation Summary
 
 ## Overview
 
-A comprehensive unit test suite has been created for the ONT direct methylation feature added to the EpigeneticButton bioinformatics pipeline. The test suite includes 70+ tests covering validation logic, helper functions, and edge cases.
+A comprehensive unit test suite has been created for the direct methylation (dmC) feature added to the EpigeneticButton bioinformatics pipeline. The test suite includes 70+ tests covering validation logic, helper functions, and edge cases.
 
 ## Files Created
 
@@ -10,7 +10,7 @@ A comprehensive unit test suite has been created for the ONT direct methylation 
 
 | File | Purpose | Tests | Coverage |
 |------|---------|-------|----------|
-| `tests/unit/test_validate_ont_input.py` | Tests for ONT input validation script | 42 tests | validate_modbam(), validate_bedmethyl(), main() |
+| `tests/unit/test_validate_dmc_input.py` | Tests for dmC input validation script | 42 tests | validate_modbam(), validate_bedmethyl(), main() |
 | `tests/unit/test_mC_helpers.py` | Tests for Snakemake helper functions | 30 tests | is_ont_sample(), get_ont_input_type(), parameters_for_mc() |
 
 ### Configuration Files
@@ -49,7 +49,7 @@ A comprehensive unit test suite has been created for the ONT direct methylation 
 
 ## Test Coverage Breakdown
 
-### test_validate_ont_input.py (42 tests)
+### test_validate_dmc_input.py (42 tests)
 
 #### TestValidateBedMethyl (25 tests)
 - ✓ Valid 11-column bedMethyl format
@@ -174,8 +174,8 @@ pytest tests/unit/ -v
 ### Expected Output
 
 ```
-tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns PASSED
-tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_10_columns PASSED
+tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns PASSED
+tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_10_columns PASSED
 ...
 tests/unit/test_mC_helpers.py::TestIsOntSample::test_ont_modbam_sample_is_ont PASSED
 tests/unit/test_mC_helpers.py::TestIsOntSample::test_bedmethyl_sample_is_ont PASSED
@@ -260,7 +260,7 @@ The test suite is ready for CI/CD integration:
 
 | Component | Target | Strategy |
 |-----------|--------|----------|
-| validate_ont_input.py | >90% | Unit tests with mocking |
+| validate_dmc_input.py | >90% | Unit tests with mocking |
 | mC.smk helpers | >95% | Direct function testing |
 | Edge cases | 100% | Explicit error condition tests |
 
@@ -322,7 +322,7 @@ When adding new ONT methylation features:
 
 All test files have been syntax-checked:
 ```bash
-✓ tests/unit/test_validate_ont_input.py
+✓ tests/unit/test_validate_dmc_input.py
 ✓ tests/unit/test_mC_helpers.py
 ✓ tests/conftest.py
 ```
@@ -331,17 +331,17 @@ All test files have been syntax-checked:
 
 ### Run specific test file
 ```bash
-pytest tests/unit/test_validate_ont_input.py -v
+pytest tests/unit/test_validate_dmc_input.py -v
 ```
 
 ### Run specific test class
 ```bash
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl -v
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl -v
 ```
 
 ### Run specific test
 ```bash
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns -v
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns -v
 ```
 
 ### Check coverage

@@ -1,6 +1,6 @@
 # Testing Guide for EpigeneticButton
 
-Complete testing documentation for the ONT methylation feature.
+Complete testing documentation for the direct methylation (dmC) feature.
 
 ## Quick Links
 
@@ -38,7 +38,7 @@ pip install -r tests/requirements-test.txt
 ```
 tests/
 ├── unit/                                  # Unit tests (72 tests)
-│   ├── test_validate_ont_input.py         # Input validation (42 tests)
+│   ├── test_validate_dmc_input.py         # Input validation (42 tests)
 │   └── test_mC_helpers.py                 # Helper functions (30 tests)
 │
 ├── data/                                  # Mock data files
@@ -89,7 +89,7 @@ tests/
 
 | Component | Tests | Coverage Target |
 |-----------|-------|----------------|
-| validate_ont_input.py | 42 | > 90% |
+| validate_dmc_input.py | 42 | > 90% |
 | mC.smk helpers | 30 | > 95% |
 | Edge cases | 15+ | 100% |
 
@@ -102,7 +102,7 @@ tests/
 pytest tests/unit/ -v
 
 # Specific file
-pytest tests/unit/test_validate_ont_input.py
+pytest tests/unit/test_validate_dmc_input.py
 
 # With coverage
 pytest tests/unit/ --cov=workflow/scripts --cov-report=html
@@ -133,7 +133,7 @@ pytest tests/unit/ --pdb
 ============================= test session starts ==============================
 collected 72 items
 
-tests/unit/test_validate_ont_input.py::TestValidateBedMethyl
+tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl
   test_valid_bedmethyl_11_columns                                       PASSED
   test_valid_bedmethyl_10_columns                                       PASSED
   test_bedmethyl_with_header_and_comments                              PASSED
@@ -154,7 +154,7 @@ tests/unit/test_validate_ont_input.py::TestValidateBedMethyl
   test_bedmethyl_position_exceeds_chrom_length                         PASSED
   test_bedmethyl_no_matching_chromosomes                               PASSED
 
-tests/unit/test_validate_ont_input.py::TestValidateModBAM
+tests/unit/test_validate_dmc_input.py::TestValidateModBAM
   test_valid_modbam_with_mm_ml_tags                                    PASSED
   test_modbam_without_mm_tag                                           PASSED
   test_modbam_without_ml_tag                                           PASSED
@@ -201,7 +201,7 @@ All test documentation is located in the `tests/` directory:
 ## Files Created
 
 ### Test Code (917 lines)
-- `tests/unit/test_validate_ont_input.py` (590 lines)
+- `tests/unit/test_validate_dmc_input.py` (590 lines)
 - `tests/unit/test_mC_helpers.py` (272 lines)
 - `tests/conftest.py` (55 lines)
 

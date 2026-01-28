@@ -214,7 +214,7 @@ These integration tests complement the existing unit tests:
 - `tests/conftest.py` - Shared pytest fixtures (already includes ONT fixtures)
 - `pytest.ini` - Pytest configuration (already has integration marker)
 - `tests/unit/test_mC_helpers.py` - Unit tests for mC helper functions
-- `tests/unit/test_validate_ont_input.py` - Unit tests for ONT validation
+- `tests/unit/test_validate_dmc_input.py` - Unit tests for ONT validation
 
 **Pipeline Files (Tested):**
 - `workflow/Snakefile` - Main pipeline orchestrator

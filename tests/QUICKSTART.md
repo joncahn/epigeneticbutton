@@ -1,6 +1,6 @@
 # Test Suite Quick Start Guide
 
-Get up and running with the ONT methylation test suite in 5 minutes.
+Get up and running with the dmC (direct methylation) test suite in 5 minutes.
 
 ## Prerequisites
 
@@ -50,8 +50,8 @@ testpaths: tests
 plugins: cov-4.1.0, mock-3.11.1, xdist-3.3.1
 collected 72 items
 
-tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns PASSED [  1%]
-tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_10_columns PASSED [  2%]
+tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns PASSED [  1%]
+tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_10_columns PASSED [  2%]
 ...
 tests/unit/test_mC_helpers.py::TestIntegrationScenarios::test_mixed_sample_types PASSED [100%]
 
@@ -70,7 +70,7 @@ Output shows coverage percentage for each file:
 ```
 Name                                    Stmts   Miss  Cover   Missing
 ---------------------------------------------------------------------
-workflow/scripts/validate_ont_input.py    127      5    96%   45-47, 89, 126
+workflow/scripts/validate_dmc_input.py    127      5    96%   45-47, 89, 126
 ---------------------------------------------------------------------
 TOTAL                                     127      5    96%
 
@@ -80,13 +80,13 @@ Coverage HTML report: htmlcov/index.html
 ### Run specific test file
 
 ```bash
-pytest tests/unit/test_validate_ont_input.py -v
+pytest tests/unit/test_validate_dmc_input.py -v
 ```
 
 ### Run specific test
 
 ```bash
-pytest tests/unit/test_validate_ont_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns -v
+pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns -v
 ```
 
 ### Run tests matching a pattern
@@ -100,19 +100,19 @@ pytest tests/unit/ -k "ont_sample" -v    # Only ont_sample tests
 
 ### ✓ PASSED - Test succeeded
 ```
-test_validate_ont_input.py::test_valid_bedmethyl_11_columns PASSED
+test_validate_dmc_input.py::test_valid_bedmethyl_11_columns PASSED
 ```
 
 ### ✗ FAILED - Test failed
 ```
-test_validate_ont_input.py::test_valid_bedmethyl_11_columns FAILED
+test_validate_dmc_input.py::test_valid_bedmethyl_11_columns FAILED
 
 AssertionError: assert False is True
 ```
 
 ### s SKIPPED - Test was skipped
 ```
-test_validate_ont_input.py::test_requires_samtools SKIPPED
+test_validate_dmc_input.py::test_requires_samtools SKIPPED
 ```
 
 ## Troubleshooting
@@ -137,7 +137,7 @@ cd /grid/martienssen/home/eernst/src/epigeneticbutton
 PYTHONPATH=. pytest tests/unit/
 ```
 
-### "No module named 'validate_ont_input'"
+### "No module named 'validate_dmc_input'"
 
 The test file imports from `workflow/scripts/`. Make sure you're running from the repository root.
 
@@ -181,7 +181,7 @@ tests/
 ├── run_tests.sh            # Test runner script
 │
 ├── unit/                   # Unit tests (72 tests)
-│   ├── test_validate_ont_input.py  # 42 tests
+│   ├── test_validate_dmc_input.py  # 42 tests
 │   └── test_mC_helpers.py          # 30 tests
 │
 └── data/                   # Mock data
@@ -191,7 +191,7 @@ tests/
 
 ## What's Being Tested
 
-### validate_ont_input.py (42 tests)
+### validate_dmc_input.py (42 tests)
 - bedMethyl file format validation
 - modBAM file validation
 - Chromosome reference checking
