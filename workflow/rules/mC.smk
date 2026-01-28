@@ -636,9 +636,10 @@ rule get_dmc_input:
             printf "Searching directory for seq_id '$seq_id'...\n"
 
             # Check for bedMethyl files first (preferred)
+            # Note: Use { || true; } pattern to handle pipefail when ls finds no matches
             bedmethyl_file=""
             for ext in .bed.gz .bedmethyl .bed; do
-                match_count=$(ls -1 "$dmc_path"/*"$seq_id"*"$ext" 2>/dev/null | wc -l)
+                match_count=$( { ls -1 "$dmc_path"/*"$seq_id"*"$ext" 2>/dev/null || true; } | wc -l)
                 if [[ "$match_count" -eq 1 ]]; then
                     bedmethyl_file=$(ls "$dmc_path"/*"$seq_id"*"$ext")
                     break
@@ -651,8 +652,9 @@ rule get_dmc_input:
             done
 
             # Check for modBAM files
+            # Note: Use { || true; } pattern to handle pipefail when ls finds no matches
             modbam_file=""
-            modbam_count=$(ls -1 "$dmc_path"/*"$seq_id"*.bam 2>/dev/null | wc -l)
+            modbam_count=$( { ls -1 "$dmc_path"/*"$seq_id"*.bam 2>/dev/null || true; } | wc -l)
             if [[ "$modbam_count" -eq 1 ]]; then
                 modbam_file=$(ls "$dmc_path"/*"$seq_id"*.bam)
             elif [[ "$modbam_count" -gt 1 ]]; then

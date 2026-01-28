@@ -1,4 +1,4 @@
-name: epibutton_ont
+name: epibutton_dmc
 channels:
   - conda-forge
   - bioconda
