@@ -584,6 +584,10 @@ rule get_dmc_input:
     - Direct file paths: /path/to/sample.bam
     - Directory paths: /path/to/dir (finds file matching seq_id)
 
+    When searching directories, bedMethyl files are preferred over modBAM if both
+    exist with the same seq_id prefix (bedMethyl is pre-computed and ready to use).
+    A warning is logged when a modBAM is skipped in favor of bedMethyl.
+
     Creates a marker file indicating the detected type for downstream rules.
     """
     input:
@@ -628,28 +632,49 @@ rule get_dmc_input:
         elif [[ -d "$dmc_path" ]]; then
             # Directory path provided - find file matching seq_id
             # Uses *seq_id* pattern consistent with sample_download.smk
+            # Prefers bedMethyl over modBAM if both exist (bedMethyl is pre-computed)
             printf "Searching directory for seq_id '$seq_id'...\n"
 
-            # Try to find modBAM (.bam) or bedMethyl (.bed.gz, .bed, .bedmethyl) files
-            input_file=""
-            for ext in .bam .bed.gz .bedmethyl .bed; do
-                # Count matches using *seq_id* pattern (seq_id anywhere in filename)
+            # Check for bedMethyl files first (preferred)
+            bedmethyl_file=""
+            for ext in .bed.gz .bedmethyl .bed; do
                 match_count=$(ls -1 "$dmc_path"/*"$seq_id"*"$ext" 2>/dev/null | wc -l)
                 if [[ "$match_count" -eq 1 ]]; then
-                    input_file=$(ls "$dmc_path"/*"$seq_id"*"$ext")
-                    printf "Found: $input_file\n"
+                    bedmethyl_file=$(ls "$dmc_path"/*"$seq_id"*"$ext")
                     break
                 elif [[ "$match_count" -gt 1 ]]; then
-                    printf "Error: Multiple files found matching seq_id '$seq_id' with extension '$ext':\n"
+                    printf "Error: Multiple bedMethyl files found matching seq_id '$seq_id' with extension '$ext':\n"
                     ls -1 "$dmc_path"/*"$seq_id"*"$ext"
                     printf "Please use a more specific seq_id or provide a direct file path.\n"
                     exit 1
                 fi
             done
 
-            if [[ -z "$input_file" ]]; then
+            # Check for modBAM files
+            modbam_file=""
+            modbam_count=$(ls -1 "$dmc_path"/*"$seq_id"*.bam 2>/dev/null | wc -l)
+            if [[ "$modbam_count" -eq 1 ]]; then
+                modbam_file=$(ls "$dmc_path"/*"$seq_id"*.bam)
+            elif [[ "$modbam_count" -gt 1 ]]; then
+                printf "Error: Multiple modBAM files found matching seq_id '$seq_id':\n"
+                ls -1 "$dmc_path"/*"$seq_id"*.bam
+                printf "Please use a more specific seq_id or provide a direct file path.\n"
+                exit 1
+            fi
+
+            # Select input file: prefer bedMethyl over modBAM
+            if [[ -n "$bedmethyl_file" ]]; then
+                input_file="$bedmethyl_file"
+                printf "Found bedMethyl: $input_file\n"
+                if [[ -n "$modbam_file" ]]; then
+                    printf "WARNING: modBAM also found ($modbam_file) but using bedMethyl (pre-computed calls preferred)\n"
+                fi
+            elif [[ -n "$modbam_file" ]]; then
+                input_file="$modbam_file"
+                printf "Found modBAM: $input_file\n"
+            else
                 printf "Error: No dmC file found matching seq_id '$seq_id' in '$dmc_path'\n"
-                printf "Looked for patterns: *$seq_id*.bam, *$seq_id*.bed.gz, *$seq_id*.bedmethyl, *$seq_id*.bed\n"
+                printf "Looked for patterns: *$seq_id*.bed.gz, *$seq_id*.bedmethyl, *$seq_id*.bed, *$seq_id*.bam\n"
                 printf "Available files:\n"
                 ls -la "$dmc_path"
                 exit 1
