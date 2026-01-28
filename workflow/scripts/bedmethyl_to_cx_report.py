@@ -35,27 +35,22 @@ import pysam
 from contextlib import ExitStack
 
 
-def get_context_and_trinuc(fasta, chrom, pos, strand):
-    """Determine methylation context and trinucleotide from reference.
+def get_context_and_trinuc_from_seq(chrom_seq, chrom_len, pos, strand):
+    """Determine methylation context and trinucleotide from cached chromosome sequence.
 
     Args:
-        fasta: pysam.FastaFile object
-        chrom: chromosome name
+        chrom_seq: uppercase chromosome sequence string
+        chrom_len: length of chromosome
         pos: 0-based position of the C
         strand: '+' or '-'
 
     Returns:
         (context, trinucleotide) tuple
     """
-    try:
-        chrom_len = fasta.get_reference_length(chrom)
-    except KeyError:
-        return ("CNN", "CNN")
-
     if strand == '+':
         # Forward strand: look at C and next 2 bases
         end = min(pos + 3, chrom_len)
-        seq = fasta.fetch(chrom, pos, end).upper()
+        seq = chrom_seq[pos:end]
         if len(seq) < 2:
             return ("CHH", seq + "N" * (3 - len(seq)))
 
@@ -72,7 +67,7 @@ def get_context_and_trinuc(fasta, chrom, pos, strand):
         # Reverse strand: C is actually a G on forward strand
         # Look at 2 bases before and the G position
         start = max(0, pos - 2)
-        seq = fasta.fetch(chrom, start, pos + 1).upper()
+        seq = chrom_seq[start:pos + 1]
 
         # Reverse complement
         comp = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'N': 'N'}
@@ -94,10 +89,19 @@ def get_context_and_trinuc(fasta, chrom, pos, strand):
 
 
 def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
-    """Convert bedMethyl to CX_report format with context from reference."""
+    """Convert bedMethyl to CX_report format with context from reference.
+
+    Optimized to load each chromosome sequence into memory once, avoiding
+    per-position file I/O overhead from repeated fasta.fetch() calls.
+    """
 
     # Open reference genome
     fasta = pysam.FastaFile(reference_file)
+
+    # Cache for current chromosome sequence (avoids millions of fetch calls)
+    current_chrom = None
+    chrom_seq = None
+    chrom_len = 0
 
     with ExitStack() as stack:
         # Handle gzipped or plain input
@@ -128,13 +132,29 @@ def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
             n_mod = int(fields[11])
             n_canonical = int(fields[12])
 
+            # Load chromosome sequence if we've moved to a new chromosome
+            if chrom != current_chrom:
+                try:
+                    chrom_seq = fasta.fetch(chrom).upper()
+                    chrom_len = len(chrom_seq)
+                    current_chrom = chrom
+                    print(f"Loaded chromosome {chrom} ({chrom_len:,} bp)", file=sys.stderr)
+                except KeyError:
+                    print(f"Warning: chromosome {chrom} not found in reference", file=sys.stderr)
+                    chrom_seq = ""
+                    chrom_len = 0
+                    current_chrom = chrom
+
             # Handle combined strand data (strand = '.')
             # For combined CpG, report as + strand
             if strand == '.':
                 strand = '+'
 
-            # Get context and trinucleotide from reference
-            context, trinuc = get_context_and_trinuc(fasta, chrom, start, strand)
+            # Get context and trinucleotide from cached sequence
+            if chrom_len == 0:
+                context, trinuc = ("CNN", "CNN")
+            else:
+                context, trinuc = get_context_and_trinuc_from_seq(chrom_seq, chrom_len, start, strand)
 
             # Convert to 1-based position for CX_report
             position = start + 1

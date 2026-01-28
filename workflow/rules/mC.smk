@@ -486,7 +486,7 @@ rule call_DMRs_pairwise:
     input:
         sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
-        chrom_sizes = lambda wildcards: (lambda rg: f"genomes/{rg}/chrom.sizes")(get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome'))
+        chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
         dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
     params:
