@@ -53,7 +53,7 @@ Fast, isolated tests for individual functions and modules. No external dependenc
 - Input validation for modBAM files
 - Input validation for bedMethyl files
 - Sample name parsing
-- ONT sample detection
+- dmC sample detection
 - Parameter selection logic
 
 **Run unit tests:**
@@ -84,8 +84,8 @@ Tests for complete workflows and pipelines. May require external tools (samtools
 `tests/unit/test_mC_helpers.py` - 30+ tests covering:
 
 - **parse_sample_name:** Standard names, ChIP groups, TF names
-- **is_ont_sample:** ONT detection, Bismark vs ONT
-- **get_ont_input_type:** modBAM vs bedMethyl detection
+- **is_dmc_sample:** dmC detection, Bismark vs dmC
+- **get_dmc_input_type:** modBAM vs bedMethyl detection
 - **parameters_for_mc:** Parameter set selection for all sample types
 - **Integration scenarios:** Complete workflows, mixed sample types
 
@@ -164,7 +164,7 @@ Shared fixtures are defined in `tests/conftest.py`:
 - `mock_bam_header` - Mock BAM file header
 - `mock_bam_read_with_mm_ml` - BAM read with methylation tags
 - `mock_bam_read_without_mm` - BAM read without methylation tags
-- `ont_sample_names` - Dictionary of sample name examples
+- `dmc_sample_names` - Dictionary of sample name examples
 
 ## Writing Tests
 

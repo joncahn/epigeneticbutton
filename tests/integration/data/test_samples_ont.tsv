@@ -1,5 +1,0 @@
-mC	WT	leaf	ONT	rep1	ONT_sample1	tests/integration/data/mock_inputs/ont_sample1.bam	SE	test_genome
-mC	WT	leaf	ONT	rep2	ONT_sample2	tests/integration/data/mock_inputs/ont_sample2.bam	SE	test_genome
-mC	WT	root	bedMethyl	rep1	bedMethyl_sample1	tests/integration/data/mock_inputs/bedmethyl_sample1.bed.gz	SE	test_genome
-mC	mutant	leaf	ONT	rep1	ONT_mut_sample1	tests/integration/data/mock_inputs/ont_mut_sample1.bam	SE	test_genome
-mC	mutant	leaf	ONT	rep2	ONT_mut_sample2	tests/integration/data/mock_inputs/ont_mut_sample2.bam	SE	test_genome

@@ -93,7 +93,7 @@ pytest tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_
 
 ```bash
 pytest tests/unit/ -k "bedmethyl" -v     # Only bedmethyl tests
-pytest tests/unit/ -k "ont_sample" -v    # Only ont_sample tests
+pytest tests/unit/ -k "dmc_sample" -v    # Only dmc_sample tests
 ```
 
 ## Understanding Test Results
@@ -198,8 +198,8 @@ tests/
 - Error handling and edge cases
 
 ### mC.smk helpers (30 tests)
-- `is_ont_sample()` - ONT sample detection
-- `get_ont_input_type()` - Input type detection
+- `is_dmc_sample()` - dmC sample detection
+- `get_dmc_input_type()` - Input type detection
 - `parameters_for_mc()` - Parameter selection
 - Sample name parsing
 

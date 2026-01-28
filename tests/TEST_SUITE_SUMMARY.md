@@ -11,7 +11,7 @@ A comprehensive unit test suite has been created for the direct methylation (dmC
 | File | Purpose | Tests | Coverage |
 |------|---------|-------|----------|
 | `tests/unit/test_validate_dmc_input.py` | Tests for dmC input validation script | 42 tests | validate_modbam(), validate_bedmethyl(), main() |
-| `tests/unit/test_mC_helpers.py` | Tests for Snakemake helper functions | 30 tests | is_ont_sample(), get_ont_input_type(), parameters_for_mc() |
+| `tests/unit/test_mC_helpers.py` | Tests for Snakemake helper functions | 30 tests | is_dmc_sample(), get_dmc_input_type(), parameters_for_mc() |
 
 ### Configuration Files
 
@@ -100,21 +100,21 @@ A comprehensive unit test suite has been created for the direct methylation (dmC
 - ✓ Parse TF sample with TF name
 - ✓ Invalid sample name format error
 
-#### TestIsOntSample (6 tests)
-- ✓ ONT modBAM sample is ONT
-- ✓ bedMethyl sample is ONT
-- ✓ WGBS sample is not ONT
-- ✓ Pico sample is not ONT
-- ✓ EMseq sample is not ONT
-- ✓ Default sample is not ONT
+#### TestIsDmcSample (6 tests)
+- ✓ dmC modBAM sample is dmC
+- ✓ bedMethyl sample is dmC
+- ✓ WGBS sample is not dmC
+- ✓ Pico sample is not dmC
+- ✓ EMseq sample is not dmC
+- ✓ Default sample is not dmC
 
-#### TestGetOntInputType (3 tests)
+#### TestGetDmcInputType (3 tests)
 - ✓ bedMethyl sample returns 'bedMethyl'
-- ✓ ONT sample returns 'modBAM'
+- ✓ dmC sample returns 'modBAM'
 - ✓ Other sample types default to 'modBAM'
 
 #### TestParametersForMc (7 tests)
-- ✓ ONT sample returns 'ONT'
+- ✓ dmC sample returns 'dmC'
 - ✓ bedMethyl sample returns 'bedMethyl'
 - ✓ WGBS sample returns 'WGBS'
 - ✓ Pico sample returns 'Pico'
@@ -129,8 +129,8 @@ A comprehensive unit test suite has been created for the direct methylation (dmC
 - ✓ Case sensitivity
 
 #### TestIntegrationScenarios (6 tests)
-- ✓ Complete workflow for ONT modBAM
-- ✓ Complete workflow for ONT bedMethyl
+- ✓ Complete workflow for dmC modBAM
+- ✓ Complete workflow for dmC bedMethyl
 - ✓ Complete workflow for Bismark
 - ✓ Multiple replicates handling
 - ✓ Mixed sample types
@@ -147,7 +147,7 @@ Defined in `tests/conftest.py`:
 6. **mock_bam_header** - Mock BAM file header with @SQ lines
 7. **mock_bam_read_with_mm_ml** - BAM read with MM/ML tags
 8. **mock_bam_read_without_mm** - BAM read without methylation tags
-9. **ont_sample_names** - Dictionary of sample name examples (6 types)
+9. **dmc_sample_names** - Dictionary of sample name examples (6 types)
 
 ## Running Tests
 
@@ -177,8 +177,8 @@ pytest tests/unit/ -v
 tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_11_columns PASSED
 tests/unit/test_validate_dmc_input.py::TestValidateBedMethyl::test_valid_bedmethyl_10_columns PASSED
 ...
-tests/unit/test_mC_helpers.py::TestIsOntSample::test_ont_modbam_sample_is_ont PASSED
-tests/unit/test_mC_helpers.py::TestIsOntSample::test_bedmethyl_sample_is_ont PASSED
+tests/unit/test_mC_helpers.py::TestIsDmcSample::test_dmc_modbam_sample_is_dmc PASSED
+tests/unit/test_mC_helpers.py::TestIsDmcSample::test_bedmethyl_sample_is_dmc PASSED
 ...
 
 ============================== 72 passed in 2.34s ==============================
@@ -300,7 +300,7 @@ Potential additions to the test suite:
 
 ### Updating for New Features
 
-When adding new ONT methylation features:
+When adding new dmC (direct methylation) features:
 
 1. Write tests first (TDD approach)
 2. Ensure backward compatibility
@@ -356,7 +356,7 @@ pytest tests/unit/ -m unit -v
 
 ## Conclusion
 
-This test suite provides comprehensive coverage of the ONT methylation feature, ensuring:
+This test suite provides comprehensive coverage of the dmC (direct methylation) feature, ensuring:
 
 - Input validation works correctly
 - Helper functions behave as expected

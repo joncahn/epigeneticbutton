@@ -1,0 +1,5 @@
+mC	WT	leaf	dmC	rep1	dmc_sample1	tests/integration/data/mock_inputs/dmc_sample1.bam	SE	test_genome
+mC	WT	leaf	dmC	rep2	dmc_sample2	tests/integration/data/mock_inputs/dmc_sample2.bam	SE	test_genome
+mC	WT	root	bedMethyl	rep1	bedMethyl_sample1	tests/integration/data/mock_inputs/bedmethyl_sample1.bed.gz	SE	test_genome
+mC	mutant	leaf	dmC	rep1	dmc_mut_sample1	tests/integration/data/mock_inputs/dmc_mut_sample1.bam	SE	test_genome
+mC	mutant	leaf	dmC	rep2	dmc_mut_sample2	tests/integration/data/mock_inputs/dmc_mut_sample2.bam	SE	test_genome

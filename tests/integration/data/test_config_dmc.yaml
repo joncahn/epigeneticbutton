@@ -1,9 +1,9 @@
-# Test configuration for ONT methylation integration tests
+# Test configuration for dmC (direct methylation) integration tests
 # This config is designed for dry-run testing only and does not require actual files
 
 repo_folder: "/grid/martienssen/home/eernst/src/epigeneticbutton"
-analysis_name: "test_ont"
-sample_file: "tests/integration/data/test_samples_ont.tsv"
+analysis_name: "test_dmc"
+sample_file: "tests/integration/data/test_samples_dmc.tsv"
 
 # Minimal reference genome configuration for test_genome
 test_genome:
@@ -29,16 +29,16 @@ aligned_bams: false
 # Methylation context
 mC_context: "all"
 
-# ONT direct methylation parameters
-ont_methylation:
+# dmC (direct methylation) parameters
+dmc_methylation:
   alignment:
     preset: "lr:hqae"
   pileup:
     combine_mods: true
     min_coverage: 3
 
-# DMR calling method for ONT samples: "dmrcaller" (default) or "modkit"
-ont_dmr_method: "dmrcaller"
+# DMR calling method for dmC samples: "dmrcaller" (default) or "modkit"
+dmc_dmr_method: "dmrcaller"
 
 # Trimming parameters
 trimming_quality:
@@ -50,7 +50,7 @@ adapter1:
 adapter2:
   mC: "AGATCGGAAGAGCGTCGTGTAGGGA"
 
-# Bismark mapping parameters (for non-ONT samples)
+# Bismark mapping parameters (for non-dmC samples)
 mC_mapping:
   default:
     map_pe: "--maxins 1000"
@@ -62,7 +62,7 @@ mC_mapping:
     map_se: ""
     process_pe: "--ignore_r2 2 --buffer_size 16G"
     process_se: "--buffer_size 16G"
-  ONT:
+  dmC:
     map_pe: ""
     map_se: ""
     process_pe: ""
@@ -101,7 +101,7 @@ resources:
   check_chrom_sizes: *low
   prep_region_file: *low
 
-  # ONT methylation rules
+  # dmC methylation rules
   make_modkit_context_beds: *heavy
   get_modbam: *standard
   get_bedmethyl: *low
@@ -109,7 +109,7 @@ resources:
   modkit_summary: *heavy
   modkit_pileup: *heavy
   split_bedmethyl_by_context: *heavy
-  make_ont_bigwig_files: *low
+  make_dmc_bigwig_files: *low
   call_DMRs_modkit: *max
 
   # Bismark rules (for comparison)

@@ -1,16 +1,16 @@
-# Files Created for ONT Integration Tests
+# Files Created for dmC Integration Tests
 
-This document lists all files created for the ONT methylation dry-run integration tests.
+This document lists all files created for the dmC (direct methylation) dry-run integration tests.
 
 ## Test Files
 
 ### 1. Test Sample Metadata
-**File:** `tests/integration/data/test_samples_ont.tsv`
+**File:** `tests/integration/data/test_samples_dmc.tsv`
 
-Mock sample metadata file with 5 ONT samples:
-- 2 ONT modBAM samples (WT leaf, rep1 & rep2)
+Mock sample metadata file with 5 dmC samples:
+- 2 dmC modBAM samples (WT leaf, rep1 & rep2)
 - 1 bedMethyl sample (WT root, rep1)
-- 2 ONT modBAM samples (mutant leaf, rep1 & rep2)
+- 2 dmC modBAM samples (mutant leaf, rep1 & rep2)
 
 Format: 9-column TSV matching pipeline requirements
 - Columns: data_type, line, tissue, sample_type, replicate, seq_id, fastq_path, paired, ref_genome
@@ -18,26 +18,26 @@ Format: 9-column TSV matching pipeline requirements
 - Uses test reference genome "test_genome"
 
 ### 2. Test Configuration
-**File:** `tests/integration/data/test_config_ont.yaml`
+**File:** `tests/integration/data/test_config_dmc.yaml`
 
 Minimal configuration file for dry-run testing:
 - Points to test sample file
 - Defines mock reference genome (test_genome)
-- Includes ONT methylation parameters
+- Includes dmC methylation parameters
 - Sets minimal resource allocations
 - Enables full analysis with DMR calling
 - No actual files required (uses mock paths)
 
 ### 3. Integration Test Suite
-**File:** `tests/integration/test_ont_dryrun.py`
+**File:** `tests/integration/test_dmc_dryrun.py`
 
 Comprehensive pytest test suite with 25 tests organized into 10 test classes:
 
 **Test Classes:**
-1. `TestONTDryRunBasic` (3 tests) - Basic setup validation
-2. `TestONTModBAMWorkflow` (4 tests) - ONT modBAM workflow
+1. `TestDmcDryRunBasic` (3 tests) - Basic setup validation
+2. `TestDmcModBAMWorkflow` (4 tests) - dmC modBAM workflow
 3. `TestBedMethylWorkflow` (3 tests) - bedMethyl input workflow
-4. `TestONTDMRWorkflow` (2 tests) - DMR analysis
+4. `TestDmcDMRWorkflow` (2 tests) - DMR analysis
 5. `TestDAGStructure` (3 tests) - DAG generation and structure
 6. `TestWildcardResolution` (2 tests) - Wildcard resolution
 7. `TestErrorHandling` (2 tests) - Error cases
@@ -48,7 +48,7 @@ Comprehensive pytest test suite with 25 tests organized into 10 test classes:
 **Key Features:**
 - Uses Snakemake `--dry-run` mode
 - Automatically skips if Snakemake not installed
-- Verifies rule selection (ONT rules included, Bismark rules excluded)
+- Verifies rule selection (dmC rules included, Bismark rules excluded)
 - Tests wildcard resolution
 - Validates DAG structure and dependencies
 - Checks error handling for invalid inputs
@@ -110,38 +110,38 @@ tests/integration/
 ├── QUICKSTART.md                       # Quick start guide (concise)
 ├── FILES_CREATED.md                    # This file (summary)
 ├── .github_workflow_example.yml       # CI/CD example
-├── test_ont_dryrun.py                 # Test suite (25 tests)
+├── test_dmc_dryrun.py                 # Test suite (25 tests)
 └── data/
-    ├── test_samples_ont.tsv           # Mock sample metadata (5 samples)
-    └── test_config_ont.yaml           # Test configuration
+    ├── test_samples_dmc.tsv           # Mock sample metadata (5 samples)
+    └── test_config_dmc.yaml           # Test configuration
 ```
 
 ## Usage
 
 ### Quick Test
 ```bash
-pytest tests/integration/test_ont_dryrun.py -v
+pytest tests/integration/test_dmc_dryrun.py -v
 ```
 
 ### Collect Tests Only
 ```bash
-pytest tests/integration/test_ont_dryrun.py --collect-only
+pytest tests/integration/test_dmc_dryrun.py --collect-only
 ```
 
 ### Manual Dry-Run
 ```bash
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw
 ```
 
 ## File Sizes
 
 ```bash
 # Check file sizes
-du -h tests/integration/data/test_samples_ont.tsv    # ~400 bytes
-du -h tests/integration/data/test_config_ont.yaml    # ~3.5 KB
-du -h tests/integration/test_ont_dryrun.py           # ~21 KB
+du -h tests/integration/data/test_samples_dmc.tsv    # ~400 bytes
+du -h tests/integration/data/test_config_dmc.yaml    # ~3.5 KB
+du -h tests/integration/test_dmc_dryrun.py           # ~21 KB
 du -h tests/integration/README.md                     # ~19 KB
 du -h tests/integration/QUICKSTART.md                 # ~5 KB
 ```
@@ -162,23 +162,23 @@ du -h tests/integration/QUICKSTART.md                 # ~5 KB
 ## Testing Coverage
 
 **What is Tested:**
-- ✓ DAG construction and validation
-- ✓ Rule selection based on sample type
-- ✓ Wildcard resolution
-- ✓ Rule dependencies
-- ✓ ONT-specific workflow paths
-- ✓ bedMethyl-specific workflow paths
-- ✓ DMR analysis workflow
-- ✓ Error handling for invalid inputs
-- ✓ Multiple replicate handling
-- ✓ Methylation context (CG/CHG/CHH) handling
+- DAG construction and validation
+- Rule selection based on sample type
+- Wildcard resolution
+- Rule dependencies
+- dmC-specific workflow paths
+- bedMethyl-specific workflow paths
+- DMR analysis workflow
+- Error handling for invalid inputs
+- Multiple replicate handling
+- Methylation context (CG/CHG/CHH) handling
 
 **What is NOT Tested:**
-- ✗ Actual rule execution
-- ✗ Tool functionality (modkit, samtools, etc.)
-- ✗ Data processing correctness
-- ✗ Output file formats
-- ✗ Performance/resource usage
+- Actual rule execution
+- Tool functionality (modkit, samtools, etc.)
+- Data processing correctness
+- Output file formats
+- Performance/resource usage
 
 ## Integration with Existing Tests
 
@@ -186,7 +186,7 @@ These integration tests complement the existing unit tests:
 
 **Unit Tests** (`tests/unit/`):
 - Test individual functions
-- Test helper functions (parse_sample_name, is_ont_sample, etc.)
+- Test helper functions (parse_sample_name, is_dmc_sample, etc.)
 - Test validation scripts
 - Fast execution
 - No external dependencies
@@ -202,7 +202,7 @@ These integration tests complement the existing unit tests:
 
 **When to Update These Tests:**
 
-1. **New ONT rules added** - Add tests to verify rule triggering
+1. **New dmC rules added** - Add tests to verify rule triggering
 2. **Sample naming changes** - Update test samples and wildcard tests
 3. **Config structure changes** - Update test config
 4. **New output targets** - Add tests for new targets
@@ -211,14 +211,14 @@ These integration tests complement the existing unit tests:
 ## Related Files
 
 **Existing Files (Not Modified):**
-- `tests/conftest.py` - Shared pytest fixtures (already includes ONT fixtures)
+- `tests/conftest.py` - Shared pytest fixtures (already includes dmC fixtures)
 - `pytest.ini` - Pytest configuration (already has integration marker)
 - `tests/unit/test_mC_helpers.py` - Unit tests for mC helper functions
-- `tests/unit/test_validate_dmc_input.py` - Unit tests for ONT validation
+- `tests/unit/test_validate_dmc_input.py` - Unit tests for dmC validation
 
 **Pipeline Files (Tested):**
 - `workflow/Snakefile` - Main pipeline orchestrator
-- `workflow/rules/mC.smk` - Methylation analysis rules (including ONT)
+- `workflow/rules/mC.smk` - Methylation analysis rules (including dmC)
 - `config/config.yaml` - Example configuration
 
 ## License

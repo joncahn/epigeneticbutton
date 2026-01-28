@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run unit tests for EpigeneticButton ONT methylation feature
+# Run unit tests for EpigeneticButton dmC (direct methylation) feature
 #
 # Usage:
 #   ./tests/run_tests.sh              # Run all tests

@@ -104,8 +104,8 @@ Tests are organized into classes by function:
 Tests are organized by function:
 
 - **TestParseSampleName** - Tests for sample name parsing
-- **TestIsOntSample** - Tests for ONT sample detection
-- **TestGetOntInputType** - Tests for input type determination
+- **TestIsDmcSample** - Tests for dmC sample detection
+- **TestGetDmcInputType** - Tests for input type determination
 - **TestParametersForMc** - Tests for parameter set selection
 - **TestEdgeCases** - Edge cases and error conditions
 - **TestIntegrationScenarios** - Realistic workflow scenarios
@@ -126,7 +126,7 @@ Test fixtures are defined in:
 - `mock_bam_header` - Mock BAM file header
 - `mock_bam_read_with_mm_ml` - Mock BAM read with methylation tags
 - `mock_bam_read_without_mm` - Mock BAM read without methylation tags
-- `ont_sample_names` - Dictionary of sample name examples
+- `dmc_sample_names` - Dictionary of sample name examples
 
 ## Writing New Tests
 
@@ -268,7 +268,7 @@ pytest tests/unit/ --cov=workflow/scripts/validate_dmc_input --cov-report=term-m
 
 ## Contributing
 
-When adding new features to the ONT methylation workflow:
+When adding new features to the dmC (direct methylation) workflow:
 
 1. Write tests FIRST (TDD approach)
 2. Ensure all existing tests pass

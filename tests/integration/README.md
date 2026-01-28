@@ -19,19 +19,19 @@ These tests do **not** require:
 
 ## Test Organization
 
-### ONT Methylation Integration Tests (`test_ont_dryrun.py`)
+### dmC (Direct Methylation) Integration Tests (`test_dmc_dryrun.py`)
 
-Tests for Oxford Nanopore Technologies (ONT) direct methylation sequencing workflow.
+Tests for direct methylation sequencing workflow (e.g., from Oxford Nanopore Technologies).
 
 **Test Classes:**
 
-1. `TestONTDryRunBasic` - Basic setup validation
+1. `TestDmcDryRunBasic` - Basic setup validation
    - Snakemake installation check
    - Config and sample file existence
 
-2. `TestONTModBAMWorkflow` - ONT modBAM input workflow
+2. `TestDmcModBAMWorkflow` - dmC modBAM input workflow
    - Dry-run success for modBAM samples
-   - Correct ONT rules are triggered (get_modbam, align_modbam, modkit_pileup, etc.)
+   - Correct dmC rules are triggered (get_modbam, align_modbam, modkit_pileup, etc.)
    - Bismark rules are NOT triggered
    - All methylation contexts (CG, CHG, CHH) are generated
 
@@ -40,17 +40,17 @@ Tests for Oxford Nanopore Technologies (ONT) direct methylation sequencing workf
    - Correct bedMethyl rules are triggered (get_bedmethyl, copy_bedmethyl_for_pileup)
    - Alignment rules are skipped (no need to align pre-computed data)
 
-4. `TestONTDMRWorkflow` - DMR analysis for ONT samples
+4. `TestDmcDMRWorkflow` - DMR analysis for dmC samples
    - Dry-run success for DMR analysis
-   - Modkit DMR calling is used (not DMRcaller)
+   - DMRcaller is used by default for DMR calling
 
 5. `TestDAGStructure` - DAG generation and structure
    - DAG can be generated successfully
-   - DAG contains expected ONT rules
+   - DAG contains expected dmC rules
    - Rule dependencies are correct
 
 6. `TestWildcardResolution` - Wildcard resolution
-   - ONT sample wildcards resolve correctly
+   - dmC sample wildcards resolve correctly
    - bedMethyl sample wildcards resolve correctly
 
 7. `TestErrorHandling` - Error cases
@@ -58,37 +58,37 @@ Tests for Oxford Nanopore Technologies (ONT) direct methylation sequencing workf
    - Invalid methylation context fails
 
 8. `TestAllMCTarget` - Pipeline completion target
-   - all_mc rule works with ONT samples
-   - ONT-specific outputs are included
+   - all_mc rule works with dmC samples
+   - dmC-specific outputs are included
 
 9. `TestContextBedGeneration` - Context BED file generation
    - CG/CHG/CHH context BED files are generated
    - Context BED files are dependencies for splitting
 
 10. `TestMultipleReplicates` - Multiple replicate handling
-    - Multiple ONT replicates are processed
+    - Multiple dmC replicates are processed
     - Merged replicates work for DMR calling
 
 ## Test Data
 
 Test data files are located in `tests/integration/data/`:
 
-### `test_samples_ont.tsv`
+### `test_samples_dmc.tsv`
 Mock sample metadata file with:
-- 2 ONT modBAM samples (WT leaf, rep1 and rep2)
+- 2 dmC modBAM samples (WT leaf, rep1 and rep2)
 - 1 bedMethyl sample (WT root, rep1)
-- 2 ONT modBAM samples for mutant (leaf, rep1 and rep2)
+- 2 dmC modBAM samples for mutant (leaf, rep1 and rep2)
 
 Format matches the pipeline's 9-column TSV format:
 ```
 data_type  line  tissue  sample_type  replicate  seq_id  fastq_path  paired  ref_genome
 ```
 
-### `test_config_ont.yaml`
+### `test_config_dmc.yaml`
 Minimal test configuration that:
 - Points to test sample file
 - Defines mock reference genome (test_genome)
-- Sets ONT methylation parameters
+- Sets dmC methylation parameters
 - Uses minimal resource allocations
 - Enables full analysis with DMR calling
 
@@ -116,14 +116,14 @@ From the repository root:
 # Run all integration tests
 pytest tests/integration/ -v
 
-# Run only ONT dry-run tests
-pytest tests/integration/test_ont_dryrun.py -v
+# Run only dmC dry-run tests
+pytest tests/integration/test_dmc_dryrun.py -v
 
 # Run specific test class
-pytest tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow -v
+pytest tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow -v
 
 # Run specific test
-pytest tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow::test_ont_modbam_dryrun_succeeds -v
+pytest tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow::test_dmc_modbam_dryrun_succeeds -v
 ```
 
 ### Run with Integration Test Marker
@@ -143,7 +143,7 @@ pytest -m "not integration" -v
 For debugging, use verbose mode to see Snakemake output:
 
 ```bash
-pytest tests/integration/test_ont_dryrun.py -v -s
+pytest tests/integration/test_dmc_dryrun.py -v -s
 ```
 
 ### Skip if Snakemake Not Installed
@@ -151,7 +151,7 @@ pytest tests/integration/test_ont_dryrun.py -v -s
 Tests will automatically skip if Snakemake is not available:
 
 ```bash
-pytest tests/integration/test_ont_dryrun.py -v
+pytest tests/integration/test_dmc_dryrun.py -v
 # Output: SKIPPED [1] Snakemake not installed or not in PATH
 ```
 
@@ -160,35 +160,35 @@ pytest tests/integration/test_ont_dryrun.py -v
 You can also manually test the dry-run:
 
 ```bash
-# Test ONT modBAM sample bigwig generation
+# Test dmC modBAM sample bigwig generation
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw
 
 # Test bedMethyl sample
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
+    --configfile tests/integration/data/test_config_dmc.yaml \
     results/mC/tracks/mC__WT__root__bedMethyl__rep1__test_genome__CG.bw
 
 # Test DMR analysis
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/DMRs/summary__mC__WT__leaf__ONT__merged__test_genome__vs__mC__mutant__leaf__ONT__merged__test_genome__DMRs.txt
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt
 
 # Generate DAG visualization
 snakemake --dag \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw \
-    | dot -Tpng > dag_ont.png
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw \
+    | dot -Tpng > dag_dmc.png
 ```
 
 ## What the Tests Verify
 
-### ONT Workflow Correctness
+### dmC Workflow Correctness
 
 1. **Rule Selection**
-   - ONT samples trigger ONT-specific rules (modkit, etc.)
-   - ONT samples do NOT trigger Bismark rules
+   - dmC samples trigger dmC-specific rules (modkit, etc.)
+   - dmC samples do NOT trigger Bismark rules
    - bedMethyl samples skip alignment steps
 
 2. **Wildcard Resolution**
@@ -203,7 +203,7 @@ snakemake --dag \
    - Context splitting happens before bigwig generation
 
 4. **DMR Analysis**
-   - ONT samples use modkit for DMR calling
+   - dmC samples use DMRcaller for DMR calling by default
    - Merged replicates are used correctly
    - Sample comparisons are properly structured
 
@@ -219,7 +219,7 @@ Tests verify that invalid inputs fail appropriately:
 ### Success
 
 ```
-tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow::test_ont_modbam_dryrun_succeeds PASSED
+tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow::test_dmc_modbam_dryrun_succeeds PASSED
 ```
 
 The Snakemake DAG was successfully built for the target, indicating correct rule structure.
@@ -227,8 +227,8 @@ The Snakemake DAG was successfully built for the target, indicating correct rule
 ### Failure
 
 ```
-tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow::test_ont_modbam_includes_expected_rules FAILED
-AssertionError: Expected ONT rule 'modkit_pileup' not found in dry-run output
+tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow::test_dmc_modbam_includes_expected_rules FAILED
+AssertionError: Expected dmC rule 'modkit_pileup' not found in dry-run output
 ```
 
 Indicates a problem with rule triggering or naming. Check:
@@ -239,7 +239,7 @@ Indicates a problem with rule triggering or naming. Check:
 ### Skipped
 
 ```
-tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow::test_ont_modbam_dryrun_succeeds SKIPPED
+tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow::test_dmc_modbam_dryrun_succeeds SKIPPED
 ```
 
 Test was skipped (usually because Snakemake is not installed). This is expected in environments without Snakemake.
@@ -248,9 +248,9 @@ Test was skipped (usually because Snakemake is not installed). This is expected 
 
 To add new integration tests:
 
-1. **Add test samples** to `test_samples_ont.tsv` or create a new sample file
+1. **Add test samples** to `test_samples_dmc.tsv` or create a new sample file
 
-2. **Update test config** if needed in `test_config_ont.yaml` or create a new config
+2. **Update test config** if needed in `test_config_dmc.yaml` or create a new config
 
 3. **Add test methods** to existing test classes or create new classes:
 
@@ -301,7 +301,7 @@ result = subprocess.run(
 Verify you're running pytest from the repository root:
 ```bash
 cd /path/to/epigeneticbutton
-pytest tests/integration/test_ont_dryrun.py -v
+pytest tests/integration/test_dmc_dryrun.py -v
 ```
 
 ### Dry-run fails with "AmbiguousRuleException"

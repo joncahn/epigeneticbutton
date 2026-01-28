@@ -1,9 +1,9 @@
 """
 Unit tests for helper functions in workflow/rules/mC.smk
 
-Tests the ONT-related helper functions:
-- is_ont_sample: checks if sample uses ONT workflow
-- get_ont_input_type: determines input type (modBAM or bedMethyl)
+Tests the dmC-related helper functions:
+- is_dmc_sample: checks if sample uses dmC (direct methylation) workflow
+- get_dmc_input_type: determines input type (modBAM or bedMethyl)
 - parameters_for_mc: returns the correct parameter set for methylation calling
 """
 
@@ -53,22 +53,22 @@ def parameters_for_mc(sample_name):
     Extracted from mC.smk for testing.
     """
     temp = parse_sample_name(sample_name)['sample_type']
-    options = {"WGBS", "Pico", "EMseq", "ONT", "bedMethyl"}
+    options = {"WGBS", "Pico", "EMseq", "dmC", "bedMethyl"}
     return temp if temp in options else "default"
 
 
-def is_ont_sample(sample_name):
+def is_dmc_sample(sample_name):
     """
-    Check if a sample uses ONT direct methylation workflow.
+    Check if a sample uses dmC (direct methylation) workflow.
 
     Extracted from mC.smk for testing.
     """
-    return parse_sample_name(sample_name)['sample_type'] in ["ONT", "bedMethyl"]
+    return parse_sample_name(sample_name)['sample_type'] in ["dmC", "bedMethyl"]
 
 
-def get_ont_input_type(sample_name):
+def get_dmc_input_type(sample_name):
     """
-    Return the input type for ONT samples: 'bedMethyl' or 'modBAM'.
+    Return the input type for dmC samples: 'bedMethyl' or 'modBAM'.
 
     Extracted from mC.smk for testing.
     """
@@ -79,20 +79,20 @@ def get_ont_input_type(sample_name):
 class TestParseSampleName:
     """Tests for the parse_sample_name helper function."""
 
-    def test_parse_standard_sample_name(self, ont_sample_names):
+    def test_parse_standard_sample_name(self, dmc_sample_names):
         """Test parsing a standard sample name."""
-        result = parse_sample_name(ont_sample_names["ont_modbam"])
+        result = parse_sample_name(dmc_sample_names["dmc_modbam"])
 
         assert result["data_type"] == "mC"
         assert result["line"] == "Col0"
         assert result["tissue"] == "leaf"
-        assert result["sample_type"] == "ONT"
+        assert result["sample_type"] == "dmC"
         assert result["replicate"] == "rep1"
         assert result["ref_genome"] == "ColCEN"
 
-    def test_parse_bedmethyl_sample_name(self, ont_sample_names):
+    def test_parse_bedmethyl_sample_name(self, dmc_sample_names):
         """Test parsing a bedMethyl sample name."""
-        result = parse_sample_name(ont_sample_names["ont_bedmethyl"])
+        result = parse_sample_name(dmc_sample_names["dmc_bedmethyl"])
 
         assert result["sample_type"] == "bedMethyl"
 
@@ -118,86 +118,86 @@ class TestParseSampleName:
             parse_sample_name("invalid__sample__name")
 
 
-class TestIsOntSample:
-    """Tests for the is_ont_sample helper function."""
+class TestIsDmcSample:
+    """Tests for the is_dmc_sample helper function."""
 
-    def test_ont_modbam_sample_is_ont(self, ont_sample_names):
-        """Test that ONT modBAM sample is identified as ONT."""
-        assert is_ont_sample(ont_sample_names["ont_modbam"]) is True
+    def test_dmc_modbam_sample_is_dmc(self, dmc_sample_names):
+        """Test that dmC modBAM sample is identified as dmC."""
+        assert is_dmc_sample(dmc_sample_names["dmc_modbam"]) is True
 
-    def test_bedmethyl_sample_is_ont(self, ont_sample_names):
-        """Test that bedMethyl sample is identified as ONT."""
-        assert is_ont_sample(ont_sample_names["ont_bedmethyl"]) is True
+    def test_bedmethyl_sample_is_dmc(self, dmc_sample_names):
+        """Test that bedMethyl sample is identified as dmC."""
+        assert is_dmc_sample(dmc_sample_names["dmc_bedmethyl"]) is True
 
-    def test_wgbs_sample_is_not_ont(self, ont_sample_names):
-        """Test that WGBS sample is not identified as ONT."""
-        assert is_ont_sample(ont_sample_names["bismark_wgbs"]) is False
+    def test_wgbs_sample_is_not_dmc(self, dmc_sample_names):
+        """Test that WGBS sample is not identified as dmC."""
+        assert is_dmc_sample(dmc_sample_names["bismark_wgbs"]) is False
 
-    def test_pico_sample_is_not_ont(self, ont_sample_names):
-        """Test that Pico sample is not identified as ONT."""
-        assert is_ont_sample(ont_sample_names["bismark_pico"]) is False
+    def test_pico_sample_is_not_dmc(self, dmc_sample_names):
+        """Test that Pico sample is not identified as dmC."""
+        assert is_dmc_sample(dmc_sample_names["bismark_pico"]) is False
 
-    def test_emseq_sample_is_not_ont(self, ont_sample_names):
-        """Test that EMseq sample is not identified as ONT."""
-        assert is_ont_sample(ont_sample_names["bismark_emseq"]) is False
+    def test_emseq_sample_is_not_dmc(self, dmc_sample_names):
+        """Test that EMseq sample is not identified as dmC."""
+        assert is_dmc_sample(dmc_sample_names["bismark_emseq"]) is False
 
-    def test_default_sample_is_not_ont(self, ont_sample_names):
-        """Test that default sample is not identified as ONT."""
-        assert is_ont_sample(ont_sample_names["bismark_default"]) is False
+    def test_default_sample_is_not_dmc(self, dmc_sample_names):
+        """Test that default sample is not identified as dmC."""
+        assert is_dmc_sample(dmc_sample_names["bismark_default"]) is False
 
 
-class TestGetOntInputType:
-    """Tests for the get_ont_input_type helper function."""
+class TestGetDmcInputType:
+    """Tests for the get_dmc_input_type helper function."""
 
-    def test_bedmethyl_sample_returns_bedmethyl(self, ont_sample_names):
+    def test_bedmethyl_sample_returns_bedmethyl(self, dmc_sample_names):
         """Test that bedMethyl sample type returns 'bedMethyl'."""
-        result = get_ont_input_type(ont_sample_names["ont_bedmethyl"])
+        result = get_dmc_input_type(dmc_sample_names["dmc_bedmethyl"])
         assert result == "bedMethyl"
 
-    def test_ont_sample_returns_modbam(self, ont_sample_names):
-        """Test that ONT sample type returns 'modBAM'."""
-        result = get_ont_input_type(ont_sample_names["ont_modbam"])
+    def test_dmc_sample_returns_modbam(self, dmc_sample_names):
+        """Test that dmC sample type returns 'modBAM'."""
+        result = get_dmc_input_type(dmc_sample_names["dmc_modbam"])
         assert result == "modBAM"
 
-    def test_wgbs_sample_returns_modbam(self, ont_sample_names):
-        """Test that non-ONT sample types default to 'modBAM'."""
-        # Note: This function should only be called on ONT samples,
+    def test_wgbs_sample_returns_modbam(self, dmc_sample_names):
+        """Test that non-dmC sample types default to 'modBAM'."""
+        # Note: This function should only be called on dmC samples,
         # but testing edge case behavior
-        result = get_ont_input_type(ont_sample_names["bismark_wgbs"])
+        result = get_dmc_input_type(dmc_sample_names["bismark_wgbs"])
         assert result == "modBAM"
 
 
 class TestParametersForMc:
     """Tests for the parameters_for_mc helper function."""
 
-    def test_ont_sample_returns_ont(self, ont_sample_names):
-        """Test that ONT sample returns 'ONT' parameter set."""
-        result = parameters_for_mc(ont_sample_names["ont_modbam"])
-        assert result == "ONT"
+    def test_dmc_sample_returns_dmc(self, dmc_sample_names):
+        """Test that dmC sample returns 'dmC' parameter set."""
+        result = parameters_for_mc(dmc_sample_names["dmc_modbam"])
+        assert result == "dmC"
 
-    def test_bedmethyl_sample_returns_bedmethyl(self, ont_sample_names):
+    def test_bedmethyl_sample_returns_bedmethyl(self, dmc_sample_names):
         """Test that bedMethyl sample returns 'bedMethyl' parameter set."""
-        result = parameters_for_mc(ont_sample_names["ont_bedmethyl"])
+        result = parameters_for_mc(dmc_sample_names["dmc_bedmethyl"])
         assert result == "bedMethyl"
 
-    def test_wgbs_sample_returns_wgbs(self, ont_sample_names):
+    def test_wgbs_sample_returns_wgbs(self, dmc_sample_names):
         """Test that WGBS sample returns 'WGBS' parameter set."""
-        result = parameters_for_mc(ont_sample_names["bismark_wgbs"])
+        result = parameters_for_mc(dmc_sample_names["bismark_wgbs"])
         assert result == "WGBS"
 
-    def test_pico_sample_returns_pico(self, ont_sample_names):
+    def test_pico_sample_returns_pico(self, dmc_sample_names):
         """Test that Pico sample returns 'Pico' parameter set."""
-        result = parameters_for_mc(ont_sample_names["bismark_pico"])
+        result = parameters_for_mc(dmc_sample_names["bismark_pico"])
         assert result == "Pico"
 
-    def test_emseq_sample_returns_emseq(self, ont_sample_names):
+    def test_emseq_sample_returns_emseq(self, dmc_sample_names):
         """Test that EMseq sample returns 'EMseq' parameter set."""
-        result = parameters_for_mc(ont_sample_names["bismark_emseq"])
+        result = parameters_for_mc(dmc_sample_names["bismark_emseq"])
         assert result == "EMseq"
 
-    def test_unknown_sample_type_returns_default(self, ont_sample_names):
+    def test_unknown_sample_type_returns_default(self, dmc_sample_names):
         """Test that unknown sample type returns 'default' parameter set."""
-        result = parameters_for_mc(ont_sample_names["bismark_default"])
+        result = parameters_for_mc(dmc_sample_names["bismark_default"])
         assert result == "default"
 
     def test_other_sample_types_return_default(self):
@@ -213,18 +213,18 @@ class TestEdgeCases:
     def test_malformed_sample_name_raises_error(self):
         """Test that malformed sample names raise appropriate errors."""
         with pytest.raises(ValueError):
-            is_ont_sample("malformed_sample_name")
+            is_dmc_sample("malformed_sample_name")
 
     def test_empty_sample_name_raises_error(self):
         """Test that empty sample name raises error."""
         with pytest.raises(ValueError):
-            is_ont_sample("")
+            is_dmc_sample("")
 
     def test_sample_name_with_underscores_in_fields(self):
         """Test sample names with underscores in individual fields."""
         # This should work - underscores are allowed within fields,
         # double underscores are field separators
-        sample_name = "mC__Col_0__leaf_tissue__ONT__rep_1__Col_CEN"
+        sample_name = "mC__Col_0__leaf_tissue__dmC__rep_1__Col_CEN"
         result = parse_sample_name(sample_name)
 
         assert result["line"] == "Col_0"
@@ -234,42 +234,42 @@ class TestEdgeCases:
 
     def test_case_sensitivity(self):
         """Test that sample type matching is case-sensitive."""
-        # Should not be recognized as ONT (lowercase)
-        sample_name = "mC__Col0__leaf__ont__rep1__ColCEN"
-        assert is_ont_sample(sample_name) is False
+        # Should not be recognized as dmC (uppercase)
+        sample_name = "mC__Col0__leaf__DMC__rep1__ColCEN"
+        assert is_dmc_sample(sample_name) is False
 
-        # Uppercase should work
-        sample_name = "mC__Col0__leaf__ONT__rep1__ColCEN"
-        assert is_ont_sample(sample_name) is True
+        # Lowercase should work
+        sample_name = "mC__Col0__leaf__dmC__rep1__ColCEN"
+        assert is_dmc_sample(sample_name) is True
 
 
 class TestIntegrationScenarios:
     """Integration tests for realistic usage scenarios."""
 
-    def test_complete_workflow_ont_modbam(self):
-        """Test complete workflow for ONT modBAM sample."""
-        sample_name = "mC__Col0__leaf__ONT__rep1__ColCEN"
+    def test_complete_workflow_dmc_modbam(self):
+        """Test complete workflow for dmC modBAM sample."""
+        sample_name = "mC__Col0__leaf__dmC__rep1__ColCEN"
 
-        # Check if it's an ONT sample
-        assert is_ont_sample(sample_name) is True
+        # Check if it's a dmC sample
+        assert is_dmc_sample(sample_name) is True
 
         # Get the input type
-        input_type = get_ont_input_type(sample_name)
+        input_type = get_dmc_input_type(sample_name)
         assert input_type == "modBAM"
 
         # Get the parameter set
         params = parameters_for_mc(sample_name)
-        assert params == "ONT"
+        assert params == "dmC"
 
-    def test_complete_workflow_ont_bedmethyl(self):
-        """Test complete workflow for ONT bedMethyl sample."""
+    def test_complete_workflow_dmc_bedmethyl(self):
+        """Test complete workflow for dmC bedMethyl sample."""
         sample_name = "mC__B73__root__bedMethyl__rep2__B73_v5"
 
-        # Check if it's an ONT sample
-        assert is_ont_sample(sample_name) is True
+        # Check if it's a dmC sample
+        assert is_dmc_sample(sample_name) is True
 
         # Get the input type
-        input_type = get_ont_input_type(sample_name)
+        input_type = get_dmc_input_type(sample_name)
         assert input_type == "bedMethyl"
 
         # Get the parameter set
@@ -280,35 +280,35 @@ class TestIntegrationScenarios:
         """Test complete workflow for Bismark sample."""
         sample_name = "mC__Col0__leaf__WGBS__rep1__ColCEN"
 
-        # Check if it's an ONT sample
-        assert is_ont_sample(sample_name) is False
+        # Check if it's a dmC sample
+        assert is_dmc_sample(sample_name) is False
 
-        # Get the parameter set (should not call get_ont_input_type for Bismark)
+        # Get the parameter set (should not call get_dmc_input_type for Bismark)
         params = parameters_for_mc(sample_name)
         assert params == "WGBS"
 
     def test_multiple_replicates(self):
-        """Test handling multiple replicates of ONT samples."""
+        """Test handling multiple replicates of dmC samples."""
         samples = [
-            "mC__Col0__leaf__ONT__rep1__ColCEN",
-            "mC__Col0__leaf__ONT__rep2__ColCEN",
-            "mC__Col0__leaf__ONT__rep3__ColCEN",
+            "mC__Col0__leaf__dmC__rep1__ColCEN",
+            "mC__Col0__leaf__dmC__rep2__ColCEN",
+            "mC__Col0__leaf__dmC__rep3__ColCEN",
         ]
 
         for sample in samples:
-            assert is_ont_sample(sample) is True
-            assert get_ont_input_type(sample) == "modBAM"
-            assert parameters_for_mc(sample) == "ONT"
+            assert is_dmc_sample(sample) is True
+            assert get_dmc_input_type(sample) == "modBAM"
+            assert parameters_for_mc(sample) == "dmC"
 
     def test_mixed_sample_types(self):
-        """Test handling a mix of ONT and Bismark samples."""
+        """Test handling a mix of dmC and Bismark samples."""
         samples = {
-            "mC__Col0__leaf__ONT__rep1__ColCEN": ("ONT", True),
+            "mC__Col0__leaf__dmC__rep1__ColCEN": ("dmC", True),
             "mC__Col0__leaf__WGBS__rep1__ColCEN": ("WGBS", False),
             "mC__Col0__leaf__bedMethyl__rep1__ColCEN": ("bedMethyl", True),
             "mC__Col0__leaf__Pico__rep1__ColCEN": ("Pico", False),
         }
 
-        for sample_name, (expected_param, expected_is_ont) in samples.items():
-            assert is_ont_sample(sample_name) == expected_is_ont
+        for sample_name, (expected_param, expected_is_dmc) in samples.items():
+            assert is_dmc_sample(sample_name) == expected_is_dmc
             assert parameters_for_mc(sample_name) == expected_param

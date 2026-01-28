@@ -2,16 +2,16 @@
 
 ## TL;DR
 
-Run ONT methylation integration tests:
+Run dmC (direct methylation) integration tests:
 
 ```bash
 # From repository root
-pytest tests/integration/test_ont_dryrun.py -v
+pytest tests/integration/test_dmc_dryrun.py -v
 ```
 
 ## What These Tests Do
 
-Integration tests verify that the Snakemake pipeline can correctly build the DAG (Directed Acyclic Graph) for ONT methylation workflows **without executing any rules**. They use Snakemake's `--dry-run` mode.
+Integration tests verify that the Snakemake pipeline can correctly build the DAG (Directed Acyclic Graph) for dmC (direct methylation) workflows **without executing any rules**. They use Snakemake's `--dry-run` mode.
 
 ## Requirements
 
@@ -29,39 +29,39 @@ pip install snakemake
 tests/integration/
 ├── README.md                           # Full documentation
 ├── QUICKSTART.md                       # This file
-├── test_ont_dryrun.py                  # ONT integration tests (25 tests)
+├── test_dmc_dryrun.py                  # dmC integration tests (25 tests)
 └── data/
-    ├── test_samples_ont.tsv           # Mock sample metadata
-    └── test_config_ont.yaml           # Test configuration
+    ├── test_samples_dmc.tsv           # Mock sample metadata
+    └── test_config_dmc.yaml           # Test configuration
 ```
 
 ## Running Tests
 
-### All ONT tests
+### All dmC tests
 ```bash
-pytest tests/integration/test_ont_dryrun.py -v
+pytest tests/integration/test_dmc_dryrun.py -v
 ```
 
 ### Specific test class
 ```bash
-pytest tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow -v
+pytest tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow -v
 ```
 
 ### Specific test
 ```bash
-pytest tests/integration/test_ont_dryrun.py::TestONTModBAMWorkflow::test_ont_modbam_dryrun_succeeds -v
+pytest tests/integration/test_dmc_dryrun.py::TestDmcModBAMWorkflow::test_dmc_modbam_dryrun_succeeds -v
 ```
 
 ### With verbose output (see Snakemake output)
 ```bash
-pytest tests/integration/test_ont_dryrun.py -v -s
+pytest tests/integration/test_dmc_dryrun.py -v -s
 ```
 
 ## Test Coverage
 
 The 25 tests cover:
 
-1. **ONT modBAM workflow** (7 tests)
+1. **dmC modBAM workflow** (7 tests)
    - Dry-run success
    - Correct rule triggering (get_modbam, align_modbam, modkit_pileup)
    - Exclusion of Bismark rules
@@ -73,16 +73,16 @@ The 25 tests cover:
    - Correct rule selection
 
 3. **DMR analysis** (2 tests)
-   - Modkit DMR calling
+   - DMRcaller for DMR calling
    - Merged replicate handling
 
 4. **DAG structure** (3 tests)
    - DAG generation
    - Rule dependencies
-   - ONT rule inclusion
+   - dmC rule inclusion
 
 5. **Wildcard resolution** (2 tests)
-   - ONT sample wildcards
+   - dmC sample wildcards
    - bedMethyl sample wildcards
 
 6. **Error handling** (2 tests)
@@ -91,7 +91,7 @@ The 25 tests cover:
 
 7. **Pipeline targets** (2 tests)
    - all_mc rule
-   - ONT output inclusion
+   - dmC output inclusion
 
 8. **Context BEDs** (2 tests)
    - Generation of CG/CHG/CHH BEDs
@@ -106,29 +106,29 @@ The 25 tests cover:
 Test individual targets manually:
 
 ```bash
-# ONT modBAM sample
+# dmC modBAM sample
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw
 
 # bedMethyl sample
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
+    --configfile tests/integration/data/test_config_dmc.yaml \
     results/mC/tracks/mC__WT__root__bedMethyl__rep1__test_genome__CG.bw
 
 # DMR analysis
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/DMRs/summary__mC__WT__leaf__ONT__merged__test_genome__vs__mC__mutant__leaf__ONT__merged__test_genome__DMRs.txt
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt
 ```
 
 ## Generate DAG Visualization
 
 ```bash
 snakemake --dag \
-    --configfile tests/integration/data/test_config_ont.yaml \
-    results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw \
-    | dot -Tpng > dag_ont.png
+    --configfile tests/integration/data/test_config_dmc.yaml \
+    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw \
+    | dot -Tpng > dag_dmc.png
 ```
 
 ## Expected Results
@@ -136,9 +136,9 @@ snakemake --dag \
 ### If Snakemake is Installed
 
 ```
-tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_snakemake_installed PASSED
-tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_config_file_exists PASSED
-tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_sample_file_exists PASSED
+tests/integration/test_dmc_dryrun.py::TestDmcDryRunBasic::test_snakemake_installed PASSED
+tests/integration/test_dmc_dryrun.py::TestDmcDryRunBasic::test_config_file_exists PASSED
+tests/integration/test_dmc_dryrun.py::TestDmcDryRunBasic::test_sample_file_exists PASSED
 ...
 ========================= 25 passed in X.XXs =========================
 ```
@@ -146,9 +146,9 @@ tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_sample_file_exist
 ### If Snakemake is Not Installed
 
 ```
-tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_snakemake_installed SKIPPED
-tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_config_file_exists PASSED
-tests/integration/test_ont_dryrun.py::TestONTDryRunBasic::test_sample_file_exists PASSED
+tests/integration/test_dmc_dryrun.py::TestDmcDryRunBasic::test_snakemake_installed SKIPPED
+tests/integration/test_dmc_dryrun.py::TestDmcDryRunBasic::test_config_file_exists PASSED
+tests/integration/test_dmc_dryrun.py::TestDmcDryRunBasic::test_sample_file_exists PASSED
 ...
 ========================= 2 passed, 23 skipped in X.XXs =========================
 ```
@@ -157,17 +157,17 @@ Tests automatically skip if Snakemake is not available.
 
 ## What Tests DON'T Require
 
-- ✗ Actual reference genomes
-- ✗ Real sequencing data (BAM/bedMethyl files)
-- ✗ Conda environments to be built
-- ✗ Rules to be executed
-- ✗ Software tools (modkit, samtools, etc.)
+- Actual reference genomes
+- Real sequencing data (BAM/bedMethyl files)
+- Conda environments to be built
+- Rules to be executed
+- Software tools (modkit, samtools, etc.)
 
 ## What Tests DO Require
 
-- ✓ Snakemake installed and in PATH
-- ✓ Python 3.8+
-- ✓ pytest
+- Snakemake installed and in PATH
+- Python 3.8+
+- pytest
 
 ## Troubleshooting
 
@@ -185,7 +185,7 @@ conda install -c conda-forge -c bioconda snakemake
 ```bash
 # Run from repository root
 cd /path/to/epigeneticbutton
-pytest tests/integration/test_ont_dryrun.py -v
+pytest tests/integration/test_dmc_dryrun.py -v
 ```
 
 ### Tests timeout
@@ -196,9 +196,9 @@ timeout=120  # in subprocess.run() calls
 
 ## Adding New Tests
 
-1. Add test samples to `data/test_samples_ont.tsv`
-2. Update config if needed: `data/test_config_ont.yaml`
-3. Add test methods to `test_ont_dryrun.py`
+1. Add test samples to `data/test_samples_dmc.tsv`
+2. Update config if needed: `data/test_config_dmc.yaml`
+3. Add test methods to `test_dmc_dryrun.py`
 
 Example:
 ```python

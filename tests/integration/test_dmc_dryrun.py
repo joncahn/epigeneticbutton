@@ -1,8 +1,9 @@
 """
-Integration tests for ONT methylation workflow using Snakemake dry-run.
+Integration tests for dmC (direct methylation) workflow using Snakemake dry-run.
 
 These tests verify that the Snakemake DAG can be correctly built and wildcards
-resolved for ONT samples without actually executing the rules.
+resolved for dmC samples (from ONT or other direct methylation platforms)
+without actually executing the rules.
 """
 
 import pytest
@@ -25,7 +26,7 @@ def repo_root():
 @pytest.fixture(scope="module")
 def test_config(repo_root):
     """Get the path to the test config file."""
-    config_path = repo_root / "tests" / "integration" / "data" / "test_config_ont.yaml"
+    config_path = repo_root / "tests" / "integration" / "data" / "test_config_dmc.yaml"
     assert config_path.exists(), f"Test config not found at {config_path}"
     return str(config_path)
 
@@ -119,8 +120,8 @@ def run_snakemake_dag(repo_root, config_file, target=None):
     return result
 
 
-class TestONTDryRunBasic:
-    """Basic dry-run tests for ONT methylation workflow."""
+class TestDmcDryRunBasic:
+    """Basic dry-run tests for dmC (direct methylation) workflow."""
 
     def test_snakemake_installed(self, snakemake_available):
         """Test that snakemake is available."""
@@ -133,59 +134,59 @@ class TestONTDryRunBasic:
 
     def test_sample_file_exists(self, repo_root):
         """Test that the test sample file exists."""
-        sample_file = repo_root / "tests" / "integration" / "data" / "test_samples_ont.tsv"
+        sample_file = repo_root / "tests" / "integration" / "data" / "test_samples_dmc.tsv"
         assert sample_file.exists()
 
 
-class TestONTModBAMWorkflow:
-    """Test ONT modBAM workflow dry-run."""
+class TestDmcModBAMWorkflow:
+    """Test dmC modBAM workflow dry-run."""
 
     @pytest.fixture
-    def ont_modbam_target(self):
-        """Return target for ONT modBAM bigwig output."""
-        return "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw"
+    def dmc_modbam_target(self):
+        """Return target for dmC modBAM bigwig output."""
+        return "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
 
-    def test_ont_modbam_dryrun_succeeds(self, snakemake_available, repo_root, test_config, ont_modbam_target):
-        """Test that dry-run succeeds for ONT modBAM sample."""
+    def test_dmc_modbam_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
+        """Test that dry-run succeeds for dmC modBAM sample."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, ont_modbam_target)
+        result = run_snakemake_dryrun(repo_root, test_config, dmc_modbam_target)
 
         # Check that dry-run completed successfully
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_ont_modbam_includes_expected_rules(self, snakemake_available, repo_root, test_config, ont_modbam_target):
-        """Test that ONT modBAM workflow includes expected rules."""
+    def test_dmc_modbam_includes_expected_rules(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
+        """Test that dmC modBAM workflow includes expected rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, ont_modbam_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_config, dmc_modbam_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
         # Combine stdout and stderr (Snakemake outputs to stderr)
         output = result.stdout + result.stderr
 
-        # Check for ONT-specific rules
+        # Check for dmC-specific rules
         # Note: modkit_pileup now does context filtering directly with --motif,
-        # so split_bedmethyl_by_context and make_modkit_context_beds are not needed for ONT
+        # so split_bedmethyl_by_context and make_modkit_context_beds are not needed for dmC
         expected_rules = [
             "get_modbam",
             "align_modbam",
             "modkit_pileup",
-            "make_ont_bigwig_files"
+            "make_dmc_bigwig_files"
         ]
 
         for rule in expected_rules:
-            assert rule in output, f"Expected ONT rule '{rule}' not found in dry-run output"
+            assert rule in output, f"Expected dmC rule '{rule}' not found in dry-run output"
 
-    def test_ont_modbam_excludes_bismark_rules(self, snakemake_available, repo_root, test_config, ont_modbam_target):
-        """Test that ONT workflow does not trigger Bismark rules."""
+    def test_dmc_modbam_excludes_bismark_rules(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
+        """Test that dmC workflow does not trigger Bismark rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, ont_modbam_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_config, dmc_modbam_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -199,9 +200,9 @@ class TestONTModBAMWorkflow:
         ]
 
         for rule in bismark_rules:
-            assert rule not in output, f"Bismark rule '{rule}' should not be in ONT workflow"
+            assert rule not in output, f"Bismark rule '{rule}' should not be in dmC workflow"
 
-    def test_ont_modbam_all_contexts(self, snakemake_available, repo_root, test_config):
+    def test_dmc_modbam_all_contexts(self, snakemake_available, repo_root, test_config):
         """Test that all three methylation contexts are generated."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
@@ -209,7 +210,7 @@ class TestONTModBAMWorkflow:
         contexts = ["CG", "CHG", "CHH"]
 
         for context in contexts:
-            target = f"results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__{context}.bw"
+            target = f"results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__{context}.bw"
             result = run_snakemake_dryrun(repo_root, test_config, target)
 
             assert result.returncode == 0, f"Dry-run failed for {context} context: {result.stderr}"
@@ -248,7 +249,7 @@ class TestBedMethylWorkflow:
             "get_bedmethyl",
             "copy_bedmethyl_for_pileup",
             "split_bedmethyl_by_context",
-            "make_ont_bigwig_files",
+            "make_dmc_bigwig_files",
             "make_modkit_context_beds"
         ]
 
@@ -276,8 +277,8 @@ class TestBedMethylWorkflow:
             assert rule not in output, f"Rule '{rule}' should be skipped for bedMethyl input"
 
 
-class TestONTDMRWorkflow:
-    """Test ONT DMR calling workflow dry-run.
+class TestDmcDMRWorkflow:
+    """Test dmC DMR calling workflow dry-run.
 
     Note: DMR workflow needs refactoring to work with the new modkit_pileup --motif
     approach. The rule currently expects combined bedMethyl files but we now generate
@@ -290,7 +291,7 @@ class TestONTDMRWorkflow:
 
         Note: DMR targets use analysis-level names (without replicate).
         """
-        return "results/mC/DMRs/summary__mC__WT__leaf__ONT__test_genome__vs__mC__mutant__leaf__ONT__test_genome__DMRs.txt"
+        return "results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt"
 
     def test_dmr_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmr_target):
         """Test that dry-run succeeds for DMR analysis."""
@@ -302,7 +303,7 @@ class TestONTDMRWorkflow:
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
     def test_dmr_uses_dmrcaller_by_default(self, snakemake_available, repo_root, test_config, dmr_target):
-        """Test that DMR workflow uses DMRcaller (same as Bismark) for ONT samples by default."""
+        """Test that DMR workflow uses DMRcaller (same as Bismark) for dmC samples by default."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
@@ -313,7 +314,7 @@ class TestONTDMRWorkflow:
         output = result.stdout + result.stderr
 
         # Default uses DMRcaller (call_DMRs_pairwise) with bedMethyl-to-CX_report conversion
-        assert "call_DMRs_pairwise" in output, "Expected DMRcaller rule for ONT samples by default"
+        assert "call_DMRs_pairwise" in output, "Expected DMRcaller rule for dmC samples by default"
         assert "convert_bedmethyl_to_cx_report" in output, "Expected bedMethyl conversion for DMRcaller"
         assert "R_call_DMRs.R" in output, "Expected DMRcaller R script"
 
@@ -326,18 +327,18 @@ class TestDAGStructure:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw"
+        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
         result = run_snakemake_dag(repo_root, test_config, target)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
         assert len(result.stdout) > 0, "DAG output is empty"
 
-    def test_dag_contains_ont_rules(self, snakemake_available, repo_root, test_config):
-        """Test that DAG contains ONT-specific rules."""
+    def test_dag_contains_dmc_rules(self, snakemake_available, repo_root, test_config):
+        """Test that DAG contains dmC-specific rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw"
+        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
         result = run_snakemake_dag(repo_root, test_config, target)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
@@ -345,14 +346,14 @@ class TestDAGStructure:
         # DAG output is in DOT format
         dag_output = result.stdout
 
-        # Check for ONT rule nodes in DAG
+        # Check for dmC rule nodes in DAG
         # Note: modkit_pileup now does context filtering directly with --motif,
-        # so split_bedmethyl_by_context is not needed for ONT samples
+        # so split_bedmethyl_by_context is not needed for dmC samples
         expected_rules = [
             "get_modbam",
             "align_modbam",
             "modkit_pileup",
-            "make_ont_bigwig_files"
+            "make_dmc_bigwig_files"
         ]
 
         for rule in expected_rules:
@@ -363,7 +364,7 @@ class TestDAGStructure:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw"
+        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
         result = run_snakemake_dag(repo_root, test_config, target)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
@@ -376,18 +377,18 @@ class TestDAGStructure:
 
 
 class TestWildcardResolution:
-    """Test wildcard resolution for ONT samples."""
+    """Test wildcard resolution for dmC samples."""
 
-    def test_ont_sample_wildcards_resolve(self, snakemake_available, repo_root, test_config):
-        """Test that wildcards are correctly resolved for ONT samples."""
+    def test_dmc_sample_wildcards_resolve(self, snakemake_available, repo_root, test_config):
+        """Test that wildcards are correctly resolved for dmC samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # Test various wildcard combinations
         targets = [
-            "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw",
-            "results/mC/tracks/mC__WT__leaf__ONT__rep2__test_genome__CHG.bw",
-            "results/mC/tracks/mC__mutant__leaf__ONT__rep1__test_genome__CHH.bw",
+            "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw",
+            "results/mC/tracks/mC__WT__leaf__dmC__rep2__test_genome__CHG.bw",
+            "results/mC/tracks/mC__mutant__leaf__dmC__rep1__test_genome__CHH.bw",
         ]
 
         for target in targets:
@@ -414,7 +415,7 @@ class TestErrorHandling:
             pytest.skip("Snakemake not installed")
 
         # Request target with non-existent reference genome
-        target = "results/mC/tracks/mC__WT__leaf__ONT__rep1__nonexistent_genome__CG.bw"
+        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__nonexistent_genome__CG.bw"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
         # Should fail because reference genome is not in config
@@ -426,7 +427,7 @@ class TestErrorHandling:
             pytest.skip("Snakemake not installed")
 
         # Request target with invalid context
-        target = "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__INVALID.bw"
+        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__INVALID.bw"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
         # Should fail because INVALID is not a valid context
@@ -434,40 +435,40 @@ class TestErrorHandling:
 
 
 class TestAllMCTarget:
-    """Test the all_mc rule with ONT samples.
+    """Test the all_mc rule with dmC samples.
 
     Note: all_mc rule needs updates to handle merged replicates properly.
     Currently skipped until merged replicate handling is implemented.
     """
 
-    @pytest.mark.skip(reason="all_mc rule needs merged replicate handling for ONT")
-    def test_all_mc_rule_with_ont(self, snakemake_available, repo_root, test_config):
-        """Test that all_mc rule works with ONT samples."""
+    @pytest.mark.skip(reason="all_mc rule needs merged replicate handling for dmC")
+    def test_all_mc_rule_with_dmc(self, snakemake_available, repo_root, test_config):
+        """Test that all_mc rule works with dmC samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # Test the all_mc checkpoint rule
-        target = "results/mC/chkpts/mC_analysis__test_ont__test_genome.done"
+        target = "results/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
-        assert result.returncode == 0, f"all_mc rule failed with ONT samples: {result.stderr}"
+        assert result.returncode == 0, f"all_mc rule failed with dmC samples: {result.stderr}"
 
-    @pytest.mark.skip(reason="all_mc rule needs merged replicate handling for ONT")
-    def test_all_mc_includes_ont_outputs(self, snakemake_available, repo_root, test_config):
-        """Test that all_mc includes ONT-specific outputs."""
+    @pytest.mark.skip(reason="all_mc rule needs merged replicate handling for dmC")
+    def test_all_mc_includes_dmc_outputs(self, snakemake_available, repo_root, test_config):
+        """Test that all_mc includes dmC-specific outputs."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/chkpts/mC_analysis__test_ont__test_genome.done"
+        target = "results/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
         result = run_snakemake_dryrun(repo_root, test_config, target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"all_mc rule failed: {result.stderr}"
 
         output = result.stdout + result.stderr
 
-        # Check for ONT summary outputs
-        assert "summary__mC__WT__leaf__ONT__rep1__test_genome.txt" in output or "modkit_summary" in output, \
-            "all_mc should include ONT summary outputs"
+        # Check for dmC summary outputs
+        assert "summary__mC__WT__leaf__dmC__rep1__test_genome.txt" in output or "modkit_summary" in output, \
+            "all_mc should include dmC summary outputs"
 
 
 class TestContextBedGeneration:
@@ -489,14 +490,14 @@ class TestContextBedGeneration:
     def test_context_beds_are_dependencies_for_bedmethyl(self, snakemake_available, repo_root, test_config):
         """Test that context BED files are dependencies for bedMethyl splitting.
 
-        Note: For ONT samples, modkit_pileup uses --motif filtering directly,
+        Note: For dmC samples, modkit_pileup uses --motif filtering directly,
         so context BEDs are only needed for bedMethyl sample_type inputs.
         """
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        # Test bedMethyl sample (not ONT) - context BEDs should be dependencies
-        target = "results/mC/ont/context__mC__WT__root__bedMethyl__rep1__test_genome__CG.bed.gz"
+        # Test bedMethyl sample (not dmC) - context BEDs should be dependencies
+        target = "results/mC/dmc/context__mC__WT__root__bedMethyl__rep1__test_genome__CG.bed.gz"
         result = run_snakemake_dag(repo_root, test_config, target)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
@@ -511,15 +512,15 @@ class TestContextBedGeneration:
 class TestMultipleReplicates:
     """Test handling of multiple replicates."""
 
-    def test_multiple_ont_replicates(self, snakemake_available, repo_root, test_config):
-        """Test that multiple ONT replicates are processed."""
+    def test_multiple_dmc_replicates(self, snakemake_available, repo_root, test_config):
+        """Test that multiple dmC replicates are processed."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # Request both replicates
         targets = [
-            "results/mC/tracks/mC__WT__leaf__ONT__rep1__test_genome__CG.bw",
-            "results/mC/tracks/mC__WT__leaf__ONT__rep2__test_genome__CG.bw"
+            "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw",
+            "results/mC/tracks/mC__WT__leaf__dmC__rep2__test_genome__CG.bw"
         ]
 
         for target in targets:
@@ -532,7 +533,7 @@ class TestMultipleReplicates:
             pytest.skip("Snakemake not installed")
 
         # DMR analysis uses analysis-level names (replicates merged automatically in the rule)
-        target = "results/mC/DMRs/summary__mC__WT__leaf__ONT__test_genome__vs__mC__mutant__leaf__ONT__test_genome__DMRs.txt"
+        target = "results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
         assert result.returncode == 0, f"Merged replicate DMR failed: {result.stderr}"

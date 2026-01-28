@@ -29,15 +29,15 @@ Use with `tests/integration/data/test_config_chr5.yaml` for integration testing:
 
 ```bash
 snakemake --configfile tests/integration/data/test_config_chr5.yaml \
-    results/mC/tracks/mC__Col0__leaf__ONT__rep1__ColCEN_Chr5__CG.bw
+    results/mC/tracks/mC__Col0__leaf__dmC__rep1__ColCEN_Chr5__CG.bw
 ```
 
 ## Adding Test Samples
 
-Update `tests/integration/data/test_samples_chr5.tsv` with actual ONT modBAM paths:
+Update `tests/integration/data/test_samples_chr5.tsv` with actual dmC modBAM paths:
 
 ```
-mC	Col0	leaf	ONT	rep1	sample_id	/path/to/ont.bam	SE	ColCEN_Chr5
+mC	Col0	leaf	dmC	rep1	sample_id	/path/to/modbam.bam	SE	ColCEN_Chr5
 ```
 
 For best testing, the modBAM should be filtered to Chr5 reads only to keep file sizes small.

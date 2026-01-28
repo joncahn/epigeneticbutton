@@ -1,7 +1,7 @@
 """
 Unit tests for workflow/scripts/validate_dmc_input.py
 
-Tests the validation functions for ONT methylation inputs:
+Tests the validation functions for dmC (direct methylation) inputs:
 - validate_modbam: validates modBAM files for MM/ML tags
 - validate_bedmethyl: validates bedMethyl file format
 """
