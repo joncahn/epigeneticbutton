@@ -180,19 +180,19 @@ mC_mapping:
 # Whether to use the custom version of the script to call DMRs
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
 
-# ONT direct methylation parameters
-# For sample_type "ONT" (modBAM input) or "bedMethyl" (pre-computed bedMethyl input)
-ont_methylation:
+# Direct methylation (dmC) parameters
+# For sample_type "dmC" - supports modBAM input or pre-computed bedMethyl input
+dmc_methylation:
   alignment:
-    preset: "lr:hqae"  # mm2plus preset for ONT reads
+    preset: "lr:hqae"  # mm2plus preset for long reads
   pileup:
     combine_mods: true  # Combine 5mC and 5hmC into total methylation
     min_coverage: 3     # Minimum read coverage for methylation calls
 
-# DMR calling method for ONT samples
-# Options: "dmrcaller" (default, R package - same as Bismark), "modkit" (native ONT tool with HMM segmentation)
+# DMR calling method for dmC samples
+# Options: "dmrcaller" (default, R package - same as Bismark), "modkit" (native tool with HMM segmentation)
 # Bismark samples always use dmrcaller regardless of this setting
-ont_dmr_method: "dmrcaller"
+dmc_dmr_method: "dmrcaller"
 
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation

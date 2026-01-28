@@ -1,5 +1,5 @@
 """
-Unit tests for workflow/scripts/validate_ont_input.py
+Unit tests for workflow/scripts/validate_dmc_input.py
 
 Tests the validation functions for ONT methylation inputs:
 - validate_modbam: validates modBAM files for MM/ML tags
@@ -16,7 +16,7 @@ from unittest.mock import patch, MagicMock
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'workflow', 'scripts'))
-from validate_ont_input import validate_modbam, validate_bedmethyl
+from validate_dmc_input import validate_modbam, validate_bedmethyl
 
 
 class TestValidateBedMethyl:
@@ -449,11 +449,11 @@ class TestValidationMain:
         )
 
         # Import and test main
-        import validate_ont_input
-        sys.argv = ['validate_ont_input.py', 'modBAM', str(bam_path)]
+        import validate_dmc_input
+        sys.argv = ['validate_dmc_input.py', 'modBAM', str(bam_path)]
 
         with pytest.raises(SystemExit) as exc_info:
-            validate_ont_input.main()
+            validate_dmc_input.main()
 
         assert exc_info.value.code == 0
 
@@ -462,30 +462,30 @@ class TestValidationMain:
         bedmethyl_path = temp_dir / "test.bedmethyl"
         bedmethyl_path.write_text(valid_bedmethyl_content)
 
-        import validate_ont_input
-        sys.argv = ['validate_ont_input.py', 'bedMethyl', str(bedmethyl_path)]
+        import validate_dmc_input
+        sys.argv = ['validate_dmc_input.py', 'bedMethyl', str(bedmethyl_path)]
 
         with pytest.raises(SystemExit) as exc_info:
-            validate_ont_input.main()
+            validate_dmc_input.main()
 
         assert exc_info.value.code == 0
 
     def test_main_unknown_input_type(self):
         """Test main function with unknown input type."""
-        import validate_ont_input
-        sys.argv = ['validate_ont_input.py', 'unknown', '/tmp/test.file']
+        import validate_dmc_input
+        sys.argv = ['validate_dmc_input.py', 'unknown', '/tmp/test.file']
 
         with pytest.raises(SystemExit) as exc_info:
-            validate_ont_input.main()
+            validate_dmc_input.main()
 
         assert exc_info.value.code == 1
 
     def test_main_insufficient_arguments(self):
         """Test main function with too few arguments."""
-        import validate_ont_input
-        sys.argv = ['validate_ont_input.py', 'modBAM']
+        import validate_dmc_input
+        sys.argv = ['validate_dmc_input.py', 'modBAM']
 
         with pytest.raises(SystemExit) as exc_info:
-            validate_ont_input.main()
+            validate_dmc_input.main()
 
         assert exc_info.value.code == 1

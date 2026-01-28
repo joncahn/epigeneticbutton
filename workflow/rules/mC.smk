@@ -525,10 +525,10 @@ rule all_mc:
 
 ################################################################################
 # Direct Methylation (dmC) Rules
-# Handles both modBAM (ONT basecalls) and pre-computed bedMethyl inputs
+# Handles both modBAM (direct methylation basecalls) and pre-computed bedMethyl inputs
 ################################################################################
 
-CONDA_ENV_DMC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_ont.yaml")
+CONDA_ENV_DMC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_dmc.yaml")
 MODKIT_VERSION = "0.6.1"
 MODKIT_BIN = os.path.join(REPO_FOLDER, "workflow", "bin", "modkit")
 
@@ -607,7 +607,7 @@ rule get_dmc_input:
             f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
             samples, 'seq_id'
         ),
-        validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_ont_input.py")
+        validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_dmc_input.py")
     log:
         temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "get_dmc_input", "dmC"))
     conda: CONDA_ENV_DMC

@@ -17,7 +17,7 @@ aligned_bams: false
 mC_context: "all"
 
 # Direct methylation (dmC) parameters
-# Supports both modBAM (ONT basecalls) and pre-computed bedMethyl inputs
+# Supports both modBAM (direct methylation basecalls) and pre-computed bedMethyl inputs
 dmc_methylation:
   alignment:
     preset: "lr:hqae"

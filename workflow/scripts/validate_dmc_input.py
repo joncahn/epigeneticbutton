@@ -7,8 +7,8 @@ Supports automatic detection and validation of:
 - bedMethyl files: pre-computed methylation calls in BED format
 
 Usage:
-    python validate_ont_input.py <input_type> <input_file> [<chrom_sizes>]
-    python validate_ont_input.py detect <input_file>
+    python validate_dmc_input.py <input_type> <input_file> [<chrom_sizes>]
+    python validate_dmc_input.py detect <input_file>
 
 Arguments:
     input_type: "modBAM", "bedMethyl", or "detect" (auto-detect type)
