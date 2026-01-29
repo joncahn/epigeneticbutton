@@ -131,6 +131,7 @@ env_patterns = [
     ("sRNA", "sRNA"),
     ("mC", "mC"),
     ("TF_*", "TF"),
+    ("ATAC", "ATAC"),
 ]
 
 # Define sample metadata and avoid header if present
@@ -198,7 +199,7 @@ def all_map_only_input(wildcards):
     
     map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA", "mC"]])
     if not config["aligned_bams"]:
-        map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP", "TF"]])
+        map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP", "TF", "ATAC"]])
     map_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
     
     for _, row in samples.iterrows():
@@ -212,6 +213,7 @@ def all_map_only_input(wildcards):
 include: "rules/environment_setup.smk"
 include: "rules/sample_download.smk"
 include: "rules/ChIPseq.smk"
+include: "rules/ATACseq.smk"
 include: "rules/RNAseq.smk"
 include: "rules/mC.smk"
 include: "rules/smallRNA.smk"
@@ -247,7 +249,8 @@ rule combined_analysis:
         expand("results/TF/chkpts/TF_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
         expand("results/RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
         expand("results/mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
-        expand("results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else [])
+        expand("results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
+        expand("results/ATAC/chkpts/ATAC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ATAC" in UNIQUE_ENVS else [])
     output:
         chkpt = f"results/combined/chkpts/final_analysis__{analysis_name}.done"
     localrule: True

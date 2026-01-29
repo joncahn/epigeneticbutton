@@ -103,10 +103,11 @@ adapter2:
 
 # Mapping option default
 chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+atac_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
 
-# ChIP-seq parameters
+# Bowtie2-based mapping parameters (shared by ChIP, TF, and ATAC)
 # For mapping
-chip_mapping:
+bt2_mapping_strategy:
   default:
     map_pe: "--end-to-end --maxins 1500"
     map_se: "--end-to-end"
@@ -129,6 +130,10 @@ chip_tracks:
   binsize: 1
   params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"
 
+atac_tracks:
+  binsize: 1
+  params: "--normalizeUsing CPM"
+
 # For peaks
 chip_callpeaks:
   # To link the type of IP with the type of peaks. Can be updated with other marks. If creating regex patterns, make sure to escape "." with "\."
@@ -137,7 +142,11 @@ chip_callpeaks:
     'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow" 
     'H3|H4': "broad"
   params: "--keep-dup 'all' --nomodel"
- 
+
+atac_callpeaks:
+  peaktype: "narrow"
+  params: "--keep-dup 'all' --nomodel --shift 75 --extsize 150"
+
 # RNA parameters
 rna_tracks:
   RNAseq:
@@ -237,6 +246,7 @@ heatmaps_plot_params:
   RNA: "--colorMap seismic --interpolationMethod bilinear"
   sRNA: "--colorMap seismic --interpolationMethod bilinear"
   mC: "--colorMap Oranges --missingDataColor 0.9 --interpolationMethod nearest"
+  ATAC: "--colorMap seismic --interpolationMethod bilinear"
 heatmaps:
   regions:
     base: "scale-regions --missingDataAsZero --skipZeros"
@@ -366,6 +376,10 @@ resources:
   best_peaks_pseudoreps: *low
   find_motifs_in_file: *heavy
   make_peak_stats: *low
+  # ATACseq
+  atac_shift_and_bed: *heavy
+  calling_peaks_atac: *heavy
+  make_coverage_atac: *heavy
   # mC
   make_bismark_indices: *heavy
   bismark_map_pe: *heavy

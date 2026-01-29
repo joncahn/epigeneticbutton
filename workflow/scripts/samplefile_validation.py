@@ -9,6 +9,8 @@ def validations_patterns(data_type):
         return re.compile(r"^(sRNA|smallRNA|shRNA)$")
     elif data_type == "mC":
         return re.compile(r"^(mC|WGBS|dmC|Pico|EMseq)$")
+    elif data_type == "ATAC":
+        return re.compile(r"^(?!.*\s)(?!.*__)(?!.*').*$")
     elif data_type.startswith("TF_"):
         return re.compile(r"^(IP|IPb|Input)$")
     elif data_type.startswith("ChIP"):
@@ -33,7 +35,9 @@ def name(row):
 def assign_chip_input(row, tab):
     dtype = row.data_type
     stype = row.sample_type
-    if dtype.startswith("TF") or dtype.startswith("ChIP"): 
+    if dtype == "ATAC":
+        return True
+    if dtype.startswith("TF") or dtype.startswith("ChIP"):
         if stype != "Input":
             match = tab[
                 (tab["data_type"]==row.data_type) &
