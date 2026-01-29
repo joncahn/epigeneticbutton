@@ -784,7 +784,7 @@ rule idr_analysis_replicates:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule merging_bt2_replicates:
+rule merging_chip_replicates:
     input:
         bamfiles = lambda wildcards: [ f"results/{wildcards.env}/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
@@ -800,11 +800,11 @@ rule merging_bt2_replicates:
     log:
         temp(return_log_chip("{env}","{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["merging_bt2_replicates"]["threads"]
+    threads: config["resources"]["merging_chip_replicates"]["threads"]
     resources:
-        mem_mb=config["resources"]["merging_bt2_replicates"]["mem_mb"],
-        tmp_mb=config["resources"]["merging_bt2_replicates"]["tmp_mb"],
-        qos=config["resources"]["merging_bt2_replicates"]["qos"]
+        mem_mb=config["resources"]["merging_chip_replicates"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_chip_replicates"]["tmp_mb"],
+        qos=config["resources"]["merging_chip_replicates"]["qos"]
     shell:
         """
         {{
