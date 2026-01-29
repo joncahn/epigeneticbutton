@@ -213,7 +213,7 @@ dmc_methylation:
 dmc_dmr_method: "dmrcaller"
 
 # small RNA parameters
-netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
+netflex_v3_deduplication: false # additional deduplication if nextflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
@@ -320,7 +320,7 @@ heavy_resources: &heavy
   qos: "slow_nice"
   
 max_resources: &max
-  threads: 16
+  threads: 8
   mem_mb: 32000
   tmp_mb: 96000
   qos: "slow_nice"
@@ -375,7 +375,7 @@ resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
-  # ONT methylation
+  # dmC
   get_modbam: *standard
   get_bedmethyl: *low
   align_modbam: *max
@@ -399,7 +399,7 @@ resources:
   create_GO_database: *single
   perform_GO_on_target_file: *single
   # smallRNA
-  deduplicate_srna_netflexv3: *standard
+  deduplicate_srna_nextflexv3: *standard
   make_bt2_indices_for_structural_RNAs: *heavy
   filter_structural_rna: *heavy
   make_bowtie1_indices: *single
