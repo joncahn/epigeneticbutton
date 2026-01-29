@@ -186,8 +186,10 @@ analysis_samples = (
     [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]]
     .drop_duplicates()
 )
-pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
-analysis_samples.to_csv(pathtoanalysisfile, sep="\t", index=False)
+# Write a test-ready sample file (same 9-column format as all_samples.tsv, minus Input rows)
+test_samples = samples.query("sample_type != 'Input'")[colnames]
+pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"test_samples_{analysis_name}.tsv")
+test_samples.to_csv(pathtoanalysisfile, sep="\t", index=False, header=False)
     
 # Add a sample_name column to the analysis_sample file
 analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
