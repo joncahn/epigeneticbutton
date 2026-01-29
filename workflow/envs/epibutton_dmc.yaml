@@ -1,0 +1,16 @@
+name: epibutton_dmc
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Note: modkit is installed via binary download in the workflow
+  # (not available on conda, get from https://github.com/nanoporetech/modkit/releases)
+  - mm2plus>=1.2  # Accelerated minimap2, drop-in replacement
+  - samtools>=1.17
+  - bedtools>=2.31
+  - ucsc-bedgraphtobigwig
+  - htslib>=1.17
+  - pigz
+  - python>=3.10
+  - pysam>=0.22  # for bedmethyl_to_cx_report.py
+  - requests  # for downloading modkit binary

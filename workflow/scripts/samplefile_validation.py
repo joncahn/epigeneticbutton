@@ -8,7 +8,7 @@ def validations_patterns(data_type):
     elif data_type == "sRNA":
         return re.compile(r"^(sRNA|smallRNA|shRNA)$")
     elif data_type == "mC":
-        return re.compile(r"^(mC|WGBS|ONT|Pico|EMseq)$")
+        return re.compile(r"^(mC|WGBS|dmC|Pico|EMseq)$")
     elif data_type.startswith("TF_"):
         return re.compile(r"^(IP|IPb|Input)$")
     elif data_type.startswith("ChIP"):

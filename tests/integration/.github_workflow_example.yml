@@ -1,0 +1,131 @@
+# Example GitHub Actions workflow for running integration tests
+# Save this as .github/workflows/integration-tests.yml
+
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, devel, feature/* ]
+    paths:
+      - 'workflow/**'
+      - 'config/**'
+      - 'tests/integration/**'
+  pull_request:
+    branches: [ main, devel ]
+    paths:
+      - 'workflow/**'
+      - 'config/**'
+      - 'tests/integration/**'
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+        snakemake-version: ['7.32.4', '8.4.0']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          channels: conda-forge,bioconda,defaults
+          channel-priority: strict
+          auto-activate-base: false
+          activate-environment: test-env
+
+      - name: Install Snakemake
+        shell: bash -l {0}
+        run: |
+          conda install -c conda-forge -c bioconda \
+            snakemake=${{ matrix.snakemake-version }} \
+            pytest pytest-cov
+
+      - name: Verify Snakemake installation
+        shell: bash -l {0}
+        run: |
+          snakemake --version
+          which snakemake
+
+      - name: Run integration tests
+        shell: bash -l {0}
+        run: |
+          pytest tests/integration/ -v --tb=short
+
+      - name: Run integration tests with coverage
+        if: matrix.python-version == '3.10' && matrix.snakemake-version == '7.32.4'
+        shell: bash -l {0}
+        run: |
+          pytest tests/integration/ -v --cov=workflow/rules --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.10' && matrix.snakemake-version == '7.32.4'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: integration
+          name: integration-tests
+
+  integration-tests-dmc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: '3.10'
+          channels: conda-forge,bioconda,defaults
+          channel-priority: strict
+
+      - name: Install dependencies
+        shell: bash -l {0}
+        run: |
+          conda install -c conda-forge -c bioconda \
+            snakemake pytest
+
+      - name: Run dmC dry-run tests
+        shell: bash -l {0}
+        run: |
+          pytest tests/integration/test_dmc_dryrun.py -v -m integration
+
+      - name: Generate DAG visualization (optional)
+        if: always()
+        shell: bash -l {0}
+        run: |
+          conda install -c conda-forge graphviz
+          snakemake --dag \
+            --configfile tests/integration/data/test_config_dmc.yaml \
+            results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw \
+            | dot -Tpng > dag_dmc_test.png || true
+
+      - name: Upload DAG as artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: dmc-dag-visualization
+          path: dag_dmc_test.png
+          if-no-files-found: ignore
+
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [integration-tests, integration-tests-dmc]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.integration-tests.result }}" == "success" ]] && \
+             [[ "${{ needs.integration-tests-dmc.result }}" == "success" ]]; then
+            echo "All integration tests passed!"
+            exit 0
+          else
+            echo "Some integration tests failed"
+            exit 1
+          fi

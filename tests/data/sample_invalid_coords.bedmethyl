@@ -1,0 +1,3 @@
+# Invalid coordinates - end before start
+Chr1	500	100	m	1000	+	500	100	255,0,0	15	85.2
+Chr2	1000	1001	m	780	+	1000	1001	255,0,0	10	65.0

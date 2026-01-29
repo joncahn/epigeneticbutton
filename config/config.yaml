@@ -17,7 +17,7 @@ ColCEN:
   gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
   te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
-  
+
 B73_v5:
   species: "mays" 
   fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
@@ -179,6 +179,38 @@ mC_mapping:
 
 # Whether to use the custom version of the script to call DMRs
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
+
+# Direct methylation (dmC) parameters
+# For sample_type "dmC" - native base modification detection from long-read sequencing (Oxford Nanopore, PacBio)
+# Supports two input formats that are automatically detected:
+#   - modBAM: BAM files with MM/ML tags from modified basecalling (e.g., Dorado, Guppy)
+#   - bedMethyl: Pre-computed methylation calls in bedMethyl format (e.g., from prior modkit pileup)
+dmc_methylation:
+  alignment:
+    # Minimap2 preset for alignment (used by mm2plus, an accelerated minimap2 fork)
+    # "lr:hqae" = long-read, high-quality, accurate end-to-end alignment
+    # Optimized for high-accuracy ONT basecalls (e.g., Guppy SUP, Dorado HAC/SUP models)
+    # Alternative presets: "map-ont" (standard ONT), "map-hifi" (PacBio HiFi)
+    preset: "lr:hqae"
+  pileup:
+    # Combine 5mC (5-methylcytosine) and 5hmC (5-hydroxymethylcytosine) into total methylation
+    # This matches bisulfite sequencing behavior, which cannot distinguish these modifications
+    # Set to false to analyze them separately (requires changes to downstream bigwig generation)
+    combine_mods: true
+    # Minimum read coverage threshold for reporting a methylation call
+    # Sites with fewer reads are excluded from bedMethyl output
+    min_coverage: 3
+
+# DMR (Differentially Methylated Region) calling method for dmC samples
+# Options:
+#   - "dmrcaller": R/Bioconductor DMRcaller package (default)
+#     Same method used for Bismark samples, enables unified dmC vs Bismark comparisons
+#     Uses sliding window approach with statistical testing
+#   - "modkit": Native modkit DMR caller with HMM-based segmentation (experimental)
+#     Only suitable for dmC vs dmC comparisons, not compatible with Bismark samples
+#     May provide better sensitivity for long-read specific patterns
+# Note: Bismark samples always use dmrcaller regardless of this setting
+dmc_dmr_method: "dmrcaller"
 
 # small RNA parameters
 netflex_v3_deduplication: false # additoinal deduplication if netflex v3 kit was used for sRNA library preparation
@@ -343,6 +375,13 @@ resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
+  # ONT methylation
+  get_modbam: *standard
+  get_bedmethyl: *low
+  align_modbam: *max
+  modkit_summary: *heavy
+  modkit_pileup: *heavy
+  convert_bedmethyl_to_cx_report: *standard
   # RNAseq
   make_STAR_indices: *heavy
   STAR_map_pe: *heavy

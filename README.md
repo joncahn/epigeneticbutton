@@ -20,7 +20,8 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Transcription Factor ChIP-seq
   - RNA-seq
   - small RNA-seq
-  - MethylC-seq (mC)
+  - MethylC-seq (mC) - Bisulfite sequencing via Bismark
+  - Direct Methylation (dmC) - Long-read native methylation (ONT, PacBio)
   - RAMPAGE *\*in development*
 
 - **Automated Analysis**:
@@ -89,11 +90,11 @@ https://epicc-builder.streamlit.app/
 4. Default options: 
    - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file ([see below](#main-output-options)).
    - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the config file ([see below](#main-output-options)).
-   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Help_Gene_Ontology) before setting it to `true` as it requires 2 other files. These files are available for Arabidopsis thaliana (Tair10 / ColCEN assembly) and Maize B73 (v5 or NAM assembly) in the `data` folder.
+   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Gene_Ontology.md) before setting it to `true` as it requires 2 other files. These files are available for Arabidopsis thaliana (Tair10 / ColCEN assembly) and Maize B73 (v5 or NAM assembly) in the `data` folder.
    - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file ([see below](#main-output-options)).
    - For ChIP-seq: the default mapping parameters are bowtie2 `--end-to-end` default parameters. Other options are available in the config file `chip_mapping_option` ([see below](#chip-mapping-parameters)).
    - For sRNA-seq: the default is not based on Netflex v3 library preparation. If your data was made with this kit, an additional deduplication and read trimming is required. To turn it ON, change the `Netflex_v3_deduplication` in the config file. See [Known issues #3](#known-potential-issues) below if you have mixed libraries.
-   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to the [Help structural RNAs](Help/Help_structural_RNAs_database_with_Rfam) before setting it to `true`. This file is available for Maize in the `data` folder.
+   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to the [Help structural RNAs](Help/Structural_RNAs_Rfam.md) before setting it to `true`. This file is available for Maize in the `data` folder.
    - For sRNA-seq: the default is to only perform *de novo* micro RNA identification (`--dn_mirna` argument in ShortStack). If you also want the known microRNAs, download the fasta file from [miRbase](https://www.mirbase.org), filter it for your species of interest, and add to the `srna_mapping_params` entry in the config file `--known_miRNAs <path/to/known_miRNA_file.fa>`.
 
 ### Running the Pipeline
@@ -183,7 +184,17 @@ For example: If you have H3K27meac IP samples which you want compared to an H3 s
 
 ### Whole Genome Bisulfite Sequencing
 - Col1: *data_type*: `mC`. No other options.
-- Col4: *sample_type*: `mC`. Can also be `WGBS`, `ONT`, `Pico` or `EMseq`. Not yet relevant except for the file names, but will be used in future release to define the type of data.
+- Col4: *sample_type*: `mC`, `WGBS`, `Pico`, or `EMseq`. These labels help identify the chemical or enzymatic conversion method, but all are processed through the Bismark pipeline.
+
+### Direct Methylation (Long-Read Sequencing)
+- Col1: *data_type*: `mC`. No other options.
+- Col4: *sample_type*: `dmC`. This identifies samples with native base modifications (Oxford Nanopore, PacBio) that have not undergone bisulfite conversion or other enzymatic treatments. However, this sample type can also be used with any upstream methylation analysis that produces modBAM or bedMethyl files.
+- Col7: *fastq_path*: Path to input file or directory containing input files. Supports:
+  - **modBAM**: BAM files with MM/ML methylation tags from basecalling (e.g., Dorado, Guppy)
+  - **bedMethyl**: Pre-computed methylation calls in bedMethyl format (e.g., from modkit pileup)
+- Col6: *seq_id*: Unique identifier used to locate files in the fastq_path directory. When fastq_path is a directory, files matching `*seq_id*.bam` (for modBAM) or `*seq_id*.bed*` (for bedMethyl) will be automatically detected. If both formats exist, bedMethyl is preferred as it's pre-computed. When fastq_path is a direct file path, seq_id serves as a sample identifier.
+- Col8: *paired*: Only `SE` is currently supported for dmC samples (we assume long-read sequencing).
+- Note: The pipeline automatically detects whether input is modBAM or bedMethyl format. modBAM files are aligned if necessary and processed through modkit pileup. Both formats are converted to a unified Bismark-compatible CX_report format for downstream analysis (bigwig generation, DMR calling) compatible with bisulfite samples.
 
 ## Configuration Options
 
@@ -244,7 +255,7 @@ Output is a single pdf file named `results/RNA/plots/plot_expression__<analysis_
 
 ### **2. Performing GO analysis on target genes**
 Given a file containing a list of genes to do GO analysis on, and optionally a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
-By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Help_Gene_Ontology](Help/Help_Gene_Ontology) for more details on how to create the GO database.\
+By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Gene_Ontology.md](Help/Gene_Ontology.md) for more details on how to create the GO database.\
 To run it, edit the config file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output files) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.done
@@ -353,7 +364,7 @@ If only the combined analysis is to be performed, and not everything else, delet
 epigeneticbutton/
 ├── config/			# Location for the main config file and recommended location for sample files and target files
 ├── data/			# Location for test material and examples (e.g. zm_structural_RNAs.fa.gz)
-├── Help/			# Location for help files (e.g. Help_structural_RNAs_database_with_Rfam)
+├── Help/			# Location for help files (e.g. Structural_RNAs_Rfam.md)
 ├── profiles/
 │	├── sge/		# Config file to run snakemake on a cluster managed by SGE
 │	└── slurm/		# Config file to run snakemake on a cluster managed by SLURM
@@ -406,7 +417,6 @@ If using local fastq files for paired-end data, the two read files need to end w
 ## Features under development
 - RAMPAGE
 - ATAC-seq
-- ONT for direct methylation calling
 
 ## FAQ
 
