@@ -15,3 +15,13 @@ mC	rdr126ddm1	leaf	dmC	rep1	as5-1_Rep1	/grid/martienssen/data/eernst/projects/ep
 mC	rdr126ddm1het	leaf	dmC	rep1	as5-1-wt_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
 mC	rdr126ddm1hp5	leaf	dmC	rep1	as6-1_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
 mC	rdr126ddm1hethp5	leaf	dmC	rep1	as6-1-wt_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
+ATAC	WT	leaf	ATAC	Rep1	SRR12362020	SRA	PE	ColCEN
+ATAC	WT	leaf	ATAC	Rep2	SRR12362021	SRA	PE	ColCEN
+ATAC	WT	leaf	ATAC	Rep3	SRR12362022	SRA	PE	ColCEN
+ATAC	WT	leaf	ATAC	Rep4	SRR12362023	SRA	PE	ColCEN
+ATAC	ddm1	leaf	ATAC	Rep1	SRR12362026	SRA	PE	ColCEN
+ATAC	ddm1	leaf	ATAC	Rep2	SRR12362027	SRA	PE	ColCEN
+ATAC	nrpd1	leaf	ATAC	Rep1	SRR12362044	SRA	PE	ColCEN
+ATAC	nrpd1	leaf	ATAC	Rep2	SRR12362045	SRA	PE	ColCEN
+ATAC	nrpd1	leaf	ATAC	Rep3	SRR12362046	SRA	PE	ColCEN
+ATAC	nrpd1	leaf	ATAC	Rep4	SRR12362047	SRA	PE	ColCEN
