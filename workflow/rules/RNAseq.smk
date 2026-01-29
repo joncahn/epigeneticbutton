@@ -360,6 +360,7 @@ rule merging_rna_replicates:
         bamfiles = lambda wildcards: [ f"results/RNA/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
                                       for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
     output:
+		temp = temp("results/RNA/mapped/temp__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
         mergefile = "results/RNA/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
     params:
         sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
@@ -375,9 +376,8 @@ rule merging_rna_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-		samtools merge -@ {threads} results/RNA/mapped/temp_{params.sname}.bam {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} results/RNA/mapped/temp_{params.sname}.bam
-		rm -f results/RNA/mapped/temp_{params.sname}.bam
+		samtools merge -@ {threads} {output.temp} {input.bamfiles}
+		samtools sort -@ {threads} -o {output.mergefile} {output.temp}
 		samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """

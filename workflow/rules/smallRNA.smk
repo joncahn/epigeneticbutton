@@ -5,9 +5,9 @@ def return_log_smallrna(sample_name, step, size):
 
 def define_input_file_for_structural(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
-    netflex_v3 = config['netflex_v3_deduplication']
+    nextflex_v3 = config['nextflex_v3_deduplication']
     if paired == "SE":
-        return "deduplicated__{sample_name}__R0" if netflex_v3 else "trim__{sample_name}__R0"
+        return "deduplicated__{sample_name}__R0" if nextflex_v3 else "trim__{sample_name}__R0"
 
 def get_bt1_indices(wildcards):
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -20,11 +20,11 @@ def get_bt1_indices(wildcards):
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     rna_depletion = config['structural_rna_depletion']
-    netflex_v3 = config['netflex_v3_deduplication']
+    netflex_v3 = config['nextflex_v3_deduplication']
     if paired == "SE":
         if rna_depletion:
             return "filtered__{sample_name}__R0" 
-        elif netflex_v3:
+        elif nextflex_v3:
             return "deduplicated__{sample_name}__R0"
         else:
             return "trim__{sample_name}__R0"
@@ -70,6 +70,8 @@ def define_final_srna_output(ref_genome):
     srna_min = config['srna_min_size']
     srna_max = config['srna_max_size']
     trimmed_fastqs = config['trimmed_fastqs']
+    rna_depletion = config['structural_rna_depletion']
+    nextflex_v3 = config['nextflex_v3_deduplication']
     map_files = []
     bigwig_files = []
     qc_files = []
@@ -80,10 +82,14 @@ def define_final_srna_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = sample_name_str(row, 'sample')
-        qc_files.append(f"results/sRNA/reports/clean__{sname}__R0_fastqc.html") # fastqc of trimmed and potentially filtered (Read0) fastq files
+        qc_files.append(f"results/sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed and potentially filtered fastq files
         map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
         if not trimmed_fastqs:
-            qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+            qc_files.append(f"results/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw fastq file
+            if nextflex_v3:
+                qc_files.append(f"results/sRNA/reports/deduplicated__{sname}__R0_fastqc.html") # fastqc of deduplicated (after nextflex v3) fastq file
+            if rna_depletion:
+                qc_files.append(f"results/sRNA/reports/filtered__{sname}__R0_fastqc.html") # fastqc of structural RNA depleted fastq file
         
         for size in range(srna_min, srna_max + 1):
             bigwig_files.append(f"results/sRNA/tracks/{sname}__{size}nt__plus.bw")
@@ -119,25 +125,25 @@ def define_final_srna_output(ref_genome):
 
     return results
 
-rule deduplicate_srna_netflexv3:
+rule deduplicate_srna_nextflexv3:
     input:
         fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
     output:
         collapse_folder = temp(directory("results/sRNA/fastq/collapsed_{sample_name}")),
         collapsed_fastq = temp("results/sRNA/fastq/collapsed_{sample_name}/trim__{sample_name}__R0_trimmed.fastq"),
         deduplicated_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq"),
-        gzipped_fastq = "results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz"
+        gzipped_fastq = temp("results/sRNA/fastq/deduplicated__{sample_name}__R0.fastq.gz")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_smallrna("{sample_name}", "deduplicate_srna_netflexv3", "all"))
+        temp(return_log_smallrna("{sample_name}", "deduplicate_srna_nextflexv3", "all"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["deduplicate_srna_netflexv3"]["threads"]
+    threads: config["resources"]["deduplicate_srna_nextflexv3"]["threads"]
     resources:
-        mem_mb=config["resources"]["deduplicate_srna_netflexv3"]["mem_mb"],
-        tmp_mb=config["resources"]["deduplicate_srna_netflexv3"]["tmp_mb"],
-        qos=config["resources"]["deduplicate_srna_netflexv3"]["qos"]
+        mem_mb=config["resources"]["deduplicate_srna_nextflexv3"]["mem_mb"],
+        tmp_mb=config["resources"]["deduplicate_srna_nextflexv3"]["tmp_mb"],
+        qos=config["resources"]["deduplicate_srna_nextflexv3"]["qos"]
     shell:
         """
         {{
@@ -186,7 +192,7 @@ rule filter_structural_rna:
         indices = lambda wildcards: f"genomes/structural_RNAs/{parse_sample_name(wildcards.sample_name)['ref_genome']}_bt2_index"
     output:
         filtered_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq"),
-        gzipped_fastq = "results/sRNA/fastq/filtered__{sample_name}__R0.fastq.gz"
+        gzipped_fastq = temp("results/sRNA/fastq/filtered__{sample_name}__R0.fastq.gz")
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -210,7 +216,7 @@ rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
     output:
-        fastq_file = temp("results/sRNA/mapped/clean__{sample_name}.fastq.gz")
+        fastq_file = "results/sRNA/fastq/clean__{sample_name}.fastq.gz"
     conda: CONDA_ENV_SRNA
     localrule: True
     shell:
@@ -262,7 +268,7 @@ rule make_bowtie1_indices_large:
         
 rule shortstack_map:
     input:
-        fastq = "results/sRNA/mapped/clean__{sample_name}.fastq.gz",
+        fastq = "results/sRNA/fastq/clean__{sample_name}.fastq.gz",
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         indices = get_bt1_indices
     output:
