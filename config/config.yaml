@@ -371,7 +371,7 @@ resources:
   calling_peaks_macs2_pe: *heavy
   calling_peaks_macs2_se: *heavy
   idr_analysis_replicates: *single
-  merging_chip_replicates: *heavy
+  merging_bt2_replicates: *heavy
   making_pseudo_replicates: *heavy
   best_peaks_pseudoreps: *low
   find_motifs_in_file: *heavy
