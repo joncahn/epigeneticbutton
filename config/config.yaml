@@ -377,7 +377,7 @@ resources:
   find_motifs_in_file: *heavy
   make_peak_stats: *low
   # ATACseq
-  atac_shift_and_bed: *heavy
+  atac_shift_and_bed: *low
   calling_peaks_atac: *heavy
   make_coverage_atac: *heavy
   # mC
