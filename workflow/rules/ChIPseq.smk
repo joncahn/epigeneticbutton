@@ -770,6 +770,7 @@ rule idr_analysis_replicates:
             printf "\nPerforming IDR for ${{rep1}} vs ${{rep2}}\n"
             idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l results/{params.env}/reports/idr_{params.sname}.log --plot || true
             ## I think "|| true" is to avoid potential pipeline breaking errors if no positive peaks were found
+            mkdir -p results/{params.env}/plots/
             mv "${{outfile}}.png" results/{params.env}/plots/
             filtered="${{outfile}}.filtered"
             awk -v OFS="\t" '$5>=540 {{print $1,$2,$3}}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
