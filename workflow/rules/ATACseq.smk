@@ -61,7 +61,7 @@ rule atac_shift_and_bed:
     input:
         bamfile = "results/ATAC/mapped/{file_type}__{sample_name}.bam"
     output:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed"
+        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz"
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:
@@ -82,14 +82,15 @@ rule atac_shift_and_bed:
         if [[ ! -f "{input.bamfile}.bai" ]]; then
             samtools index -@ {threads} "{input.bamfile}"
         fi
-        alignmentSieve --ATACshift -b {input.bamfile} -p {threads} --bam /dev/stdout | \
-        bedtools bamtobed -i stdin > {output.bedfile}
+        alignmentSieve --ATACshift -b {input.bamfile} -p {threads} -o /dev/stdout | \
+        bedtools bamtobed -i stdin | \
+        pigz -p {threads} > {output.bedfile}
         }} 2>&1 | tee -a "{log}"
         """
 
 rule calling_peaks_atac:
     input:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bed"
+        bedfile = "results/ATAC/mapped/shifted_{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bed.gz"
     output:
         peakfile = "results/ATAC/peaks/peaks_atac__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.narrowPeak"
     params:

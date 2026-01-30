@@ -9,3 +9,4 @@ dependencies:
   - bedtools
   - deeptools
   - macs2
+  - pigz
