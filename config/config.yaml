@@ -328,6 +328,13 @@ heavy_resources: &heavy
   mem_mb: 16000
   tmp_mb: 48000
   qos: "slow_nice"
+
+heavier_resources: &heavier
+  threads: 8
+  mem_mb: 32000
+  tmp_mb: 64000
+  runtime: 1440
+  qos: "slow_nice"
   
 max_resources: &max
   threads: 16
@@ -358,8 +365,8 @@ resources:
   get_available_bam: *standard
   # ChIPseq
   make_bt2_indices: *heavy
-  bowtie2_map_pe: *heavy
-  bowtie2_map_se: *heavy
+  bowtie2_map_pe: *heavier
+  bowtie2_map_se: *heavier
   filter_chip_pe: *heavy
   filter_chip_se: *heavy
   make_chip_stats_pe: *low
@@ -377,13 +384,13 @@ resources:
   find_motifs_in_file: *heavy
   make_peak_stats: *low
   # ATACseq
-  atac_shift_and_bed: *low
+  atac_shift_and_bed: *standard
   calling_peaks_atac: *heavy
-  make_coverage_atac: *heavy
+  make_coverage_atac: *heavier
   # mC
   make_bismark_indices: *heavy
-  bismark_map_pe: *heavy
-  bismark_map_se: *heavy
+  bismark_map_pe: *heavier
+  bismark_map_se: *heavier
   make_mc_stats_pe: *low
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
@@ -394,12 +401,12 @@ resources:
   get_bedmethyl: *low
   align_modbam: *max
   modkit_summary: *heavy
-  modkit_pileup: *heavy
+  modkit_pileup: *heavier
   convert_bedmethyl_to_cx_report: *standard
   # RNAseq
   make_STAR_indices: *heavy
-  STAR_map_pe: *heavy
-  STAR_map_se: *heavy
+  STAR_map_pe: *heavier
+  STAR_map_se: *heavier
   filter_rna_pe: *heavy
   filter_rna_se: *heavy
   make_rna_stats_pe: *low
@@ -418,7 +425,7 @@ resources:
   filter_structural_rna: *heavy
   make_bowtie1_indices: *single
   make_bowtie1_indices_large: *single
-  shortstack_map: *heavy
+  shortstack_map: *heavier
   make_cluster_bedfiles: *low
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
