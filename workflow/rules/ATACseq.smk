@@ -57,11 +57,12 @@ def define_final_atac_output(ref_genome):
     return results
 
 
-rule atac_shift_and_bed:
+rule atac_shift_bam:
     input:
         bamfile = "results/ATAC/mapped/{file_type}__{sample_name}.bam"
     output:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz"
+        shifted_bam = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam",
+        shifted_bai = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam.bai"
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:
@@ -70,21 +71,43 @@ rule atac_shift_and_bed:
     log:
         temp(return_log_chip("ATAC","{sample_name}", "atac_shift_{file_type}", ""))
     conda: CONDA_ENV_ATAC
-    threads: config["resources"]["atac_shift_and_bed"]["threads"]
+    threads: config["resources"]["atac_shift_bam"]["threads"]
     resources:
-        mem_mb=config["resources"]["atac_shift_and_bed"]["mem_mb"],
-        tmp_mb=config["resources"]["atac_shift_and_bed"]["tmp_mb"],
-        qos=config["resources"]["atac_shift_and_bed"]["qos"]
+        mem_mb=config["resources"]["atac_shift_bam"]["mem_mb"],
+        tmp_mb=config["resources"]["atac_shift_bam"]["tmp_mb"],
+        qos=config["resources"]["atac_shift_bam"]["qos"]
     shell:
         """
         {{
-        printf "\nApplying Tn5 shift and converting to BED for {params.file_type}__{params.sample_name}\n"
-        if [[ ! -f "{input.bamfile}.bai" ]]; then
-            samtools index -@ {threads} "{input.bamfile}"
-        fi
-        alignmentSieve --ATACshift -b {input.bamfile} -p {threads} -o /dev/stdout | \
-        bedtools bamtobed -i stdin | \
-        pigz -p {threads} > {output.bedfile}
+        printf "\nApplying Tn5 shift for {params.file_type}__{params.sample_name}\n"
+        alignmentSieve --ATACshift -b {input.bamfile} -p {threads} -o {output.shifted_bam}
+        samtools index -@ {threads} {output.shifted_bam}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule atac_bam_to_bed:
+    input:
+        bamfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam"
+    output:
+        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz"
+    wildcard_constraints:
+        file_type = "final|merged|pseudo1|pseudo2"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        file_type = lambda wildcards: wildcards.file_type
+    log:
+        temp(return_log_chip("ATAC","{sample_name}", "atac_bed_{file_type}", ""))
+    conda: CONDA_ENV_ATAC
+    threads: config["resources"]["atac_bam_to_bed"]["threads"]
+    resources:
+        mem_mb=config["resources"]["atac_bam_to_bed"]["mem_mb"],
+        tmp_mb=config["resources"]["atac_bam_to_bed"]["tmp_mb"],
+        qos=config["resources"]["atac_bam_to_bed"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nConverting shifted BAM to BED for {params.file_type}__{params.sample_name}\n"
+        bedtools bamtobed -i {input.bamfile} | pigz -p {threads} > {output.bedfile}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -120,8 +143,8 @@ rule calling_peaks_atac:
 
 rule make_coverage_atac:
     input:
-        bamfile = "results/ATAC/mapped/{file_type}__{sample_name}.bam",
-        bai = "results/ATAC/mapped/{file_type}__{sample_name}.bam.bai"
+        bamfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam",
+        bai = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam.bai"
     output:
         bigwig = "results/ATAC/tracks/coverage__{file_type}__{sample_name}.bw"
     wildcard_constraints:
