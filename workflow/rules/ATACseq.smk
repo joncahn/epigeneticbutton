@@ -153,7 +153,7 @@ rule make_coverage_atac:
         binsize = config['atac_tracks']['binsize'],
         params = config['atac_tracks']['params']
     log:
-        temp(return_log_chip("ATAC","{sample_name}", "making_coverage_{file_type}", ""))
+        temp(return_log_chip("ATAC","{sample_name}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV_ATAC
     threads: config["resources"]["make_coverage_atac"]["threads"]
     resources:

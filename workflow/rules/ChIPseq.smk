@@ -199,9 +199,9 @@ def define_logs_final_input(wildcards):
     for rep in analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), []):
         namerep = f"{data_type}__{line}__{tissue}__{sample_type}__{rep}__{ref_genome}"
         log_files.append(return_log_chip(env, namerep, f"final__{peaktype}peak_calling", paired))
+        log_files.append(return_log_chip(env, namerep, "making_bigwig_final", ""))
         if env != "ATAC":
-            log_files.append(return_log_chip(env, namerep, f"making_bigwig_final", ""))
-            log_files.append(return_log_chip(env, namerep, f"making_fingerprint_final", ""))
+            log_files.append(return_log_chip(env, namerep, "making_fingerprint_final", ""))
 
     if len(analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])) >= 2:
         log_files.append(return_log_chip(env, sname, "IDR", ""))
