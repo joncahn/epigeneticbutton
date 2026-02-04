@@ -11,8 +11,10 @@ def validations_patterns(data_type):
         return re.compile(r"^(mC|WGBS|dmC|Pico|EMseq)$")
     elif data_type.startswith("TF_"):
         return re.compile(r"^(IP|IPb|Input)$")
-    elif data_type.startswith("ChIP") or data_type == "ATAC":
+    elif data_type.startswith("ChIP"):
         return re.compile(r"^(?!.*\s)(?!.*__)(?!.*').+$")
+    elif data_type == "ATAC":
+        return re.compile(r"^ATAC$")
 
 def validate_sample_type(row):
     pattern = validations_patterns(row.data_type)
