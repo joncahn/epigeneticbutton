@@ -71,8 +71,8 @@ def define_samplenames_per_env_and_ref(wildcards):
     srna_sizes = config['srna_heatmap_sizes']
     globenv = wildcards.env
     if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    else:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
@@ -80,7 +80,7 @@ def define_samplenames_per_env_and_ref(wildcards):
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
             label = f"{row.line}_{row.tissue}_{row.extra_info}"
             names.append(f"{label}:{file}")
-        elif row.env == "ChIP":
+        elif row.env in ["ChIP", "ATAC"]:
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
             label = f"{row.line}_{row.tissue}_{row.sample_type}"
             names.append(f"{label}:{file}")
@@ -89,7 +89,7 @@ def define_samplenames_per_env_and_ref(wildcards):
                 file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
                 label = f"{row.line}_{row.tissue}_{replicate}"
                 names.append(f"{label}:{file}")
-    
+
     return names
 
 def define_bedfiles_per_env_and_ref(wildcards):
@@ -97,17 +97,17 @@ def define_bedfiles_per_env_and_ref(wildcards):
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    else:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
-        if globenv in ["all_chip", "ChIP", "TF"]:
+        if globenv in ["all_chip", "ChIP", "TF", "ATAC"]:
             files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
         elif globenv == "sRNA":
-            files.extend(f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed" 
+            files.extend(f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
                                       for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
-    
+
     return files
 
 def define_sample_types_for_upset(wildcards):
@@ -115,15 +115,15 @@ def define_sample_types_for_upset(wildcards):
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    elif globenv in ["ChIP", "TF"]:    
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    elif globenv in ["ChIP", "TF", "ATAC"]:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    else: 
+    else:
         filtered_analysis_samples = None
-    
+
     if filtered_analysis_samples is not None:
         for _, row in filtered_analysis_samples.iterrows():
-            if row.env == "ChIP":
+            if row.env in ["ChIP", "ATAC"]:
                 types.add(row.sample_type)
             elif row.env == "TF":
                 types.add(row.extra_info)
@@ -140,11 +140,11 @@ def define_sample_types_for_upset(wildcards):
 
 def define_upset_script(wildcards):
     globenv = wildcards.env
-    if globenv in ["all_chip", "ChIP", "TF"]:
+    if globenv in ["all_chip", "ChIP", "TF", "ATAC"]:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_peaks.R")
     elif globenv == "sRNA":
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_clusters.R")
-    
+
     return script
 
 def assign_colors(keys, cmap_name="tab20"):
@@ -169,6 +169,7 @@ def define_key_for_plots(wildcards, string):
     marks = []
     unique_tf = set()
     unique_chip = set()
+    unique_atac = set()
     unique_rna = set()
     unique_srna = set()
     unique_mc = set()
@@ -353,23 +354,46 @@ def define_key_for_plots(wildcards, string):
                         label_to_mark[label] = f"m{context}"
                         label_to_type[label] = f"{row.line}_{row.tissue}"
 
+        elif row.env == "ATAC":
+            if not plot_allreps:
+                merged = f"coverage__merged__{prefix}__merged__{row.ref_genome}.bw"
+                onerep = f"coverage__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
+                bw = f"results/ATAC/tracks/{merged}" if len(reps) >=2 else f"results/ATAC/tracks/{onerep}"
+                label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                grouped_bw["atac"].append(bw)
+                grouped_labs["atac"].append(label)
+                unique_atac.add("ATAC")
+                label_to_mark[label] = "ATAC"
+                label_to_type[label] = f"{row.line}_{row.tissue}"
+            else:
+                for rep in reps:
+                    bw = f"results/ATAC/tracks/coverage__final__{prefix}__{rep}__{row.ref_genome}.bw"
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                    grouped_bw["atac"].append(bw)
+                    grouped_labs["atac"].append(label)
+                    unique_atac.add("ATAC")
+                    label_to_mark[label] = "ATAC"
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
+
     bigwigs = (
-        sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
-        sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
+        sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) +
+        sum([grouped_bw.get("atac", [])], []) +
+        sum([grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) +
         sum([grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_bw.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
     labels = (
-        sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) + 
-        sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) + 
-        sum([grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) + 
+        sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
+        sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) +
+        sum([grouped_labs.get("atac", [])], []) +
+        sum([grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) +
         sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
-    marks = ( sorted(unique_chip) + sorted(unique_tf) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
-    
-    marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marks = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+
+    marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
     types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
     
@@ -435,12 +459,12 @@ def define_final_stats_output():
     aligned_bams = config['aligned_bams']
     stat_files = []    
     if not aligned_bams:
-        stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
-    
+        stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","ATAC"]])
+
     stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA","mC"]])
     stat_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
-    stat_files += expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF"]])
-    
+    stat_files += expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","ATAC"]])
+
     return stat_files
 
 def define_final_combined_output(ref_genome):
@@ -455,6 +479,7 @@ def define_final_combined_output(ref_genome):
     all_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
     chip_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     tf_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    atac_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ATAC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     mc_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     srna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -468,12 +493,16 @@ def define_final_combined_output(ref_genome):
     if len(tf_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
     
-    if len(chip_analysis_samples) >=1 and len(tf_analysis_samples) >=1:
+    peak_envs = sum(1 for s in [chip_analysis_samples, tf_analysis_samples, atac_analysis_samples] if len(s) >= 1)
+    if peak_envs >= 2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
     if len(srna_analysis_samples) >=1:
         plot_files.append(f"results/combined/plots/Upset_combined_clusters__sRNA__{analysis_name}__{ref_genome}.pdf")
-    
+
+    if len(atac_analysis_samples) >=2:
+        plot_files.append(f"results/combined/plots/Upset_combined_peaks__ATAC__{analysis_name}__{ref_genome}.pdf")
+
     if len(mc_analysis_samples) >=1:
         if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
             plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")

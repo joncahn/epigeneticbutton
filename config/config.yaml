@@ -103,10 +103,11 @@ adapter2:
 
 # Mapping option default
 chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+atac_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
 
-# ChIP-seq parameters
+# Bowtie2-based mapping parameters (shared by ChIP, TF, and ATAC)
 # For mapping
-chip_mapping:
+bt2_mapping_strategy:
   default:
     map_pe: "--end-to-end --maxins 1500"
     map_se: "--end-to-end"
@@ -129,6 +130,10 @@ chip_tracks:
   binsize: 1
   params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"
 
+atac_tracks:
+  binsize: 1
+  params: "--normalizeUsing CPM"
+
 # For peaks
 chip_callpeaks:
   # To link the type of IP with the type of peaks. Can be updated with other marks. If creating regex patterns, make sure to escape "." with "\."
@@ -137,7 +142,11 @@ chip_callpeaks:
     'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow" 
     'H3|H4': "broad"
   params: "--keep-dup 'all' --nomodel"
- 
+
+atac_callpeaks:
+  peaktype: "narrow"
+  params: "--keep-dup 'all' --nomodel --shift 75 --extsize 150"
+
 # RNA parameters
 rna_tracks:
   RNAseq:
@@ -237,6 +246,7 @@ heatmaps_plot_params:
   RNA: "--colorMap seismic --interpolationMethod bilinear"
   sRNA: "--colorMap seismic --interpolationMethod bilinear"
   mC: "--colorMap Oranges --missingDataColor 0.9 --interpolationMethod nearest"
+  ATAC: "--colorMap seismic --interpolationMethod bilinear"
 heatmaps:
   regions:
     base: "scale-regions --missingDataAsZero --skipZeros"
@@ -319,6 +329,13 @@ heavy_resources: &heavy
   mem_mb: 16000
   tmp_mb: 48000
   qos: "slow_nice"
+
+heavier_resources: &heavier
+  threads: 8
+  mem_mb: 32000
+  tmp_mb: 64000
+  runtime: 1440
+  qos: "slow_nice"
   
 max_resources: &max
   threads: 8
@@ -349,8 +366,8 @@ resources:
   get_available_bam: *standard
   # ChIPseq
   make_bt2_indices: *heavy
-  bowtie2_map_pe: *heavy
-  bowtie2_map_se: *heavy
+  bowtie2_map_pe: *heavier
+  bowtie2_map_se: *heavier
   filter_chip_pe: *heavy
   filter_chip_se: *heavy
   make_chip_stats_pe: *low
@@ -367,10 +384,15 @@ resources:
   best_peaks_pseudoreps: *low
   find_motifs_in_file: *heavy
   make_peak_stats: *low
+  # ATACseq
+  atac_shift_bam: *standard
+  atac_bam_to_bed: *low
+  calling_peaks_atac: *heavy
+  make_coverage_atac: *heavier
   # mC
   make_bismark_indices: *heavy
-  bismark_map_pe: *heavy
-  bismark_map_se: *heavy
+  bismark_map_pe: *heavier
+  bismark_map_se: *heavier
   make_mc_stats_pe: *low
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
@@ -381,12 +403,12 @@ resources:
   get_bedmethyl: *low
   align_modbam: *max
   modkit_summary: *heavy
-  modkit_pileup: *heavy
+  modkit_pileup: *heavier
   convert_bedmethyl_to_cx_report: *standard
   # RNAseq
   make_STAR_indices: *heavy
-  STAR_map_pe: *heavy
-  STAR_map_se: *heavy
+  STAR_map_pe: *heavier
+  STAR_map_se: *heavier
   filter_rna_pe: *heavy
   filter_rna_se: *heavy
   make_rna_stats_pe: *low
@@ -405,7 +427,7 @@ resources:
   filter_structural_rna: *heavy
   make_bowtie1_indices: *single
   make_bowtie1_indices_large: *single
-  shortstack_map: *heavy
+  shortstack_map: *heavier
   make_cluster_bedfiles: *low
   make_srna_size_stats: *standard
   filter_size_srna_sample: *standard
