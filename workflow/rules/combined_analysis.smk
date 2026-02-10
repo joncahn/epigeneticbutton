@@ -177,6 +177,7 @@ def define_key_for_plots(wildcards, string):
     grouped_labs = defaultdict(list)
     label_to_mark = {}
     label_to_type = {}
+    label_to_track = {}
     srna_sizes = config['srna_heatmap_sizes']
     plot_allreps = config['plot_allreps']
     ref_genome = wildcards.ref_genome
@@ -203,6 +204,7 @@ def define_key_for_plots(wildcards, string):
                 unique_chip.add(row.sample_type)
                 label_to_mark[label] = row.sample_type
                 label_to_type[label] = f"{row.line}_{row.tissue}"
+                label_to_track[label] = row.sample_type
             else:
                 for rep in reps:
                     bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
@@ -212,6 +214,7 @@ def define_key_for_plots(wildcards, string):
                     unique_chip.add(row.sample_type)
                     label_to_mark[label] = row.sample_type
                     label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_track[label] = row.sample_type
             
         elif row.env == "TF":
             if not plot_allreps:
@@ -224,6 +227,7 @@ def define_key_for_plots(wildcards, string):
                 unique_tf.add(row.extra_info)
                 label_to_mark[label] = row.extra_info
                 label_to_type[label] = f"{row.line}_{row.tissue}"
+                label_to_track[label] = row.extra_info
             else:
                 for rep in reps:
                     bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
@@ -233,6 +237,7 @@ def define_key_for_plots(wildcards, string):
                     unique_tf.add(row.extra_info)
                     label_to_mark[label] = row.extra_info
                     label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_track[label] = row.extra_info
             
         elif row.env == "RNA":
             if strand == "unstranded":
@@ -249,6 +254,8 @@ def define_key_for_plots(wildcards, string):
                     label_to_mark[f"{label}_minus"] = row.data_type
                     label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                     label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                    label_to_track[f"{label}_plus"] = f"{row.data_type}_plus"
+                    label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
                 else:
                     for rep in reps:
                         bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__plus.bw"
@@ -261,6 +268,8 @@ def define_key_for_plots(wildcards, string):
                         label_to_mark[f"{label}_minus"] = row.data_type
                         label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                         label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                        label_to_track[f"{label}_plus"] = f"{row.data_type}_plus"
+                        label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
             else:
                 if not plot_allreps:
                     merged = f"{prefix}__merged__{row.ref_genome}"
@@ -298,6 +307,8 @@ def define_key_for_plots(wildcards, string):
                         label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
                         label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                         label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                        label_to_track[f"{label}_plus"] = f"sRNA_{size}nt_plus"
+                        label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                     else:
                         for rep in reps:
                             bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__plus.bw"
@@ -310,6 +321,8 @@ def define_key_for_plots(wildcards, string):
                             label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
                             label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
                             label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                            label_to_track[f"{label}_plus"] = f"sRNA_{size}nt_plus"
+                            label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                 else:
                     if not plot_allreps:
                         merged = f"{prefix}__merged__{row.ref_genome}"
@@ -343,6 +356,7 @@ def define_key_for_plots(wildcards, string):
                     unique_mc.add(f"m{context}")
                     label_to_mark[label] = f"m{context}"
                     label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_track[label] = f"m{context}"
             else:
                 for rep in reps:
                     for context in ["CG","CHG","CHH"]:
@@ -353,6 +367,7 @@ def define_key_for_plots(wildcards, string):
                         unique_mc.add(f"m{context}")
                         label_to_mark[label] = f"m{context}"
                         label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_track[label] = f"m{context}"
 
         elif row.env == "ATAC":
             if not plot_allreps:
@@ -365,6 +380,7 @@ def define_key_for_plots(wildcards, string):
                 unique_atac.add("ATAC")
                 label_to_mark[label] = "ATAC"
                 label_to_type[label] = f"{row.line}_{row.tissue}"
+                label_to_track[label] = "ATAC"
             else:
                 for rep in reps:
                     bw = f"results/ATAC/tracks/coverage__final__{prefix}__{rep}__{row.ref_genome}.bw"
@@ -374,6 +390,7 @@ def define_key_for_plots(wildcards, string):
                     unique_atac.add("ATAC")
                     label_to_mark[label] = "ATAC"
                     label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_track[label] = "ATAC"
 
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
@@ -408,7 +425,7 @@ def define_key_for_plots(wildcards, string):
     trackcolors = [track_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsplus = [plus_palette[label_to_mark[lab]] for lab in labels]
     fillcolorsminus = [minus_palette[label_to_mark[lab]] for lab in labels]
-    alignedmarks = [label_to_mark[lab] for lab in labels]
+    alignedmarks = [label_to_track[lab] for lab in labels]
     
     if string == "bigwigs":
         return bigwigs
@@ -1443,6 +1460,7 @@ rule prep_browser_on_region:
                 fi
             fi
             printf "${{lab}}\t${{path}}.bw\t${{back}}\t${{track}}\t${{plus}}\t${{minus}}\t${{ymin}}\t${{ymax}}\n" >> {output.filenames}
+            rm -f {params.trackfolder}/*.bedGraph
         done < {params.sample_table}
         
         }} 2>&1 | tee -a "{log}" 
