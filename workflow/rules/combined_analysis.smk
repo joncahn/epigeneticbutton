@@ -1482,7 +1482,7 @@ rule make_single_loci_browser_plot:
             printf "\nPlotting browser on {params.regionID} without higlights\n\n"
             Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}"
         fi
-        # rm -rf {params.trackfolder}
+        rm -rf {params.trackfolder}
         }} 2>&1 | tee -a "{log}"
         """
 
