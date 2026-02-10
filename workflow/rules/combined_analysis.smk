@@ -418,6 +418,7 @@ def define_key_for_plots(wildcards, string):
         return marks
     elif string == "table":
         table_name = f"results/combined/matrix/sample_table__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.tab"
+        os.makedirs(os.path.dirname(table_name), exist_ok=True)
         tab = pd.DataFrame({
             "bigwigs": bigwigs,
             "labels": labels,
@@ -1481,7 +1482,7 @@ rule make_single_loci_browser_plot:
             printf "\nPlotting browser on {params.regionID} without higlights\n\n"
             Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}"
         fi
-        rm -rf {params.trackfolder}
+        # rm -rf {params.trackfolder}
         }} 2>&1 | tee -a "{log}"
         """
 
