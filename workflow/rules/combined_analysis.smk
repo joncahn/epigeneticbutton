@@ -1427,8 +1427,8 @@ rule prep_browser_on_region:
                 ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
                 ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
             elif [[ {params.browser_scales} == "type" ]]; then
-                ymin=$(cat {params.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
-                ymax=$(cat {params.trackfolder}/*_${{mark}} | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
+                ymin=$(cat {params.trackfolder}/*_${{mark}}.bedGraph | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
+                ymax=$(cat {params.trackfolder}/*_${{mark}}.bedGraph | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
             fi
             if [[ {params.mc_scales} == "True" ]]; then
                 if [[ ${{mark}} == "mCG" ]]; then
@@ -1482,7 +1482,7 @@ rule make_single_loci_browser_plot:
             printf "\nPlotting browser on {params.regionID} without higlights\n\n"
             Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}"
         fi
-        # rm -rf {params.trackfolder}
+        rm -rf {params.trackfolder}
         }} 2>&1 | tee -a "{log}"
         """
 
