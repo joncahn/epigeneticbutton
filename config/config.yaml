@@ -152,12 +152,12 @@ rna_tracks:
   RNAseq:
     file_order: "rnaseq"
     param_bg: "--outWigType bedGraph"
-    strandedness: "reverse"
+    strandedness: "reverse" # default for stranded RNAseq libraries. Use "unstranded" if libraries do not keep strand information
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
   RAMPAGE:
     file_order: "rampage"
     param_bg: "--outWigType bedGraph read1_5p"
-    strandedness: "forward"
+    strandedness: "forward" # default for stranded RAMPAGE libraries. Use "unstranded" if libraries do not keep strand information
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
 
 # WGBS parameters
@@ -415,6 +415,7 @@ resources:
   make_rna_stats_se: *low
   merging_rna_replicates: *heavy
   make_rna_stranded_bigwigs: *heavy
+  make_rna_unstranded_bigwigs: *heavy
   prep_files_for_DEGs: *single
   call_all_DEGs: *single
   gather_gene_expression_rpkm: *single

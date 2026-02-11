@@ -240,7 +240,30 @@ def define_key_for_plots(wildcards, string):
                     label_to_track[label] = row.extra_info
             
         elif row.env == "RNA":
-            if strand == "unstranded":
+            strandedness = config['rna_tracks'][row.data_type]['strandedness']
+            if strandedness == "unstranded":
+                if not plot_allreps:
+                    merged = f"{prefix}__merged__{row.ref_genome}"
+                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
+                    bw = f"results/{row.env}/tracks/{merged}__unstranded.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__unstranded.bw"
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                    grouped_bw[f"{row.data_type}"].append(bw)
+                    grouped_labs[f"{row.data_type}"].append(f"{label}")
+                    unique_rna.add(row.data_type)
+                    label_to_mark[label] = row.data_type
+                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_track[label] = row.data_type
+                else:
+                    for rep in reps:
+                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__unstranded.bw"
+                        label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                        grouped_bw[f"{row.data_type}"].append(bw)
+                        grouped_labs[f"{row.data_type}"].append(f"{label}")
+                        unique_rna.add(row.data_type)
+                        label_to_mark[label] = row.data_type
+                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_track[label] = row.data_type
+            elif strand == "unstranded":
                 if not plot_allreps:
                     merged = f"{prefix}__merged__{row.ref_genome}"
                     onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"

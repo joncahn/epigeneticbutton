@@ -64,15 +64,22 @@ def define_final_rna_output(ref_genome):
             if not trimmed_fastqs:
                 qc_files.append(f"results/RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
         
-        bigwig_files.append(f"results/RNA/tracks/{sname}__plus.bw")
-        bigwig_files.append(f"results/RNA/tracks/{sname}__minus.bw")
+        strand = config['rna_tracks'][row.data_type]['strandedness']
+        if strand == "unstranded":
+            bigwig_files.append(f"results/RNA/tracks/{sname}__unstranded.bw")
+        else:
+            bigwig_files.append(f"results/RNA/tracks/{sname}__plus.bw")
+            bigwig_files.append(f"results/RNA/tracks/{sname}__minus.bw")
         
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name_str(row, 'analysis')
+        strand = config['rna_tracks'][row.data_type]['strandedness']
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
-            bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
+            if strand == "unstranded":
+                bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__unstranded.bw")
+            else:
+                bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
+                bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
     filtered_analysis_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
     filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
@@ -387,6 +394,7 @@ rule make_rna_stranded_bigwigs:
         bamfile = lambda wildcards: f"results/RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
+        bw_unstranded = "results/RNA/tracks/{sample_name}__unstranded.bw",
         bw_plus = "results/RNA/tracks/{sample_name}__plus.bw",
         bw_minus = "results/RNA/tracks/{sample_name}__minus.bw"
     params:
@@ -417,7 +425,7 @@ rule make_rna_stranded_bigwigs:
         elif [[ "{params.multimap}" == "unique" ]]; then
             bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
             bed2="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str2.out.bg"
-        fi        
+        fi
         bedSort ${{bed1}} "results/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg"
         bedSort ${{bed2}} "results/RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg"
         if [[ "{params.strandedness}" == "forward" ]]; then
@@ -431,6 +439,45 @@ rule make_rna_stranded_bigwigs:
         rm -f results/RNA/tracks/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
+        
+rule make_rna_unstranded_bigwigs:
+    input: 
+        bamfile = lambda wildcards: f"results/RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+    output:
+        bw_unstranded = "results/RNA/tracks/{sample_name}__unstranded.bw"
+    params:
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        param_bg = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['param_bg'],
+        strandedness = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['strandedness'],
+        multimap = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['multimap']
+    log:
+        temp(return_log_rna("{sample_name}", "making_bigiwig", ""))
+    conda: CONDA_ENV_RNA
+    threads: config["resources"]["make_rna_stranded_bigwigs"]["threads"]
+    resources:
+        mem_mb=config["resources"]["make_rna_stranded_bigwigs"]["mem_mb"],
+        tmp_mb=config["resources"]["make_rna_stranded_bigwigs"]["tmp_mb"],
+        qos=config["resources"]["make_rna_stranded_bigwigs"]["qos"]
+    shell:
+        """
+        {{
+        ### Making BedGraph files
+        printf "\nMaking bedGraph files\n"
+        STAR --runMode inputAlignmentsFromBAM --runThreadN {threads} --inputBAMfile "{input.bamfile}" --outWigStrand Unstranded {params.param_bg} --outFileNamePrefix "results/RNA/tracks/bg_{params.sample_name}_"
+        printf "\nConverting bedGraphs to bigWigs\n"
+        if [[ "{params.multimap}" == "multiple" ]]; then
+            bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.UniqueMultiple.str1.out.bg"
+        elif [[ "{params.multimap}" == "unique" ]]; then
+            bed1="results/RNA/tracks/bg_{params.sample_name}_Signal.Unique.str1.out.bg"
+        fi
+        bedSort ${{bed1}} "results/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg"
+        bedGraphToBigWig "results/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_unstranded}"
+        rm -f results/RNA/tracks/*"{params.sample_name}_Signal"*
+        rm -f results/RNA/tracks/*"{params.sample_name}_Log"*
+        }} 2>&1 | tee -a "{log}"
+        """
 
 rule prep_files_for_DEGs:
     input: 
@@ -439,7 +486,8 @@ rule prep_files_for_DEGs:
         rna_samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
         rna_counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
     params:
-        ref_genome = lambda wildcards: wildcards.ref_genome
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        strand = config['rna_tracks']['RNAseq']['strandedness']
     log:
         temp(return_log_rna("{ref_genome}", "prep_for_DEGs", "{analysis_name}"))
     threads: config["resources"]["prep_files_for_DEGs"]["threads"]
@@ -462,7 +510,16 @@ rule prep_files_for_DEGs:
         replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
         for sname, rep in replicates.values:
             file_path = f"results/RNA/DEG/counts__{sname}.tab"
-            temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
+            if params.strand = "reverse":
+                temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 3])
+            elif params.strand = "forward":
+                temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 2])
+            elif params.strand = "unstranded":
+                temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
+            else:
+                print("Unknown strandedness option, defaulting to unstranded")
+                temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
+                
             temp.columns = ['GID', rep]
 
             if RNA_counts is None:
