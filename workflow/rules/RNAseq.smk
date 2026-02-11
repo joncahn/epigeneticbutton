@@ -510,11 +510,11 @@ rule prep_files_for_DEGs:
         replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
         for sname, rep in replicates.values:
             file_path = f"results/RNA/DEG/counts__{sname}.tab"
-            if params.strand = "reverse":
+            if params.strand == "reverse":
                 temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 3])
-            elif params.strand = "forward":
+            elif params.strand == "forward":
                 temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 2])
-            elif params.strand = "unstranded":
+            elif params.strand == "unstranded":
                 temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
             else:
                 print("Unknown strandedness option, defaulting to unstranded")
