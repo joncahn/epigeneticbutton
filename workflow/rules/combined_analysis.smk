@@ -1464,7 +1464,7 @@ rule prep_browser_on_region:
                 fi
             fi
             printf "${{lab}}\t${{path}}.bw\t${{back}}\t${{track}}\t${{plus}}\t${{minus}}\t${{ymin}}\t${{ymax}}\n" >> {output.filenames}
-            rm -f {params.trackfolder}/*.bedGraph
+            # rm -f {params.trackfolder}/*.bedGraph
         done < {params.sample_table}
         
         }} 2>&1 | tee -a "{log}" 
@@ -1504,7 +1504,7 @@ rule make_single_loci_browser_plot:
             printf "\nPlotting browser on {params.regionID} without higlights\n\n"
             Rscript "{params.script}" "{input.filenames}" "{input.genes}" "{input.tes}" "${{name}}" "{params.title}"
         fi
-        rm -rf {params.trackfolder}
+        # rm -rf {params.trackfolder}
         }} 2>&1 | tee -a "{log}"
         """
 
