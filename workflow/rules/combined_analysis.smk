@@ -1468,8 +1468,8 @@ rule prep_browser_on_region:
                 fi
             fi
             printf "${{lab}}\t${{path}}.bw\t${{back}}\t${{track}}\t${{plus}}\t${{minus}}\t${{ymin}}\t${{ymax}}\n" >> {output.filenames}
-            rm -f {params.trackfolder}/*.bedGraph
         done < {params.sample_table}
+        rm -f {params.trackfolder}/*.bedGraph
         
         }} 2>&1 | tee -a "{log}" 
         """
