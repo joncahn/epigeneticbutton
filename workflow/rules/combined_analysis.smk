@@ -1431,7 +1431,6 @@ rule prep_browser_on_region:
         printf "Summarize bigwigs in binsize of ${{binsize}} bp on {params.regionID}\n"
         multiBigwigSummary bins -b ${{filelist2[@]}} -l {params.labels} -r ${{region}} -p {threads} -bs ${{binsize}} -out {output.temparray} --outRawCounts {output.tempvalues}
         
-        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
         while read bw lab back track plus minus mark
         do
             path="{params.trackfolder}/${{lab}}_${{mark}}"
@@ -1443,7 +1442,11 @@ rule prep_browser_on_region:
                 awk -v OFS="\t" -v a=${{col}} 'NR>1 {{if ($a == "nan") b=0; else b=$a; print $1,$2,$3,b}}' {output.tempvalues} | bedtools sort -g {input.chrom_sizes} > "${{path}}.bedGraph"
             fi
             bedGraphToBigWig "${{path}}.bedGraph" {input.chrom_sizes} "${{path}}.bw"
-            
+        done < {params.sample_table}
+        
+        printf "Name\tPath\tBackcolor\tTrackcolor\tFillcolorplus\tFillcolorminus\tYmin\tYmax\n" > {output.filenames}
+        while read bw lab back track plus minus mark
+        do
             if [[ {params.browser_scales} == "sample" ]]; then
                 ymin=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=9999}} {{if ($4<a) a=$4;}} END {{if (a<0) b=a*1.2; else b=a*0.8; print b}}')
                 ymax=$(cat "${{path}}.bedGraph" | awk 'BEGIN {{a=-9999}} {{if ($4>a) a=$4;}} END {{if (a>0) b=a*1.2; else b=a*0.8; print b}}')
