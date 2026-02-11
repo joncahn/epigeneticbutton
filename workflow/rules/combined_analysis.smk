@@ -281,6 +281,7 @@ def define_key_for_plots(wildcards, string):
                     unique_rna.add(row.data_type)
                     label_to_mark[label] = row.data_type
                     label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_track[label] = row.data_type
                 else:
                     for rep in reps:
                         bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{strand}.bw"
@@ -290,6 +291,7 @@ def define_key_for_plots(wildcards, string):
                         unique_rna.add(row.data_type)
                         label_to_mark[label] = row.data_type
                         label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_track[label] = row.data_type
                         
         elif row.env == "sRNA":
             for size in srna_sizes:
@@ -334,6 +336,7 @@ def define_key_for_plots(wildcards, string):
                         unique_srna.add(f"sRNA_{size}nt")
                         label_to_mark[label] = f"sRNA_{size}nt"
                         label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_track[label] = f"sRNA_{size}nt"
                     else:
                         for rep in reps:
                             bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__{strand}.bw"
@@ -343,6 +346,7 @@ def define_key_for_plots(wildcards, string):
                             unique_srna.add(f"sRNA_{size}nt")
                             label_to_mark[label] = f"sRNA_{size}nt"
                             label_to_type[label] = f"{row.line}_{row.tissue}"
+                            label_to_track[label] = f"sRNA_{size}nt"
                         
         elif row.env == "mC":
             if not plot_allreps:
