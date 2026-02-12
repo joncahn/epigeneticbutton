@@ -394,7 +394,6 @@ rule make_rna_stranded_bigwigs:
         bamfile = lambda wildcards: f"results/RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bw_unstranded = "results/RNA/tracks/{sample_name}__unstranded.bw",
         bw_plus = "results/RNA/tracks/{sample_name}__plus.bw",
         bw_minus = "results/RNA/tracks/{sample_name}__minus.bw"
     params:
