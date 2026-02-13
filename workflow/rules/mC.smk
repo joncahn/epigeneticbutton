@@ -1118,7 +1118,7 @@ rule convert_bedmethyl_to_cx_report:
 
 rule summarize_bigwigs_pca:
     input:
-        bigwigs = define_input_for_pca(wildcards.ref_genome, wildcard.context, "bigwigs")
+        bigwigs = lambda wildcards: define_input_for_pca(wildcards.ref_genome, wildcards.context, "bigwigs")
     output:
         array = "results/combined/matrix/matrix__m{context}__{analysis_name}__{ref_genome}.npz"
     params:
