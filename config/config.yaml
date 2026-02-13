@@ -162,7 +162,8 @@ rna_tracks:
 
 # WGBS parameters
 mC_context: "all" # another option should be set for CG-only (changes parameters for methylation extraction step)
-
+pca_bs: 1000 # binsize for PCA 
+pca_step: 10000 # step between bins for PCA 
 # If using the Pico or EMseq kit for DNA methylation, trimming parameters should be changed "-u 10 -q 10 -m 20" for SE and "-u 10 -U 10 -q 10 -m 20" ## Can be added as an option based on "sample" name and PE
 mC_mapping:
   default: 
@@ -398,6 +399,8 @@ resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
+  summarize_bigwigs_pca: *max
+  plot_PCA_correlation: *single
   # dmC
   get_modbam: *standard
   get_bedmethyl: *low

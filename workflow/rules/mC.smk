@@ -63,13 +63,48 @@ def script_DMRs():
     custom = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs_custom.R")
     return custom if script_dmrs else default
 
+def assign_colors(keys, cmap_name="tab20"):
+    cmap = plt.get_cmap(cmap_name)
+    colors = {}
+    for i,key in enumerate(sorted(set(keys))):
+        colors[key] = mcolors.to_hex(cmap(i % cmap.N))
+    return colors
+
+def define_input_for_pca(ref_genome, context, string):
+    bigwigs = []
+    labels = []
+    unique_group = set()
+    label_to_group = {}
+    
+    filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
+    for _, row in filtered_samples.iterrows():
+        bw = f"results/mC/tracks/{sample_name_str(row, 'sample')}__{context}.bw"
+        label = f"{row.line}_{row.tissue}_{row.rep}"
+        group = f"{row.line}_{row.tissue}"
+        bigwigs.append(bw)
+        labels.append(label)
+        unique_group.add(group)
+        label_to_group[label] = group
+    
+    palette = assign_colors(unique_group, "tab20")
+    colors = [palette[label_to_group[lab]] for lab in labels]
+    
+    if string == "bigwigs": 
+        return bigwigs
+    elif string == "labels":
+        return labels
+    elif string == "colors":
+        return colors
+
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
     trimmed_fastqs = config['trimmed_fastqs']
+    mC_context = config['mC_context']
     map_files = []
     dmr_files = []
     bigwig_files = []
+    plot_files = []
     qc_files = []
     ont_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'mC') & (samples['ref_genome'] == ref_genome) ].copy()
@@ -98,12 +133,18 @@ def define_final_mC_output(ref_genome):
                 qc_files.append(f"results/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
                 if not trimmed_fastqs:
                     qc_files.append(f"results/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-
+    
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
             bigwig_files.append(f"results/mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
+    
+    if len(filtered_rep_samples) >=3:
+        plot_files.append(f"results/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
+        if mC_context == "all":
+            plot_files.append(f"results/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
+            plot_files.append(f"results/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
 
     # DMR analysis: all sample types use DMRcaller via unified CX_report format
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
@@ -113,7 +154,7 @@ def define_final_mC_output(ref_genome):
         sample2 = sample_name_str(b_dict, 'analysis')
         dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
 
-    results = map_files + bigwig_files + ont_files
+    results = map_files + bigwig_files + ont_files + plot_files
 
     if qc_option == "all":
         results += qc_files
@@ -1073,3 +1114,53 @@ rule convert_bedmethyl_to_cx_report:
         }} 2>&1 | tee -a "{log}"
         """
 
+############## To plot PCA
+
+rule summarize_bigwigs_pca:
+    input:
+        bigwigs = define_input_for_pca(wildcards.ref_genome, wildcard.context, "bigwigs")
+    output:
+        array = "results/combined/matrix/matrix__m{context}__{analysis_name}__{ref_genome}.npz"
+    params:
+        labels = define_input_for_pca(wildcards.ref_genome, wildcard.context, "labels"),
+        bs = config['pca_bs'],
+        step = config['pca_step']
+    log:
+        temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_bigwigs_pca", "{context}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["summarize_bigwigs_pca"]["threads"]
+    resources:
+        mem_mb=config["resources"]["summarize_bigwigs_pca"]["mem_mb"],
+        tmp_mb=config["resources"]["summarize_bigwigs_pca"]["tmp_mb"],
+        qos=config["resources"]["summarize_bigwigs_pca"]["qos"]
+    shell:
+        """
+        {{
+        printf "Summarizing bigwigs for {wildcards.analysis_name} {wildcards.ref_genome} in {wildcards.context} sequence context\n"
+        multiBigwigSummary bins -b {input.bigwigs} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
+        }} 2>&1 | tee -a "{log}"
+        """    
+
+rule plot_PCA_correlation:
+    input:
+        array = "results/combined/matrix/matrix__m{context}__{analysis_name}__{ref_genome}.npz"
+    output:
+        plot = "results/combined/plots/PCA__m{context}__{analysis_name}__{ref_genome}.pdf"
+    params:
+        colors = define_input_for_pca(wildcards.ref_genome, wildcard.context, "colors"),
+        bs = config['pca_bs']
+    log:
+        temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{context}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["plot_PCA_correlation"]["threads"]
+    resources:
+        mem_mb=config["resources"]["plot_PCA_correlation"]["mem_mb"],
+        tmp_mb=config["resources"]["plot_PCA_correlation"]["tmp_mb"],
+        qos=config["resources"]["plot_PCA_correlation"]["qos"]
+    shell:
+        """
+        {{
+        printf "Plotting PCA for {wildcards.analysis_name} {wildcards.ref_genome} in {wildcards.context} sequence context\n"
+        plotPCA -in {input.array} -T "PCA for m{wildcards.context} in {params.bs}bp bins" -o {output.plot} --colors {params.colors}
+        }} 2>&1 | tee -a "{log}"
+        """
