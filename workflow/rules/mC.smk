@@ -1122,7 +1122,7 @@ rule summarize_bigwigs_pca:
     output:
         array = "results/combined/matrix/matrix__m{context}__{analysis_name}__{ref_genome}.npz"
     params:
-        labels = define_input_for_pca(wildcards.ref_genome, wildcard.context, "labels"),
+        labels = lambda wildcards: define_input_for_pca(wildcards.ref_genome, wildcards.context, "labels"),
         bs = config['pca_bs'],
         step = config['pca_step']
     log:
@@ -1147,7 +1147,7 @@ rule plot_PCA_correlation:
     output:
         plot = "results/combined/plots/PCA__m{context}__{analysis_name}__{ref_genome}.pdf"
     params:
-        colors = define_input_for_pca(wildcards.ref_genome, wildcard.context, "colors"),
+        colors = lambda wildcards: define_input_for_pca(wildcards.ref_genome, wildcards.context, "colors"),
         bs = config['pca_bs']
     log:
         temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{context}"))
