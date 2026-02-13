@@ -79,7 +79,7 @@ def define_input_for_pca(ref_genome, context, string):
     filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_samples.iterrows():
         bw = f"results/mC/tracks/{sample_name_str(row, 'sample')}__{context}.bw"
-        label = f"{row.line}_{row.tissue}_{row.rep}"
+        label = f"{row.line}_{row.tissue}_{row.replicate}"
         group = f"{row.line}_{row.tissue}"
         bigwigs.append(bw)
         labels.append(label)
