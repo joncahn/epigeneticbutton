@@ -399,8 +399,6 @@ resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
-  summarize_bigwigs_pca: *max
-  plot_PCA_correlation: *single
   # dmC
   get_modbam: *standard
   get_bedmethyl: *low
@@ -462,3 +460,5 @@ resources:
   prep_browser_on_region: *heavy
   make_single_loci_browser_plot: *single
   merge_region_browser_plots: *low
+  summarize_tracks_pca: *max
+  plot_PCA_correlation: *single

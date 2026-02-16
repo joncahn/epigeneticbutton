@@ -499,6 +499,55 @@ def define_individual_browser_plots(wildcards):
         files.append(f"results/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
     return files
 
+def define_input_for_pca(wildcards, string):
+    tracks = []
+    labels = []
+    unique_group = set()
+    label_to_group = {}
+    ref_genome = wildcards.ref_genome
+    globenv = wildcards.env
+    
+    if globenv in ["mCG", "mCHG", "mCHH"]:
+        filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
+        for _, row in filtered_samples.iterrows():
+            bw = f"results/mC/tracks/{sample_name_str(row, 'sample')}__{context}.bw"
+            label = f"{row.line}_{row.tissue}_{row.replicate}"
+            group = f"{row.line}_{row.tissue}"
+            tracks.append(bw)
+            labels.append(label)
+            unique_group.add(group)
+            label_to_group[label] = group
+    elif globenv in ["TF", "ChIP", "ATAC"]:
+        filtered_samples = samples[ (samples['env'] == globenv) & (samples['ref_genome'] == ref_genome) ].copy()
+        for _, row in filtered_samples.iterrows():
+            bam = f"results/{env}/mapped/final__{sample_name_str(row, 'sample')}.bam"
+            label = f"{row.sample_type}_{row.line}_{row.tissue}_{row.data_type}_{row.replicate}"
+            group = f"{row.sample_type}_{row.line}_{row.tissue}"
+            tracks.append(bam)
+            labels.append(label)
+            unique_group.add(group)
+            label_to_group[label] = group
+    elif globenv = "all_chip":
+        filtered_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
+        for _, row in filtered_samples.iterrows():
+            bam = f"results/{env}/mapped/final__{sample_name_str(row, 'sample')}.bam"
+            label = f"{row.sample_type}_{row.line}_{row.tissue}_{row.data_type}_{row.replicate}"
+            group = f"{row.sample_type}_{row.line}_{row.tissue}"
+            tracks.append(bam)
+            labels.append(label)
+            unique_group.add(group)
+            label_to_group[label] = group
+    
+    palette = assign_colors(unique_group, "tab20")
+    colors = [palette[label_to_group[lab]] for lab in labels]
+    
+    if string == "tracks": 
+        return tracks
+    elif string == "labels":
+        return labels
+    elif string == "colors":
+        return colors
+
 def define_final_stats_output():
     aligned_bams = config['aligned_bams']
     stat_files = []    
@@ -517,6 +566,7 @@ def define_final_combined_output(ref_genome):
     te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
     mc_sort = config['heatmap_sort_mc_after_others']    
+    mC_context = config['mC_context']
     plot_files = []
     te_plots = []
     
@@ -591,6 +641,22 @@ def define_final_combined_output(ref_genome):
         te_plots.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
         te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
         te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+
+    mc_rep_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
+    if len(mc_rep_samples) >=3:
+        plot_files.append(f"results/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
+        if mC_context == "all":
+            plot_files.append(f"results/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
+            plot_files.append(f"results/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
+    
+    all_chip_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
+    if len(all_chip_samples) >=3:
+            plot_files.append(f"results/combined/plots/PCA__all_chip__{analysis_name}__{ref_genome}.pdf")
+    
+    for env in UNIQUE_ENVS if env in ["TF", "ChIP", "ATAC"]:
+        env_rep_samples = samples[ (samples['env'] == env) & (samples['ref_genome'] == ref_genome) ].copy()
+        if len(env_rep_samples) >=3:
+            plot_files.append(f"results/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf")
 
     results = []
     
@@ -1551,6 +1617,62 @@ rule merge_region_browser_plots:
     shell:
         """
         pdfunite {input.plots} {output.merged_plots}
+        """
+
+############## To plot PCA
+
+rule summarize_tracks_pca:
+    input:
+        tracks = lambda wildcards: define_input_for_pca(wildcards, "tracks")
+    output:
+        array = "results/combined/matrix/pca_matrix__{env}__{analysis_name}__{ref_genome}.npz"
+    params:
+        labels = lambda wildcards: define_input_for_pca(wildcards, "labels"),
+        bs = config['pca_bs'],
+        step = config['pca_step']
+    log:
+        temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_tracks_pca", "{context}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["summarize_bigwigs_pca"]["threads"]
+    resources:
+        mem_mb=config["resources"]["summarize_bigwigs_pca"]["mem_mb"],
+        tmp_mb=config["resources"]["summarize_bigwigs_pca"]["tmp_mb"],
+        qos=config["resources"]["summarize_bigwigs_pca"]["qos"]
+    shell:
+        """
+        {{
+        if [[ {wildcards.env} == "mCG" || {wildcards.env} == "mCHG" || {wildcards.env} == "mCHH" ]]; then
+            printf "Summarizing bigwigs for {wildcards.analysis_name} {wildcards.ref_genome} for mC samples in {wildcards.context} sequence context\n"
+            multiBigwigSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
+        else
+            printf "Summarizing bams for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.context} samples\n"
+            multiBamSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
+        fi
+        }} 2>&1 | tee -a "{log}"
+        """    
+
+rule plot_PCA_correlation:
+    input:
+        array = "results/combined/matrix/pca_matrix__{env}__{analysis_name}__{ref_genome}.npz"
+    output:
+        plot = "results/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf"
+    params:
+        colors = lambda wildcards: define_input_for_pca(wildcards, "colors"),
+        bs = config['pca_bs']
+    log:
+        temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{context}"))
+    conda: CONDA_ENV
+    threads: config["resources"]["plot_PCA_correlation"]["threads"]
+    resources:
+        mem_mb=config["resources"]["plot_PCA_correlation"]["mem_mb"],
+        tmp_mb=config["resources"]["plot_PCA_correlation"]["tmp_mb"],
+        qos=config["resources"]["plot_PCA_correlation"]["qos"]
+    shell:
+        """
+        {{
+        printf "Plotting PCA for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.context} samples\n"
+        plotPCA -in {input.array} -T "PCA for m{wildcards.context} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose
+        }} 2>&1 | tee -a "{log}"
         """
 
 ###
