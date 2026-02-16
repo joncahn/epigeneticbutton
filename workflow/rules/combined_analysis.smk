@@ -1633,11 +1633,11 @@ rule summarize_tracks_pca:
     log:
         temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_tracks_pca", "{context}"))
     conda: CONDA_ENV
-    threads: config["resources"]["summarize_bigwigs_pca"]["threads"]
+    threads: config["resources"]["summarize_tracks_pca"]["threads"]
     resources:
-        mem_mb=config["resources"]["summarize_bigwigs_pca"]["mem_mb"],
-        tmp_mb=config["resources"]["summarize_bigwigs_pca"]["tmp_mb"],
-        qos=config["resources"]["summarize_bigwigs_pca"]["qos"]
+        mem_mb=config["resources"]["summarize_tracks_pca"]["mem_mb"],
+        tmp_mb=config["resources"]["summarize_tracks_pca"]["tmp_mb"],
+        qos=config["resources"]["summarize_tracks_pca"]["qos"]
     shell:
         """
         {{
