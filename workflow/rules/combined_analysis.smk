@@ -1631,7 +1631,7 @@ rule summarize_tracks_pca:
         bs = config['pca_bs'],
         step = config['pca_step']
     log:
-        temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_tracks_pca", "{context}"))
+        temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_tracks_pca", "{env}"))
     conda: CONDA_ENV
     threads: config["resources"]["summarize_tracks_pca"]["threads"]
     resources:
@@ -1642,10 +1642,10 @@ rule summarize_tracks_pca:
         """
         {{
         if [[ {wildcards.env} == "mCG" || {wildcards.env} == "mCHG" || {wildcards.env} == "mCHH" ]]; then
-            printf "Summarizing bigwigs for {wildcards.analysis_name} {wildcards.ref_genome} for mC samples in {wildcards.context} sequence context\n"
+            printf "Summarizing bigwigs for {wildcards.analysis_name} {wildcards.ref_genome} for mC samples in {wildcards.env} sequence context\n"
             multiBigwigSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
         else
-            printf "Summarizing bams for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.context} samples\n"
+            printf "Summarizing bams for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.env} samples\n"
             multiBamSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
         fi
         }} 2>&1 | tee -a "{log}"
@@ -1660,7 +1660,7 @@ rule plot_PCA_correlation:
         colors = lambda wildcards: define_input_for_pca(wildcards, "colors"),
         bs = config['pca_bs']
     log:
-        temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{context}"))
+        temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{env}"))
     conda: CONDA_ENV
     threads: config["resources"]["plot_PCA_correlation"]["threads"]
     resources:
@@ -1670,8 +1670,8 @@ rule plot_PCA_correlation:
     shell:
         """
         {{
-        printf "Plotting PCA for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.context} samples\n"
-        plotPCA -in {input.array} -T "PCA for m{wildcards.context} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose
+        printf "Plotting PCA for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.env} samples\n"
+        plotPCA -in {input.array} -T "PCA for m{wildcards.env} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose
         }} 2>&1 | tee -a "{log}"
         """
 
