@@ -509,6 +509,7 @@ def define_input_for_pca(wildcards, string):
     
     if globenv in ["mCG", "mCHG", "mCHH"]:
         filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
+        context = globenv[1:]
         for _, row in filtered_samples.iterrows():
             bw = f"results/mC/tracks/{sample_name_str(row, 'sample')}__{context}.bw"
             label = f"{row.line}_{row.tissue}_{row.replicate}"
