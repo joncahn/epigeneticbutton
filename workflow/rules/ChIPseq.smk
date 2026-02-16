@@ -1054,10 +1054,10 @@ rule find_motifs_in_file:
 
 rule perform_pairwise_diff_peaks:
     input:
-        peak_file1 = define_input_manorm(wildcards.sample1, "peaks"),
-        peak_file2 = define_input_manorm(wildcards.sample2, "peaks"),
-        read_file1 = define_input_manorm(wildcards.sample1, "reads"),
-        read_file2 = define_input_manorm(wildcards.sample2, "reads")
+        peak_file1 = lambda wildcards: define_input_manorm(wildcards.sample1, "peaks"),
+        peak_file2 = lambda wildcards: define_input_manorm(wildcards.sample2, "peaks"),
+        read_file1 = lambda wildcards: define_input_manorm(wildcards.sample1, "reads"),
+        read_file2 = lambda wildcards: define_input_manorm(wildcards.sample2, "reads")
     output:
         result = "results/{env}/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls"
     wildcard_constraints:
