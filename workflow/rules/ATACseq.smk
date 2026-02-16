@@ -122,7 +122,7 @@ rule calling_peaks_atac:
         params = config["atac_callpeaks"]['params'],
         genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
     log:
-        temp(return_log_chip("ATAC","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__narrowpeak_calling", "PE"))
+        temp(return_log_chip("ATAC","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__narrowpeak_calling", ""))
     conda: CONDA_ENV_ATAC
     threads: config["resources"]["calling_peaks_atac"]["threads"]
     resources:

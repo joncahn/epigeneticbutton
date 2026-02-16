@@ -1672,7 +1672,7 @@ rule plot_PCA_correlation:
         """
         {{
         printf "Plotting PCA for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.env} samples\n"
-        plotPCA -in {input.array} -T "PCA for m{wildcards.env} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose
+        plotPCA -in {input.array} -T "PCA for {wildcards.env} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose
         }} 2>&1 | tee -a "{log}"
         """
 

@@ -147,6 +147,12 @@ atac_callpeaks:
   peaktype: "narrow"
   params: "--keep-dup 'all' --nomodel --shift 75 --extsize 150"
 
+diffpeaks_params:
+  chip_pe: "-w 2000 --pe"
+  chip_se: "-w 2000"
+  TF_pe: "-w 1000 --pe"
+  TF_se: "-w 1000"
+
 # RNA parameters
 rna_tracks:
   RNAseq:
@@ -385,6 +391,7 @@ resources:
   best_peaks_pseudoreps: *low
   find_motifs_in_file: *heavy
   make_peak_stats: *low
+  perform_pairwise_diff_peaks: *heavy
   # ATACseq
   atac_shift_bam: *standard
   atac_bam_to_bed: *low
