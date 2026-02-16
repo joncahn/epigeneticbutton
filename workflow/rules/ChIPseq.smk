@@ -196,7 +196,7 @@ def define_input_manorm(sample_name, string):
     
     if env == "ChIP":
         params = config['diffpeaks_params']['chip_pe'] if paired == "PE" else config['diffpeaks_params']['chip_se']
-    elif env ="TF":
+    elif env == "TF":
         params = config['diffpeaks_params']['TF_pe'] if paired == "PE" else config['diffpeaks_params']['TF_se']
     
     peaktype = get_peaktype_for_env(sample_type, env)
