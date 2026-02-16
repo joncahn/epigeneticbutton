@@ -566,7 +566,7 @@ def define_final_combined_output(ref_genome):
     te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
     mc_sort = config['heatmap_sort_mc_after_others']    
-    mC_context = config['mC_context']
+    mc_context = config['mC_context']
     plot_files = []
     te_plots = []
     
@@ -645,7 +645,7 @@ def define_final_combined_output(ref_genome):
     mc_rep_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
     if len(mc_rep_samples) >=3:
         plot_files.append(f"results/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
-        if mC_context == "all":
+        if mc_context == "all":
             plot_files.append(f"results/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
             plot_files.append(f"results/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
     
@@ -653,7 +653,7 @@ def define_final_combined_output(ref_genome):
     if len(all_chip_samples) >=3:
             plot_files.append(f"results/combined/plots/PCA__all_chip__{analysis_name}__{ref_genome}.pdf")
     
-    for env in UNIQUE_ENVS if env in ["TF", "ChIP", "ATAC"]:
+    for env in [e for e in UNIQUE_ENVS if e in ["TF", "ChIP", "ATAC"]]:
         env_rep_samples = samples[ (samples['env'] == env) & (samples['ref_genome'] == ref_genome) ].copy()
         if len(env_rep_samples) >=3:
             plot_files.append(f"results/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf")
