@@ -527,7 +527,7 @@ def define_input_for_pca(wildcards, string):
             labels.append(label)
             unique_group.add(group)
             label_to_group[label] = group
-    elif globenv = "all_chip":
+    elif globenv == "all_chip":
         filtered_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
             bam = f"results/{env}/mapped/final__{sample_name_str(row, 'sample')}.bam"
