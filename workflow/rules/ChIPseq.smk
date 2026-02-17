@@ -185,33 +185,60 @@ def define_chipseq_target_file(wildcards):
             "or the value of 'motifs_target_file_name' in the config file"
             )
 
-def define_input_manorm(sample_name, string):
-    data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
-    line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
-    tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
-    sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
-    ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
-    env = get_sample_info_from_name(sample_name, analysis_samples, 'env')
-    paired = get_sample_info_from_name(sample_name, analysis_samples, 'paired')
+def define_input_manorm(wildcards, string):
+    sample1 = wildcards.sample1
+    data_type1 = get_sample_info_from_name(sample1, analysis_samples, 'data_type')
+    line1 = get_sample_info_from_name(sample1, analysis_samples, 'line')
+    tissue1 = get_sample_info_from_name(sample1, analysis_samples, 'tissue')
+    sample_type1 = get_sample_info_from_name(sample1, analysis_samples, 'sample_type')
+    ref_genome1 = get_sample_info_from_name(sample1, analysis_samples, 'ref_genome')
+    env1 = get_sample_info_from_name(sample1, analysis_samples, 'env')
+    paired1 = get_sample_info_from_name(sample1, analysis_samples, 'paired')
     
-    if env == "ChIP":
-        params = config['diffpeaks_params']['chip_pe'] if paired == "PE" else config['diffpeaks_params']['chip_se']
-    elif env == "TF":
-        params = config['diffpeaks_params']['TF_pe'] if paired == "PE" else config['diffpeaks_params']['TF_se']
+    sample2 = wildcards.sample2
+    data_type2 = get_sample_info_from_name(sample2, analysis_samples, 'data_type')
+    line2 = get_sample_info_from_name(sample2, analysis_samples, 'line')
+    tissue2 = get_sample_info_from_name(sample2, analysis_samples, 'tissue')
+    sample_type2 = get_sample_info_from_name(sample2, analysis_samples, 'sample_type')
+    ref_genome2 = get_sample_info_from_name(sample2, analysis_samples, 'ref_genome')
+    env2 = get_sample_info_from_name(wildcards, analysis_samples, 'env')
+    paired2 = get_sample_info_from_name(wildcards, analysis_samples, 'paired')
     
-    peaktype = get_peaktype_for_env(sample_type, env)
-    peakfile = f"results/{env}/peaks/selected_peaks__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.ref_genome}.{peaktype}Peak"
+    if env1 == "ChIP":
+        params = config['diffpeaks_params']['chip_pe'] if paired1 == "PE" and paired2 == "PE" else config['diffpeaks_params']['chip_se']
+    elif env1 == "TF":
+        params = config['diffpeaks_params']['TF_pe'] if paired1 == "PE" and paired2 == "PE" else config['diffpeaks_params']['TF_se']
     
-    replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
-    if len(replicates) >= 2:
-        bamfile = f"results/{env}/mapped/merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__merged__{wildcards.ref_genome}.bam"
+    peaktype1 = get_peaktype_for_env(sample_type1, env1)
+    peaktype2 = get_peaktype_for_env(sample_type2, env2)
+    if peaktype1 != peaktype2:
+        return ValueError(f"{sample1} and {sample2} have different peaktypes.")
     else:
-        bamfile = f"results/{env}/mapped/merged__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicates[0]}__{wildcards.ref_genome}.bam"
+        peaktype = peaktype1
         
-    if string == "peaks":
-        return peakfile
-    elif string == "reads":
-        return bamfile
+    peakfile1 = f"results/{env1}/peaks/selected_peaks__{data_type1}__{line1}__{tissue1}__{sample_type1}__{ref_genome1}.{peaktype1}Peak"
+    peakfile2 = f"results/{env2}/peaks/selected_peaks__{data_type2}__{line2}__{tissue2}__{sample_type2}__{ref_genome2}.{peaktype2}Peak"
+    
+    
+    replicates1 = analysis_to_replicates.get((data_type1, line1, tissue1, sample_type1, ref_genome1), [])
+    if len(replicates1) >= 2:
+        bamfile1 = f"results/{env1}/mapped/merged__{data_type1}__{line1}__{tissue1}__{sample_type1}__merged__{ref_genome1}.bam"
+    else:
+        bamfile1 = f"results/{env1}/mapped/merged__{data_type1}__{line1}__{tissue1}__{sample_type1}__{replicates1[0]}__{ref_genome1}.bam"
+    replicates2 = analysis_to_replicates.get((data_type2, line2, tissue2, sample_type2, ref_genome2), [])
+    if len(replicates2) >= 2:
+        bamfile2 = f"results/{env2}/mapped/merged__{data_type2}__{line2}__{tissue2}__{sample_type2}__merged__{ref_genome2}.bam"
+    else:
+        bamfile2 = f"results/{env2}/mapped/merged__{data_type2}__{line2}__{tissue2}__{sample_type2}__{replicates2[0]}__{ref_genome2}.bam"
+        
+    if string == "peaks1":
+        return peakfile1
+    elif string == "peaks2":
+        return peakfile2
+    elif string == "reads1":
+        return bamfile1
+    elif string == "reads2":
+        return bamfile2
     elif string == "params":
         return params
     elif string == "format":
@@ -336,7 +363,10 @@ def define_final_chip_output(ref_genome):
                 b_dict = b._asdict()
                 sample1 = sample_name_str(a_dict, "analysis")
                 sample2 = sample_name_str(b_dict, "analysis")
-                peak_files.append(f"results/ChIP/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
+                peaktype1 = get_peaktype_per_env(a.sample_type, config["chip_callpeaks"]['peaktype'])
+                peaktype2 = get_peaktype_per_env(b.sample_type, config["chip_callpeaks"]['peaktype'])
+                if peaktype1 == peaktype2:
+                    peak_files.append(f"results/ChIP/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
                 
     results = map_files + bigwig_files
     
@@ -1054,17 +1084,17 @@ rule find_motifs_in_file:
 
 rule perform_pairwise_diff_peaks:
     input:
-        peak_file1 = lambda wildcards: define_input_manorm(wildcards.sample1, "peaks"),
-        peak_file2 = lambda wildcards: define_input_manorm(wildcards.sample2, "peaks"),
-        read_file1 = lambda wildcards: define_input_manorm(wildcards.sample1, "reads"),
-        read_file2 = lambda wildcards: define_input_manorm(wildcards.sample2, "reads")
+        peak_file1 = lambda wildcards: define_input_manorm(wildcards, "peaks1"),
+        peak_file2 = lambda wildcards: define_input_manorm(wildcards, "peaks2"),
+        read_file1 = lambda wildcards: define_input_manorm(wildcards, "reads1"),
+        read_file2 = lambda wildcards: define_input_manorm(wildcards, "reads2")
     output:
         result = "results/{env}/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls"
     wildcard_constraints:
         env = "ChIP|TF"
     params:
-        diffpeaks = lambda wildcards: define_input_manorm(wildcards.sample2, "params"),
-        peakformat = lambda wildcards: define_input_manorm(wildcards.sample1, "format"),
+        diffpeaks = lambda wildcards: define_input_manorm(wildcards, "params"),
+        peakformat = lambda wildcards: define_input_manorm(wildcards, "format"),
         output_folder = lambda wildcards: f"results/{wildcards.env}/peaks/{wildcards.sample1}_vs_{wildcards.sample2}_{filetype}"
     log:
         temp(return_log_chip("{env}","{sample1}_vs_{sample2}", "diff_peaks", ""))
