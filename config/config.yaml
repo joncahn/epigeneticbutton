@@ -152,6 +152,8 @@ diffpeaks_params:
   chip_se: "-w 2000"
   TF_pe: "-w 1000 --pe"
   TF_se: "-w 1000"
+  ATAC_pe: "-w 1000"
+  ATAC_se: "-w 1000"
 
 # RNA parameters
 rna_tracks:

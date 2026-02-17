@@ -208,6 +208,8 @@ def define_input_manorm(wildcards, string):
         params = config['diffpeaks_params']['chip_pe'] if paired1 == "PE" and paired2 == "PE" else config['diffpeaks_params']['chip_se']
     elif env1 == "TF":
         params = config['diffpeaks_params']['TF_pe'] if paired1 == "PE" and paired2 == "PE" else config['diffpeaks_params']['TF_se']
+    elif env1 == "ATAC":
+        params = config['diffpeaks_params']['ATAC_pe'] if paired1 == "PE" and paired2 == "PE" else config['diffpeaks_params']['ATAC_se']
     
     peaktype1 = get_peaktype_for_env(sample_type1, env1)
     peaktype2 = get_peaktype_for_env(sample_type2, env2)
@@ -219,17 +221,18 @@ def define_input_manorm(wildcards, string):
     peakfile1 = f"results/{env1}/peaks/selected_peaks__{data_type1}__{line1}__{tissue1}__{sample_type1}__{ref_genome1}.{peaktype1}Peak"
     peakfile2 = f"results/{env2}/peaks/selected_peaks__{data_type2}__{line2}__{tissue2}__{sample_type2}__{ref_genome2}.{peaktype2}Peak"
     
-    
     replicates1 = analysis_to_replicates.get((data_type1, line1, tissue1, sample_type1, ref_genome1), [])
+    add1 = "shifted_" if env1 == "ATAC" else ""
     if len(replicates1) >= 2:
-        bamfile1 = f"results/{env1}/mapped/merged__{data_type1}__{line1}__{tissue1}__{sample_type1}__merged__{ref_genome1}.bam"
+        bamfile1 = f"results/{env1}/mapped/{add1}merged__{data_type1}__{line1}__{tissue1}__{sample_type1}__merged__{ref_genome1}.bam"
     else:
-        bamfile1 = f"results/{env1}/mapped/final__{data_type1}__{line1}__{tissue1}__{sample_type1}__{replicates1[0]}__{ref_genome1}.bam"
+        bamfile1 = f"results/{env1}/mapped/{add1}final__{data_type1}__{line1}__{tissue1}__{sample_type1}__{replicates1[0]}__{ref_genome1}.bam"
     replicates2 = analysis_to_replicates.get((data_type2, line2, tissue2, sample_type2, ref_genome2), [])
+    add2 = "shifted_" if env2 == "ATAC" else ""
     if len(replicates2) >= 2:
-        bamfile2 = f"results/{env2}/mapped/merged__{data_type2}__{line2}__{tissue2}__{sample_type2}__merged__{ref_genome2}.bam"
+        bamfile2 = f"results/{env2}/mapped/{add2}merged__{data_type2}__{line2}__{tissue2}__{sample_type2}__merged__{ref_genome2}.bam"
     else:
-        bamfile2 = f"results/{env2}/mapped/final__{data_type2}__{line2}__{tissue2}__{sample_type2}__{replicates2[0]}__{ref_genome2}.bam"
+        bamfile2 = f"results/{env2}/mapped/{add2}final__{data_type2}__{line2}__{tissue2}__{sample_type2}__{replicates2[0]}__{ref_genome2}.bam"
         
     if string == "peaks1":
         return peakfile1
@@ -1091,14 +1094,14 @@ rule perform_pairwise_diff_peaks:
     output:
         result = "results/{env}/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls"
     wildcard_constraints:
-        env = "ChIP|TF"
+        env = "ChIP|TF|ATAC"
     params:
         diffpeaks = lambda wildcards: define_input_manorm(wildcards, "params"),
         peakformat = lambda wildcards: define_input_manorm(wildcards, "format"),
         output_folder = lambda wildcards: f"results/{wildcards.env}/peaks/{wildcards.sample1}_vs_{wildcards.sample2}"
     log:
         temp(return_log_chip("{env}","{sample1}_vs_{sample2}", "diff_peaks", ""))
-    conda: CONDA_ENV_IDR
+    conda: CONDA_ENV_CHIP
     threads: config["resources"]["perform_pairwise_diff_peaks"]["threads"]
     resources:
         mem_mb=config["resources"]["perform_pairwise_diff_peaks"]["mem_mb"],
