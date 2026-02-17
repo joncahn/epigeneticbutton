@@ -1095,7 +1095,7 @@ rule perform_pairwise_diff_peaks:
     params:
         diffpeaks = lambda wildcards: define_input_manorm(wildcards, "params"),
         peakformat = lambda wildcards: define_input_manorm(wildcards, "format"),
-        output_folder = lambda wildcards: f"results/{wildcards.env}/peaks/{wildcards.sample1}_vs_{wildcards.sample2}_{filetype}"
+        output_folder = lambda wildcards: f"results/{wildcards.env}/peaks/{wildcards.sample1}_vs_{wildcards.sample2}"
     log:
         temp(return_log_chip("{env}","{sample1}_vs_{sample2}", "diff_peaks", ""))
     conda: CONDA_ENV_IDR
