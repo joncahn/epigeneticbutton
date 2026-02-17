@@ -224,12 +224,12 @@ def define_input_manorm(wildcards, string):
     if len(replicates1) >= 2:
         bamfile1 = f"results/{env1}/mapped/merged__{data_type1}__{line1}__{tissue1}__{sample_type1}__merged__{ref_genome1}.bam"
     else:
-        bamfile1 = f"results/{env1}/mapped/merged__{data_type1}__{line1}__{tissue1}__{sample_type1}__{replicates1[0]}__{ref_genome1}.bam"
+        bamfile1 = f"results/{env1}/mapped/final__{data_type1}__{line1}__{tissue1}__{sample_type1}__{replicates1[0]}__{ref_genome1}.bam"
     replicates2 = analysis_to_replicates.get((data_type2, line2, tissue2, sample_type2, ref_genome2), [])
     if len(replicates2) >= 2:
         bamfile2 = f"results/{env2}/mapped/merged__{data_type2}__{line2}__{tissue2}__{sample_type2}__merged__{ref_genome2}.bam"
     else:
-        bamfile2 = f"results/{env2}/mapped/merged__{data_type2}__{line2}__{tissue2}__{sample_type2}__{replicates2[0]}__{ref_genome2}.bam"
+        bamfile2 = f"results/{env2}/mapped/final__{data_type2}__{line2}__{tissue2}__{sample_type2}__{replicates2[0]}__{ref_genome2}.bam"
         
     if string == "peaks1":
         return peakfile1
