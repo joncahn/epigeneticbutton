@@ -201,8 +201,8 @@ def define_input_manorm(wildcards, string):
     tissue2 = get_sample_info_from_name(sample2, analysis_samples, 'tissue')
     sample_type2 = get_sample_info_from_name(sample2, analysis_samples, 'sample_type')
     ref_genome2 = get_sample_info_from_name(sample2, analysis_samples, 'ref_genome')
-    env2 = get_sample_info_from_name(wildcards, analysis_samples, 'env')
-    paired2 = get_sample_info_from_name(wildcards, analysis_samples, 'paired')
+    env2 = get_sample_info_from_name(sample2, analysis_samples, 'env')
+    paired2 = get_sample_info_from_name(sample2, analysis_samples, 'paired')
     
     if env1 == "ChIP":
         params = config['diffpeaks_params']['chip_pe'] if paired1 == "PE" and paired2 == "PE" else config['diffpeaks_params']['chip_se']
@@ -212,7 +212,7 @@ def define_input_manorm(wildcards, string):
     peaktype1 = get_peaktype_for_env(sample_type1, env1)
     peaktype2 = get_peaktype_for_env(sample_type2, env2)
     if peaktype1 != peaktype2:
-        return ValueError(f"{sample1} and {sample2} have different peaktypes.")
+        raise ValueError(f"{sample1} and {sample2} have different peaktypes.")
     else:
         peaktype = peaktype1
         
