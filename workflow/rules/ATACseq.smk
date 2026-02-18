@@ -45,6 +45,13 @@ def define_final_atac_output(ref_genome):
         if len(reps) >= 2:
             bigwig_files.append(f"results/ATAC/tracks/coverage__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
             stat_files.append(f"results/ATAC/chkpts/idr__{spname}.done")
+            
+    for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
+        a_dict = a._asdict()
+        b_dict = b._asdict()
+        sample1 = sample_name_str(a_dict, 'analysis')
+        sample2 = sample_name_str(b_dict, 'analysis')
+        peak_files.append(f"results/ATAC/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
 
     results = map_files + bigwig_files
 
