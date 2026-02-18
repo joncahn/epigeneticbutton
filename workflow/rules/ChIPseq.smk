@@ -1113,10 +1113,10 @@ rule perform_pairwise_diff_peaks:
         if [[ "{params.peakformat}" == "narrow" ]]; then
             printf "\nComparing {wildcards.sample1} with {wildcards.sample2} with .narrowPeak files with MAnorm version:\n"
             manorm --version
-            manorm --p1 {input.peak_file1} --p2 {input.peak_file2} --r1 {input.read_file1} --r2 {input.read_file2} --n1 {wildcards.sample1} --n2 {wildcards.sample2} -o {params.output_folder} --rf "bam" --pf "narrowPeak" {params.diffpeaks}
+            manorm --p1 {input.peak_file1} --p2 {input.peak_file2} --r1 {input.read_file1} --r2 {input.read_file2} --n1 {wildcards.sample1} --n2 {wildcards.sample2} -o {params.output_folder} --rf "bam" --pf "narrowpeak" {params.diffpeaks}
         elif [[ "${{ext}}" == "broad" ]]; then
             printf "\nComparing {wildcards.sample1} with {wildcards.sample2} with .broadPeak files with MAnorm version:\n"
-            manorm --p1 {input.peak_file1} --p2 {input.peak_file2} --r1 {input.read_file1} --r2 {input.read_file2} --n1 {wildcards.sample1} --n2 {wildcards.sample2} -o {params.output_folder} --rf "bam" --pf "broadPeak" {params.diffpeaks}
+            manorm --p1 {input.peak_file1} --p2 {input.peak_file2} --r1 {input.read_file1} --r2 {input.read_file2} --n1 {wildcards.sample1} --n2 {wildcards.sample2} -o {params.output_folder} --rf "bam" --pf "broadpeak" {params.diffpeaks}
         fi
         }} 2>&1 | tee -a "{log}"
         """    
