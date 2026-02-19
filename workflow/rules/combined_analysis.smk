@@ -99,7 +99,7 @@ def define_samples_for_upset(wildcards, string):
                 names.append(f"{label}:{file}")
                 files.apped(file)
         elif globenv == "RAMPAGE":
-            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])):
+            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                 file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
                 label = f"{row.line}_{row.tissue}_{row.replicate}"
                 names.append(f"{label}:{file}")
