@@ -728,7 +728,7 @@ rule call_rampage_TSS:
         params = config["rampage_calltss"]['params'],
         genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
     log:
-        temp(return_log_rna("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__TSS_calling", "SE"))
+        temp(return_log_rna("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__TSS_calling", "SE"))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["call_rampage_TSS"]["threads"]
     resources:
