@@ -92,20 +92,20 @@ def define_samples_for_upset(wildcards, string):
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
             label = f"{row.line}_{row.tissue}_{row.sample_type}"
             names.append(f"{label}:{file}")
-            files.apped(file)
+            files.append(file)
             types.add(row.sample_type)
         elif row.env == "sRNA":
             for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                 file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
                 label = f"{row.line}_{row.tissue}_{replicate}"
                 names.append(f"{label}:{file}")
-                files.apped(file)
+                files.append(file)
         elif globenv == "RAMPAGE":
             for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                 file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
                 label = f"{row.line}_{row.tissue}_{replicate}"
                 names.append(f"{label}:{file}")
-                files.apped(file)
+                files.append(file)
                 types.add(f"{row.line}_{row.tissue}")
 
     if globenv == "sRNA":
