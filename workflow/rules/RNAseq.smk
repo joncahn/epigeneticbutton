@@ -110,14 +110,15 @@ def define_final_rna_output(ref_genome):
         
     filtered_samples3 = samples[ (samples['data_type'] == 'RAMPAGE') & (samples['ref_genome'] == ref_genome) ].copy()
     filtered_samples3['Sample'] = filtered_samples3['line'] + "__" + filtered_samples3['tissue']
-    for _, row in filtered_samples3.iterrows():        
-        if len(filtered_samples2['Sample'] == filtered_samples3['Sample']) >= 1:
+    valid_samples = set(filtered_samples2['Sample'])
+    for _, row in filtered_samples3.iterrows():
+        if row['Sample'] in valid_samples:
             tss_files.append(f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.replicate}__{row.ref_genome}_peaks.narrowPeak")
             
     filtered_analysis_samples2 = analysis_samples[ (analysis_samples['data_type'] == 'RAMPAGE') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
     for _, row in filtered_analysis_samples2.iterrows():
-        if len(filtered_samples2['Sample'] == filtered_analysis_samples2['Sample']) >= 1:
+        if row['Sample'] in valid_samples:
             tss_files.append(f"results/RNA/TSS/TSS__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}_peaks.narrowPeak")
     
     results = map_files + bigwig_files
