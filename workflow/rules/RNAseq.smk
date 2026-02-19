@@ -738,7 +738,7 @@ rule call_rampage_TSS:
     shell:
         """
         {{
-        printf "\nCalling TSS ({params.peaktype} peaks) for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        printf "\nCalling TSS (narrow peaks) for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
         macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n TSS__{params.filetype}__{params.ipname} --outdir results/{params.env}/TSS/
         }} 2>&1 | tee -a "{log}"
