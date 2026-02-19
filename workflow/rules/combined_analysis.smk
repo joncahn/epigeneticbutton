@@ -19,6 +19,8 @@ def define_combined_target_file(wildcards):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("combined_clusters"):
         file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
+    elif target_name.startswith("combined_TSS"):
+        file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
         file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
     elif target_name.startswith("all_TEs"):
