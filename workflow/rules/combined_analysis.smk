@@ -69,7 +69,7 @@ def define_sort_options(wildcards):
 
 def define_samples_for_upset(wildcards, string):
     names = []
-    file = []
+    files = []
     types = set()
     ref_genome = wildcards.ref_genome
     srna_sizes = config['srna_heatmap_sizes']
