@@ -146,6 +146,10 @@ chip_callpeaks:
 atac_callpeaks:
   peaktype: "narrow"
   params: "--keep-dup 'all' --nomodel --shift 75 --extsize 150"
+  
+rampage_calltss:
+  peaktype: "narrow"
+  params: "--keep-dup 'all' --nomodel --extsize 100"
 
 diffpeaks_params:
   chip_pe: "-w 2000 --pe"
@@ -432,6 +436,7 @@ resources:
   plot_expression_levels: *single
   create_GO_database: *single
   perform_GO_on_target_file: *single
+  call_rampage_TSS: *heavy
   # smallRNA
   deduplicate_srna_nextflexv3: *standard
   make_bt2_indices_for_structural_RNAs: *heavy

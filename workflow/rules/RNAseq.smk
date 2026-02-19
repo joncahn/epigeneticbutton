@@ -36,6 +36,19 @@ def get_go_database(ref_genome):
     genus=config[config[ref_genome]['species']]['genus']
     return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
 
+def assign_rna_input(wildcards):
+    inputname = f"RNAseq__{wildcards.line}__{wildcards.tissue}__RNAseq__{wildcards.replicate}__{wildcards.ref_genome}"
+    if inputname in samples['sample_name']:
+        return f"{wildcards.file_type}__inputname"
+    else:
+        same_name = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == wildcards.ref_genome) & (samples['line'] == wildcards.line) & (samples['tissue'] == wildcards.tissue) ].copy()
+        if len(same_name) == 1:
+            return f"final__{same_name['sample_name']}"
+        elif len(same_name) >= 2:
+            return f"merged__RNAseq__{wildcards.line}__{wildcards.tissue}__RNAseq__merged__{wildcards.ref_genome}"
+        else:
+            raise ValueError(f"\nSample '{ipname}' does not have corresponding RNA control for calling TSS")
+
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
@@ -46,6 +59,7 @@ def define_final_rna_output(ref_genome):
     bigwig_files = []
     qc_files = []
     deg_files = []
+    tss_files = []
     filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ].copy()
     
     for _, row in filtered_rep_samples.iterrows():
@@ -81,9 +95,9 @@ def define_final_rna_output(ref_genome):
                 bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
                 bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
     
-    filtered_analysis_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
-    filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
-    if len(filtered_analysis_samples2['Sample'].drop_duplicates()) >= 2:   
+    filtered_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
+    filtered_samples2['Sample'] = filtered_samples2['line'] + "__" + filtered_samples2['tissue']
+    if len(filtered_samples2['Sample'].drop_duplicates()) >= 2:   
         deg_files.append(f"results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         deg_files.append(f"results/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__unique_DEGs.pdf")
@@ -91,16 +105,28 @@ def define_final_rna_output(ref_genome):
         if go_analysis:
             deg_files.append(f"results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__unique_DEGs.done")
             
-    elif len(filtered_analysis_samples2['Sample'].drop_duplicates()) == 1:
+    elif len(filtered_samples2['Sample'].drop_duplicates()) == 1:
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         
+    filtered_samples3 = samples[ (samples['data_type'] == 'RAMPAGE') & (samples['ref_genome'] == ref_genome) ].copy()
+    filtered_samples3['Sample'] = filtered_samples3['line'] + "__" + filtered_samples3['tissue']
+    for _, row in filtered_samples3.iterrows():        
+        if len(filtered_samples2['Sample'] == filtered_samples3['Sample']) >= 1:
+            tss_files.append(f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.replicate}__{row.ref_genome}_peaks.narrowPeak")
+            
+    filtered_analysis_samples2 = analysis_samples[ (analysis_samples['data_type'] == 'RAMPAGE') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+    filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
+    for _, row in filtered_analysis_samples2.iterrows():
+        if len(filtered_samples2['Sample'] == filtered_analysis_samples2['Sample']) >= 1:
+            tss_files.append(f"results/RNA/TSS/TSS__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}_peaks.narrowPeak")
+    
     results = map_files + bigwig_files
     
     if qc_option == "all":
         results += qc_files
         
     if analysis:
-        results += deg_files
+        results += deg_files + tss_files
 
     return results
         
@@ -683,6 +709,38 @@ rule perform_GO_on_target_file:
         printf "running GO analysis for {input.target_file} (from {params.analysis_name} and {params.ref_genome})\n"
         Rscript "{params.script}" "{params.dbname}" "{params.analysis_name}" "{params.ref_genome}" "{input.target_file}" "{input.background_file}" "{params.target_name}"
         touch {output.touch}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule call_rampage_TSS:
+    input: 
+        ipfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{assign_rna_input(wildcards)}.bam"
+    output:
+        peakfile = "results/{env}/TSS/TSS__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.narrowPeak"
+    wildcard_constraints:
+        env = "RNA"
+    params:
+        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        inputname = lambda wildcards: f"{assign_rna_input(wildcards)}",
+        filetype = lambda wildcards: {wildcards.file_type},
+        env = lambda wildcards: {wildcards.env},
+        params = config["rampage_calltss"]['params'],
+        genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
+    log:
+        temp(return_log_rna("{env}","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__TSS_calling", "SE"))
+    conda: CONDA_ENV_CHIP
+    threads: config["resources"]["call_rampage_TSS"]["threads"]
+    resources:
+        mem_mb=config["resources"]["call_rampage_TSS"]["mem_mb"],
+        tmp_mb=config["resources"]["call_rampage_TSS"]["tmp_mb"],
+        qos=config["resources"]["call_rampage_TSS"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nCalling TSS ({params.peaktype} peaks) for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
+        macs2 --version
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n TSS__{params.filetype}__{params.ipname} --outdir results/{params.env}/TSS/
         }} 2>&1 | tee -a "{log}"
         """
 
