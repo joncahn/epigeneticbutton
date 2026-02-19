@@ -714,17 +714,16 @@ rule perform_GO_on_target_file:
 
 rule call_rampage_TSS:
     input: 
-        ipfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{assign_rna_input(wildcards)}.bam"
+        ipfile = lambda wildcards: f"results/RNA/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+        inputfile = lambda wildcards: f"results/RNA/mapped/{assign_rna_input(wildcards)}.bam"
     output:
-        peakfile = "results/{env}/TSS/TSS__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.narrowPeak"
+        peakfile = "results/RNA/TSS/TSS__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.narrowPeak"
     wildcard_constraints:
         env = "RNA"
     params:
         ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
         inputname = lambda wildcards: f"{assign_rna_input(wildcards)}",
         filetype = lambda wildcards: {wildcards.file_type},
-        env = lambda wildcards: {wildcards.env},
         params = config["rampage_calltss"]['params'],
         genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
     log:
