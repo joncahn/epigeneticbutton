@@ -119,7 +119,7 @@ def define_samples_for_upset(wildcards, string):
         return names
     elif string == "files":
         return files
-    elif string = "types":
+    elif string == "types":
         return ordered
 
 # def define_bedfiles_per_env_and_ref(wildcards):
