@@ -1012,7 +1012,7 @@ rule combine_TSS:
             awk -v OFS="\t" -v l=${{label}} '{{print $1,$2,$3,l}}' ${{file}} >> {output.temp1_file}
         done
         sort -k1,1 -k2,2n {output.temp1_file} > {output.temp2_file}
-        printf "Chr\tStart\tStop\tPeakID\tSamples\n" > {output.merged_file}
+        printf "Chr\tStart\tStop\tTSSID\tSamples\n" > {output.merged_file}
         bedtools merge -i {output.temp2_file} -c 4 -o distinct | bedtools sort -g {input.chrom_sizes} | awk -v OFS="\t" -v a={params.analysis_name} '{{print $1,$2,$3,"combined_TSS_"a"_"NR,$4}}' >> {output.merged_file}
         }} 2>&1 | tee -a "{log}"
         """
