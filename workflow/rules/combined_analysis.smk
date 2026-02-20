@@ -86,7 +86,7 @@ def define_samples_for_upset(wildcards, string):
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
             label = f"{row.line}_{row.tissue}_{row.extra_info}"
             names.append(f"{label}:{file}")
-            files.apped(file)
+            files.append(file)
             types.add(row.extra_info)
         elif row.env in ["ChIP", "ATAC"]:
             file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
