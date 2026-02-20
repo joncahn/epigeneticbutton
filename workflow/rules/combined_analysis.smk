@@ -126,9 +126,16 @@ def define_samples_for_upset(wildcards, string):
                 files.append(file)
                 types.add(row.sample_type)
         elif globenv == "RAMPAGE":
-            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
-                label = f"{row.line}_{row.tissue}_{replicate}"
+            if allreps:
+                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
+                    file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
+                    label = f"{row.line}_{row.tissue}_{replicate}"
+                    names.append(f"{label}:{file}")
+                    files.append(file)
+                    types.add(f"{row.line}_{row.tissue}")
+            else:
+                file = f"results/RNA/TSS/TSS__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}_peaks.narrowPeak"
+                label = f"{row.line}_{row.tissue}"
                 names.append(f"{label}:{file}")
                 files.append(file)
                 types.add(f"{row.line}_{row.tissue}")
