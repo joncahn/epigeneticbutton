@@ -87,7 +87,7 @@ def define_samples_for_upset(wildcards, string):
             if allreps:
                 for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                     peaktype = get_peaktype_for_env(row.sample_type, row.env)
-                    paired = get_sample_info_from_name(spname, analysis, 'paired')
+                    paired = get_sample_info_from_name(spname, analysis_samples, 'paired')
                     if paired == "PE":
                         prefix = "peaks_pe"
                     else:
@@ -107,7 +107,7 @@ def define_samples_for_upset(wildcards, string):
             if allreps:
                 for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                     peaktype = get_peaktype_for_env(row.sample_type, row.env)
-                    paired = get_sample_info_from_name(spname, analysis, 'paired')
+                    paired = get_sample_info_from_name(spname, analysis_samples, 'paired')
                     if row.env == "ATAC":
                         prefix = "peaks_atac"
                     elif paired == "PE":
