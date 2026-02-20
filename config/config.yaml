@@ -159,6 +159,8 @@ diffpeaks_params:
   ATAC_pe: "-w 1000 --s1 75 --s2 75"
   ATAC_se: "-w 1000 --s1 75 --s2 75"
 
+upset_allreps: false # whether to use data from all individual replicates or from merged samples when multiple replicates are present. Default to false (using merged replicates). Only affects Upset for peaks and TSS, not sRNA clusters (always allreps).
+
 # RNA parameters
 rna_tracks:
   RNAseq:
@@ -243,7 +245,7 @@ srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg 
 srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps and browsers. Can add as many as desired as a list, for sizes within the range above.
 
 # For all plots (heatmaps, metaplots, browsers)
-plot_allreps: false # whether to use data from all individual replicates or form merged samples when multiple replicates are present. Default to false (using merged replicates).
+plot_allreps: false # whether to use data from all individual replicates or from merged samples when multiple replicates are present. Default to false (using merged replicates).
 # For deeptools heatmaps and profiles
 heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
 stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.

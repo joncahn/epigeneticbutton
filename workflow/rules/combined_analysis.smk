@@ -74,6 +74,7 @@ def define_samples_for_upset(wildcards, string):
     ref_genome = wildcards.ref_genome
     srna_sizes = config['srna_heatmap_sizes']
     globenv = wildcards.env
+    allreps = config['upset_allreps']
     if globenv == "all_chip":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     elif globenv == "RAMPAGE":
@@ -83,23 +84,47 @@ def define_samples_for_upset(wildcards, string):
     for _, row in filtered_analysis_samples.iterrows():
         spname = sample_name_str(row, 'analysis')
         if row.env == "TF":
-            file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
-            label = f"{row.line}_{row.tissue}_{row.extra_info}"
-            names.append(f"{label}:{file}")
-            files.append(file)
-            types.add(row.extra_info)
-        elif row.env in ["ChIP", "ATAC"]:
-            file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
-            label = f"{row.line}_{row.tissue}_{row.sample_type}"
-            names.append(f"{label}:{file}")
-            files.append(file)
-            types.add(row.sample_type)
-        elif row.env == "sRNA":
-            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
-                label = f"{row.line}_{row.tissue}_{replicate}"
+            if allreps:
+                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
+                    peaktype = get_peaktype_for_env(row.sample_type, row.env)
+                    paired = get_sample_info_from_name(spname, analysis, 'paired')
+                    if paired == "PE":
+                        prefix = "peaks_pe"
+                    else:
+                        prefix = "peaks_se"
+                    file = f"results/{row.env}/peaks/{prefix}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.{peaktype}Peak"
+                    label = f"{row.line}_{row.tissue}_{row.extra_info}_{replicate}"
+                    names.append(f"{label}:{file}")
+                    files.append(file)
+                    types.add(row.extra_info)
+            else:
+                file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
+                label = f"{row.line}_{row.tissue}_{row.extra_info}"
                 names.append(f"{label}:{file}")
                 files.append(file)
+                types.add(row.extra_info)
+        elif row.env in ["ChIP", "ATAC"]:
+            if allreps:
+                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
+                    peaktype = get_peaktype_for_env(row.sample_type, row.env)
+                    paired = get_sample_info_from_name(spname, analysis, 'paired')
+                    if row.env == "ATAC":
+                        prefix = "peaks_atac"
+                    elif paired == "PE":
+                        prefix = "peaks_pe"
+                    else:
+                        prefix = "peaks_se"
+                    file = f"results/{row.env}/peaks/{prefix}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.{peaktype}Peak"
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{replicate}"
+                    names.append(f"{label}:{file}")
+                    files.append(file)
+                    types.add(row.sample_type)
+            else:
+                file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
+                label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                names.append(f"{label}:{file}")
+                files.append(file)
+                types.add(row.sample_type)
         elif globenv == "RAMPAGE":
             for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
                 file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
@@ -107,6 +132,12 @@ def define_samples_for_upset(wildcards, string):
                 names.append(f"{label}:{file}")
                 files.append(file)
                 types.add(f"{row.line}_{row.tissue}")
+        elif row.env == "sRNA":
+            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
+                file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
+                label = f"{row.line}_{row.tissue}_{replicate}"
+                names.append(f"{label}:{file}")
+                files.append(file)
 
     if globenv == "sRNA":
         srna_min = config['srna_min_size']
