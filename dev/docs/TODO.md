@@ -6,16 +6,32 @@
 
 ## UI
 
-* config.yaml:  one thing we can think of as well, maybe for the future big reworking, is that parameters in the config file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
+### refactor sample sheet
+  | Assay   | Genome   | Condition1 | Condition2 | Replicate_ID | Read_files | Read_layout | Group_ID |   Control | IP_target |
+  |---------|----------|------------|------------|-------|-------------|------------|-------------|  ---------|-----------|
+  | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] |   [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/  to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [freetext] | [boolean] | [Input or freetext name of IP   target, e.g. H3K9me2] required for ChIP_broad/ChIP_narrow |
+  
+  Assay: controlled vocabulary, replaces data_type/sample_type and provides the menu of accepted assay   types for analysis. 
+  Genome: Reference genome name
+  Condition1: An experimental variable like sample line/genotype (e.g. B73), tissue type, environmental   parameter value (e.g. 37deg), time point (e.g. T0), etc.
+  Condition2: (optional) another experimental variable. If provided, will be analyzed combinatorially   with Condition1.
+  Replicate_ID: name your replicates (e.g. rep1, rep2, repA, repB, 1, 2). If multiple samples share the   same Replicate_ID they will be merged as technical replicates in the analysis.
+  Read_files: Path to FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded   from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz).
+  Read_layout: single-end or paired-end sequencing (SE or PE)
+  Group_ID: groups samples together for normalization with a control sample
+  Control: [boolean] - indicate whether this sample is the control sample for all samples with this   Group_ID. We should validate that there is just one control per Group_ID. Controls are currently used   only for ChIP_broad, ChIP_narrow, and RAMPAGE samples.
+  IP_target: Required only for ChIP_broad and ChIP_narrow samples.
 
-| Assay   | Genome   | Condition1 | Condition2 | Label | ReplicateID | Read_files | Read_layout | Control | IP_target |
-|---------|----------|------------|------------|-------|-------------|------------|-------------|---------|-----------|
-| [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] | [freetext] | [freetext] default = [Assay]\_[Genome]\_[Condition1]\_[Condition2] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple: [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [label of Input] required for ChIP/TF | [Input or name of target, e.g. H3K9me2] required for ChIP/TF |
+### config.yaml:  
 
-* refactor sample sheet, especially fastq_path - this actually already not strictly a fastq_path - we search for bams and bedmethyls here. Need to think more about whether a one file per line approach to the sample file makes more sense than the current approach. See: sample-sheet-refactor-recommendations.md
-  * explicit placeholder value for empty data to improve user experience with sample sheet, e.g. “-” synonym for “” in TSV
-  * data_type and sample_type columns are the only targets of this refactor, all others remain the same for now
+* one thing we can think of as well, maybe for the future big reworking, is that parameters in the config file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
+
+### custom adapter handling
+
 * Sequencing adapters could vary on a per-library. Maybe there should be an optional sample file column for custom adapters and we remove the global params from config.yaml. If we use skewer for trimming, auto-detection of most standard adapters is built-in if I’m not mistaken.
+
+### species-specific parameters
+
 * Species (as in Species-dependent parameters in config.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no?
 
 ## Plotting
