@@ -1540,7 +1540,7 @@ rule prep_browser_on_region:
         chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
         gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
         all_genes = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
-        TE_file = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}__TE_file.bed" if config['browser_TE_file'] else None
+        TE_file = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}__TE_file.bed" if config['browser_TE_file'] else []
     output:
         filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
         genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
@@ -1613,10 +1613,10 @@ rule prep_browser_on_region:
             touch {output.genes}
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ -n {input.TE_file} && -s {input.TE_file} && "{params.target_name}" != "full_chromosomes" ]]; then
+        if [[ -n "{input.TE_file}" && -s "{input.TE_file}" && "{params.target_name}" != "full_chromosomes" ]]; then
             printf "Getting TE track\n"
             bedtools intersect -a {input.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-        elif [[ -n {input.TE_file} ]]; then
+        else
             printf "No TE file to be included in browser\n"
             touch {output.tes}
         fi

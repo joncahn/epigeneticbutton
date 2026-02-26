@@ -10,6 +10,7 @@ dependencies:
   - samtools
   - deeptools
   - ucsc-bedgraphtobigwig
+  - ucsc-bigwigtobedgraph
   - ucsc-bedsort
   - seqtk
   - r-base
