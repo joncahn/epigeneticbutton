@@ -122,16 +122,19 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Schizosaccharomyces pombe test case
 
-* [ ] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution.
+* [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 18 samples (11 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_config_pombe.yaml`.
 
-* [ ] Gather all necessary genome reference resources (fasta, gff, gtf) from [Pombase.org](https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/). Derive an appropriate test config and test samplefile.
+* [x] Gather all necessary genome reference resources (fasta, gff, gtf) from [Pombase.org](https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/). Derive an appropriate test config and test samplefile. **Done**: PomBase Feb 2026 FASTA/GFF3, gffread-derived GTF, Infernal/Rfam-15.0 structural RNA FASTA (261 loci). Files in `tests/integration/data/Spombe/`.
 
-* [ ] Let’s use Hyun Soo Kim's ChIP-seq (H3K9me2, PolII, sRNA):
-    <https://www.nature.com/articles/s41467-024-53417-9#data-availability> <https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE156069>
+* [x] Let’s use Hyun Soo Kim’s ChIP-seq (H3K9me2, H3K9me3, sRNA) + Ekwall lab H3K4me3 + Chang/Rct1 WCE + Martienssen 2025 RNA-seq:
+    - Kim et al. 2024 GSE156069: H3K9me2/me3 WT+dcr1 PE ChIP, sRNA SE
+    - Ekwall lab GSE280066: H3K4me3 SE ChIP + Input
+    - Chang et al. 2017 GSE97746: WCE control PE
+    - Martienssen 2025 GSE278839: RNA-seq WT+dcr1 SE
 
-* [ ] Search only R.A. Martienssen publication datasets for additional RNA-seq and ChIP libraries
+* [x] Search only R.A. Martienssen publication datasets for additional RNA-seq and ChIP libraries. **Done**: used 3 Martienssen lab datasets + 1 Ekwall lab dataset.
 
-* [ ] Any necessary data caching for the development of this test case should be done in the untracked test-data-prep directory.
+* [x] Any necessary data caching for the development of this test case should be done in the untracked test-data-prep directory. **Done**: structural RNA build intermediates in `test-data-prep/pombe-structural-rna/`.
 
 ### Complete A. thaliana ColCEN Chr5 test case
 
