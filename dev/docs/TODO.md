@@ -8,23 +8,40 @@
 
 ### refactor sample sheet
 
+#### New format
+
 * [ ] New sample sheet format streamlines and clarifies input specifications. This is a major change that will require a deep review of the codebase, especially the snakemake rules. Automatically generated filenames will change, e.g. "Input" -> "Control", as controls could be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.). There will also be significant changes to documentation to reflect this new format, and to example files and test code. Finally, this change should be validated with a full run of the S. pombe integration test.
 
   | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
-  |-----------|-------|--------|--------|--------------|------------|-------------|-----------|  --------|
-  | [freetext] | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [Input or freetext name of IP target, e.g. H3K9me2] required for ChIP_broad/ChIP_narrow | [freetext] |
+  |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
+  | [freetext] | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [freetext name of IP target or control, e.g. H3K9me2, or Input, WCE, etc.] required for ChIP_broad/ChIP_narrow | [valid sample ID] |
   
-  Sample_ID: a name that uniquely identifies this sample. Will be used to track the sample internally, and can be used to assign controls to ChIP_broad, ChIP_narrow, and RAMPAGE Assays.
+  Sample_ID: a name that uniquely identifies this sample. Will be used to track the sample internally, and can be used to assign controls to ChIP_broad, ChIP_narrow, and RAMPAGE Assays. We will not enforce any format, other than uniqueness, but the epicc-builder app should suggest a concise ID (see epicc-builder specification).
   Assay: controlled vocabulary, replaces data_type/sample_type and provides the menu of accepted assay   types for analysis.
   Genome: Reference genome name
-  Levels: Comma-separated list of the levels of experimental factors represented by this sample. Factors could be any experimental variable, such as line/genotype (levels: B73, Mo17), tissue type (levels: root, leaf, pistil), environmental parameters (levels: 37deg, 24deg), time points (levels: T0, T1, T2), etc. If multiple factor levels (e.g. "root,T0") are listed for this sample, multifactorial comparisons will be performed.
-  Replicate_ID: name your replicates (e.g. rep1, rep2, repA, repB, 1, 2). If multiple samples share the same Replicate_ID they will be merged as technical replicates in the analysis.
-  Read_files: Path to FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz).
+  Levels: Comma-separated list of the levels of experimental factors represented by this sample. Factors could be any experimental variable, such as line/genotype (levels: B73, Mo17), tissue type (levels: root, leaf, pistil), environmental parameters (levels: 37deg, 24deg), time points (levels: T0, T1, T2), etc. If multiple factor levels (e.g. "root,T0") are listed for this sample, multifactorial comparisons will be performed. N.B. all samples must have the same number of levels at this time.
+  Replicate_ID: enter names for biological replicates to distinguish them in analysis (e.g. rep1, rep2, repA, repB, 1, 2).
+  Read_files: Path to FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz). If multiple read files or SRA IDs are separated by a "+", they will be merged before any processing.
   Read_layout: controlled vocabulary, single-end or paired-end sequencing (SE or PE)
   IP_target: Required only for ChIP_broad and ChIP_narrow samples.
   Control: Must be a valid Sample_ID. Controls are currently used only for normalizing ChIP_broad, ChIP_narrow, and RAMPAGE samples.
 
-  * All free text fields should have input validation for safety, and path validation and SRA regex validation should be applied to Read_files.
+##### Input validation
+
+* [ ] All free text fields should have input validation for safety, and path validation and SRA regex validation should be applied to Read_files.
+
+#### epicc-builder
+
+* [ ] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file than can be opened offline in any modern browser, and will allow for the user to save the created sample sheet as a file.
+  * [ ] Find a suitable js library for table drawing and widgets.
+  * [ ] Accessibility (to e.g. screen readers) is an important concern.
+  * [ ] When focus (keyboard or mouse) is on a column, the description of that column should be shown to the user via a dynamic text display.
+  * [ ] Hamburger menu on each sample row allows for common actions like "Add a replicate", "Insert duplicate below", "Remove sample", etc.
+  * [ ] Sample rows are reorderable.
+  * [ ] Perform the same input validation as the pipeline code, and give users feedback through diagnostic messages.
+  * [ ] Continuously evaluate user input as the table is filled out, opportunistically assigning defaults to sample column entries when there is sufficient input to do so.
+  * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. It should be possible for the user to edit the suggestion.
+  * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
 
 ### config.yaml
 
@@ -97,7 +114,9 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Read Mapping
 
-* [ ] (ChIP/ATAC):  look at adding option to use Chromap for ~10X speedup (and possibly set as default), consider supporting different sensitivity levels if possible as with bt2.
+* [ ] (ChIP/ATAC):  look at adding option to use [Chromap](https://github.com/haowenz/chromap) for ~10X speedup (and possibly set as default), consider supporting different sensitivity levels if possible as with bt2.
+
+* [ ] (WGBS):  consider switching to [bwa-meth](https://github.com/brentp/bwa-meth)
 
 ### Local
 
@@ -126,10 +145,10 @@ Do we currently have a way to specify whether one or the other or both should be
 * [x] Gather all necessary genome reference resources (fasta, gff, gtf) from [Pombase.org](https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/). Derive an appropriate test config and test samplefile. **Done**: PomBase Feb 2026 FASTA/GFF3, gffread-derived GTF, Infernal/Rfam-15.0 structural RNA FASTA (261 loci). Files in `tests/integration/data/Spombe/`.
 
 * [x] Let’s use Hyun Soo Kim’s ChIP-seq (H3K9me2, H3K9me3, sRNA) + Ekwall lab H3K4me3 + Chang/Rct1 WCE + Martienssen 2025 RNA-seq:
-    - Kim et al. 2024 GSE156069: H3K9me2/me3 WT+dcr1 PE ChIP, sRNA SE
-    - Ekwall lab GSE280066: H3K4me3 SE ChIP + Input
-    - Chang et al. 2017 GSE97746: WCE control PE
-    - Martienssen 2025 GSE278839: RNA-seq WT+dcr1 SE
+  * Kim et al. 2024 GSE156069: H3K9me2/me3 WT+dcr1 PE ChIP, sRNA SE
+  * Ekwall lab GSE280066: H3K4me3 SE ChIP + Input
+  * Chang et al. 2017 GSE97746: WCE control PE
+  * Martienssen 2025 GSE278839: RNA-seq WT+dcr1 SE
 
 * [x] Search only R.A. Martienssen publication datasets for additional RNA-seq and ChIP libraries. **Done**: used 3 Martienssen lab datasets + 1 Ekwall lab dataset.
 
