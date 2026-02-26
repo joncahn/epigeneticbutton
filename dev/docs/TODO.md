@@ -10,21 +10,20 @@
 
 * [ ] New sample sheet format streamlines and clarifies input specifications. This is a major change that will require a deep review of the codebase, especially the snakemake rules. Automatically generated filenames will change, e.g. "Input" -> "Control", as controls could be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.). There will also be significant changes to documentation to reflect this new format, and to example files and test code. Finally, this change should be validated with a full run of the S. pombe integration test.
 
-  | Assay   | Genome   | Condition1 | Condition2 | Replicate_ID | Read_files | Read_layout | Group_ID |   Control | IP_target |
-  |---------|----------|------------|------------|-------|-------------|------------|-------------|  ---------|-----------|
-  | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] |   [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [freetext] | [boolean] | [Input or freetext name of IP   target, e.g. H3K9me2] required for ChIP_broad/ChIP_narrow |
+  | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
+  |-----------|-------|--------|--------|--------------|------------|-------------|-----------|  --------|
+  | [freetext] | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [Input or freetext name of IP target, e.g. H3K9me2] required for ChIP_broad/ChIP_narrow | [freetext] |
   
+  Sample_ID: a name that uniquely identifies this sample. Will be used to track the sample internally, and can be used to assign controls to ChIP_broad, ChIP_narrow, and RAMPAGE Assays.
   Assay: controlled vocabulary, replaces data_type/sample_type and provides the menu of accepted assay   types for analysis.
   Genome: Reference genome name
-  Condition1: An experimental variable like sample line/genotype (e.g. B73), tissue type, environmental   parameter value (e.g. 37deg), time point (e.g. T0), etc. Condition1 and Condition2 generalize the previous line/tissue fields.
-  Condition2: (optional) another experimental variable. If provided, will be analyzed combinatorially   with Condition1.
-  Replicate_ID: name your replicates (e.g. rep1, rep2, repA, repB, 1, 2). If multiple samples share the   same Replicate_ID they will be merged as technical replicates in the analysis.
+  Levels: Comma-separated list of the levels of experimental factors represented by this sample. Factors could be any experimental variable, such as line/genotype (levels: B73, Mo17), tissue type (levels: root, leaf, pistil), environmental parameters (levels: 37deg, 24deg), time points (levels: T0, T1, T2), etc. If multiple factor levels (e.g. "root,T0") are listed for this sample, multifactorial comparisons will be performed.
+  Replicate_ID: name your replicates (e.g. rep1, rep2, repA, repB, 1, 2). If multiple samples share the same Replicate_ID they will be merged as technical replicates in the analysis.
   Read_files: Path to FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz).
   Read_layout: controlled vocabulary, single-end or paired-end sequencing (SE or PE)
-  Group_ID: groups samples together for normalization with a control sample
-  Control: [boolean] - indicate whether this sample is the control sample for all samples with this   Group_ID. We should validate that there is just one control per Group_ID. Controls are currently used   only for ChIP_broad, ChIP_narrow, and RAMPAGE samples.
   IP_target: Required only for ChIP_broad and ChIP_narrow samples.
-  
+  Control: Must be a valid Sample_ID. Controls are currently used only for normalizing ChIP_broad, ChIP_narrow, and RAMPAGE samples.
+
   * All free text fields should have input validation for safety, and path validation and SRA regex validation should be applied to Read_files.
 
 ### config.yaml
