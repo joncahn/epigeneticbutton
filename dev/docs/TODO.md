@@ -10,7 +10,12 @@
 
 #### New format
 
-* [ ] New sample sheet format streamlines and clarifies input specifications. This is a major change that will require a deep review of the codebase, especially the snakemake rules. Automatically generated filenames will change, e.g. "Input" -> "Control", as controls could be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.). There will also be significant changes to documentation to reflect this new format, and to example files and test code. Finally, this change should be validated with a full run of the S. pombe integration test.
+* [ ] New sample sheet format streamlines and clarifies input specifications. Controls can now be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.) referenced by Sample_ID rather than a boolean flag.
+  * [ ] Update Snakefile sample-sheet parsing to read the new columns and build sample metadata accordingly.
+  * [ ] Update rule files: automatically generated filenames will change (e.g. "Input" -> the control's Sample_ID).
+  * [ ] Update documentation (README, Read the Docs, example sample sheets) to reflect the new format.
+  * [ ] Update test sample sheets and test code.
+  * [ ] Validate with a full run of the S. pombe integration test.
 
   | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
   |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
@@ -19,29 +24,48 @@
   Sample_ID: a name that uniquely identifies this sample. Will be used to track the sample internally, and can be used to assign controls to ChIP_broad, ChIP_narrow, and RAMPAGE Assays. We will not enforce any format, other than uniqueness, but the epicc-builder app should suggest a concise ID (see epicc-builder specification).
   Assay: controlled vocabulary, replaces data_type/sample_type and provides the menu of accepted assay   types for analysis.
   Genome: Reference genome name
-  Levels: Comma-separated list of the levels of experimental factors represented by this sample. Factors could be any experimental variable, such as line/genotype (levels: B73, Mo17), tissue type (levels: root, leaf, pistil), environmental parameters (levels: 37deg, 24deg), time points (levels: T0, T1, T2), etc. If multiple factor levels (e.g. "root,T0") are listed for this sample, multifactorial comparisons will be performed. N.B. all samples must have the same number of levels at this time.
-  Replicate_ID: enter names for biological replicates to distinguish them in analysis (e.g. rep1, rep2, repA, repB, 1, 2).
+  Levels: Comma-separated list of factor:level pairs describing the experimental conditions for this sample. Uses the syntax `factor_name:level_value` (e.g. `genotype:WT,tissue:root`). Factors can be any experimental variable — genotype (B73, Mo17), tissue (root, leaf), temperature (37deg, 24deg), time point (T0, T1), etc. If multiple factors are specified, multifactorial comparisons will be performed. Factor names are not currently used in pipeline logic (only levels are used for constructing comparisons and plot labels), but they improve readability and enable epicc-builder to parse and validate entries progressively. **All samples must have the same number of factor:level pairs, including controls.** Controls should still specify meaningful levels where possible (e.g. `genotype:WT,tissue:root`).
+  Replicate_ID: identifies biological or technical replicates (e.g. rep1, rep2, repA, repB, 1, 2). Replicates are treated independently in analysis and merged only for specific downstream steps like peak calling. Note: `+` in Read_files is for concatenating multi-file inputs from the same library (e.g. multiple lanes or runs) before any processing — this is distinct from replicate handling.
   Read_files: Path to FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz). If multiple read files or SRA IDs are separated by a "+", they will be merged before any processing.
   Read_layout: controlled vocabulary, single-end or paired-end sequencing (SE or PE)
-  IP_target: Required only for ChIP_broad and ChIP_narrow samples.
-  Control: Must be a valid Sample_ID. Controls are currently used only for normalizing ChIP_broad, ChIP_narrow, and RAMPAGE samples.
+  IP_target: Required for all ChIP_broad and ChIP_narrow samples, including controls. Describes what was pulled down — e.g. `H3K9me2` for an IP sample, or `Input`, `WCE`, `IgG` for a control sample.
+  Control: Must be a valid Sample_ID. Used only for normalizing ChIP_broad, ChIP_narrow, and RAMPAGE samples. Validation rules: (1) the referenced Sample_ID must exist in the sheet, (2) a control sample must not itself reference another control (no chaining), (3) it is an error to specify a Control for non-ChIP/RAMPAGE assays, (4) multiple IP samples may share the same control.
 
 ##### Input validation
 
-* [ ] All free text fields should have input validation for safety, and path validation and SRA regex validation should be applied to Read_files.
+* [ ] Per-field validation rules (implemented in both pipeline parsing and epicc-builder):
+  * Sample_ID: required, must be unique across the sheet, sanitize for filesystem-safe characters.
+  * Assay: required, must be one of the controlled vocabulary values.
+  * Genome: required, freetext with safety sanitization.
+  * Levels: required, comma-separated `factor:level` pairs. All samples must have the same number of pairs. Factor names must be consistent across samples.
+  * Replicate_ID: required, freetext with safety sanitization.
+  * Read_files: required, validate as a path (local file exists or matches SRA regex `SRR\d+`). For PE, validate comma-separated pair. For `+`-merged entries, validate each component.
+  * Read_layout: required, must be `SE` or `PE`.
+  * IP_target: required for ChIP_broad and ChIP_narrow (including controls), must be blank or absent for other assays.
+  * Control: must reference an existing Sample_ID. Required for ChIP_broad, ChIP_narrow, and RAMPAGE IP samples. Error if specified for other assays. No chaining (referenced sample must not itself have a Control).
+  * Cross-field: warn if Read_layout is PE but Read_files has only one path (and vice versa).
 
 #### epicc-builder
 
-* [ ] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file than can be opened offline in any modern browser, and will allow for the user to save the created sample sheet as a file.
-  * [ ] Find a suitable js library for table drawing and widgets.
+* [ ] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser.
+
+  **Prerequisite research**: Identify a suitable JS library for table drawing and widgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can be bundled into a single HTML file).
+
+  **I/O**:
+  * [ ] Output format: TSV with the column header as the first row, matching the pipeline's expected input format.
+  * [ ] Import an existing sample sheet (TSV) for editing.
+
+  **UX**:
   * [ ] Accessibility (to e.g. screen readers) is an important concern.
   * [ ] When focus (keyboard or mouse) is on a column, the description of that column should be shown to the user via a dynamic text display.
   * [ ] Hamburger menu on each sample row allows for common actions like "Add a replicate", "Insert duplicate below", "Remove sample", etc.
   * [ ] Sample rows are reorderable.
+  * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
+  * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. It should be possible for the user to edit the suggestion.
+
+  **Validation**:
   * [ ] Perform the same input validation as the pipeline code, and give users feedback through diagnostic messages.
   * [ ] Continuously evaluate user input as the table is filled out, opportunistically assigning defaults to sample column entries when there is sufficient input to do so.
-  * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. It should be possible for the user to edit the suggestion.
-  * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
 
 ### config.yaml
 
