@@ -1,6 +1,10 @@
 # Big Refactor TODO
 
-## Features
+## Documentation
+
+* [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
+
+## Analysis
 
 ### (Differential) splicing analysis for RNAseq
 
@@ -17,10 +21,6 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 ### ATAC-seq input sample support
 
 * [ ] Support calling ATAC peaks with Input
-
-## Documentation
-
-* [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
 
 ## UI/UX
 
@@ -77,7 +77,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### config.yaml
 
-* [ ] one thing we can think of as well, maybe for the future big reworking, is that parameters in the config file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
+* [ ] Parameters in the config file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
 
 ### custom adapter handling
 
@@ -198,10 +198,10 @@ Do we currently have a way to specify whether one or the other or both should be
 
 * [ ] Add H. sapiens Chr21 test case.
 
-## Known Issues
+## Known Unknowns
 
 * [ ] For now, ChIPseq replicates are only properly merged if same paired information (all PE or all SE). Not sure what happens if both PE and SE reps are available with the same line+tissue name. Corner case to check.
 
-## BUGS
+## Known Issues/Bugs
 
 * [ ] PlotPCA can fail if no dimensions found. check npz results before starting PCA? (how in bash?)
