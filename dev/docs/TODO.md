@@ -10,8 +10,8 @@
 
 ### (Differential) splicing analysis for RNAseq
 
-* [ ] Jon: heavy pipeline. Here is what was used in my MBD paper:
-To look for novel splicing changes that occurred within the mC reader mutants, the reads mapped withSTAR (Dobin et al. 2013) were processed by StringTie and merged together (Pertea et al. 2015) into amaster novel transcriptome comprising splicing events from TAIR10 and ones uniquely identified withinthis study. Then reads underwent lightweight alignment using Salmon version 1.4.0 (Patro et al. 2017) against the novel transcriptome from StringTie. Novel and known transcripts belonging to the same genewere analysed for splicing events by SUPPA2 (Trincado et al. 2018). Differential alternative splicing (DAS)was calculated for each event based on abundance of transcripts with and without inclusion of those eventsby SUPPA2 (Trincado et al. 2018).
+* [ ] heavy pipeline. Here is what was used in my MBD paper:
+To look for novel splicing changes that occurred within the mC reader mutants, the reads were mapped with STAR (Dobin et al. 2013) were processed by StringTie and merged together (Pertea et al. 2015) into a master novel transcriptome comprising splicing events from TAIR10 and ones uniquely identified withinthis study. Then reads underwent lightweight alignment using Salmon version 1.4.0 (Patro et al. 2017) against the novel transcriptome from StringTie. Novel and known transcripts belonging to the same genewere analysed for splicing events by SUPPA2 (Trincado et al. 2018). Differential alternative splicing (DAS)was calculated for each event based on abundance of transcripts with and without inclusion of those eventsby SUPPA2 (Trincado et al. 2018).
 
 ### Generic pre-computed bedMethyl input support
 
@@ -63,7 +63,9 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser.
 
-  **Prerequisite research**: Identify a suitable JS library for table drawing and widgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can be bundled into a single HTML file).
+##### [ ] Implementation Stage 1: Sample sheet preparation helper
+
+  **Prerequisite research**: Identify a suitable JS library for table drawing and widgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can be bundled into a single HTML file).  **Decision reached: use [tabulator] <https://tabulator.info/>**.
 
   **I/O**:
   * [ ] Output format: TSV with the column header as the first row, matching the pipeline's expected input format.
@@ -80,6 +82,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   **Validation** (see [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) for the canonical rules):
   * [ ] Perform the same input validation as the pipeline code, and give users feedback through diagnostic messages.
   * [ ] Continuously evaluate user input as the table is filled out, opportunistically assigning defaults to sample column entries when there is sufficient input to do so.
+
+##### [ ] Implementation Stage 2: Config file helper
+
+* [ ] Yet to be specified.
 
 ### config.yaml
 

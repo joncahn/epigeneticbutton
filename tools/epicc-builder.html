@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPICC Sample Sheet Builder</title>
+<link href="https://unpkg.com/tabulator-tables@6/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+<script src="https://unpkg.com/tabulator-tables@6/dist/js/tabulator.min.js"></script>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #53a8b6;
+    --text: #eee;
+    --text-dim: #999;
+    --err: #e94560;
+    --warn: #f0a500;
+    --ok: #53a8b6;
+    --border: #2a2a4a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  header h1 span { color: var(--accent); }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .toolbar button, .toolbar label {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .toolbar button:hover, .toolbar label:hover { background: var(--accent); }
+  .toolbar input[type="file"] { display: none; }
+  main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  #description-panel {
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-dim);
+    min-height: 32px;
+    flex-shrink: 0;
+  }
+  #description-panel strong { color: var(--accent2); margin-right: 6px; }
+  #table-container {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+  }
+  #diagnostics-panel {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 20px;
+    max-height: 180px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  }
+  #diagnostics-panel:empty::before {
+    content: "No validation issues";
+    color: var(--ok);
+  }
+  .diag-error { color: var(--err); }
+  .diag-warning { color: var(--warn); }
+  .diag-ok { color: var(--ok); }
+  .diag-summary { margin-bottom: 4px; font-weight: 600; }
+
+  /* Tabulator overrides */
+  .tabulator {
+    background: var(--bg);
+    border: none;
+    font-size: 13px;
+  }
+  .tabulator .tabulator-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+  }
+  .tabulator .tabulator-header .tabulator-col {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+  }
+  .tabulator .tabulator-header .tabulator-col .tabulator-col-title {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .tabulator .tabulator-tableholder .tabulator-table .tabulator-row {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .tabulator .tabulator-tableholder .tabulator-table .tabulator-row:hover {
+    background: var(--surface);
+  }
+  .tabulator .tabulator-row .tabulator-cell {
+    border-right: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 8px;
+  }
+  .tabulator .tabulator-row .tabulator-cell.tabulator-editing {
+    border: 1px solid var(--accent2);
+    padding: 0;
+  }
+  .tabulator .tabulator-row .tabulator-cell.tabulator-editing input,
+  .tabulator .tabulator-row .tabulator-cell.tabulator-editing select {
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .tabulator .tabulator-footer { background: var(--surface); }
+
+  /* Validation indicators */
+  .cell-error {
+    border-left: 3px solid var(--err) !important;
+  }
+  .cell-warning {
+    border-left: 3px solid var(--warn) !important;
+  }
+
+  /* Placeholder styling for suggested Sample_ID */
+  .cell-suggestion {
+    color: var(--text-dim) !important;
+    font-style: italic;
+  }
+
+  /* Action column */
+  .row-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .row-action-btn:hover { color: var(--accent); }
+
+  /* Context menu */
+  .ctx-menu {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 10000;
+    min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    padding: 4px 0;
+  }
+  .ctx-menu div {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .ctx-menu div:hover {
+    background: var(--surface2);
+    color: var(--accent);
+  }
+  .ctx-menu-sep {
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+    padding: 0 !important;
+    cursor: default !important;
+  }
+  .ctx-menu-sep:hover {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  /* Tabulator list editor dropdown styling */
+  .tabulator-edit-list {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+  }
+  .tabulator-edit-list .tabulator-edit-list-item {
+    color: var(--text) !important;
+  }
+  .tabulator-edit-list .tabulator-edit-list-item:hover {
+    background: var(--surface2) !important;
+    color: var(--accent) !important;
+  }
+  .tabulator-edit-list .tabulator-edit-list-item.active {
+    background: var(--accent) !important;
+    color: white !important;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>EPICC</span> Sample Sheet Builder</h1>
+  <div class="toolbar">
+    <label for="import-file" role="button" aria-label="Import TSV file" tabindex="0"
+           onkeydown="if(event.key==='Enter')this.click()">Import TSV
+      <input type="file" id="import-file" accept=".tsv,.txt,.tab" aria-label="Choose TSV file to import">
+    </label>
+    <button id="btn-export" aria-label="Export sample sheet as TSV">Export TSV</button>
+    <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
+  </div>
+</header>
+
+<main>
+  <div id="description-panel" aria-live="polite" role="status">
+    Click a column header or cell to see its description.
+  </div>
+  <div id="table-container"></div>
+  <div id="diagnostics-panel" aria-live="polite" role="log" aria-label="Validation diagnostics"></div>
+</main>
+
+<script>
+// ===========================================================================
+// Constants (mirroring workflow/scripts/sample_sheet.py & samplefile_validation.py)
+// ===========================================================================
+
+const COLUMNS = [
+  "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
+  "Read_files", "Read_layout", "IP_target", "Control"
+];
+
+const VALID_ASSAYS = [
+  "ChIP_broad", "ChIP_narrow", "ATAC",
+  "RNAseq", "RAMPAGE",
+  "sRNA",
+  "WGBS", "EMseq", "dmC"
+];
+
+const ASSAY_TO_ENV = {
+  ChIP_broad: "ChIP", ChIP_narrow: "ChIP",
+  ATAC: "ATAC",
+  RNAseq: "RNA", RAMPAGE: "RNA",
+  sRNA: "sRNA",
+  WGBS: "mC", EMseq: "mC", dmC: "mC"
+};
+
+const CHIP_ASSAYS = new Set(["ChIP_broad", "ChIP_narrow"]);
+const CONTROL_ASSAYS = new Set(["ChIP_broad", "ChIP_narrow", "RAMPAGE"]);
+
+const UNSAFE_CHARS_RE = /[/\\\s'";&|<>$`!{}()\[\]?*~#]/;
+const DOUBLE_UNDERSCORE_RE = /__/;
+const SRA_REGEX = /^[SDE]RR\d+$/;
+
+const COLUMN_DESCRIPTIONS = {
+  Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
+  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), ATAC, RNAseq, RAMPAGE, sRNA, WGBS, EMseq, dmC.",
+  Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
+  Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
+  Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
+  Read_files: "SRA accession (SRR12345678), local path, or '+'-separated for merging. PE local: comma-separated R1,R2 pair.",
+  Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
+  IP_target: "What was immunoprecipitated. Required for ChIP assays (e.g. H3K9me2, Input). Must be blank for non-ChIP assays.",
+  Control: "Sample_ID of the control sample (e.g. Input for ChIP). Only for ChIP_broad, ChIP_narrow, RAMPAGE. No chaining allowed."
+};
+
+// Assay short names for Sample_ID suggestion (non-ChIP assays)
+const ASSAY_SHORT = {
+  ATAC: "ATAC", RNAseq: "RNA", RAMPAGE: "RAMPAGE",
+  sRNA: "sRNA", WGBS: "WGBS", EMseq: "EMseq", dmC: "dmC"
+};
+
+// ===========================================================================
+// State
+// ===========================================================================
+
+let table;
+let cellIssues = {}; // { "rowId:field": { errors: [], warnings: [] } }
+let activeCtxMenu = null;
+
+// ===========================================================================
+// Helpers
+// ===========================================================================
+
+function parseLevels(str) {
+  if (!str) return null;
+  const pairs = str.split(",").map(s => s.trim());
+  const result = [];
+  for (const p of pairs) {
+    if (!p.includes(":")) return null;
+    const [factor, ...rest] = p.split(":");
+    result.push({ factor: factor.trim(), level: rest.join(":").trim() });
+  }
+  return result;
+}
+
+function levelsToLabel(str) {
+  const parsed = parseLevels(str);
+  if (!parsed) return "";
+  return parsed.map(p => p.level).join("_");
+}
+
+function suggestSampleId(rowData) {
+  const assay = (rowData.Assay || "").trim();
+  const levels = (rowData.Levels || "").trim();
+  const rep = (rowData.Replicate_ID || "").trim();
+  const ip = (rowData.IP_target || "").trim();
+  if (!levels || !rep) return "";
+  const label = levelsToLabel(levels);
+  if (!label) return "";
+  if (CHIP_ASSAYS.has(assay)) {
+    if (!ip) return "";
+    return label + "_" + ip + "_" + rep;
+  }
+  const short = ASSAY_SHORT[assay];
+  if (!short) return "";
+  return label + "_" + short + "_" + rep;
+}
+
+function getAllSampleIds() {
+  if (!table) return [];
+  return table.getData().map(r => (r.Sample_ID || "").trim()).filter(Boolean);
+}
+
+function emptyRow() {
+  return {
+    Sample_ID: "", Assay: "", Genome: "", Levels: "", Replicate_ID: "",
+    Read_files: "", Read_layout: "", IP_target: "", Control: ""
+  };
+}
+
+// ===========================================================================
+// Description panel (safe DOM methods only)
+// ===========================================================================
+
+const descPanel = document.getElementById("description-panel");
+function showDescription(field) {
+  const desc = COLUMN_DESCRIPTIONS[field];
+  if (desc) {
+    // Clear and rebuild with safe DOM methods
+    while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
+    const strong = document.createElement("strong");
+    strong.textContent = field;
+    descPanel.appendChild(strong);
+    descPanel.appendChild(document.createTextNode(" " + desc));
+  }
+}
+
+// ===========================================================================
+// Context menu
+// ===========================================================================
+
+function closeCtxMenu() {
+  if (activeCtxMenu) {
+    activeCtxMenu.remove();
+    activeCtxMenu = null;
+  }
+}
+document.addEventListener("click", closeCtxMenu);
+document.addEventListener("keydown", function(e) { if (e.key === "Escape") closeCtxMenu(); });
+
+function showCtxMenu(e, row) {
+  closeCtxMenu();
+  const menu = document.createElement("div");
+  menu.className = "ctx-menu";
+  menu.setAttribute("role", "menu");
+
+  const items = [
+    { label: "Add replicate", action: function() { addReplicate(row); } },
+    { label: "Duplicate row", action: function() { duplicateRow(row); } },
+    { sep: true },
+    { label: "Move up", action: function() { moveRow(row, -1); } },
+    { label: "Move down", action: function() { moveRow(row, 1); } },
+    { sep: true },
+    { label: "Remove row", action: function() { removeRow(row); } },
+  ];
+
+  for (var ii = 0; ii < items.length; ii++) {
+    var item = items[ii];
+    if (item.sep) {
+      var sep = document.createElement("div");
+      sep.className = "ctx-menu-sep";
+      menu.appendChild(sep);
+      continue;
+    }
+    var el = document.createElement("div");
+    el.textContent = item.label;
+    el.setAttribute("role", "menuitem");
+    el.setAttribute("tabindex", "0");
+    (function(action) {
+      el.addEventListener("click", function(ev) { ev.stopPropagation(); closeCtxMenu(); action(); });
+      el.addEventListener("keydown", function(ev) { if (ev.key === "Enter") { ev.stopPropagation(); closeCtxMenu(); action(); } });
+    })(item.action);
+    menu.appendChild(el);
+  }
+
+  // Position
+  var x = (e.clientX || e.pageX || 100);
+  var y = (e.clientY || e.pageY || 100);
+  menu.style.left = x + "px";
+  menu.style.top = y + "px";
+  document.body.appendChild(menu);
+
+  // Adjust if offscreen
+  var rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + "px";
+  if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + "px";
+
+  activeCtxMenu = menu;
+}
+
+// ===========================================================================
+// Row actions
+// ===========================================================================
+
+function addReplicate(row) {
+  var data = Object.assign({}, row.getData());
+  // Increment replicate
+  var rep = data.Replicate_ID || "";
+  var m = rep.match(/^(.*?)(\d+)$/);
+  if (m) {
+    data.Replicate_ID = m[1] + (parseInt(m[2]) + 1);
+  } else {
+    data.Replicate_ID = rep ? rep + "_2" : "rep1";
+  }
+  data.Sample_ID = ""; // clear so suggestion kicks in
+  delete data.id; // new internal id
+  table.addRow(data, false, row);
+  runValidation();
+  applySuggestions();
+}
+
+function duplicateRow(row) {
+  var data = Object.assign({}, row.getData());
+  data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
+  delete data.id;
+  table.addRow(data, false, row);
+  runValidation();
+  applySuggestions();
+}
+
+function moveRow(row, direction) {
+  var rows = table.getRows();
+  var idx = rows.indexOf(row);
+  var targetIdx = idx + direction;
+  if (targetIdx < 0 || targetIdx >= rows.length) return;
+  if (direction < 0) {
+    row.move(rows[targetIdx], true);
+  } else {
+    row.move(rows[targetIdx], false);
+  }
+}
+
+function removeRow(row) {
+  row.delete();
+  runValidation();
+  applySuggestions();
+}
+
+// ===========================================================================
+// Validation Engine
+// ===========================================================================
+
+function runValidation() {
+  cellIssues = {};
+  var data = table.getData();
+  var errors = [];
+  var warnings = [];
+  var sampleIds = new Set();
+  var rows = table.getRows();
+
+  // --- Per-row validation ---
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var rowNum = i + 1;
+    var sid = (row.Sample_ID || "").trim();
+    var assay = (row.Assay || "").trim();
+    var genome = (row.Genome || "").trim();
+    var levels = (row.Levels || "").trim();
+    var rep = (row.Replicate_ID || "").trim();
+    var readFiles = (row.Read_files || "").trim();
+    var readLayout = (row.Read_layout || "").trim();
+    var ipTarget = (row.IP_target || "").trim();
+    var control = (row.Control || "").trim();
+    var rowKey = rows[i] ? rows[i].getIndex() : i;
+
+    // Sample_ID
+    if (!sid) {
+      addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + ": Sample_ID is required");
+    } else {
+      if (UNSAFE_CHARS_RE.test(sid))
+        addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + " '" + sid + "': Sample_ID contains unsafe characters");
+      if (DOUBLE_UNDERSCORE_RE.test(sid))
+        addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + " '" + sid + "': Sample_ID must not contain '__'");
+      if (sampleIds.has(sid))
+        addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + " '" + sid + "': duplicate Sample_ID");
+      sampleIds.add(sid);
+    }
+
+    // Assay
+    if (!VALID_ASSAYS.includes(assay))
+      addIssue(cellIssues, errors, rowKey, "Assay", "[X] Row #" + rowNum + " '" + sid + "': Assay '" + assay + "' not in [" + VALID_ASSAYS.join(", ") + "]");
+
+    // Genome
+    if (!genome)
+      addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': Genome is required");
+
+    // Levels
+    if (!levels) {
+      addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels is required");
+    } else {
+      var pairs = levels.split(",");
+      for (var pi = 0; pi < pairs.length; pi++) {
+        var p = pairs[pi].trim();
+        if (!p.includes(":")) {
+          addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels entry '" + p + "' must be 'factor:level' format");
+        } else {
+          var parts = p.split(":");
+          var factor = parts[0];
+          var level = parts.slice(1).join(":");
+          if (!factor.trim() || !level.trim())
+            addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': empty factor name or level in Levels");
+        }
+      }
+    }
+
+    // Replicate_ID
+    if (!rep)
+      addIssue(cellIssues, errors, rowKey, "Replicate_ID", "[X] Row #" + rowNum + " '" + sid + "': Replicate_ID is required");
+
+    // Read_layout
+    if (readLayout !== "SE" && readLayout !== "PE")
+      addIssue(cellIssues, errors, rowKey, "Read_layout", "[X] Row #" + rowNum + " '" + sid + "': Read_layout must be 'SE' or 'PE', got '" + readLayout + "'");
+
+    // Read_files
+    if (!readFiles) {
+      addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_files is required");
+    } else {
+      var components = readFiles.split("+").map(function(s) { return s.trim(); });
+      for (var ci = 0; ci < components.length; ci++) {
+        var files = components[ci].split(",").map(function(s) { return s.trim(); });
+        var first = files[0];
+        if (SRA_REGEX.test(first)) {
+          for (var fi = 0; fi < files.length; fi++) {
+            if (!SRA_REGEX.test(files[fi]))
+              addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': mixed SRA/path in Read_files component");
+          }
+        } else {
+          if (readLayout === "PE" && files.length === 1 && !first.endsWith(".bam"))
+            addIssueWarn(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)");
+          if (readLayout === "SE" && files.length > 1)
+            addIssueWarn(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths");
+        }
+      }
+    }
+
+    // IP_target
+    if (CHIP_ASSAYS.has(assay)) {
+      if (!ipTarget)
+        addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target is required for " + assay);
+    } else if (assay) {
+      if (ipTarget)
+        addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target must be blank for " + assay);
+    }
+
+    // Control (assay check only - reference checks below)
+    if (control) {
+      if (!CONTROL_ASSAYS.has(assay))
+        addIssue(cellIssues, errors, rowKey, "Control", "[X] Row #" + rowNum + " '" + sid + "': Control is not allowed for " + assay);
+    }
+  }
+
+  // --- Cross-row validation ---
+
+  // Levels: consistent factors
+  var allFactors = [];
+  for (var i = 0; i < data.length; i++) {
+    var levels = (data[i].Levels || "").trim();
+    if (!levels) { allFactors.push(null); continue; }
+    var parsed = parseLevels(levels);
+    allFactors.push(parsed ? parsed.map(function(p) { return p.factor; }) : null);
+  }
+  var refFactors = null;
+  var refRowNum = 1;
+  for (var i = 0; i < allFactors.length; i++) {
+    if (allFactors[i] !== null) { refFactors = allFactors[i]; refRowNum = i + 1; break; }
+  }
+  if (refFactors) {
+    for (var i = 0; i < allFactors.length; i++) {
+      var factors = allFactors[i];
+      if (factors === null) continue;
+      if (i + 1 === refRowNum) continue; // skip the reference row itself
+      var rowNum = i + 1;
+      var rowKey = rows[i] ? rows[i].getIndex() : i;
+      if (factors.length !== refFactors.length) {
+        addIssue(cellIssues, errors, rowKey, "Levels",
+          "[X] Row #" + rowNum + ": Levels has " + factors.length + " factors, expected " + refFactors.length + " (matching row " + refRowNum + ")");
+      } else if (JSON.stringify(factors) !== JSON.stringify(refFactors)) {
+        addIssue(cellIssues, errors, rowKey, "Levels",
+          "[X] Row #" + rowNum + ": Levels factor names [" + factors.join(",") + "] don't match row " + refRowNum + " [" + refFactors.join(",") + "]");
+      }
+    }
+  }
+
+  // Control: reference validation
+  var allSids = new Set(data.map(function(r) { return (r.Sample_ID || "").trim(); }).filter(Boolean));
+  for (var i = 0; i < data.length; i++) {
+    var control = (data[i].Control || "").trim();
+    var sid = (data[i].Sample_ID || "").trim();
+    var rowNum = i + 1;
+    var rowKey = rows[i] ? rows[i].getIndex() : i;
+    if (!control) continue;
+
+    if (!allSids.has(control)) {
+      addIssue(cellIssues, errors, rowKey, "Control",
+        "[X] Row #" + rowNum + " '" + sid + "': Control '" + control + "' does not match any Sample_ID in the sheet");
+    } else {
+      // No chaining
+      var ctrlRow = data.find(function(r) { return (r.Sample_ID || "").trim() === control; });
+      if (ctrlRow) {
+        var ctrlCtrl = (ctrlRow.Control || "").trim();
+        if (ctrlCtrl) {
+          addIssue(cellIssues, errors, rowKey, "Control",
+            "[X] Row #" + rowNum + " '" + sid + "': Control '" + control + "' itself has a Control (chaining not allowed)");
+        }
+      }
+    }
+  }
+
+  // --- Update UI ---
+  updateCellStyles();
+  renderDiagnostics(errors, warnings);
+}
+
+function addIssue(issues, list, rowKey, field, msg) {
+  list.push(msg);
+  var key = rowKey + ":" + field;
+  if (!issues[key]) issues[key] = { errors: [], warnings: [] };
+  issues[key].errors.push(msg);
+}
+
+function addIssueWarn(issues, list, rowKey, field, msg) {
+  list.push(msg);
+  var key = rowKey + ":" + field;
+  if (!issues[key]) issues[key] = { errors: [], warnings: [] };
+  issues[key].warnings.push(msg);
+}
+
+function updateCellStyles() {
+  var rows = table.getRows();
+  for (var ri = 0; ri < rows.length; ri++) {
+    var rowKey = rows[ri].getIndex();
+    for (var ci = 0; ci < COLUMNS.length; ci++) {
+      var field = COLUMNS[ci];
+      var cell = rows[ri].getCell(field);
+      if (!cell) continue;
+      var el = cell.getElement();
+      el.classList.remove("cell-error", "cell-warning");
+      var key = rowKey + ":" + field;
+      var issues = cellIssues[key];
+      if (issues && issues.errors.length > 0) {
+        el.classList.add("cell-error");
+      } else if (issues && issues.warnings.length > 0) {
+        el.classList.add("cell-warning");
+      }
+    }
+  }
+}
+
+function renderDiagnostics(errors, warnings) {
+  var panel = document.getElementById("diagnostics-panel");
+  // Clear panel using safe DOM methods
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  if (errors.length === 0 && warnings.length === 0) return;
+
+  if (errors.length > 0) {
+    var summary = document.createElement("div");
+    summary.className = "diag-summary diag-error";
+    summary.textContent = errors.length + " error" + (errors.length > 1 ? "s" : "");
+    panel.appendChild(summary);
+    for (var i = 0; i < errors.length; i++) {
+      var div = document.createElement("div");
+      div.className = "diag-error";
+      div.textContent = errors[i];
+      panel.appendChild(div);
+    }
+  }
+  if (warnings.length > 0) {
+    var summary = document.createElement("div");
+    summary.className = "diag-summary diag-warning";
+    summary.textContent = warnings.length + " warning" + (warnings.length > 1 ? "s" : "");
+    panel.appendChild(summary);
+    for (var i = 0; i < warnings.length; i++) {
+      var div = document.createElement("div");
+      div.className = "diag-warning";
+      div.textContent = warnings[i];
+      panel.appendChild(div);
+    }
+  }
+}
+
+// ===========================================================================
+// Sample_ID suggestion
+// ===========================================================================
+
+function applySuggestions() {
+  var rows = table.getRows();
+  for (var ri = 0; ri < rows.length; ri++) {
+    var data = rows[ri].getData();
+    var sid = (data.Sample_ID || "").trim();
+    var cell = rows[ri].getCell("Sample_ID");
+    if (!cell) continue;
+    var el = cell.getElement();
+    if (!sid) {
+      var suggestion = suggestSampleId(data);
+      if (suggestion) {
+        el.classList.add("cell-suggestion");
+        el.setAttribute("data-suggestion", suggestion);
+        el.title = "Suggested: " + suggestion;
+        // Show suggestion as cell content if not editing
+        if (!el.querySelector(".tabulator-editing")) {
+          el.textContent = suggestion;
+        }
+      } else {
+        el.classList.remove("cell-suggestion");
+        el.removeAttribute("data-suggestion");
+        el.title = "";
+      }
+    } else {
+      el.classList.remove("cell-suggestion");
+      el.removeAttribute("data-suggestion");
+      el.title = "";
+    }
+  }
+}
+
+// ===========================================================================
+// Import / Export
+// ===========================================================================
+
+function importTSV(text) {
+  var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+  if (lines.length < 1) return;
+
+  var header = lines[0].split("\t").map(function(s) { return s.trim(); });
+  // Validate header
+  var missing = COLUMNS.filter(function(c) { return header.indexOf(c) === -1; });
+  if (missing.length > 0) {
+    alert("Import error: missing columns: " + missing.join(", ") +
+      "\n\nExpected: " + COLUMNS.join(", ") +
+      "\nFound: " + header.join(", "));
+    return;
+  }
+
+  var colIdx = {};
+  for (var ci = 0; ci < COLUMNS.length; ci++) {
+    colIdx[COLUMNS[ci]] = header.indexOf(COLUMNS[ci]);
+  }
+
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var fields = lines[i].split("\t");
+    var row = {};
+    for (var ci = 0; ci < COLUMNS.length; ci++) {
+      var c = COLUMNS[ci];
+      row[c] = (fields[colIdx[c]] || "").trim();
+    }
+    rows.push(row);
+  }
+
+  table.setData(rows);
+  setTimeout(function() { runValidation(); applySuggestions(); }, 100);
+}
+
+function exportTSV() {
+  var data = table.getData();
+  // Before export, accept suggestions for empty Sample_IDs
+  for (var i = 0; i < data.length; i++) {
+    if (!(data[i].Sample_ID || "").trim()) {
+      var suggestion = suggestSampleId(data[i]);
+      if (suggestion) data[i].Sample_ID = suggestion;
+    }
+  }
+  var lines = [COLUMNS.join("\t")];
+  for (var i = 0; i < data.length; i++) {
+    lines.push(COLUMNS.map(function(c) { var v = data[i][c]; return (v == null) ? "" : String(v); }).join("\t"));
+  }
+  var blob = new Blob([lines.join("\n") + "\n"], { type: "text/tab-separated-values" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "sample_sheet.tsv";
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+}
+
+// ===========================================================================
+// Tabulator initialization
+// ===========================================================================
+
+function controlListValues() {
+  return [""].concat(getAllSampleIds());
+}
+
+var columnDefs = [
+  {
+    title: "", field: "_actions", width: 36, headerSort: false, frozen: true,
+    cssClass: "action-col", hozAlign: "center", resizable: false,
+    formatter: function() {
+      return '<button class="row-action-btn" aria-label="Row actions" title="Row actions">\u22EE</button>';
+    },
+    cellClick: function(e, cell) {
+      showCtxMenu(e, cell.getRow());
+    }
+  },
+  {
+    title: "Sample_ID", field: "Sample_ID", editor: "input", width: 200,
+    editorParams: { elementAttributes: { placeholder: "auto-suggested or type your own" } },
+    headerClick: function() { showDescription("Sample_ID"); },
+    cellClick: function(e, cell) { showDescription("Sample_ID"); },
+  },
+  {
+    title: "Assay", field: "Assay", width: 140,
+    editor: "list",
+    editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
+    headerClick: function() { showDescription("Assay"); },
+    cellClick: function(e, cell) { showDescription("Assay"); },
+  },
+  {
+    title: "Genome", field: "Genome", editor: "input", width: 120,
+    editorParams: { elementAttributes: { placeholder: "e.g. Spombe, ColCEN, hg38" } },
+    headerClick: function() { showDescription("Genome"); },
+    cellClick: function(e, cell) { showDescription("Genome"); },
+  },
+  {
+    title: "Levels", field: "Levels", editor: "input", width: 220,
+    editorParams: { elementAttributes: { placeholder: "e.g. genotype:WT,tissue:root" } },
+    headerClick: function() { showDescription("Levels"); },
+    cellClick: function(e, cell) { showDescription("Levels"); },
+  },
+  {
+    title: "Replicate_ID", field: "Replicate_ID", editor: "input", width: 110,
+    editorParams: { elementAttributes: { placeholder: "e.g. rep1" } },
+    headerClick: function() { showDescription("Replicate_ID"); },
+    cellClick: function(e, cell) { showDescription("Replicate_ID"); },
+  },
+  {
+    title: "Read_files", field: "Read_files", editor: "input", width: 200,
+    editorParams: { elementAttributes: { placeholder: "e.g. SRR12345678" } },
+    headerClick: function() { showDescription("Read_files"); },
+    cellClick: function(e, cell) { showDescription("Read_files"); },
+  },
+  {
+    title: "Read_layout", field: "Read_layout", width: 110,
+    editor: "list",
+    editorParams: { values: ["SE", "PE"], listOnEmpty: true, freetext: false },
+    headerClick: function() { showDescription("Read_layout"); },
+    cellClick: function(e, cell) { showDescription("Read_layout"); },
+  },
+  {
+    title: "IP_target", field: "IP_target", editor: "input", width: 120,
+    editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
+    headerClick: function() { showDescription("IP_target"); },
+    cellClick: function(e, cell) { showDescription("IP_target"); },
+  },
+  {
+    title: "Control", field: "Control", width: 200,
+    editor: "list",
+    editorParams: function(cell) {
+      return { values: controlListValues(), autocomplete: true, listOnEmpty: true, freetext: true };
+    },
+    headerClick: function() { showDescription("Control"); },
+    cellClick: function(e, cell) { showDescription("Control"); },
+  },
+];
+
+table = new Tabulator("#table-container", {
+  data: [emptyRow(), emptyRow(), emptyRow()],
+  columns: columnDefs,
+  layout: "fitDataFill",
+  movableRows: true,
+  history: true,
+  placeholder: "No data \u2014 click '+ Add Row' or import a TSV file",
+  rowHeight: 32,
+  index: "id",
+  reactiveData: false,
+});
+
+// Auto-increment IDs for row indexing
+var _rowIdCounter = 0;
+table.on("dataLoaded", function(data) {
+  for (var i = 0; i < data.length; i++) {
+    if (!data[i].id) data[i].id = ++_rowIdCounter;
+  }
+});
+table.on("rowAdded", function(row) {
+  var d = row.getData();
+  if (!d.id) {
+    row.update({ id: ++_rowIdCounter });
+  }
+});
+
+// Accept suggestion on edit start: if Sample_ID is empty but has suggestion, populate it
+table.on("cellEditing", function(cell) {
+  if (cell.getField() === "Sample_ID") {
+    var val = (cell.getValue() || "").trim();
+    var el = cell.getElement();
+    var suggestion = el.getAttribute("data-suggestion");
+    if (!val && suggestion) {
+      cell.setValue(suggestion);
+    }
+  }
+});
+
+table.on("cellEdited", function(cell) {
+  // When Assay changes, clear IP_target for non-ChIP
+  if (cell.getField() === "Assay") {
+    var row = cell.getRow();
+    var assay = (cell.getValue() || "").trim();
+    if (!CHIP_ASSAYS.has(assay)) {
+      row.update({ IP_target: "" });
+    }
+  }
+  runValidation();
+  applySuggestions();
+});
+
+table.on("rowDeleted", function() { runValidation(); applySuggestions(); });
+table.on("rowMoved", function() { runValidation(); });
+
+// Initial state
+table.on("tableBuilt", function() {
+  runValidation();
+  applySuggestions();
+});
+
+// ===========================================================================
+// Toolbar event handlers
+// ===========================================================================
+
+document.getElementById("btn-add-row").addEventListener("click", function() {
+  table.addRow(emptyRow());
+  runValidation();
+  applySuggestions();
+});
+
+document.getElementById("import-file").addEventListener("change", function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    importTSV(ev.target.result);
+  };
+  reader.readAsText(file);
+  e.target.value = ""; // reset so same file can be re-imported
+});
+
+document.getElementById("btn-export").addEventListener("click", exportTSV);
+
+// ===========================================================================
+// Keyboard shortcuts
+// ===========================================================================
+
+document.addEventListener("keydown", function(e) {
+  // Ctrl+Z: undo
+  if (e.ctrlKey && e.key === "z" && !e.shiftKey) {
+    table.undo();
+    runValidation();
+    applySuggestions();
+  }
+  // Ctrl+Shift+Z or Ctrl+Y: redo
+  if ((e.ctrlKey && e.shiftKey && e.key === "Z") || (e.ctrlKey && e.key === "y")) {
+    table.redo();
+    runValidation();
+    applySuggestions();
+  }
+});
+</script>
+</body>
+</html>
