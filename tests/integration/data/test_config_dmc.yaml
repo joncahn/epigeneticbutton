@@ -1,7 +1,7 @@
 # Test configuration for dmC (direct methylation) integration tests
 # This config is designed for dry-run testing only and does not require actual files
 
-repo_folder: "/grid/martienssen/home/eernst/src/epigeneticbutton"
+repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_dmc"
 sample_file: "tests/integration/data/test_samples_dmc.tsv"
 

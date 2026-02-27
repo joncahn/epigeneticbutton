@@ -1,19 +1,19 @@
-data_type	line	tissue	sample_type	replicate	seq_id	fastq_path	paired	ref_genome
-ChIP	WT	cell	H3K9me2	rep1	SRR20678305	SRA	PE	Spombe
-ChIP	WT	cell	H3K9me2	rep2	SRR20678333	SRA	PE	Spombe
-ChIP	WT	cell	H3K9me3	rep1	SRR20678311	SRA	PE	Spombe
-ChIP	WT	cell	H3K9me3	rep2	SRR20678336	SRA	PE	Spombe
-ChIP	dcr1	cell	H3K9me2	rep1	SRR20678308	SRA	PE	Spombe
-ChIP	dcr1	cell	H3K9me3	rep1	SRR20678314	SRA	PE	Spombe
-ChIP	WT	cell	Input	rep1	SRR5445712	SRA	PE	Spombe
-ChIP	dcr1	cell	Input	rep1	SRR5445712	SRA	PE	Spombe
-ChIP	veg	cell	H3K4me3	rep1	SRR31073789	SRA	SE	Spombe
-ChIP	veg	cell	H3K4me3	rep2	SRR31073812	SRA	SE	Spombe
-ChIP	veg	cell	Input	rep1	SRR31073785	SRA	SE	Spombe
-RNAseq	WT	cell	RNAseq	rep1	SRR30889044	SRA	SE	Spombe
-RNAseq	WT	cell	RNAseq	rep2	SRR30889043	SRA	SE	Spombe
-RNAseq	dcr1	cell	RNAseq	rep1	SRR30889039	SRA	SE	Spombe
-RNAseq	dcr1	cell	RNAseq	rep2	SRR30889038	SRA	SE	Spombe
-sRNA	WT	cell	sRNA	rep1	SRR20678362	SRA	SE	Spombe
-sRNA	WT	cell	sRNA	rep2	SRR20678373	SRA	SE	Spombe
-sRNA	dcr1	cell	sRNA	rep1	SRR20678363	SRA	SE	Spombe
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
+WT_cell_H3K9me2_rep1	ChIP_broad	Spombe	genotype:WT,tissue:cell	rep1	SRR20678305	PE	H3K9me2	WT_cell_Input_rep1
+WT_cell_H3K9me2_rep2	ChIP_broad	Spombe	genotype:WT,tissue:cell	rep2	SRR20678333	PE	H3K9me2	WT_cell_Input_rep1
+WT_cell_H3K9me3_rep1	ChIP_broad	Spombe	genotype:WT,tissue:cell	rep1	SRR20678311	PE	H3K9me3	WT_cell_Input_rep1
+WT_cell_H3K9me3_rep2	ChIP_broad	Spombe	genotype:WT,tissue:cell	rep2	SRR20678336	PE	H3K9me3	WT_cell_Input_rep1
+dcr1_cell_H3K9me2_rep1	ChIP_broad	Spombe	genotype:dcr1,tissue:cell	rep1	SRR20678308	PE	H3K9me2	dcr1_cell_Input_rep1
+dcr1_cell_H3K9me3_rep1	ChIP_broad	Spombe	genotype:dcr1,tissue:cell	rep1	SRR20678314	PE	H3K9me3	dcr1_cell_Input_rep1
+WT_cell_Input_rep1	ChIP_broad	Spombe	genotype:WT,tissue:cell	rep1	SRR5445712	PE	Input	
+dcr1_cell_Input_rep1	ChIP_broad	Spombe	genotype:dcr1,tissue:cell	rep1	SRR5445712	PE	Input	
+veg_cell_H3K4me3_rep1	ChIP_narrow	Spombe	genotype:veg,tissue:cell	rep1	SRR31073789	SE	H3K4me3	veg_cell_Input_rep1
+veg_cell_H3K4me3_rep2	ChIP_narrow	Spombe	genotype:veg,tissue:cell	rep2	SRR31073812	SE	H3K4me3	veg_cell_Input_rep1
+veg_cell_Input_rep1	ChIP_narrow	Spombe	genotype:veg,tissue:cell	rep1	SRR31073785	SE	Input	
+WT_cell_RNA_rep1	RNAseq	Spombe	genotype:WT,tissue:cell	rep1	SRR30889044	SE		
+WT_cell_RNA_rep2	RNAseq	Spombe	genotype:WT,tissue:cell	rep2	SRR30889043	SE		
+dcr1_cell_RNA_rep1	RNAseq	Spombe	genotype:dcr1,tissue:cell	rep1	SRR30889039	SE		
+dcr1_cell_RNA_rep2	RNAseq	Spombe	genotype:dcr1,tissue:cell	rep2	SRR30889038	SE		
+WT_cell_sRNA_rep1	sRNA	Spombe	genotype:WT,tissue:cell	rep1	SRR20678362	SE		
+WT_cell_sRNA_rep2	sRNA	Spombe	genotype:WT,tissue:cell	rep2	SRR20678373	SE		
+dcr1_cell_sRNA_rep1	sRNA	Spombe	genotype:dcr1,tissue:cell	rep1	SRR20678363	SE		

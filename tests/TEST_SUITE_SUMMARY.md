@@ -147,7 +147,6 @@ Defined in `tests/conftest.py`:
 6. **mock_bam_header** - Mock BAM file header with @SQ lines
 7. **mock_bam_read_with_mm_ml** - BAM read with MM/ML tags
 8. **mock_bam_read_without_mm** - BAM read without methylation tags
-9. **dmc_sample_names** - Dictionary of sample name examples (6 types)
 
 ## Running Tests
 

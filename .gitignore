@@ -53,3 +53,4 @@ NOTES.local.md
 # Auto-generated config files
 config/analysis_samplefile_*.tsv
 config/config_test_local.yaml
+dev/plans/

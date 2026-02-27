@@ -16,12 +16,12 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 ## Features
 
 - **Multiple Data Types Support**:
-  - Histone ChIP-seq
-  - Transcription Factor ChIP-seq
+  - ChIP-seq — histone marks (broad peaks) and transcription factors (narrow peaks)
   - RNA-seq
   - small RNA-seq
-  - MethylC-seq (mC) - Bisulfite sequencing via Bismark
+  - MethylC-seq - Bisulfite sequencing via Bismark (WGBS, EMseq)
   - Direct Methylation (dmC) - Long-read native methylation (ONT, PacBio)
+  - ATAC-seq *\*in development*
   - RAMPAGE *\*in development*
 
 - **Automated Analysis**:
@@ -68,15 +68,15 @@ For new users, it is recommended to use the configuration app to validate your s
 https://epicc-builder.streamlit.app/
 
 1. Prepare your sample metadata file (default to `config/all_samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
-   - `data_type`: Type of data [RNAseq | ChIP_* | TF_* | mC | sRNA] (RAMPAGE under development)
-   - `line`: Sample line (e.g. B73)
-   - `tissue`: Tissue type
-   - `sample_type`: Sample identifier
-   - `replicate`: Replicate ID
-   - `seq_id`: Sequencing ID; use the corresponding SRR####### if downloading from SRA
-   - `fastq_path`: Path to FASTQ files; if downloading from SRA, use "SRA" 
-   - `paired`: [PE | SE]
-   - `ref_genome`: Reference genome name
+   - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
+   - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `EMseq` | `dmC`]
+   - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)
+   - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
+   - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
+   - `Read_files`: Path to FASTQ/BAM files, or SRA accession (e.g. `SRR12345678`). For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple inputs.
+   - `Read_layout`: [`PE` | `SE`]
+   - `IP_target`: Required for ChIP assays — the IP target (e.g. `H3K9me2`) or control type (e.g. `Input`, `WCE`). Leave blank for other assays.
+   - `Control`: Sample_ID of the control sample for this IP (e.g. the Input sample's Sample_ID). Required for ChIP and RAMPAGE IP samples. Leave blank for controls and non-ChIP assays.
 
 2. Update `config/config.yaml` with your paths and parameters:
    - Sample file: this is the full path to the file detailed above which contain your samples metadata. 
@@ -137,64 +137,91 @@ snakemake --dag | dot -Tpng > dag.png
 
 ## Sample file configuration
 
-A template and more details can be found on the epicc-builder app:
-https://epicc-builder.streamlit.app/
-You can also use it to validate your entries.
+### Overview
 
-### Common to all types of samples:
-- Col2: *line*: Can be any information you want, such as `Col0` or `WT` to annotate and label samples
-- Col3: *tissue*: Can be any information you want, such as `leaf` or `mutant` or `6h_stress` to annotate and label samples
-The combination line x tissue will be the base for all comparisons (e.g `WT_leaf` vs `WT_roots` or `Col0_control` vs `Ler_stress`)
-- Col5: *replicate*: Any value to match the different replicates (e.g Rep1, RepA, 1). All the different replicates are merged for samples with the same line, tissue and sample_type.
-- Col6: *seq_id*: Unique identifier to identify the raw data. If the data is deposited in SRA, it can be an SRR number (e.g. SRR27821931) or a comma-delimited list of SRR numbers (e.g. SRR27821931,SRR27821932,SRR27821933) without spaces if multiple fastq files should be merged into 1 biological replicate. If the data is local, it must be a unique identifier of the file in this folder (e.g. `wt_k27`). This identifier should be shared by both 'R1' and 'R2' fastq files for paired-end data.
-- Col7: *fastq_path*: Either `SRA` if raw data to be downloaded from SRA (the SRR number should be used as `seq-id`), or the path to the directory containing the fastq file (e.g. `/archive/fastq`), in which case the `seq_id` should be a unique identifier of the corresponding file in this folder (e.g. `/archive/fastq/raw.reads.wt_k27.fastq.gz`)
-- Col8: *paired*: `PE` for paired-end data or `SE` for single-end data. PE samples should have two fastq files R1 and R2 at the location defined above, sharing the same identifier in Col6 (e.g. `/archive/fastq/raw.reads.wt_k27_R1.fastq.gz` and `/archive/fastq/raw.reads.wt_k27_R2.fastq.gz`)
-- Col9: *ref_genome*: Name of the reference genome to use for mapping (e.g `tair10`). 
-For each reference genome, a corresponding fasta, gff and gtf files are required. It can be a full path (including the extension) or relative to the main repo folder. These files can be gzipped. For example, if your sample file has `B73_NAM` as a reference genome (last column), there must be this entry in the config file:
+The sample metadata file is a tab-separated file (TSV) with 9 columns. Each row defines one biological sample.
+
+| Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
+|-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
+
+A migration script (`scripts/migrate_sample_sheet.py`) is available to convert old-format sample sheets.
+
+### Common to all types of samples
+
+- **Sample_ID**: A unique identifier for this sample. Used in output filenames. Must be filesystem-safe (no `__`, `/`, whitespace, or shell metacharacters).
+- **Levels**: Comma-separated `factor:level` pairs describing experimental conditions (e.g. `genotype:WT,tissue:leaf` or `genotype:Col0,treatment:control`). The combination of levels is used for comparisons. All samples must have the same number of factors with the same factor names.
+- **Replicate_ID**: Any value to identify replicates (e.g. `rep1`, `repA`, `1`). Replicates with the same Assay, Levels, IP_target, and Genome are merged for downstream analysis.
+- **Read_files**: Path to input data. Supports:
+  - SRA accession: `SRR27821931` (will be downloaded automatically)
+  - Multiple SRA accessions to merge: `SRR27821931+SRR27821932` (separated by `+`)
+  - Local FASTQ path: `/archive/fastq/sample_R1.fq.gz` (SE) or `/archive/fastq/sample_R1.fq.gz,/archive/fastq/sample_R2.fq.gz` (PE, comma-separated)
+  - Local BAM path for dmC: `/archive/bams/sample.bam`
+- **Read_layout**: `PE` for paired-end data or `SE` for single-end data.
+- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). For each genome, fasta, gff, and gtf files must be defined in `config/config.yaml`:
+```yaml
+ColCEN:
+  fasta_file: path/to/ColCEN.fasta   # .fa(.gz) or .fasta(.gz)
+  gff_file: ColCEN.gff               # .gff*(.gz)
+  gtf_file: ColCEN.gtf               # .gtf(.gz)
 ```
-B73_NAM:
-	fasta_file: path/to/B73.fasta	# can be .fa(.gz) or .fasta(.gz)
-	gff_file: B73.gff	# can be .gff*(.gz)
-	gtf_file: B73.gtf	# can be .gtf(.gz)
+The GTF file can be created from a GFF file with `gffread -T <gff_file> -o <gtf_file>`. All files can be gzipped.
+
+### ChIP-seq (Histones and Transcription Factors)
+
+- **Assay**: `ChIP_broad` for histone marks with broad peaks (e.g. H3K9me2, H3K27me3) or `ChIP_narrow` for marks with narrow peaks (e.g. H3K4me3) and transcription factors (e.g. TB1, FLC).
+- **IP_target**: Required for all ChIP samples including controls. The name of what was pulled down — e.g. `H3K9me2` or `TB1` for IP, or `Input`/`WCE`/`IgG` for controls.
+- **Control**: For IP samples, the Sample_ID of the control sample. Leave blank for control samples themselves. Multiple IP samples can share the same control.
+
+Histone example:
 ```
-Other files specific to each reference genome are optional.
-The GTF file can be created from a GFF file with cufflinks `gffread -T <gff_file> -o <gtf_file>` and check that `transcript_id` and `gene_id` are correctly assigned in the 9th column. The GFF file should have `gene` and `exon` in the 3rd column. All files can be gzipped (.gz extension).
+WT_leaf_H3K27ac_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12345	PE	H3K27ac	WT_leaf_Input_rep1
+WT_leaf_Input_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12346	PE	Input
+```
 
-### Histone ChIP-seq
-- Col1: *data_type*: `ChIP` or `ChIP_<id>` where `<id>` is an identifier to relate an IP sample to its corresponding input. Only necessary in case there are different inputs to be used for different IP samples that otherwise share the same `line` and `tissue` values.
-For example: If you have H3K27meac IP samples which you want compared to an H3 sample, and H4K16ac to be compared to H4 samples. Both H3 and H4 samples should be labeled `Input` in sample_type, so to differentiate them, use `ChIP_H3` and `ChIP_H4` for their data_type and the ones of H3K27ac and H4K16ac, respectively. Example:\
-`ChIP_H3	Col0	WT	H3K27ac	Rep1	wt_k27	./fastq/	PE	Tair10`\
-`ChIP_H3	Col0	WT	IP	Rep1	wt_h3_ctrl	./fastq/	PE	Tair10`\
-`ChIP_H4	Col0	WT	H3K27ac	Rep1	wt_h4k16	./fastq/	PE	Tair10`\
-`ChIP_H4	Col0	WT	IP	Rep1	wt_h4_ctrl	./fastq/	PE	Tair10`
-- Col4: *sample_type*: Either `Input` to be used as a control (even if it is actually H3 or IgG pull-down), or the histone mark IP (e.g. H3K9me2). If the mark is not already listed in the config file `chip_callpeaks: peaktype:`, add it to the desired category (either narrow or broad peaks).
-- Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `ChIP` data_type, using `MNase` for the light digest and `Input` for the heavy digest.
+Transcription factor example:
+```
+WT_leaf_TB1_rep1	ChIP_narrow	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12347	PE	TB1	WT_leaf_Input_rep1
+WT_leaf_Input_rep1	ChIP_narrow	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12348	PE	Input
+```
 
-### Transcription factor ChIP-seq
-- Col1: *data_type*: `TF_<tf_name>` where `<tf_name>` is the name of the transcirption factor (e.g. for `TB1` data, use `TF_TB1`). This name should be identical for the IP and its input, and for all replicates. Multiple TFs can be analyzed in parallel, each having its own set of IP and Input samples e.g. `TF_<name1>` and `TF_<name2>`.
-- Col4: *sample_type*: Either `Input` or `IP`. This works for transcription factors with narrow peaks (default). Use `IPb` for broad peaks.
+To use different controls for different marks (e.g. H3 for one mark, H4 for another), simply assign the appropriate control Sample_ID in the `Control` column.
+
+- Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `ChIP_broad`, using `MNase` as IP_target for the light digest and `Input` for the heavy digest.
 
 ### RNA-seq
-- Col1: *data_type*: `RNAseq`. No other options.
-- Col4: *sample_type*: `RNAseq`. No other options.
+
+- **Assay**: `RNAseq`
+- **IP_target**: Leave blank.
+- **Control**: Leave blank.
+
+### RAMPAGE
+
+- **Assay**: `RAMPAGE`
+- **IP_target**: Leave blank.
+- **Control**: Sample_ID of the corresponding RNAseq sample (used for normalization).
 
 ### small RNA-seq
-- Col1: *data_type*: `sRNA`. No other options.
-- Col4: *sample_type*: `sRNA`. Can also be `smallRNA` or `shRNA`. Does not really matter but it is used in file names.
+
+- **Assay**: `sRNA`
+- **IP_target**: Leave blank.
+- **Control**: Leave blank.
 
 ### Whole Genome Bisulfite Sequencing
-- Col1: *data_type*: `mC`. No other options.
-- Col4: *sample_type*: `mC`, `WGBS`, `Pico`, or `EMseq`. These labels help identify the chemical or enzymatic conversion method, but all are processed through the Bismark pipeline.
+
+- **Assay**: `WGBS` or `EMseq`. These labels identify the conversion method; both are processed through the Bismark pipeline.
+- **IP_target**: Leave blank.
+- **Control**: Leave blank.
 
 ### Direct Methylation (Long-Read Sequencing)
-- Col1: *data_type*: `mC`. No other options.
-- Col4: *sample_type*: `dmC`. This identifies samples with native base modifications (Oxford Nanopore, PacBio) that have not undergone bisulfite conversion or other enzymatic treatments. However, this sample type can also be used with any upstream methylation analysis that produces modBAM or bedMethyl files.
-- Col7: *fastq_path*: Path to input file or directory containing input files. Supports:
+
+- **Assay**: `dmC`. For samples with native base modifications (Oxford Nanopore, PacBio) that have not undergone bisulfite conversion.
+- **Read_files**: Path to input file or directory. Supports:
   - **modBAM**: BAM files with MM/ML methylation tags from basecalling (e.g., Dorado, Guppy)
   - **bedMethyl**: Pre-computed methylation calls in bedMethyl format (e.g., from modkit pileup)
-- Col6: *seq_id*: Unique identifier used to locate files in the fastq_path directory. When fastq_path is a directory, files matching `*seq_id*.bam` (for modBAM) or `*seq_id*.bed*` (for bedMethyl) will be automatically detected. If both formats exist, bedMethyl is preferred as it's pre-computed. When fastq_path is a direct file path, seq_id serves as a sample identifier.
-- Col8: *paired*: Only `SE` is currently supported for dmC samples (we assume long-read sequencing).
-- Note: The pipeline automatically detects whether input is modBAM or bedMethyl format. modBAM files are aligned if necessary and processed through modkit pileup. Both formats are converted to a unified Bismark-compatible CX_report format for downstream analysis (bigwig generation, DMR calling) compatible with bisulfite samples.
+- **Read_layout**: Only `SE` is currently supported (long-read sequencing).
+- **IP_target**: Leave blank.
+- **Control**: Leave blank.
+- Note: The pipeline automatically detects modBAM vs bedMethyl format. modBAM files are aligned and processed through modkit pileup. Both formats are converted to Bismark-compatible CX_report format for downstream analysis.
 
 ## Configuration Options
 
@@ -202,7 +229,7 @@ More details can be found on the epicc-builder app or commented within the `conf
 https://epicc-builder.streamlit.app/
 
 ### Main output options
-- `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true` (default), will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP/TF, heatmaps and metaplots on all genes).
+- `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true` (default), will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP, heatmaps and metaplots on all genes).
 - `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples on TEs. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome. The name of each TE (4th column of the bed file) must be unique. Default is `false`.
 - `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files. Default is `false`.
 
@@ -272,14 +299,14 @@ Given a bed file containing different regions, it will perform a motifs analysis
 By default motifs analysis is only performed on the final selected TF peak files (`motifs: true` in the config file). Edit to `allrep: true` in the config file for motifs analysis to be performed on all replicates and pairwise idr peaks if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the config file `jaspar_db` and change the `motifs_ref_genome` to match the samples.\
 To run the analysis:
 ```bash 
-snakemake --cores 1 results/TF/chkpts/motifs__<motif_target_file_label>.done
+snakemake --cores 1 results/ChIP/chkpts/motifs__<motif_target_file_label>.done
 ```
 Note that the separator is two underscores next to each other `__`.\
 An example running the pipeline on a slurm hpc, for regions from <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
 ```bash 
-snakemake --profile profiles/slurm results/TF/chkpts/motifs__my_regions_of_interests.done --config motifs_target_file="data/target_peaks.txt" motifs_target_file_label="my_regions_of_interests" motifs_ref_genome="ColCEN"
+snakemake --profile profiles/slurm results/ChIP/chkpts/motifs__my_regions_of_interests.done --config motifs_target_file="data/target_peaks.txt" motifs_target_file_label="my_regions_of_interests" motifs_ref_genome="ColCEN"
 ```
-Output is the folder `results/TF/<motif_target_file_label>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html. \
+Output is the folder `results/ChIP/<motif_target_file_label>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html. \
 When setting `motif_ref_genome`, it is safer to use a reference genome that has already been used in a run. Otherwise, it will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path.\
 For the target file chosen `motif_target_file`, if the regions are over 500bp, only the middle 400bp will be used.
 
@@ -350,7 +377,7 @@ snakemake --cores 1 results/combined/plots/Browser_<target_name>__<env>__<analys
 The target file is a bed-like file, with the following columns: Chr Start End ID Binsize Higlight_starts Higlight_widths\
 Each region will be printed individually, and merged into a final PDF.\
 Hightlights columns are optional, and correspond to regions of the browser that will be highlighted for this specific region (boxed). As many highlights can be used in a comma-separated lists, the first highlight will be in blue and all the others in red. For example, if the region to plot is chr1:1000-5000, using col6=3000,4000 col7=50,200 will make a blue box higlighting chr1:3000-3050 and a red one highlighting chr1:4000:4200.\
-Use <env>="all" to include all samples, "most" for all data-types except mC, or any single environment for data type-specific browsers `[all, most, ChIP, TF, RNA, sRNA, mC]`.\
+Use <env>="all" to include all samples, "most" for all data-types except mC, or any single environment for data type-specific browsers `[all, most, ChIP, ATAC, RNA, sRNA, mC]`.\
 By default, no TE file is used. If you want to add TE annotations, supply a bed-file in the config file `browser_TE_file`.
 
 ### **8. Rerunning a specific analysis**
@@ -391,13 +418,13 @@ epigeneticbutton/
 		├── plots/	# Data type specific plots
 		├── reports/	# QC reports
 		├── tracks/	# Track files (bigwigs)
-		└── */		# data-specific directories (e.g. 'peaks' for ChIP, 'peaks' and 'motifs' for TF, 'DEG' for RNA, 'DMRs' and 'methylcall' for mC, 'clusters' for sRNA)
+		└── */		# data-specific directories (e.g. 'peaks' for ChIP, 'DEG' for RNA, 'DMRs' and 'methylcall' for mC, 'clusters' for sRNA)
 ```
 
 ## Known potential issues
 
 1. Relationship between IP and Input for ChIP-seq samples\
-Whether a histone ChIP sample is to be compared to H3/H4 or to chromatin input, the sample it is compared to must be called 'Input'. It must also be sequenced either paired-end or single-end but the same than the IPs.
+Control samples are linked via the `Control` column in the sample sheet (must be a valid Sample_ID). IP and Control samples must use the same Read_layout (both PE or both SE).
 
 2. small RNA-seq libraries\
 Different small RNAseq libraries have different chemistry and might need to be trimmed differently. For now, the code only works if all your samples were done using the same library preparation, either netflex v3 or not. If you have a mix of libraries, you should run the pipeline with each kind separately, and then rerun the analysis with all the samples you want to anlayze together.
@@ -411,8 +438,8 @@ Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A p
 5. Quality-Of-Service slurm configuration\
 Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
 
-6. Help for local fasq files naming convention\
-If using local fastq files for paired-end data, the two read files need to end with `*R1*.f(ast)q(.gz)` and `*R2*.f(ast)q(.gz)`, or `_1.f(ast)q(.gz)` and `_2.f(ast)q(.gz)`, i.e. extensions `fq` or `fastq` and gzipped `.gz` or not. The `<seq_id>` should be common between the two files but distinct from all other files in the same folder (i.e. only one file matching the `*<seq_id>*R1*.f(ast)q(.gz)` expression).
+6. Help for local fastq files naming convention\
+If using local fastq files for paired-end data, provide comma-separated R1 and R2 paths in the `Read_files` column (e.g. `/path/sample_R1.fq.gz,/path/sample_R2.fq.gz`). Files can use extensions `.fq` or `.fastq` and may be gzipped (`.gz`).
 
 ## Features under development
 - RAMPAGE

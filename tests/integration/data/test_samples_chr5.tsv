@@ -1,5 +1,5 @@
-data_type	line	tissue	sample_type	replicate	seq_id	fastq_path	paired	ref_genome
-mC	rdr126ddm1	leaf	dmC	rep1	dmc_ddm1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453434.Chr5.bam	SE	ColCEN_Chr5
-mC	rdr126ddm1het	leaf	dmC	rep1	dmc_ddm1het	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453435.Chr5.bam	SE	ColCEN_Chr5
-mC	rdr126ddm1hp5	leaf	dmC	rep1	dmc_ddm1hp5	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453436.Chr5.bam	SE	ColCEN_Chr5
-mC	rdr126ddm1hethp5	leaf	dmC	rep1	dmc_ddm1hethp5	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453437.Chr5.bam	SE	ColCEN_Chr5
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
+rdr126ddm1_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453434.Chr5.bam	SE		
+rdr126ddm1het_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1het,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453435.Chr5.bam	SE		
+rdr126ddm1hp5_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1hp5,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453436.Chr5.bam	SE		
+rdr126ddm1hethp5_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1hethp5,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453437.Chr5.bam	SE		

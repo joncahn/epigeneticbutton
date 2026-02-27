@@ -38,7 +38,7 @@ def define_input_for_grouped_analysis(ref_genome):
     bamfiles = []
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')
+        sname = row['sample_name']
         bamfiles.append(f"results/sRNA/mapped/{sname}/clean__{sname}_condensed.bam")
     
     return bamfiles
@@ -81,7 +81,7 @@ def define_final_srna_output(ref_genome):
     
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')
+        sname = row['sample_name']
         qc_files.append(f"results/sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed and potentially filtered fastq files
         map_files.append(f"results/sRNA/reports/sizes_stats__{sname}.txt")
         if not trimmed_fastqs:
@@ -97,13 +97,14 @@ def define_final_srna_output(ref_genome):
         
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name_str(row, 'analysis')
-        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
+        spname = row['sample_name']
+        rep_ids = get_replicate_sample_ids(row['sample_name'], samples)
+        if len(rep_ids) >= 2:
             for size in range(srna_min, srna_max + 1):
-                bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__plus.bw")
-                bigwig_files.append(f"results/sRNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__{size}nt__minus.bw")
+                bigwig_files.append(f"results/sRNA/tracks/{row['sample_name']}__{size}nt__plus.bw")
+                bigwig_files.append(f"results/sRNA/tracks/{row['sample_name']}__{size}nt__minus.bw")
     
-    if len(filtered_analysis_samples) >= 2 and any(len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2 for _, row in filtered_analysis_samples.iterrows()):
+    if len(filtered_analysis_samples) >= 2 and any(len(get_replicate_sample_ids(row['sample_name'], samples)) >= 2 for _, row in filtered_analysis_samples.iterrows()):
         analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
         analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_genes.done")
         te_analysis_files.append(f"results/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_all_TEs.done")
@@ -395,17 +396,17 @@ rule filter_size_srna_sample:
 
 rule merging_srna_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"results/sRNA/mapped/sized__{wildcards.size}nt__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
-                                      for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
+        bamfiles = lambda wildcards: [f"results/sRNA/mapped/sized__{wildcards.size}nt__{sid}.bam"
+                                      for sid in get_replicate_sample_ids(wildcards.sample_name, samples)]
     output:
-        tempfile = temp("results/sRNA/mapped/temp__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
-        mergefile = temp("results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
-        indexfile = temp("results/sRNA/mapped/merged__{size}nt__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam.bai")
+        tempfile = temp("results/sRNA/mapped/temp__{size}nt__{sample_name}.bam"),
+        mergefile = temp("results/sRNA/mapped/merged__{size}nt__{sample_name}.bam"),
+        indexfile = temp("results/sRNA/mapped/merged__{size}nt__{sample_name}.bam.bai")
     params:
-        sname = lambda wildcards: sample_name_str(wildcards, 'analysis'),
+        sname = lambda wildcards: wildcards.sample_name,
         size = lambda wildcards: wildcards.size
     log:
-        temp(return_log_smallrna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_srna_reps", "{size}"))
+        temp(return_log_smallrna("{sample_name}", "merging_srna_reps", "{size}"))
     conda: CONDA_ENV_SRNA
     threads: config["resources"]["merging_srna_replicates"]["threads"]
     resources:
@@ -524,8 +525,8 @@ rule prep_files_for_differential_srna_clusters:
         tmp_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp_mb"],
         qos=config["resources"]["prep_files_for_differential_srna_clusters"]["qos"]
     run:
-        filtered_samples = samples[ (samples['data_type'] == 'sRNA') & (samples['ref_genome'] == params.ref_genome) ].copy()
-        filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
+        filtered_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == params.ref_genome) ].copy()
+        filtered_samples['Sample'] = filtered_samples['levels_label']
         filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
         
         sRNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()    
@@ -537,7 +538,7 @@ rule prep_files_for_differential_srna_clusters:
         column_order = ['Name']
         for _, row in sRNA_samples.iterrows():
             ROW = filtered_samples.loc[filtered_samples["Replicate"] == row["Replicate"]].iloc[0]
-            sname = sample_name_str(ROW, 'sample')
+            sname = ROW['sample_name']
             column_order.append(sname)
             
         temp = pd.read_csv(input.count_file, sep="\t", header=0)

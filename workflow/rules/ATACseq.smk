@@ -13,7 +13,7 @@ def define_final_atac_output(ref_genome):
 
     filtered_rep_samples = samples[ (samples['env'] == 'ATAC') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')
+        sname = row['sample_name']
         paired = get_sample_info_from_name(sname, samples, 'paired')
         env = "ATAC"
         if paired == "PE" and not aligned_bams:
@@ -32,25 +32,23 @@ def define_final_atac_output(ref_genome):
     # ATAC has no Input samples to filter out
     peaktype = config["atac_callpeaks"]["peaktype"]
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')
+        sname = row['sample_name']
         paired = get_sample_info_from_name(sname, samples, 'paired')
         bigwig_files.append(f"results/ATAC/tracks/coverage__final__{sname}.bw")
         peak_files.append(f"results/ATAC/peaks/peaks_atac__final__{sname}_peaks.{peaktype}Peak")
 
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ATAC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name_str(row, 'analysis')
+        spname = row['sample_name']
         peak_files.append(f"results/ATAC/peaks/selected_peaks__{spname}.bedPeak")
-        reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
+        reps = get_replicate_sample_ids(row['sample_name'], samples)
         if len(reps) >= 2:
-            bigwig_files.append(f"results/ATAC/tracks/coverage__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.bw")
+            bigwig_files.append(f"results/ATAC/tracks/coverage__merged__{row['sample_name']}.bw")
             stat_files.append(f"results/ATAC/chkpts/idr__{spname}.done")
             
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
-        a_dict = a._asdict()
-        b_dict = b._asdict()
-        sample1 = sample_name_str(a_dict, 'analysis')
-        sample2 = sample_name_str(b_dict, 'analysis')
+        sample1 = a._asdict()['sample_name']
+        sample2 = b._asdict()['sample_name']
         peak_files.append(f"results/ATAC/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
 
     results = map_files + bigwig_files
@@ -120,16 +118,18 @@ rule atac_bam_to_bed:
 
 rule calling_peaks_atac:
     input:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.bed.gz"
+        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz"
     output:
-        peakfile = "results/ATAC/peaks/peaks_atac__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.narrowPeak"
+        peakfile = "results/ATAC/peaks/peaks_atac__{file_type}__{sample_name}_peaks.narrowPeak"
+    wildcard_constraints:
+        file_type = "final|merged|pseudo1|pseudo2"
     params:
-        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
+        ipname = lambda wildcards: wildcards.sample_name,
         filetype = lambda wildcards: wildcards.file_type,
         params = config["atac_callpeaks"]['params'],
-        genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
+        genomesize = lambda wildcards: config[config[parse_sample_name(wildcards.sample_name)['ref_genome']]['species']]['genomesize']
     log:
-        temp(return_log_chip("ATAC","{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__narrowpeak_calling", ""))
+        temp(return_log_chip("ATAC","{sample_name}", "{file_type}__narrowpeak_calling", ""))
     conda: CONDA_ENV_ATAC
     threads: config["resources"]["calling_peaks_atac"]["threads"]
     resources:

@@ -13,7 +13,7 @@ Mock sample metadata file with 5 dmC samples:
 - 2 dmC modBAM samples (mutant leaf, rep1 & rep2)
 
 Format: 9-column TSV matching pipeline requirements
-- Columns: data_type, line, tissue, sample_type, replicate, seq_id, fastq_path, paired, ref_genome
+- Columns: Sample_ID, Assay, Genome, Levels, Replicate_ID, Read_files, Read_layout, IP_target, Control
 - Uses mock paths (no actual files needed)
 - Uses test reference genome "test_genome"
 
@@ -132,7 +132,7 @@ pytest tests/integration/test_dmc_dryrun.py --collect-only
 ```bash
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw
+    results/mC/tracks/WT_leaf_dmC_rep1__CG.bw
 ```
 
 ## File Sizes
@@ -186,7 +186,7 @@ These integration tests complement the existing unit tests:
 
 **Unit Tests** (`tests/unit/`):
 - Test individual functions
-- Test helper functions (parse_sample_name, is_dmc_sample, etc.)
+- Test helper functions (is_dmc_sample, parameters_for_mc, etc.)
 - Test validation scripts
 - Fast execution
 - No external dependencies

@@ -52,33 +52,45 @@ snakemake --profile profiles/slurm coverage_chip
 - `workflow/scripts/` - R scripts for statistical analysis and plotting
 - `workflow/envs/` - Conda environment YAML files per analysis type
 
-### Sample Naming Convention
+### Sample Sheet and Naming
 
-Samples are identified by a compound name: `{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}` (double underscore separators).
+Sample metadata is defined in a TSV file with 9 columns:
 
-Data types: `ChIP`, `ChIP_<group>`, `TF_<name>`, `RNAseq`, `sRNA`, `mC`
+`Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control`
 
-Sample types for mC data_type:
-- Bisulfite sequencing: `mC`, `WGBS`, `Pico`, `EMseq` (processed via Bismark)
-- Direct methylation: `dmC` (native base modifications from Oxford Nanopore/PacBio; processed via modkit)
+- **Sample_ID**: Unique identifier, used as filesystem name. Must be unique and filesystem-safe (no `__`, `/`, whitespace).
+- **Assay**: Controlled vocabulary: `ChIP_broad`, `ChIP_narrow`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `EMseq`, `dmC`
+- **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`)
+- **Levels**: Comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:root`). All samples must have the same factors.
+- **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
+- **Read_files**: SRA accession (`SRR12345`), local path, or `+`-separated for merging multiple inputs
+- **Read_layout**: `SE` or `PE`
+- **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `Input`). Blank for others.
+- **Control**: Sample_ID of the control sample (e.g. Input for ChIP). No chaining.
+
+Per-replicate files use `Sample_ID` directly (e.g. `final__WT_cell_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT_cell__H3K9me2__Spombe`).
+
+Peak type is determined by Assay: `ChIP_broad` → broad peaks (histone marks), `ChIP_narrow` → narrow peaks (transcription factors, H3K4me3, etc.). Both share the `ChIP` env (`results/ChIP/`).
+
+Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 
 ### Configuration
 
 - `config/config.yaml` - Main configuration (paths, parameters, resource allocation)
-- `config/all_samples.tsv` - Sample metadata (9 columns: data_type, line, tissue, sample_type, replicate, seq_id, fastq_path, paired, ref_genome)
+- `config/all_samples.tsv` - Sample metadata (see above)
 - `profiles/slurm/config.yaml` - SLURM executor settings
 
 ### Output Structure
 
-Results go to `results/{env}/` where env is one of: `ChIP`, `TF`, `RNA`, `sRNA`, `mC`, `combined`. Each contains `chkpts/` (checkpoint files for pipeline logic), `logs/`, `tracks/` (bigwigs), and analysis-specific subdirectories.
+Results go to `results/{env}/` where env is one of: `ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`. Each contains `chkpts/` (checkpoint files for pipeline logic), `logs/`, `tracks/` (bigwigs), and analysis-specific subdirectories.
 
 Reference genomes are prepared in `genomes/{ref_genome}/`.
 
 ## Key Implementation Details
 
 - Requires Snakemake 9.0+
-- ChIP Input samples must have `sample_type: Input` regardless of actual control type (H3, IgG, etc.)
-- TF ChIP uses `TF_<name>` data_type to link IP with corresponding Input
-- Peak types (narrow/broad) are determined by regex patterns in `chip_callpeaks.peaktype` config
+- Control samples are linked explicitly via the `Control` column (a valid Sample_ID). Controls can be any sample (WCE, H3, IgG, etc.).
+- Peak types are determined by Assay (`ChIP_broad` → broad, `ChIP_narrow` → narrow). No regex config needed.
+- Env mapping: `ChIP_broad`/`ChIP_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`EMseq`/`dmC` → `mC`
 - RNA-seq strandedness is configurable per protocol (RNAseq vs RAMPAGE)
 - Checkpoint files in `results/*/chkpts/` control re-running analyses; delete to force rerun

@@ -50,8 +50,8 @@ QC_option: "none" # options: ["none"|"all"] for fastqc
 GO: false # If switching to true, make sure the database is created, or the required files below are edited
 
 # Input options: By default, will perform the analysis from the raw fastqs. If intermediate files are already available, switch the corresponding format to "true".
-trimmed_fastqs: false # if fastqs are already trimmed (fastq file(s) (can be gzipped) required in the `fastq_path` folder of the metadata samplefile, 1 matching the `seq_id` if SE, 2 ending in R1 and R2 if PE)
-aligned_bams: false # if ChIP-seq alignments are already performed (a single sam or bam file matching the `seq_id` is required in the `fastq_path` folder of the metadata samplefile). Only works for ChIP-seq data (histone or TF) since other ouput from the alignment steps are necessary for the other data types (e.g. conut table for RNA-seq)
+trimmed_fastqs: false # if fastqs are already trimmed (fastq file(s) (can be gzipped) specified in the Read_files column of the sample sheet, 1 file if SE, comma-separated R1,R2 if PE)
+aligned_bams: false # if ChIP-seq alignments are already performed (a single sam or bam file specified in Read_files). Only works for ChIP-seq data (histone or TF) since other output from the alignment steps are necessary for the other data types (e.g. count table for RNA-seq)
 
 # Species-dependent parameters:
 thaliana:
@@ -205,7 +205,7 @@ mC_mapping:
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
 
 # Direct methylation (dmC) parameters
-# For sample_type "dmC" - native base modification detection from long-read sequencing (Oxford Nanopore, PacBio)
+# For Assay "dmC" - native base modification detection from long-read sequencing (Oxford Nanopore, PacBio)
 # Supports two input formats that are automatically detected:
 #   - modBAM: BAM files with MM/ML tags from modified basecalling (e.g., Dorado, Guppy)
 #   - bedMethyl: Pre-computed methylation calls in bedMethyl format (e.g., from prior modkit pileup)

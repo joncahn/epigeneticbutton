@@ -76,73 +76,55 @@ def define_samples_for_upset(wildcards, string):
     globenv = wildcards.env
     allreps = config['upset_allreps']
     if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     elif globenv == "RAMPAGE":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['sample_type'] == "RAMPAGE") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name_str(row, 'analysis')
-        if row.env == "TF":
+        if row.env in ["ChIP", "ATAC"]:
             if allreps:
-                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                    peaktype = get_peaktype_for_env(row.sample_type, row.env)
-                    paired = get_sample_info_from_name(spname, analysis_samples, 'paired')
-                    if paired == "PE":
-                        prefix = "peaks_pe"
-                    else:
-                        prefix = "peaks_se"
-                    file = f"results/{row.env}/peaks/{prefix}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.{peaktype}Peak"
-                    label = f"{row.line}_{row.tissue}_{row.extra_info}_{replicate}"
-                    names.append(f"{label}:{file}")
-                    files.append(file)
-                    types.add(row.extra_info)
-            else:
-                file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
-                label = f"{row.line}_{row.tissue}_{row.extra_info}"
-                names.append(f"{label}:{file}")
-                files.append(file)
-                types.add(row.extra_info)
-        elif row.env in ["ChIP", "ATAC"]:
-            if allreps:
-                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                    peaktype = get_peaktype_for_env(row.sample_type, row.env)
-                    paired = get_sample_info_from_name(spname, analysis_samples, 'paired')
+                for sid in get_replicate_sample_ids(row['sample_name'], samples):
+                    peaktype = get_peaktype_for_env(row['sample_name'], row.env)
+                    paired = get_sample_info_from_name(row['sample_name'], analysis_samples, 'paired')
                     if row.env == "ATAC":
                         prefix = "peaks_atac"
                     elif paired == "PE":
                         prefix = "peaks_pe"
                     else:
                         prefix = "peaks_se"
-                    file = f"results/{row.env}/peaks/{prefix}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.{peaktype}Peak"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{replicate}"
+                    file = f"results/{row.env}/peaks/{prefix}__final__{sid}_peaks.{peaktype}Peak"
+                    rep = parse_sample_name(sid)['replicate']
+                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
                     names.append(f"{label}:{file}")
                     files.append(file)
                     types.add(row.sample_type)
             else:
-                file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
+                file = f"results/{row.env}/peaks/selected_peaks__{row['sample_name']}.bedPeak"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
                 names.append(f"{label}:{file}")
                 files.append(file)
                 types.add(row.sample_type)
         elif globenv == "RAMPAGE":
             if allreps:
-                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                    file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
-                    label = f"{row.line}_{row.tissue}_{replicate}"
+                for sid in get_replicate_sample_ids(row['sample_name'], samples):
+                    file = f"results/RNA/TSS/TSS__final__{sid}_peaks.narrowPeak"
+                    rep = parse_sample_name(sid)['replicate']
+                    label = f"{row.line}_{row.tissue}_{rep}"
                     names.append(f"{label}:{file}")
                     files.append(file)
                     types.add(f"{row.line}_{row.tissue}")
             else:
-                file = f"results/RNA/TSS/TSS__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}_peaks.narrowPeak"
+                file = f"results/RNA/TSS/TSS__merged__{row['sample_name']}_peaks.narrowPeak"
                 label = f"{row.line}_{row.tissue}"
                 names.append(f"{label}:{file}")
                 files.append(file)
                 types.add(f"{row.line}_{row.tissue}")
         elif row.env == "sRNA":
-            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
-                label = f"{row.line}_{row.tissue}_{replicate}"
+            for sid in get_replicate_sample_ids(row['sample_name'], samples):
+                file = f"results/sRNA/mapped/{sid}/clusters.bed"
+                rep = parse_sample_name(sid)['replicate']
+                label = f"{row.line}_{row.tissue}_{rep}"
                 names.append(f"{label}:{file}")
                 files.append(file)
 
@@ -162,64 +144,9 @@ def define_samples_for_upset(wildcards, string):
     elif string == "types":
         return ordered
 
-# def define_bedfiles_per_env_and_ref(wildcards):
-    # files = []
-    # ref_genome = wildcards.ref_genome
-    # globenv = wildcards.env
-    # if globenv == "all_chip":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # elif globenv == "RAMPAGE":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['sample_type'] == "RAMPAGE") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # else:
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # for _, row in filtered_analysis_samples.iterrows():
-        # spname = sample_name_str(row, 'analysis')
-        # if globenv in ["all_chip", "ChIP", "TF", "ATAC"]:
-            # files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
-        # elif globenv == "sRNA":
-            # files.extend(f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
-                                      # for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
-        # elif globenv == "RAMPAGE":
-            # files.extend(f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
-                                      # for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
-
-    # return files
-
-# def define_sample_types_for_upset(wildcards):
-    # types = set()
-    # ref_genome = wildcards.ref_genome
-    # globenv = wildcards.env
-    # if globenv == "all_chip":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # elif globenv in ["ChIP", "TF", "ATAC"]:
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # elif globenv == "RAMPAGE":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['data_type'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # else:
-        # filtered_analysis_samples = None
-
-    # if filtered_analysis_samples is not None:
-        # for _, row in filtered_analysis_samples.iterrows():
-            # if row.env in ["ChIP", "ATAC"]:
-                # types.add(row.sample_type)
-            # elif row.env == "TF":
-                # types.add(row.extra_info)
-            # elif row.sample_type == "RAMPAGE":
-                # types.add(f"{row.line}__{row.tissue}")
-
-    # if globenv == "sRNA":
-        # srna_min = config['srna_min_size']
-        # srna_max = config['srna_max_size']
-        # types = [f"{s}nt" for s in range(srna_min, srna_max + 1)]
-        # types += ["MIRNA", "Others"]
-        # result = ":".join(types)
-    # else:
-        # result = ":".join(sorted(types))
-    # return result
-
 def define_upset_script(wildcards):
     globenv = wildcards.env
-    if globenv in ["all_chip", "ChIP", "TF", "ATAC"]:
+    if globenv in ["all_chip", "ChIP", "ATAC"]:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_peaks.R")
     elif globenv == "sRNA":
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_clusters.R")
@@ -248,7 +175,6 @@ def define_key_for_plots(wildcards, string):
     bigwigs = []
     labels = []
     marks = []
-    unique_tf = set()
     unique_chip = set()
     unique_atac = set()
     unique_rna = set()
@@ -272,13 +198,10 @@ def define_key_for_plots(wildcards, string):
     else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        prefix = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}"
-        reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
+        rep_ids = get_replicate_sample_ids(row['sample_name'], samples)
         if row.env == "ChIP":
             if not plot_allreps:
-                merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
-                onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"                
-                bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
+                bw = f"results/{row.env}/tracks/FC__merged__{row['sample_name']}.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/FC__final__{rep_ids[0]}.bw"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
                 grouped_bw[f"chip_{row.sample_type}"].append(bw)
                 grouped_labs[f"chip_{row.sample_type}"].append(label)
@@ -287,8 +210,9 @@ def define_key_for_plots(wildcards, string):
                 label_to_type[label] = f"{row.line}_{row.tissue}"
                 label_to_track[label] = row.sample_type
             else:
-                for rep in reps:
-                    bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
+                for sid in rep_ids:
+                    bw = f"results/{row.env}/tracks/FC__final__{sid}.bw"
+                    rep = parse_sample_name(sid)['replicate']
                     label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
                     grouped_bw[f"chip_{row.sample_type}"].append(bw)
                     grouped_labs[f"chip_{row.sample_type}"].append(label)
@@ -296,37 +220,12 @@ def define_key_for_plots(wildcards, string):
                     label_to_mark[label] = row.sample_type
                     label_to_type[label] = f"{row.line}_{row.tissue}"
                     label_to_track[label] = row.sample_type
-            
-        elif row.env == "TF":
-            if not plot_allreps:
-                merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
-                onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
-                bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
-                label = f"{row.line}_{row.tissue}_{row.extra_info}"
-                grouped_bw[f"tf_{row.extra_info}"].append(bw)
-                grouped_labs[f"tf_{row.extra_info}"].append(label)
-                unique_tf.add(row.extra_info)
-                label_to_mark[label] = row.extra_info
-                label_to_type[label] = f"{row.line}_{row.tissue}"
-                label_to_track[label] = row.extra_info
-            else:
-                for rep in reps:
-                    bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
-                    label = f"{row.line}_{row.tissue}_{row.extra_info}_{rep}"
-                    grouped_bw[f"tf_{row.extra_info}"].append(bw)
-                    grouped_labs[f"tf_{row.extra_info}"].append(label)
-                    unique_tf.add(row.extra_info)
-                    label_to_mark[label] = row.extra_info
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
-                    label_to_track[label] = row.extra_info
-            
+
         elif row.env == "RNA":
             strandedness = config['rna_tracks'][row.data_type]['strandedness']
             if strandedness == "unstranded":
                 if not plot_allreps:
-                    merged = f"{prefix}__merged__{row.ref_genome}"
-                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw = f"results/{row.env}/tracks/{merged}__unstranded.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__unstranded.bw"
+                    bw = f"results/{row.env}/tracks/{row['sample_name']}__unstranded.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__unstranded.bw"
                     label = f"{row.line}_{row.tissue}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].append(bw)
                     grouped_labs[f"{row.data_type}"].append(f"{label}")
@@ -335,8 +234,9 @@ def define_key_for_plots(wildcards, string):
                     label_to_type[label] = f"{row.line}_{row.tissue}"
                     label_to_track[label] = row.data_type
                 else:
-                    for rep in reps:
-                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__unstranded.bw"
+                    for sid in rep_ids:
+                        bw = f"results/{row.env}/tracks/{sid}__unstranded.bw"
+                        rep = parse_sample_name(sid)['replicate']
                         label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
                         grouped_bw[f"{row.data_type}"].append(bw)
                         grouped_labs[f"{row.data_type}"].append(f"{label}")
@@ -346,10 +246,8 @@ def define_key_for_plots(wildcards, string):
                         label_to_track[label] = row.data_type
             elif strand == "unstranded":
                 if not plot_allreps:
-                    merged = f"{prefix}__merged__{row.ref_genome}"
-                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw1 = f"results/{row.env}/tracks/{merged}__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__plus.bw"
-                    bw2 = f"results/{row.env}/tracks/{merged}__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__minus.bw"
+                    bw1 = f"results/{row.env}/tracks/{row['sample_name']}__plus.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__plus.bw"
+                    bw2 = f"results/{row.env}/tracks/{row['sample_name']}__minus.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__minus.bw"
                     label = f"{row.line}_{row.tissue}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
                     grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
@@ -361,9 +259,10 @@ def define_key_for_plots(wildcards, string):
                     label_to_track[f"{label}_plus"] = f"{row.data_type}_plus"
                     label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
                 else:
-                    for rep in reps:
-                        bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__plus.bw"
-                        bw2 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__minus.bw"
+                    for sid in rep_ids:
+                        bw1 = f"results/{row.env}/tracks/{sid}__plus.bw"
+                        bw2 = f"results/{row.env}/tracks/{sid}__minus.bw"
+                        rep = parse_sample_name(sid)['replicate']
                         label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
                         grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
                         grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
@@ -376,9 +275,7 @@ def define_key_for_plots(wildcards, string):
                         label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
             else:
                 if not plot_allreps:
-                    merged = f"{prefix}__merged__{row.ref_genome}"
-                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
+                    bw = f"results/{row.env}/tracks/{row['sample_name']}__{strand}.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__{strand}.bw"
                     label = f"{row.line}_{row.tissue}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].append(bw)
                     grouped_labs[f"{row.data_type}"].append(f"{label}")
@@ -387,8 +284,9 @@ def define_key_for_plots(wildcards, string):
                     label_to_type[label] = f"{row.line}_{row.tissue}"
                     label_to_track[label] = row.data_type
                 else:
-                    for rep in reps:
-                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{strand}.bw"
+                    for sid in rep_ids:
+                        bw = f"results/{row.env}/tracks/{sid}__{strand}.bw"
+                        rep = parse_sample_name(sid)['replicate']
                         label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
                         grouped_bw[f"{row.data_type}"].append(bw)
                         grouped_labs[f"{row.data_type}"].append(f"{label}")
@@ -401,10 +299,8 @@ def define_key_for_plots(wildcards, string):
             for size in srna_sizes:
                 if strand == "unstranded":
                     if not plot_allreps:
-                        merged = f"{prefix}__merged__{row.ref_genome}"
-                        onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                        bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
-                        bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
+                        bw1 = f"results/{row.env}/tracks/{row['sample_name']}__{size}nt__plus.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__{size}nt__plus.bw"
+                        bw2 = f"results/{row.env}/tracks/{row['sample_name']}__{size}nt__minus.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__{size}nt__minus.bw"
                         label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
                         grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
                         grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
@@ -416,9 +312,10 @@ def define_key_for_plots(wildcards, string):
                         label_to_track[f"{label}_plus"] = f"sRNA_{size}nt_plus"
                         label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                     else:
-                        for rep in reps:
-                            bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__plus.bw"
-                            bw2 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__minus.bw"
+                        for sid in rep_ids:
+                            bw1 = f"results/{row.env}/tracks/{sid}__{size}nt__plus.bw"
+                            bw2 = f"results/{row.env}/tracks/{sid}__{size}nt__minus.bw"
+                            rep = parse_sample_name(sid)['replicate']
                             label = f"{row.line}_{row.tissue}_sRNA_{rep}_{size}nt"
                             grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
                             grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
@@ -431,9 +328,7 @@ def define_key_for_plots(wildcards, string):
                             label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                 else:
                     if not plot_allreps:
-                        merged = f"{prefix}__merged__{row.ref_genome}"
-                        onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                        bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
+                        bw = f"results/{row.env}/tracks/{row['sample_name']}__{size}nt__{strand}.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__{size}nt__{strand}.bw"
                         label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
                         grouped_bw[f"sRNA_{size}nt"].append(bw)
                         grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
@@ -442,8 +337,9 @@ def define_key_for_plots(wildcards, string):
                         label_to_type[label] = f"{row.line}_{row.tissue}"
                         label_to_track[label] = f"sRNA_{size}nt"
                     else:
-                        for rep in reps:
-                            bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__{strand}.bw"
+                        for sid in rep_ids:
+                            bw = f"results/{row.env}/tracks/{sid}__{size}nt__{strand}.bw"
+                            rep = parse_sample_name(sid)['replicate']
                             label = f"{row.line}_{row.tissue}_sRNA_{rep}_{size}nt"
                             grouped_bw[f"sRNA_{size}nt"].append(bw)
                             grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
@@ -454,10 +350,8 @@ def define_key_for_plots(wildcards, string):
                         
         elif row.env == "mC":
             if not plot_allreps:
-                merged = f"{prefix}__merged__{row.ref_genome}"
-                onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
                 for context in ["CG","CHG","CHH"]:
-                    bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}.bw"
+                    bw = f"results/{row.env}/tracks/{row['sample_name']}__{context}.bw" if len(rep_ids) >=2 else f"results/{row.env}/tracks/{rep_ids[0]}__{context}.bw"
                     label = f"{row.line}_{row.tissue}_m{context}"
                     grouped_bw[f"m{context}"].append(bw)
                     grouped_labs[f"m{context}"].append(f"{label}")
@@ -466,9 +360,10 @@ def define_key_for_plots(wildcards, string):
                     label_to_type[label] = f"{row.line}_{row.tissue}"
                     label_to_track[label] = f"m{context}"
             else:
-                for rep in reps:
+                for sid in rep_ids:
                     for context in ["CG","CHG","CHH"]:
-                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{context}.bw"
+                        bw = f"results/{row.env}/tracks/{sid}__{context}.bw"
+                        rep = parse_sample_name(sid)['replicate']
                         label = f"{row.line}_{row.tissue}_{rep}_m{context}"
                         grouped_bw[f"m{context}"].append(bw)
                         grouped_labs[f"m{context}"].append(f"{label}")
@@ -479,9 +374,7 @@ def define_key_for_plots(wildcards, string):
 
         elif row.env == "ATAC":
             if not plot_allreps:
-                merged = f"coverage__merged__{prefix}__merged__{row.ref_genome}.bw"
-                onerep = f"coverage__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
-                bw = f"results/ATAC/tracks/{merged}" if len(reps) >=2 else f"results/ATAC/tracks/{onerep}"
+                bw = f"results/ATAC/tracks/coverage__merged__{row['sample_name']}.bw" if len(rep_ids) >=2 else f"results/ATAC/tracks/coverage__final__{rep_ids[0]}.bw"
                 label = f"{row.line}_{row.tissue}_{row.sample_type}"
                 grouped_bw["atac"].append(bw)
                 grouped_labs["atac"].append(label)
@@ -490,8 +383,9 @@ def define_key_for_plots(wildcards, string):
                 label_to_type[label] = f"{row.line}_{row.tissue}"
                 label_to_track[label] = "ATAC"
             else:
-                for rep in reps:
-                    bw = f"results/ATAC/tracks/coverage__final__{prefix}__{rep}__{row.ref_genome}.bw"
+                for sid in rep_ids:
+                    bw = f"results/ATAC/tracks/coverage__final__{sid}.bw"
+                    rep = parse_sample_name(sid)['replicate']
                     label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
                     grouped_bw["atac"].append(bw)
                     grouped_labs["atac"].append(label)
@@ -502,7 +396,6 @@ def define_key_for_plots(wildcards, string):
 
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
-        sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) +
         sum([grouped_bw.get("atac", [])], []) +
         sum([grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) +
         sum([grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
@@ -510,15 +403,14 @@ def define_key_for_plots(wildcards, string):
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
-        sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) +
         sum([grouped_labs.get("atac", [])], []) +
         sum([grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) +
         sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
-    marks = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marks = ( sorted(unique_chip) + sorted(unique_atac) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
 
-    marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marksforbrowser = ( sorted(unique_chip) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
     types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
     
@@ -592,17 +484,17 @@ def define_input_for_pca(wildcards, string):
         filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
         context = globenv[1:]
         for _, row in filtered_samples.iterrows():
-            bw = f"results/mC/tracks/{sample_name_str(row, 'sample')}__{context}.bw"
+            bw = f"results/mC/tracks/{row['sample_name']}__{context}.bw"
             label = f"{row.line}_{row.tissue}_{row.replicate}"
             group = f"{row.line}_{row.tissue}"
             tracks.append(bw)
             labels.append(label)
             unique_group.add(group)
             label_to_group[label] = group
-    elif globenv in ["TF", "ChIP", "ATAC"]:
+    elif globenv in ["ChIP", "ATAC"]:
         filtered_samples = samples[ (samples['env'] == globenv) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
-            bam = f"results/{globenv}/mapped/final__{sample_name_str(row, 'sample')}.bam"
+            bam = f"results/{globenv}/mapped/final__{row['sample_name']}.bam"
             label = f"{row.sample_type}_{row.line}_{row.tissue}_{row.data_type}_{row.replicate}"
             group = f"{row.sample_type}_{row.line}_{row.tissue}"
             tracks.append(bam)
@@ -610,9 +502,9 @@ def define_input_for_pca(wildcards, string):
             unique_group.add(group)
             label_to_group[label] = group
     elif globenv == "all_chip":
-        filtered_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
+        filtered_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
-            bam = f"results/{row.env}/mapped/final__{sample_name_str(row, 'sample')}.bam"
+            bam = f"results/{row.env}/mapped/final__{row['sample_name']}.bam"
             label = f"{row.sample_type}_{row.line}_{row.tissue}_{row.data_type}_{row.replicate}"
             group = f"{row.sample_type}_{row.line}_{row.tissue}"
             tracks.append(bam)
@@ -634,11 +526,11 @@ def define_final_stats_output():
     aligned_bams = config['aligned_bams']
     stat_files = []    
     if not aligned_bams:
-        stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","ATAC"]])
+        stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","ATAC"]])
 
     stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA","mC"]])
     stat_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
-    stat_files += expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","ATAC"]])
+    stat_files += expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","ATAC"]])
 
     return stat_files
 
@@ -654,7 +546,6 @@ def define_final_combined_output(ref_genome):
     
     all_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
     chip_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    tf_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     atac_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ATAC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     mc_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -666,11 +557,8 @@ def define_final_combined_output(ref_genome):
     
     if len(chip_analysis_samples) >=2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
-    
-    if len(tf_analysis_samples) >=2:
-        plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
-    
-    peak_envs = sum(1 for s in [chip_analysis_samples, tf_analysis_samples, atac_analysis_samples] if len(s) >= 1)
+
+    peak_envs = sum(1 for s in [chip_analysis_samples, atac_analysis_samples] if len(s) >= 1)
     if peak_envs >= 2:
         plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
@@ -735,11 +623,11 @@ def define_final_combined_output(ref_genome):
             plot_files.append(f"results/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
             plot_files.append(f"results/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
     
-    all_chip_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
+    all_chip_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
     if len(all_chip_samples) >=3:
             plot_files.append(f"results/combined/plots/PCA__all_chip__{analysis_name}__{ref_genome}.pdf")
-    
-    for env in [e for e in UNIQUE_ENVS if e in ["TF", "ChIP", "ATAC"]]:
+
+    for env in [e for e in UNIQUE_ENVS if e in ["ChIP", "ATAC"]]:
         env_rep_samples = samples[ (samples['env'] == env) & (samples['ref_genome'] == ref_genome) ].copy()
         if len(env_rep_samples) >=3:
             plot_files.append(f"results/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf")

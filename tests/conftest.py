@@ -99,14 +99,3 @@ def mock_bam_read_without_mm():
     )
 
 
-@pytest.fixture
-def dmc_sample_names():
-    """Return sample name examples for direct methylation (dmC)."""
-    return {
-        "dmc_modbam": "mC__Col0__leaf__dmC__rep1__ColCEN",
-        "dmc_bedmethyl": "mC__Col0__leaf__bedMethyl__rep1__ColCEN",
-        "bismark_wgbs": "mC__Col0__leaf__WGBS__rep1__ColCEN",
-        "bismark_pico": "mC__Col0__leaf__Pico__rep1__ColCEN",
-        "bismark_emseq": "mC__Col0__leaf__EMseq__rep1__ColCEN",
-        "bismark_default": "mC__Col0__leaf__sample__rep1__ColCEN",
-    }

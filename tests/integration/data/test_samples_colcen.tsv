@@ -1,27 +1,27 @@
-data_type	line	tissue	sample_type	replicate	seq_id	fastq_path	paired	ref_genome
-ChIP	WT	leaf	CenH3	rep1	WT_CenH3_IP_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	WT	leaf	CenH3	rep2	WT_CenH3_IP_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	WT	leaf	Input	rep1	WT_CenH3_Input_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	WT	leaf	Input	rep2	WT_CenH3_Input_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1	leaf	CenH3	rep1	ddm1rdr126_CenH3_IP_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1	leaf	CenH3	rep2	ddm1rdr126_CenH3_IP_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1	leaf	Input	rep1	ddm1rdr126_CenH3_Input_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1	leaf	Input	rep2	ddm1rdr126_CenH3_Input_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1hp5	leaf	CenH3	rep1	hp5_CenH3_IP_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1hp5	leaf	CenH3	rep2	hp5_CenH3_IP_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1hp5	leaf	Input	rep1	hp5_CenH3_Input_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-ChIP	rdr126ddm1hp5	leaf	Input	rep2	hp5_CenH3_Input_Rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs	PE	ColCEN
-mC	rdr126ddm1	leaf	dmC	rep1	as5-1_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
-mC	rdr126ddm1het	leaf	dmC	rep1	as5-1-wt_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
-mC	rdr126ddm1hp5	leaf	dmC	rep1	as6-1_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
-mC	rdr126ddm1hethp5	leaf	dmC	rep1	as6-1-wt_Rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024	SE	ColCEN
-ATAC	WT	leaf	ATAC	Rep1	SRR12362020	SRA	PE	ColCEN
-ATAC	WT	leaf	ATAC	Rep2	SRR12362021	SRA	PE	ColCEN
-ATAC	WT	leaf	ATAC	Rep3	SRR12362022	SRA	PE	ColCEN
-ATAC	WT	leaf	ATAC	Rep4	SRR12362023	SRA	PE	ColCEN
-ATAC	ddm1	leaf	ATAC	Rep1	SRR12362026	SRA	PE	ColCEN
-ATAC	ddm1	leaf	ATAC	Rep2	SRR12362027	SRA	PE	ColCEN
-ATAC	nrpd1	leaf	ATAC	Rep1	SRR12362044	SRA	PE	ColCEN
-ATAC	nrpd1	leaf	ATAC	Rep2	SRR12362045	SRA	PE	ColCEN
-ATAC	nrpd1	leaf	ATAC	Rep3	SRR12362046	SRA	PE	ColCEN
-ATAC	nrpd1	leaf	ATAC	Rep4	SRR12362047	SRA	PE	ColCEN
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
+WT_leaf_CenH3_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/WT_CenH3_IP_Rep1	PE	CenH3	WT_leaf_Input_rep1
+WT_leaf_CenH3_rep2	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/WT_CenH3_IP_Rep2	PE	CenH3	WT_leaf_Input_rep2
+WT_leaf_Input_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/WT_CenH3_Input_Rep1	PE	Input	
+WT_leaf_Input_rep2	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/WT_CenH3_Input_Rep2	PE	Input	
+rdr126ddm1_leaf_CenH3_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/ddm1rdr126_CenH3_IP_Rep1	PE	CenH3	rdr126ddm1_leaf_Input_rep1
+rdr126ddm1_leaf_CenH3_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/ddm1rdr126_CenH3_IP_Rep2	PE	CenH3	rdr126ddm1_leaf_Input_rep2
+rdr126ddm1_leaf_Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/ddm1rdr126_CenH3_Input_Rep1	PE	Input	
+rdr126ddm1_leaf_Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/ddm1rdr126_CenH3_Input_Rep2	PE	Input	
+rdr126ddm1hp5_leaf_CenH3_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/hp5_CenH3_IP_Rep1	PE	CenH3	rdr126ddm1hp5_leaf_Input_rep1
+rdr126ddm1hp5_leaf_CenH3_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/hp5_CenH3_IP_Rep2	PE	CenH3	rdr126ddm1hp5_leaf_Input_rep2
+rdr126ddm1hp5_leaf_Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/hp5_CenH3_Input_Rep1	PE	Input	
+rdr126ddm1hp5_leaf_Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/chip-fastqs/hp5_CenH3_Input_Rep2	PE	Input	
+rdr126ddm1_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024/as5-1_Rep1	SE		
+rdr126ddm1het_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1het,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024/as5-1-wt_Rep1	SE		
+rdr126ddm1hp5_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024/as6-1_Rep1	SE		
+rdr126ddm1hethp5_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1hethp5,tissue:leaf	rep1	/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton/test-data-prep/modbams-shimada2024/as6-1-wt_Rep1	SE		
+WT_leaf_ATAC_Rep1	ATAC	ColCEN	genotype:WT,tissue:leaf	Rep1	SRR12362020	PE		
+WT_leaf_ATAC_Rep2	ATAC	ColCEN	genotype:WT,tissue:leaf	Rep2	SRR12362021	PE		
+WT_leaf_ATAC_Rep3	ATAC	ColCEN	genotype:WT,tissue:leaf	Rep3	SRR12362022	PE		
+WT_leaf_ATAC_Rep4	ATAC	ColCEN	genotype:WT,tissue:leaf	Rep4	SRR12362023	PE		
+ddm1_leaf_ATAC_Rep1	ATAC	ColCEN	genotype:ddm1,tissue:leaf	Rep1	SRR12362026	PE		
+ddm1_leaf_ATAC_Rep2	ATAC	ColCEN	genotype:ddm1,tissue:leaf	Rep2	SRR12362027	PE		
+nrpd1_leaf_ATAC_Rep1	ATAC	ColCEN	genotype:nrpd1,tissue:leaf	Rep1	SRR12362044	PE		
+nrpd1_leaf_ATAC_Rep2	ATAC	ColCEN	genotype:nrpd1,tissue:leaf	Rep2	SRR12362045	PE		
+nrpd1_leaf_ATAC_Rep3	ATAC	ColCEN	genotype:nrpd1,tissue:leaf	Rep3	SRR12362046	PE		
+nrpd1_leaf_ATAC_Rep4	ATAC	ColCEN	genotype:nrpd1,tissue:leaf	Rep4	SRR12362047	PE		

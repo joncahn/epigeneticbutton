@@ -4,17 +4,48 @@ Integration tests for dmC (direct methylation) workflow using Snakemake dry-run.
 These tests verify that the Snakemake DAG can be correctly built and wildcards
 resolved for dmC samples (from ONT or other direct methylation platforms)
 without actually executing the rules.
+
+Test samples (from test_samples_dmc.tsv, new format):
+  Sample_ID                 Assay  Genome       Levels
+  WT_leaf_dmC_rep1          dmC    test_genome  genotype:WT,tissue:leaf
+  WT_leaf_dmC_rep2          dmC    test_genome  genotype:WT,tissue:leaf
+  WT_root_bedMethyl_rep1    dmC    test_genome  genotype:WT,tissue:root
+  mutant_leaf_dmC_rep1      dmC    test_genome  genotype:mutant,tissue:leaf
+  mutant_leaf_dmC_rep2      dmC    test_genome  genotype:mutant,tissue:leaf
+
+Output paths use Sample_ID directly:
+  results/mC/tracks/{Sample_ID}__{context}.bw
+
+Analysis-level names (for DMRs) use build_analysis_name():
+  {Assay}__{levels_label}__{IP_target}__{Genome}
+  e.g. dmC__WT_leaf____test_genome
 """
 
 import pytest
 import subprocess
-import re
-import os
 from pathlib import Path
 
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
+
+
+# ---------------------------------------------------------------------------
+# Target path constants (derived from test_samples_dmc.tsv)
+# ---------------------------------------------------------------------------
+
+# Per-replicate bigwig targets
+DMC_MODBAM_TARGET = "results/mC/tracks/WT_leaf_dmC_rep1__CG.bw"
+DMC_MODBAM_REP2_TARGET = "results/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
+BEDMETHYL_TARGET = "results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw"
+MUTANT_TARGET = "results/mC/tracks/mutant_leaf_dmC_rep1__CG.bw"
+
+# Analysis-level names (Assay__levels_label__IP_target__Genome)
+WT_LEAF_ANALYSIS = "dmC__WT_leaf____test_genome"
+MUTANT_LEAF_ANALYSIS = "dmC__mutant_leaf____test_genome"
+
+# DMR target
+DMR_TARGET = f"results/mC/DMRs/summary__{WT_LEAF_ANALYSIS}__vs__{MUTANT_LEAF_ANALYSIS}__DMRs.txt"
 
 
 @pytest.fixture(scope="module")
@@ -64,17 +95,16 @@ def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
         "--dry-run",
         "--configfile", config_file,
         "--cores", "1",
+        "--quiet", "progress",
     ]
-
-    if target:
-        cmd.append(target)
-
-    # Add --quiet at end to avoid it consuming the target (Snakemake 9 behavior)
-    cmd.append("--quiet")
-    cmd.append("progress")
 
     if extra_args:
         cmd.extend(extra_args)
+
+    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
+    if target:
+        cmd.append("--")
+        cmd.append(target)
 
     result = subprocess.run(
         cmd,
@@ -103,10 +133,12 @@ def run_snakemake_dag(repo_root, config_file, target=None):
         "snakemake",
         "--dag",
         "--configfile", config_file,
-        "--cores", "1"
+        "--cores", "1",
     ]
 
+    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
     if target:
+        cmd.append("--")
         cmd.append(target)
 
     result = subprocess.run(
@@ -144,7 +176,7 @@ class TestDmcModBAMWorkflow:
     @pytest.fixture
     def dmc_modbam_target(self):
         """Return target for dmC modBAM bigwig output."""
-        return "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
+        return DMC_MODBAM_TARGET
 
     def test_dmc_modbam_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
         """Test that dry-run succeeds for dmC modBAM sample."""
@@ -169,13 +201,11 @@ class TestDmcModBAMWorkflow:
         output = result.stdout + result.stderr
 
         # Check for dmC-specific rules
-        # Note: modkit_pileup now does context filtering directly with --motif,
-        # so split_bedmethyl_by_context and make_modkit_context_beds are not needed for dmC
         expected_rules = [
-            "get_modbam",
-            "align_modbam",
-            "modkit_pileup",
-            "make_dmc_bigwig_files"
+            "get_dmc_input",
+            "dmc_input_checkpoint",
+            "convert_bedmethyl_to_cx_report",
+            "make_mc_bigwig_files"
         ]
 
         for rule in expected_rules:
@@ -210,7 +240,7 @@ class TestDmcModBAMWorkflow:
         contexts = ["CG", "CHG", "CHH"]
 
         for context in contexts:
-            target = f"results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__{context}.bw"
+            target = f"results/mC/tracks/WT_leaf_dmC_rep1__{context}.bw"
             result = run_snakemake_dryrun(repo_root, test_config, target)
 
             assert result.returncode == 0, f"Dry-run failed for {context} context: {result.stderr}"
@@ -222,7 +252,7 @@ class TestBedMethylWorkflow:
     @pytest.fixture
     def bedmethyl_target(self):
         """Return target for bedMethyl bigwig output."""
-        return "results/mC/tracks/mC__WT__root__bedMethyl__rep1__test_genome__CG.bw"
+        return BEDMETHYL_TARGET
 
     def test_bedmethyl_dryrun_succeeds(self, snakemake_available, repo_root, test_config, bedmethyl_target):
         """Test that dry-run succeeds for bedMethyl sample."""
@@ -245,12 +275,13 @@ class TestBedMethylWorkflow:
         output = result.stdout + result.stderr
 
         # Check for bedMethyl-specific rules
+        # bedMethyl uses get_dmc_input (auto-detects input type),
+        # then copy_bedmethyl_input, merge_pileup_sources, convert to CX_report
         expected_rules = [
-            "get_bedmethyl",
-            "copy_bedmethyl_for_pileup",
-            "split_bedmethyl_by_context",
-            "make_dmc_bigwig_files",
-            "make_modkit_context_beds"
+            "get_dmc_input",
+            "dmc_input_checkpoint",
+            "convert_bedmethyl_to_cx_report",
+            "make_mc_bigwig_files"
         ]
 
         for rule in expected_rules:
@@ -269,8 +300,8 @@ class TestBedMethylWorkflow:
 
         # bedMethyl should not trigger alignment or pileup from BAM
         skipped_rules = [
-            "align_modbam",
-            "modkit_pileup"
+            "prepare_modbam_for_pileup",
+            "modkit_pileup_dmc"
         ]
 
         for rule in skipped_rules:
@@ -291,7 +322,7 @@ class TestDmcDMRWorkflow:
 
         Note: DMR targets use analysis-level names (without replicate).
         """
-        return "results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt"
+        return DMR_TARGET
 
     def test_dmr_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmr_target):
         """Test that dry-run succeeds for DMR analysis."""
@@ -327,8 +358,7 @@ class TestDAGStructure:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
-        result = run_snakemake_dag(repo_root, test_config, target)
+        result = run_snakemake_dag(repo_root, test_config, DMC_MODBAM_TARGET)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
         assert len(result.stdout) > 0, "DAG output is empty"
@@ -338,8 +368,7 @@ class TestDAGStructure:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
-        result = run_snakemake_dag(repo_root, test_config, target)
+        result = run_snakemake_dag(repo_root, test_config, DMC_MODBAM_TARGET)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
 
@@ -347,13 +376,11 @@ class TestDAGStructure:
         dag_output = result.stdout
 
         # Check for dmC rule nodes in DAG
-        # Note: modkit_pileup now does context filtering directly with --motif,
-        # so split_bedmethyl_by_context is not needed for dmC samples
         expected_rules = [
-            "get_modbam",
-            "align_modbam",
-            "modkit_pileup",
-            "make_dmc_bigwig_files"
+            "get_dmc_input",
+            "dmc_input_checkpoint",
+            "convert_bedmethyl_to_cx_report",
+            "make_mc_bigwig_files"
         ]
 
         for rule in expected_rules:
@@ -364,8 +391,7 @@ class TestDAGStructure:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw"
-        result = run_snakemake_dag(repo_root, test_config, target)
+        result = run_snakemake_dag(repo_root, test_config, DMC_MODBAM_TARGET)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
 
@@ -386,9 +412,9 @@ class TestWildcardResolution:
 
         # Test various wildcard combinations
         targets = [
-            "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw",
-            "results/mC/tracks/mC__WT__leaf__dmC__rep2__test_genome__CHG.bw",
-            "results/mC/tracks/mC__mutant__leaf__dmC__rep1__test_genome__CHH.bw",
+            "results/mC/tracks/WT_leaf_dmC_rep1__CG.bw",
+            "results/mC/tracks/WT_leaf_dmC_rep2__CHG.bw",
+            "results/mC/tracks/mutant_leaf_dmC_rep1__CHH.bw",
         ]
 
         for target in targets:
@@ -400,8 +426,7 @@ class TestWildcardResolution:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/tracks/mC__WT__root__bedMethyl__rep1__test_genome__CG.bw"
-        result = run_snakemake_dryrun(repo_root, test_config, target)
+        result = run_snakemake_dryrun(repo_root, test_config, BEDMETHYL_TARGET)
 
         assert result.returncode == 0, f"Wildcard resolution failed for bedMethyl: {result.stderr}"
 
@@ -409,17 +434,17 @@ class TestWildcardResolution:
 class TestErrorHandling:
     """Test error handling for invalid configurations."""
 
-    def test_missing_reference_genome(self, snakemake_available, repo_root, test_config):
-        """Test that requesting non-existent reference genome fails gracefully."""
+    def test_missing_sample_target(self, snakemake_available, repo_root, test_config):
+        """Test that requesting a target for a non-existent sample fails gracefully."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        # Request target with non-existent reference genome
-        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__nonexistent_genome__CG.bw"
+        # Request target with a sample name not in the sample sheet
+        target = "results/mC/tracks/nonexistent_sample__CG.bw"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
-        # Should fail because reference genome is not in config
-        assert result.returncode != 0, "Should fail for non-existent reference genome"
+        # Should fail because sample is not in the sample sheet
+        assert result.returncode != 0, "Should fail for non-existent sample"
 
     def test_invalid_context(self, snakemake_available, repo_root, test_config):
         """Test that invalid methylation context fails."""
@@ -427,7 +452,7 @@ class TestErrorHandling:
             pytest.skip("Snakemake not installed")
 
         # Request target with invalid context
-        target = "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__INVALID.bw"
+        target = "results/mC/tracks/WT_leaf_dmC_rep1__INVALID.bw"
         result = run_snakemake_dryrun(repo_root, test_config, target)
 
         # Should fail because INVALID is not a valid context
@@ -467,46 +492,38 @@ class TestAllMCTarget:
         output = result.stdout + result.stderr
 
         # Check for dmC summary outputs
-        assert "summary__mC__WT__leaf__dmC__rep1__test_genome.txt" in output or "modkit_summary" in output, \
-            "all_mc should include dmC summary outputs"
+        assert "modkit_summary" in output or "WT_leaf_dmC_rep1" in output, \
+            "all_mc should include dmC outputs"
 
 
-class TestContextBedGeneration:
-    """Test methylation context BED file generation."""
+class TestCxReportConversion:
+    """Test CX_report conversion for dmC samples."""
 
-    def test_context_beds_generation(self, snakemake_available, repo_root, test_config):
-        """Test that context BED files are generated for reference genome."""
+    def test_cx_report_generated_for_dmc(self, snakemake_available, repo_root, test_config):
+        """Test that CX_report conversion is in the DAG for dmC bigwig generation."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        contexts = ["CG", "CHG", "CHH"]
+        result = run_snakemake_dryrun(repo_root, test_config, DMC_MODBAM_TARGET, ["--printshellcmds"])
 
-        for context in contexts:
-            target = f"genomes/test_genome/modkit_{context}.bed.gz"
-            result = run_snakemake_dryrun(repo_root, test_config, target)
+        assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
-            assert result.returncode == 0, f"Context BED generation failed for {context}: {result.stderr}"
+        output = result.stdout + result.stderr
+        assert "convert_bedmethyl_to_cx_report" in output, \
+            "CX_report conversion should be in the DAG for dmC samples"
 
-    def test_context_beds_are_dependencies_for_bedmethyl(self, snakemake_available, repo_root, test_config):
-        """Test that context BED files are dependencies for bedMethyl splitting.
-
-        Note: For dmC samples, modkit_pileup uses --motif filtering directly,
-        so context BEDs are only needed for bedMethyl sample_type inputs.
-        """
+    def test_cx_report_generated_for_bedmethyl(self, snakemake_available, repo_root, test_config):
+        """Test that CX_report conversion is in the DAG for bedMethyl bigwig generation."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        # Test bedMethyl sample (not dmC) - context BEDs should be dependencies
-        target = "results/mC/dmc/context__mC__WT__root__bedMethyl__rep1__test_genome__CG.bed.gz"
-        result = run_snakemake_dag(repo_root, test_config, target)
+        result = run_snakemake_dryrun(repo_root, test_config, BEDMETHYL_TARGET, ["--printshellcmds"])
 
-        assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
+        assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
-        dag_output = result.stdout
-
-        # Check that modkit context bed generation is in the DAG for bedMethyl samples
-        assert "make_modkit_context_beds" in dag_output, \
-            "Context BED generation should be a dependency for bedMethyl samples"
+        output = result.stdout + result.stderr
+        assert "convert_bedmethyl_to_cx_report" in output, \
+            "CX_report conversion should be in the DAG for bedMethyl samples"
 
 
 class TestMultipleReplicates:
@@ -519,8 +536,8 @@ class TestMultipleReplicates:
 
         # Request both replicates
         targets = [
-            "results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw",
-            "results/mC/tracks/mC__WT__leaf__dmC__rep2__test_genome__CG.bw"
+            "results/mC/tracks/WT_leaf_dmC_rep1__CG.bw",
+            "results/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
         ]
 
         for target in targets:
@@ -533,7 +550,6 @@ class TestMultipleReplicates:
             pytest.skip("Snakemake not installed")
 
         # DMR analysis uses analysis-level names (replicates merged automatically in the rule)
-        target = "results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt"
-        result = run_snakemake_dryrun(repo_root, test_config, target)
+        result = run_snakemake_dryrun(repo_root, test_config, DMR_TARGET)
 
         assert result.returncode == 0, f"Merged replicate DMR failed: {result.stderr}"

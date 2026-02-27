@@ -109,17 +109,17 @@ Test individual targets manually:
 # dmC modBAM sample
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw
+    results/mC/tracks/WT_leaf_dmC_rep1__CG.bw
 
 # bedMethyl sample
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__root__bedMethyl__rep1__test_genome__CG.bw
+    results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw
 
 # DMR analysis
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt
+    results/mC/DMRs/summary__dmC__WT_leaf____test_genome__vs__dmC__mutant_leaf____test_genome__DMRs.txt
 ```
 
 ## Generate DAG Visualization
@@ -127,7 +127,7 @@ snakemake --dry-run \
 ```bash
 snakemake --dag \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw \
+    results/mC/tracks/WT_leaf_dmC_rep1__CG.bw \
     | dot -Tpng > dag_dmc.png
 ```
 

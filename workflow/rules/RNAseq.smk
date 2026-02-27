@@ -4,8 +4,7 @@ def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
 def define_RNA_input_for_degs(ref_genome):
-    file_paths = []
-    filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
+    filtered_samples = samples[(samples['Assay'] == 'RNAseq') & (samples['Genome'] == ref_genome)]
     return [f"results/RNA/DEG/counts__{sname}.tab" for sname in filtered_samples['sample_name']]
 
 def define_rnaseq_target_file(wildcards):
@@ -15,8 +14,8 @@ def define_rnaseq_target_file(wildcards):
     elif wildcards.target_name == "unique_DEGs":
         return f"results/RNA/DEG/unique_DEGs__{wildcards.analysis_name}__{wildcards.ref_genome}.txt"
     else:
-        raise ValueError(   
-            f"{wildcards.target_name} does not match possible files." 
+        raise ValueError(
+            f"{wildcards.target_name} does not match possible files."
             "It can be 'unique_DEGs', or the value of "
             "'rnaseq_target_file_name' in the config file"
         )
@@ -30,24 +29,44 @@ def define_rnaseq_background_file(wildcards):
         return config['rnaseq_background_file']
     else:
         return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
-        
+
 def get_go_database(ref_genome):
     species=config[ref_genome]['species']
     genus=config[config[ref_genome]['species']]['genus']
     return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
 
 def assign_rna_input(wildcards):
-    inputname = f"RNAseq__{wildcards.line}__{wildcards.tissue}__RNAseq__{wildcards.replicate}__{wildcards.ref_genome}"
-    if inputname in samples['sample_name']:
-        return f"{wildcards.file_type}__inputname"
-    else:
-        same_name = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == wildcards.ref_genome) & (samples['line'] == wildcards.line) & (samples['tissue'] == wildcards.tissue) ].copy()
-        if len(same_name) == 1:
-            return f"final__{same_name['sample_name']}"
-        elif len(same_name) >= 2:
-            return f"merged__RNAseq__{wildcards.line}__{wildcards.tissue}__RNAseq__merged__{wildcards.ref_genome}"
+    """Find the RNA control bam for a RAMPAGE sample.
+
+    Uses the Control column when available, otherwise falls back to
+    matching by line+tissue among RNAseq samples.
+    """
+    sname = wildcards.sample_name
+    # Check if there is an explicit control in the Control column
+    ctrl = get_control_sample_id(sname, samples)
+    if ctrl:
+        ctrl_parsed = parse_sample_name(ctrl)
+        if ctrl_parsed['replicate'] == 'merged':
+            return f"merged__{ctrl}"
         else:
-            raise ValueError(f"\nSample '{ipname}' does not have corresponding RNA control for calling TSS")
+            return f"final__{ctrl}"
+    # Fallback: find matching RNAseq sample by line+tissue
+    parsed = parse_sample_name(sname)
+    same_name = samples[
+        (samples['Assay'] == 'RNAseq') &
+        (samples['Genome'] == parsed['ref_genome']) &
+        (samples['line'] == parsed['line']) &
+        (samples['tissue'] == parsed['tissue'])
+    ]
+    if len(same_name) == 1:
+        return f"final__{same_name.iloc[0]['sample_name']}"
+    elif len(same_name) >= 2:
+        # Multiple replicates: find the merged analysis_name for this group
+        for _, r in analysis_samples.iterrows():
+            if (r['Assay'] == 'RNAseq' and r['line'] == parsed['line'] and
+                r['tissue'] == parsed['tissue'] and r['Genome'] == parsed['ref_genome']):
+                return f"merged__{r['sample_name']}"
+    raise ValueError(f"\nSample '{sname}' does not have corresponding RNA control for calling TSS")
 
 def define_final_rna_output(ref_genome):
     qc_option = config["QC_option"]
@@ -60,11 +79,11 @@ def define_final_rna_output(ref_genome):
     qc_files = []
     deg_files = []
     tss_files = []
-    filtered_rep_samples = samples[ (samples['env'] == 'RNA') & (samples['ref_genome'] == ref_genome) ].copy()
-    
+    filtered_rep_samples = samples[(samples['env'] == 'RNA') & (samples['Genome'] == ref_genome)].copy()
+
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')        
-        paired = get_sample_info_from_name(sname, samples, 'paired')
+        sname = row['sample_name']
+        paired = row['paired']
         if paired == "PE":
             qc_files.append(f"results/RNA/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"results/RNA/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
@@ -77,60 +96,62 @@ def define_final_rna_output(ref_genome):
             map_files.append(f"results/RNA/logs/process_rna_se_sample__{sname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"results/RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-        
-        strand = config['rna_tracks'][row.data_type]['strandedness']
+
+        strand = config['rna_tracks'][row['Assay']]['strandedness']
         if strand == "unstranded":
             bigwig_files.append(f"results/RNA/tracks/{sname}__unstranded.bw")
         else:
             bigwig_files.append(f"results/RNA/tracks/{sname}__plus.bw")
             bigwig_files.append(f"results/RNA/tracks/{sname}__minus.bw")
-        
-    filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+
+    filtered_analysis_samples = analysis_samples[(analysis_samples['env'] == 'RNA') & (analysis_samples['Genome'] == ref_genome)].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        strand = config['rna_tracks'][row.data_type]['strandedness']
-        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
+        strand = config['rna_tracks'][row['Assay']]['strandedness']
+        akey = build_analysis_key(row)
+        if len(analysis_to_replicates.get(akey, [])) >= 2:
+            aname = row['sample_name']
             if strand == "unstranded":
-                bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__unstranded.bw")
+                bigwig_files.append(f"results/RNA/tracks/{aname}__unstranded.bw")
             else:
-                bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__plus.bw")
-                bigwig_files.append(f"results/RNA/tracks/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}__minus.bw")
-    
-    filtered_samples2 = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == ref_genome) ].copy()
+                bigwig_files.append(f"results/RNA/tracks/{aname}__plus.bw")
+                bigwig_files.append(f"results/RNA/tracks/{aname}__minus.bw")
+
+    filtered_samples2 = samples[(samples['Assay'] == 'RNAseq') & (samples['Genome'] == ref_genome)].copy()
     filtered_samples2['Sample'] = filtered_samples2['line'] + "__" + filtered_samples2['tissue']
-    if len(filtered_samples2['Sample'].drop_duplicates()) >= 2:   
+    if len(filtered_samples2['Sample'].drop_duplicates()) >= 2:
         deg_files.append(f"results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
         deg_files.append(f"results/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__unique_DEGs.pdf")
-        
+
         if go_analysis:
             deg_files.append(f"results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__unique_DEGs.done")
-            
+
     elif len(filtered_samples2['Sample'].drop_duplicates()) == 1:
         deg_files.append(f"results/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
-        
-    filtered_samples3 = samples[ (samples['data_type'] == 'RAMPAGE') & (samples['ref_genome'] == ref_genome) ].copy()
+
+    filtered_samples3 = samples[(samples['Assay'] == 'RAMPAGE') & (samples['Genome'] == ref_genome)].copy()
     filtered_samples3['Sample'] = filtered_samples3['line'] + "__" + filtered_samples3['tissue']
     valid_samples = set(filtered_samples2['Sample'])
     for _, row in filtered_samples3.iterrows():
         if row['Sample'] in valid_samples:
-            tss_files.append(f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{row.replicate}__{row.ref_genome}_peaks.narrowPeak")
-            
-    filtered_analysis_samples2 = analysis_samples[ (analysis_samples['data_type'] == 'RAMPAGE') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+            tss_files.append(f"results/RNA/TSS/TSS__final__{row['sample_name']}_peaks.narrowPeak")
+
+    filtered_analysis_samples2 = analysis_samples[(analysis_samples['Assay'] == 'RAMPAGE') & (analysis_samples['Genome'] == ref_genome)].copy()
     filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
     for _, row in filtered_analysis_samples2.iterrows():
         if row['Sample'] in valid_samples:
-            tss_files.append(f"results/RNA/TSS/TSS__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}_peaks.narrowPeak")
-    
+            tss_files.append(f"results/RNA/TSS/TSS__merged__{row['sample_name']}_peaks.narrowPeak")
+
     results = map_files + bigwig_files
-    
+
     if qc_option == "all":
         results += qc_files
-        
+
     if analysis:
         results += deg_files + tss_files
 
     return results
-        
+
 rule make_STAR_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
@@ -194,7 +215,7 @@ rule STAR_map_pe:
         mv "results/RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         rm -f results/RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
-        """    
+        """
 
 rule STAR_map_se:
     input:
@@ -226,7 +247,7 @@ rule STAR_map_se:
         rm -f results/RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
-        
+
 rule filter_rna_pe:
     input:
         bamfile = "results/RNA/mapped/star_pe__{sample_name}_Aligned.out.bam"
@@ -293,7 +314,7 @@ rule filter_rna_se:
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.sorted_file}" > "{output.metrics_flag}"
         }} 2>&1 | tee -a "{log}"
-        """        
+        """
 
 rule make_rna_stats_pe:
     input:
@@ -332,7 +353,7 @@ rule make_rna_stats_pe:
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
-        
+
 rule make_rna_stats_se:
     input:
         metrics_trim = "results/RNA/reports/trim_se__{sample_name}.txt",
@@ -385,20 +406,22 @@ rule pe_or_se_rna_dispatch:
         mv {input.bamfile} {output.bam_file}
         mv {input.bamfile}.bai {output.bam_file}.bai
         mv {input.countfile} {output.count_file}
-        touch {output.touch} 
+        touch {output.touch}
         """
 
 rule merging_rna_replicates:
     input:
-        bamfiles = lambda wildcards: [ f"results/RNA/mapped/final__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{replicate}__{wildcards.ref_genome}.bam" 
-                                      for replicate in analysis_to_replicates.get((wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), []) ]
+        bamfiles = lambda wildcards: [
+            f"results/RNA/mapped/final__{sid}.bam"
+            for sid in get_replicate_sample_ids(wildcards.sample_name, samples)
+        ]
     output:
-        temp = temp("results/RNA/mapped/temp__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"),
-        mergefile = "results/RNA/mapped/merged__{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bam"
+        temp = temp("results/RNA/mapped/temp__{sample_name}.bam"),
+        mergefile = "results/RNA/mapped/merged__{sample_name}.bam"
     params:
-        sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
+        sname = lambda wildcards: wildcards.sample_name
     log:
-        temp(return_log_rna("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_rna_reps", ""))
+        temp(return_log_rna("{sample_name}", "merging_rna_reps", ""))
     conda: CONDA_ENV_RNA
     threads: config["resources"]["merging_rna_replicates"]["threads"]
     resources:
@@ -416,7 +439,7 @@ rule merging_rna_replicates:
         """
 
 rule make_rna_stranded_bigwigs:
-    input: 
+    input:
         bamfile = lambda wildcards: f"results/RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
@@ -464,9 +487,9 @@ rule make_rna_stranded_bigwigs:
         rm -f results/RNA/tracks/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
-        
+
 rule make_rna_unstranded_bigwigs:
-    input: 
+    input:
         bamfile = lambda wildcards: f"results/RNA/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
@@ -505,7 +528,7 @@ rule make_rna_unstranded_bigwigs:
         """
 
 rule prep_files_for_DEGs:
-    input: 
+    input:
         lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome)
     output:
         rna_samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
@@ -521,16 +544,16 @@ rule prep_files_for_DEGs:
         tmp_mb=config["resources"]["prep_files_for_DEGs"]["tmp_mb"],
         qos=config["resources"]["prep_files_for_DEGs"]["qos"]
     run:
-        filtered_samples = samples[ (samples['data_type'] == 'RNAseq') & (samples['ref_genome'] == params.ref_genome) ].copy()
+        filtered_samples = samples[(samples['Assay'] == 'RNAseq') & (samples['Genome'] == params.ref_genome)].copy()
         filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
         filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
-        
-        RNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()    
+
+        RNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()
         RNA_samples = RNA_samples.sort_values(by=['Sample', 'Replicate'],ascending=[True, True]).reset_index(drop=True)
         RNA_samples['Color'] = pd.factorize(RNA_samples['Sample'])[0] + 1
 
         RNA_samples.to_csv(output.rna_samples, sep="\t", index=False)
-        
+
         RNA_counts = None
         replicates = filtered_samples[['sample_name', 'Replicate']].drop_duplicates()
         for sname, rep in replicates.values:
@@ -544,19 +567,19 @@ rule prep_files_for_DEGs:
             else:
                 print("Unknown strandedness option, defaulting to unstranded")
                 temp = pd.read_csv(file_path, sep="\t", header=None, usecols=[0, 1])
-                
+
             temp.columns = ['GID', rep]
 
             if RNA_counts is None:
                 RNA_counts = temp
             else:
                 RNA_counts = pd.merge(RNA_counts, temp, on='GID', how='outer')
-            
+
         replicate_order = RNA_samples['Replicate'].tolist()
         column_order = ['GID'] + replicate_order
         RNA_counts = RNA_counts[column_order]
         RNA_counts.to_csv(output.rna_counts, sep="\t", index=False)
-    
+
 rule call_all_DEGs:
     input:
         samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
@@ -713,21 +736,21 @@ rule perform_GO_on_target_file:
         """
 
 rule call_rampage_TSS:
-    input: 
-        ipfile = lambda wildcards: f"results/RNA/mapped/{wildcards.file_type}__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}.bam",
+    input:
+        ipfile = lambda wildcards: f"results/RNA/mapped/{wildcards.file_type}__{wildcards.sample_name}.bam",
         inputfile = lambda wildcards: f"results/RNA/mapped/{assign_rna_input(wildcards)}.bam"
     output:
-        peakfile = "results/RNA/TSS/TSS__{file_type}__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}_peaks.narrowPeak"
+        peakfile = "results/RNA/TSS/TSS__{file_type}__{sample_name}_peaks.narrowPeak"
     wildcard_constraints:
         env = "RNA"
     params:
-        ipname = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        inputname = lambda wildcards: f"{assign_rna_input(wildcards)}",
-        filetype = lambda wildcards: {wildcards.file_type},
+        ipname = lambda wildcards: wildcards.sample_name,
+        inputname = lambda wildcards: assign_rna_input(wildcards),
+        filetype = lambda wildcards: wildcards.file_type,
         params = config["rampage_calltss"]['params'],
-        genomesize = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genomesize']
+        genomesize = lambda wildcards: config[config[parse_sample_name(wildcards.sample_name)['ref_genome']]['species']]['genomesize']
     log:
-        temp(return_log_rna("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "{file_type}__TSS_calling", "SE"))
+        temp(return_log_rna("{sample_name}", "{file_type}__TSS_calling", "SE"))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["call_rampage_TSS"]["threads"]
     resources:
@@ -752,4 +775,4 @@ rule all_rna:
     shell:
         """
         touch {output.touch}
-        """        
+        """

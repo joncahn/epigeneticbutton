@@ -81,7 +81,7 @@ Mock sample metadata file with:
 
 Format matches the pipeline's 9-column TSV format:
 ```
-data_type  line  tissue  sample_type  replicate  seq_id  fastq_path  paired  ref_genome
+Sample_ID  Assay  Genome  Levels  Replicate_ID  Read_files  Read_layout  IP_target  Control
 ```
 
 ### `test_config_dmc.yaml`
@@ -163,22 +163,22 @@ You can also manually test the dry-run:
 # Test dmC modBAM sample bigwig generation
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw
+    results/mC/tracks/WT_leaf_dmC_rep1__CG.bw
 
 # Test bedMethyl sample
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__root__bedMethyl__rep1__test_genome__CG.bw
+    results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw
 
 # Test DMR analysis
 snakemake --dry-run \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/DMRs/summary__mC__WT__leaf__dmC__test_genome__vs__mC__mutant__leaf__dmC__test_genome__DMRs.txt
+    results/mC/DMRs/summary__dmC__WT_leaf____test_genome__vs__dmC__mutant_leaf____test_genome__DMRs.txt
 
 # Generate DAG visualization
 snakemake --dag \
     --configfile tests/integration/data/test_config_dmc.yaml \
-    results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw \
+    results/mC/tracks/WT_leaf_dmC_rep1__CG.bw \
     | dot -Tpng > dag_dmc.png
 ```
 

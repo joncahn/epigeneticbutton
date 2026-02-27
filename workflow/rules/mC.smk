@@ -1,16 +1,26 @@
 CONDA_ENV_MC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_mc.yaml")
 
+# Build wildcard constraint patterns for dmC vs bisulfite rule routing.
+# dmC samples (Assay == "dmC") use modkit/ONT pipeline; all others use Bismark.
+_dmc_ids = sorted(samples.loc[samples["Assay"] == "dmC", "Sample_ID"].unique())
+if _dmc_ids:
+    _DMC_WC = "(?:" + "|".join(re.escape(s) for s in _dmc_ids) + ")"
+    _NON_DMC_WC = "(?!(?:" + "|".join(re.escape(s) for s in _dmc_ids) + ")$).*"
+else:
+    _DMC_WC = "(?!x)x"  # matches nothing
+    _NON_DMC_WC = ".*"
+
 def return_log_mc(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
-     
+
 def parameters_for_mc(sample_name):
-    temp = parse_sample_name(sample_name)['sample_type']
+    assay = get_sample_info_from_name(sample_name, samples, 'Assay')
     options = {"WGBS", "Pico", "EMseq", "dmC"}
-    return temp if temp in options else "default"
+    return assay if assay in options else "default"
 
 def is_dmc_sample(sample_name):
     """Check if a sample uses direct methylation (dmC) workflow (vs bisulfite)."""
-    return parse_sample_name(sample_name)['sample_type'] == "dmC"
+    return get_sample_info_from_name(sample_name, samples, 'Assay') == "dmC"
 
 def define_cx_report_input(wildcards):
     """Get CX_report path for a sample (used by bigwig generation and replicate merging).
@@ -20,43 +30,36 @@ def define_cx_report_input(wildcards):
     - dmC (direct methylation): results/mC/dmc/cx_report__...CX_report.txt.gz
     - Merged replicates: results/mC/methylcall/...merged.CX_report.txt.gz
     """
-    name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}"
-    if wildcards.replicate == "merged":
-        return f"results/mC/methylcall/{name}.merged.CX_report.txt.gz"
-    elif wildcards.sample_type == "dmC":
+    sname = wildcards.sample_name
+    parsed = parse_sample_name(sname)
+    if parsed['replicate'] == "merged":
+        return f"results/mC/methylcall/{sname}.merged.CX_report.txt.gz"
+    elif is_dmc_sample(sname):
         # dmC samples: use converted CX_report from bedMethyl
-        return f"results/mC/dmc/cx_report__{name}.CX_report.txt.gz"
+        return f"results/mC/dmc/cx_report__{sname}.CX_report.txt.gz"
     else:
         # Bismark samples: use deduplicated CX_report
-        return f"results/mC/methylcall/{name}.deduplicated.CX_report.txt.gz"
+        return f"results/mC/methylcall/{sname}.deduplicated.CX_report.txt.gz"
 
 def define_DMR_samples(sample_name):
     """Get CX_report files for DMR analysis.
 
     For Bismark samples: returns deduplicated CX_report files
     For dmC samples: returns converted CX_report files (from bedMethyl)
+    Uses get_replicate_sample_ids() to find per-replicate Sample_IDs.
     """
-    data_type = get_sample_info_from_name(sample_name, analysis_samples, 'data_type')
-    line = get_sample_info_from_name(sample_name, analysis_samples, 'line')
-    tissue = get_sample_info_from_name(sample_name, analysis_samples, 'tissue')
-    sample_type = get_sample_info_from_name(sample_name, analysis_samples, 'sample_type')
-    ref_genome = get_sample_info_from_name(sample_name, analysis_samples, 'ref_genome')
+    rep_sids = get_replicate_sample_ids(sample_name, samples)
+    if not rep_sids:
+        # sample_name is itself a per-replicate name, not an analysis name
+        rep_sids = [sample_name]
+    result = []
+    for sid in rep_sids:
+        if is_dmc_sample(sid):
+            result.append(f"results/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
+        else:
+            result.append(f"results/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
+    return result
 
-    # Return empty list if sample not found (prevents None in paths)
-    if any(x is None for x in [data_type, line, tissue, sample_type, ref_genome]):
-        return []
-
-    replicates = analysis_to_replicates.get((data_type, line, tissue, sample_type, ref_genome), [])
-
-    if sample_type == "dmC":
-        # dmC samples: use converted CX_report files (unified format with all contexts)
-        return [ f"results/mC/dmc/cx_report__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.CX_report.txt.gz"
-                        for replicate in replicates ]
-    else:
-        # Bismark samples: use deduplicated CX_report files
-        return [ f"results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.deduplicated.CX_report.txt.gz"
-                        for replicate in replicates ]
-                    
 def script_DMRs():
     script_dmrs = config['custom_script_dmrs']
     default = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R")
@@ -76,12 +79,12 @@ def define_final_mC_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'mC') & (samples['ref_genome'] == ref_genome) ].copy()
 
     for _, row in filtered_rep_samples.iterrows():
-        sname = sample_name_str(row, 'sample')
-        paired = get_sample_info_from_name(sname, samples, 'paired')
-        sample_type = parse_sample_name(sname)['sample_type']
+        sname = row['sample_name']
+        paired = row['paired']
+        assay = row['Assay']
 
         # dmC samples use direct methylation workflow
-        if sample_type == "dmC":
+        if assay == "dmC":
             bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
             ont_files.append(f"results/mC/dmc/summary__{sname}.txt")  # modkit summary
         else:
@@ -99,19 +102,20 @@ def define_final_mC_output(ref_genome):
                 qc_files.append(f"results/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
                 if not trimmed_fastqs:
                     qc_files.append(f"results/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
-    
+
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name_str(row, 'analysis')
-        if len(analysis_to_replicates[(row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome)]) >= 2:
-            bigwig_files.append(f"results/mC/chkpts/bigwig__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}.done") # merged bigwig files
-    
+        aname = row['sample_name']
+        rep_sids = get_replicate_sample_ids(aname, samples)
+        if len(rep_sids) >= 2:
+            bigwig_files.append(f"results/mC/chkpts/bigwig__{aname}.done") # merged bigwig files
+
     # DMR analysis: all sample types use DMRcaller via unified CX_report format
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
         a_dict = a._asdict()
         b_dict = b._asdict()
-        sample1 = sample_name_str(a_dict, 'analysis')
-        sample2 = sample_name_str(b_dict, 'analysis')
+        sample1 = a_dict['sample_name']
+        sample2 = b_dict['sample_name']
         dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
 
     results = map_files + bigwig_files + ont_files
@@ -150,7 +154,7 @@ rule make_bismark_indices:
         fi
         }} 2>&1 | tee -a "{log}"
         """
-        
+
 rule bismark_map_pe:
     input:
         fastq1 = "results/mC/fastq/trim__{sample_name}__R1.fastq.gz",
@@ -163,7 +167,7 @@ rule bismark_map_pe:
         metrics_alignement = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
     wildcard_constraints:
-        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
+        sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -205,7 +209,7 @@ rule bismark_map_se:
         metrics_map = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
     wildcard_constraints:
-        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
+        sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
@@ -243,14 +247,14 @@ rule pe_or_se_mc_dispatch:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         touch = "results/mC/chkpts/map_mC__{sample_name}.done"
     wildcard_constraints:
-        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
+        sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     localrule: True
     shell:
         """
         mv {input} {output.cx_report}
-        touch {output.touch} 
+        touch {output.touch}
         """
-        
+
 rule make_mc_stats_pe:
     input:
         metrics_trim = "results/mC/reports/trim_pe__{sample_name}.txt",
@@ -259,7 +263,7 @@ rule make_mc_stats_pe:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     wildcard_constraints:
-        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
+        sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     output:
         stat_file = "results/mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
         reportfile = "results/mC/reports/final_report_pe__{sample_name}.html"
@@ -302,7 +306,7 @@ rule make_mc_stats_pe:
         cp results/mC/mapped/PE__"{params.sample_name}"*.txt results/mC/reports/
         cp {params.prefix}/trim__"{params.sample_name}"*.txt results/mC/reports/
         """
-        
+
 rule make_mc_stats_se:
     input:
         metrics_trim = "results/mC/reports/trim_se__{sample_name}.txt",
@@ -311,7 +315,7 @@ rule make_mc_stats_se:
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     wildcard_constraints:
-        sample_name = r"(?!.*__dmC__).*"  # Exclude dmC (direct methylation) samples
+        sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     output:
         stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
         reportfile = "results/mC/reports/final_report_se__{sample_name}.html"
@@ -362,27 +366,28 @@ def get_cx_reports_for_merging(wildcards):
     - Bismark samples: results/mC/methylcall/...deduplicated.CX_report.txt.gz
     - dmC (direct methylation): results/mC/dmc/cx_report__...CX_report.txt.gz
     """
-    replicates = analysis_to_replicates.get(
-        (wildcards.data_type, wildcards.line, wildcards.tissue, wildcards.sample_type, wildcards.ref_genome), [])
+    aname = wildcards.sample_name
+    rep_sids = get_replicate_sample_ids(aname, samples)
 
-    if wildcards.sample_type == "dmC":
-        return [f"results/mC/dmc/cx_report__{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{rep}__{wildcards.ref_genome}.CX_report.txt.gz"
-                for rep in replicates]
-    else:
-        return [f"results/mC/methylcall/{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{rep}__{wildcards.ref_genome}.deduplicated.CX_report.txt.gz"
-                for rep in replicates]
+    result = []
+    for sid in rep_sids:
+        if is_dmc_sample(sid):
+            result.append(f"results/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
+        else:
+            result.append(f"results/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
+    return result
 
 rule merging_mc_replicates:
     input:
         report_files = get_cx_reports_for_merging
     output:
-        bedfile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.bed"),
-        tempmergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt"),
-        mergefile = temp("results/mC/methylcall/{data_type}__{line}__{tissue}__{sample_type}__merged__{ref_genome}.merged.CX_report.txt.gz")
+        bedfile = temp("results/mC/methylcall/{sample_name}.bed"),
+        tempmergefile = temp("results/mC/methylcall/{sample_name}.merged.CX_report.txt"),
+        mergefile = temp("results/mC/methylcall/{sample_name}.merged.CX_report.txt.gz")
     params:
-        sname = lambda wildcards: sample_name_str(wildcards, 'analysis')
+        sname = lambda wildcards: wildcards.sample_name
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{ref_genome}", "merging_reps", ""))
+        temp(return_log_mc("{sample_name}", "merging_reps", ""))
     conda: CONDA_ENV_MC
     threads: config["resources"]["merging_mc_replicates"]["threads"]
     resources:
@@ -397,7 +402,7 @@ rule merging_mc_replicates:
 		bedtools merge -d -1 -o distinct,sum,sum,distinct,distinct -c 4,5,6,7,8 -i {output.bedfile} | awk -v OFS="\t" '{{print $1,$3,$4,$5,$6,$7,$8}}' > {output.tempmergefile}
         pigz -p {threads} "{output.tempmergefile}" -c > "{output.mergefile}"
         }} 2>&1 | tee -a "{log}"
-        """    
+        """
 
 rule make_mc_bigwig_files:
     """Generate bigwig files from CX_report data.
@@ -406,18 +411,18 @@ rule make_mc_bigwig_files:
     """
     input:
         cx_report = define_cx_report_input,
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bigwigcg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CG.bw",
-        bigwigchg = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHG.bw",
-        bigwigchh = "results/mC/tracks/{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}__CHH.bw",
-        touch = "results/mC/chkpts/bigwig__{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}.done"
+        bigwigcg = "results/mC/tracks/{sample_name}__CG.bw",
+        bigwigchg = "results/mC/tracks/{sample_name}__CHG.bw",
+        bigwigchh = "results/mC/tracks/{sample_name}__CHH.bw",
+        touch = "results/mC/chkpts/bigwig__{sample_name}.done"
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__{wildcards.sample_type}__{wildcards.replicate}__{wildcards.ref_genome}",
-        ref_genome = lambda wildcards: wildcards.ref_genome,
+        sample_name = lambda wildcards: wildcards.sample_name,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         context = config['mC_context']
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__{sample_type}__{replicate}__{ref_genome}", "bigwig", ""))
+        temp(return_log_mc("{sample_name}", "bigwig", ""))
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
@@ -430,7 +435,7 @@ rule make_mc_bigwig_files:
         if [[ "{params.context}" == "all" ]]; then
             zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CG.bedGraph"}}'
             for strand in plus minus; do
-                case "${{strand}}" in 
+                case "${{strand}}" in
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
@@ -451,7 +456,7 @@ rule make_mc_bigwig_files:
         elif [[ "{params.context}" == "CG-only" ]]; then
             zcat {input.cx_report} | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "results/mC/tracks/"{params.sample_name}"__CG.bedGraph"
             for strand in plus minus; do
-                case "${{strand}}" in 
+                case "${{strand}}" in
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
@@ -511,7 +516,7 @@ rule call_DMRs_pairwise:
         printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
         Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
         }} 2>&1 | tee -a "{log}"
-        """    
+        """
 
 rule all_mc:
     input:
@@ -592,25 +597,19 @@ rule get_dmc_input:
     Creates a marker file indicating the detected type for downstream rules.
     """
     input:
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
-        validated = "results/mC/dmc/validated__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.input"
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
+        validated = "results/mC/dmc/validated__{sample_name}.input"
     wildcard_constraints:
-        sample_type = r"dmC"
+        sample_name = _DMC_WC
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
-        dmc_path = lambda wildcards: get_sample_info_from_name(
-            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
-            samples, 'fastq_path'
-        ),
-        seq_id = lambda wildcards: get_sample_info_from_name(
-            f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
-            samples, 'seq_id'
-        ),
+        sample_name = lambda wildcards: wildcards.sample_name,
+        dmc_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'fastq_path'),
+        seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'seq_id'),
         validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_dmc_input.py")
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "get_dmc_input", "dmC"))
+        temp(return_log_mc("{sample_name}", "get_dmc_input", "dmC"))
     conda: CONDA_ENV_DMC
     threads: config["resources"]["get_modbam"]["threads"]
     resources:
@@ -706,8 +705,8 @@ rule get_dmc_input:
 
 def get_dmc_input_type(wildcards):
     """Get the input type (modBAM or bedMethyl) for a dmC sample by reading the marker file."""
-    sample_name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
-    marker_file = f"results/mC/dmc/input_type__{sample_name}.txt"
+    sname = wildcards.sample_name
+    marker_file = f"results/mC/dmc/input_type__{sname}.txt"
     # This function is called during DAG building, marker file may not exist yet
     # Return a checkpoint-compatible path
     return marker_file
@@ -715,38 +714,42 @@ def get_dmc_input_type(wildcards):
 checkpoint dmc_input_checkpoint:
     """Checkpoint to determine dmC input type for branching workflow."""
     input:
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt"
     output:
-        touch = touch("results/mC/dmc/checkpoint__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.done")
+        touch = touch("results/mC/dmc/checkpoint__{sample_name}.done")
+    wildcard_constraints:
+        sample_name = _DMC_WC
     localrule: True
 
 def get_pileup_input_for_dmc(wildcards):
     """Determine pileup input based on detected input type."""
     checkpoint_output = checkpoints.dmc_input_checkpoint.get(**wildcards).output[0]
-    sample_name = f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
-    type_marker = f"results/mC/dmc/input_type__{sample_name}.txt"
+    sname = wildcards.sample_name
+    type_marker = f"results/mC/dmc/input_type__{sname}.txt"
     with open(type_marker) as f:
         input_type = f.read().strip()
     if input_type == "modBAM":
-        return f"results/mC/dmc/pileup_modbam__{sample_name}.bedmethyl.gz"
+        return f"results/mC/dmc/pileup_modbam__{sname}.bedmethyl.gz"
     else:
-        return f"results/mC/dmc/pileup_bedmethyl__{sample_name}.bedmethyl.gz"
+        return f"results/mC/dmc/pileup_bedmethyl__{sname}.bedmethyl.gz"
 
 rule prepare_modbam_for_pileup:
     """Prepare modBAM input: index and optionally realign."""
     input:
-        validated = "results/mC/dmc/validated__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.input",
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        validated = "results/mC/dmc/validated__{sample_name}.input",
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
+        fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        aligned_bam = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam",
-        aligned_bai = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam.bai"
+        aligned_bam = "results/mC/dmc/aligned__{sample_name}.bam",
+        aligned_bai = "results/mC/dmc/aligned__{sample_name}.bam.bai"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        sample_name = lambda wildcards: wildcards.sample_name,
         preset = config.get('dmc_methylation', {}).get('alignment', {}).get('preset', 'lr:hqae')
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "prepare_modbam", "dmC"))
+        temp(return_log_mc("{sample_name}", "prepare_modbam", "dmC"))
     conda: CONDA_ENV_DMC
     threads: config["resources"]["align_modbam"]["threads"]
     resources:
@@ -792,7 +795,8 @@ rule prepare_modbam_for_pileup:
         fi
 
         if [[ "$needs_realign" == "true" ]]; then
-            printf "Aligning modBAM to {wildcards.ref_genome} with mm2plus\n"
+            ref_genome=$(echo {input.fasta} | sed 's|.*/||; s|\.fa$||')
+            printf "Aligning modBAM to $ref_genome with mm2plus\n"
             samtools fastq -T MM,ML {input.validated} | \
                 mm2plus -ax {params.preset} -t {threads} -y {input.fasta} - | \
                 samtools sort -@ {threads} -o {output.aligned_bam} -
@@ -810,18 +814,20 @@ rule prepare_modbam_for_pileup:
 rule modkit_pileup_dmc:
     """Generate bedMethyl file from aligned modBAM using modkit pileup."""
     input:
-        bam = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam",
-        bai = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam.bai",
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        bam = "results/mC/dmc/aligned__{sample_name}.bam",
+        bai = "results/mC/dmc/aligned__{sample_name}.bam.bai",
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
+        fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         modkit = MODKIT_BIN
     output:
-        bedmethyl = "results/mC/dmc/pileup_modbam__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz"
+        bedmethyl = "results/mC/dmc/pileup_modbam__{sample_name}.bedmethyl.gz"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        sample_name = lambda wildcards: wildcards.sample_name,
         combine_mods = "--combine-mods" if config.get('dmc_methylation', {}).get('pileup', {}).get('combine_mods', True) else ""
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "modkit_pileup", "dmC"))
+        temp(return_log_mc("{sample_name}", "modkit_pileup", "dmC"))
     conda: CONDA_ENV_DMC
     threads: config["resources"]["modkit_pileup"]["threads"]
     resources:
@@ -849,14 +855,16 @@ rule modkit_pileup_dmc:
 rule copy_bedmethyl_input:
     """Copy pre-computed bedMethyl to pileup location for consistent downstream processing."""
     input:
-        validated = "results/mC/dmc/validated__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.input",
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
+        validated = "results/mC/dmc/validated__{sample_name}.input",
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt"
     output:
-        bedmethyl = "results/mC/dmc/pileup_bedmethyl__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz"
+        bedmethyl = "results/mC/dmc/pileup_bedmethyl__{sample_name}.bedmethyl.gz"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
+        sample_name = lambda wildcards: wildcards.sample_name
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "copy_bedmethyl", "dmC"))
+        temp(return_log_mc("{sample_name}", "copy_bedmethyl", "dmC"))
     conda: CONDA_ENV_DMC
     threads: config["resources"]["get_bedmethyl"]["threads"]
     resources:
@@ -884,7 +892,9 @@ rule merge_pileup_sources:
     input:
         pileup = get_pileup_input_for_dmc
     output:
-        bedmethyl = "results/mC/dmc/pileup__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz"
+        bedmethyl = "results/mC/dmc/pileup__{sample_name}.bedmethyl.gz"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     localrule: True
     shell:
         """
@@ -894,15 +904,17 @@ rule merge_pileup_sources:
 rule modkit_summary_dmc:
     """Generate QC statistics from modBAM using modkit summary."""
     input:
-        bam = "results/mC/dmc/aligned__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bam",
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
+        bam = "results/mC/dmc/aligned__{sample_name}.bam",
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
         modkit = MODKIT_BIN
     output:
-        summary = "results/mC/dmc/summary__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
+        summary = "results/mC/dmc/summary__{sample_name}.txt"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}"
+        sample_name = lambda wildcards: wildcards.sample_name
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "modkit_summary", "dmC"))
+        temp(return_log_mc("{sample_name}", "modkit_summary", "dmC"))
     conda: CONDA_ENV_DMC
     threads: config["resources"]["modkit_summary"]["threads"]
     resources:
@@ -935,20 +947,22 @@ rule make_mc_stats_dmc:
     Uses CX_report file (unified format) for coverage statistics.
     """
     input:
-        cx_report = "results/mC/dmc/cx_report__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.CX_report.txt.gz",
-        type_marker = "results/mC/dmc/input_type__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        cx_report = "results/mC/dmc/cx_report__{sample_name}.CX_report.txt.gz",
+        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
+        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.txt"
+        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     params:
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
-        line = lambda wildcards: wildcards.line,
-        tissue = lambda wildcards: wildcards.tissue,
+        sample_name = lambda wildcards: wildcards.sample_name,
+        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
         sample_type = "dmC",
-        replicate = lambda wildcards: wildcards.replicate,
-        ref_genome = lambda wildcards: wildcards.ref_genome
+        replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "making_stats", "dmC"))
+        temp(return_log_mc("{sample_name}", "making_stats", "dmC"))
     conda: CONDA_ENV_DMC
     threads: config["resources"]["modkit_summary"]["threads"]
     resources:
@@ -1032,17 +1046,19 @@ rule convert_bedmethyl_to_cx_report:
     When mC_context is 'CG-only', filters output to only include CG context.
     """
     input:
-        bedmethyl = "results/mC/dmc/pileup__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.bedmethyl.gz",
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        fai = "genomes/{ref_genome}/{ref_genome}.fa.fai"
+        bedmethyl = "results/mC/dmc/pileup__{sample_name}.bedmethyl.gz",
+        fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
+        fai = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.fai"
     output:
-        cx_report = "results/mC/dmc/cx_report__{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}.CX_report.txt.gz"
+        cx_report = "results/mC/dmc/cx_report__{sample_name}.CX_report.txt.gz"
+    wildcard_constraints:
+        sample_name = _DMC_WC
     params:
         script = os.path.join(REPO_FOLDER, "workflow", "scripts", "bedmethyl_to_cx_report.py"),
-        sample_name = lambda wildcards: f"{wildcards.data_type}__{wildcards.line}__{wildcards.tissue}__dmC__{wildcards.replicate}__{wildcards.ref_genome}",
+        sample_name = lambda wildcards: wildcards.sample_name,
         context = config['mC_context']
     log:
-        temp(return_log_mc("{data_type}__{line}__{tissue}__dmC__{replicate}__{ref_genome}", "bedmethyl_to_cx", "dmC"))
+        temp(return_log_mc("{sample_name}", "bedmethyl_to_cx", "dmC"))
     conda: CONDA_ENV_DMC
     threads: 1
     resources:

@@ -1,21 +1,22 @@
-ChIP	Col0	WT	H3K27ac	Rep1	SRR27821885	SRA	PE	ColCEN
-ChIP	Col0	WT	H3K4me1	Rep1	SRR27821852	SRA	PE	ColCEN
-ChIP	Col0	WT	Input	Rep1	SRR27821932	SRA	PE	ColCEN
-mC	Col0	suvh1	WGBS	Rep1	SRR27821959	SRA	SE	ColCEN
-mC	Col0	WT	WGBS	Rep1	SRR27821907	SRA	SE	ColCEN
-mC	Col0	WT	WGBS	Rep2	SRR27821907	SRA	SE	ColCEN
-RNAseq	Col0	suvh13	RNAseq	Rep1	SRR27821840	SRA	PE	ColCEN
-RNAseq	Col0	suvh13	RNAseq	Rep2	SRR27821839	SRA	PE	ColCEN
-RNAseq	Col0	suvh13	RNAseq	Rep3	SRR27821838	SRA	PE	ColCEN
-RNAseq	Col0	WT	RNAseq	Rep1	SRR27821967	SRA	PE	ColCEN
-RNAseq	Col0	WT	RNAseq	Rep2	SRR27821966	SRA	PE	ColCEN
-RNAseq	Col0	WT	RNAseq	Rep3	SRR27821918	SRA	PE	ColCEN
-sRNA	Col0	VLP_ddm1	shRNA	Rep1	SRR8792540	SRA	SE	ColCEN
-sRNA	Col0	VLP_ddm1	shRNA	Rep2	SRR8792538	SRA	SE	ColCEN
-sRNA	Col0	VLP_WT_inflo	shRNA	Rep1	SRR8792539	SRA	SE	ColCEN
-TF_SUVH1	Col0	suvh1.1	Input	Rep1	SRR27821931	SRA	SE	ColCEN
-TF_SUVH1	Col0	suvh1.1	Input	Rep2	SRR27821934	SRA	SE	ColCEN
-TF_SUVH1	Col0	suvh1.1	IP	Rep1	SRR27821933	SRA	SE	ColCEN
-TF_SUVH1	Col0	suvh1.1	IP	Rep2	SRR27821935	SRA	SE	ColCEN
-TF_SUVH3	Col0	suvh3	Input	RepA	SRR27821929	SRA	SE	ColCEN
-TF_SUVH3	Col0	suvh3	IP	RepA	SRR27821930	SRA	SE	ColCEN
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
+Col0_WT_H3K27ac_Rep1	ChIP_narrow	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821885	PE	H3K27ac	Col0_WT_Input_Rep1
+Col0_WT_H3K4me1_Rep1	ChIP_broad	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821852	PE	H3K4me1	Col0_WT_Input_Rep1
+Col0_WT_Input_Rep1	ChIP_narrow	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821932	PE	Input	
+Col0_suvh1_WGBS_Rep1	WGBS	ColCEN	genotype:Col0,tissue:suvh1	Rep1	SRR27821959	SE		
+Col0_WT_WGBS_Rep1	WGBS	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821907	SE		
+Col0_WT_WGBS_Rep2	WGBS	ColCEN	genotype:Col0,tissue:WT	Rep2	SRR27821907	SE		
+Col0_suvh13_RNA_Rep1	RNAseq	ColCEN	genotype:Col0,tissue:suvh13	Rep1	SRR27821840	PE		
+Col0_suvh13_RNA_Rep2	RNAseq	ColCEN	genotype:Col0,tissue:suvh13	Rep2	SRR27821839	PE		
+Col0_suvh13_RNA_Rep3	RNAseq	ColCEN	genotype:Col0,tissue:suvh13	Rep3	SRR27821838	PE		
+Col0_WT_RNA_Rep1	RNAseq	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821967	PE		
+Col0_WT_RNA_Rep2	RNAseq	ColCEN	genotype:Col0,tissue:WT	Rep2	SRR27821966	PE		
+Col0_WT_RNA_Rep3	RNAseq	ColCEN	genotype:Col0,tissue:WT	Rep3	SRR27821918	PE		
+Col0_VLP_ddm1_sRNA_Rep1	sRNA	ColCEN	genotype:Col0,tissue:VLP_ddm1	Rep1	SRR8792540	SE		
+Col0_VLP_ddm1_sRNA_Rep2	sRNA	ColCEN	genotype:Col0,tissue:VLP_ddm1	Rep2	SRR8792538	SE		
+Col0_VLP_WT_inflo_sRNA_Rep1	sRNA	ColCEN	genotype:Col0,tissue:VLP_WT_inflo	Rep1	SRR8792539	SE		
+Col0_suvh1.1_Input_Rep1	ChIP_narrow	ColCEN	genotype:Col0,tissue:suvh1.1	Rep1	SRR27821931	SE	Input	
+Col0_suvh1.1_Input_Rep2	ChIP_narrow	ColCEN	genotype:Col0,tissue:suvh1.1	Rep2	SRR27821934	SE	Input	
+Col0_suvh1.1_SUVH1_Rep1	ChIP_narrow	ColCEN	genotype:Col0,tissue:suvh1.1	Rep1	SRR27821933	SE	SUVH1	Col0_suvh1.1_Input_Rep1
+Col0_suvh1.1_SUVH1_Rep2	ChIP_narrow	ColCEN	genotype:Col0,tissue:suvh1.1	Rep2	SRR27821935	SE	SUVH1	Col0_suvh1.1_Input_Rep2
+Col0_suvh3_Input_RepA	ChIP_narrow	ColCEN	genotype:Col0,tissue:suvh3	RepA	SRR27821929	SE	Input	
+Col0_suvh3_SUVH3_RepA	ChIP_narrow	ColCEN	genotype:Col0,tissue:suvh3	RepA	SRR27821930	SE	SUVH3	Col0_suvh3_Input_RepA

@@ -102,7 +102,7 @@ jobs:
           conda install -c conda-forge graphviz
           snakemake --dag \
             --configfile tests/integration/data/test_config_dmc.yaml \
-            results/mC/tracks/mC__WT__leaf__dmC__rep1__test_genome__CG.bw \
+            results/mC/tracks/WT_leaf_dmC_rep1__CG.bw \
             | dot -Tpng > dag_dmc_test.png || true
 
       - name: Upload DAG as artifact

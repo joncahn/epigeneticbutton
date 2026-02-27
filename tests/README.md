@@ -165,7 +165,6 @@ Shared fixtures are defined in `tests/conftest.py`:
 - `mock_bam_header` - Mock BAM file header
 - `mock_bam_read_with_mm_ml` - BAM read with methylation tags
 - `mock_bam_read_without_mm` - BAM read without methylation tags
-- `dmc_sample_names` - Dictionary of sample name examples
 
 ## Writing Tests
 

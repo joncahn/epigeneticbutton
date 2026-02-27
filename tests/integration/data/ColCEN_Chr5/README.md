@@ -29,7 +29,7 @@ Use with `tests/integration/data/test_config_chr5.yaml` for integration testing:
 
 ```bash
 snakemake --configfile tests/integration/data/test_config_chr5.yaml \
-    results/mC/tracks/mC__Col0__leaf__dmC__rep1__ColCEN_Chr5__CG.bw
+    results/mC/tracks/rdr126ddm1_leaf_dmC_rep1__CG.bw
 ```
 
 ## Adding Test Samples
@@ -37,7 +37,8 @@ snakemake --configfile tests/integration/data/test_config_chr5.yaml \
 Update `tests/integration/data/test_samples_chr5.tsv` with actual dmC modBAM paths:
 
 ```
-mC	Col0	leaf	dmC	rep1	sample_id	/path/to/modbam.bam	SE	ColCEN_Chr5
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
+Col0_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:Col0,tissue:leaf	rep1	/path/to/modbam.bam	SE
 ```
 
 For best testing, the modBAM should be filtered to Chr5 reads only to keep file sizes small.

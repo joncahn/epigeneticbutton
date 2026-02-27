@@ -1,5 +1,23 @@
 # Big Refactor TODO
 
+## Features
+
+### (Differential) splicing analysis for RNAseq
+
+* [ ] Jon: heavy pipeline. Here is what was used in my MBD paper:
+To look for novel splicing changes that occurred within the mC reader mutants, the reads mapped withSTAR (Dobin et al. 2013) were processed by StringTie and merged together (Pertea et al. 2015) into amaster novel transcriptome comprising splicing events from TAIR10 and ones uniquely identified withinthis study. Then reads underwent lightweight alignment using Salmon version 1.4.0 (Patro et al. 2017) against the novel transcriptome from StringTie. Novel and known transcripts belonging to the same genewere analysed for splicing events by SUPPA2 (Trincado et al. 2018). Differential alternative splicing (DAS)was calculated for each event based on abundance of transcripts with and without inclusion of those eventsby SUPPA2 (Trincado et al. 2018).
+
+### Generic pre-computed bedMethyl input support
+
+* [ ] Support bedMethyl as a generic pre-computed methylation input format for any mC assay (WGBS, EMseq, dmC), not just dmC. Currently bedMethyl handling is exclusively gated behind dmC wildcard constraints (`_DMC_WC`). The underlying scripts (`validate_dmc_input.py`, `bedmethyl_to_cx_report.py`) are already assay-agnostic — the limitation is purely in rule routing.
+  * **Current state**: A sample with `Assay: WGBS` and `Read_files: /path/to/precomputed.bed.gz` fails because (1) excluded from dmC rules by `_DMC_WC`, (2) `define_cx_report_input()` routes it to Bismark expecting FASTQs.
+  * **Approach**: Add `bedMethyl` as a valid Assay in `VALID_ASSAYS` (maps to `mC` env). Modify `define_cx_report_input()` and wildcard constraints to route bedMethyl samples to the conversion pipeline. Reuse existing `get_dmc_input` → `copy_bedmethyl_input` → `convert_bedmethyl_to_cx_report` chain.
+  * **Alternative**: Add an optional `Input_format` column (FASTQ/BAM/bedMethyl) to separate assay type from input format. More flexible but larger change.
+
+### ATAC-seq input sample support
+
+* [ ] Support calling ATAC peaks with Input
+
 ## Documentation
 
 * [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
@@ -10,12 +28,12 @@
 
 #### New format
 
-* [ ] New sample sheet format streamlines and clarifies input specifications. Controls can now be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.) referenced by Sample_ID rather than a boolean flag.
-  * [ ] Update Snakefile sample-sheet parsing to read the new columns and build sample metadata accordingly.
-  * [ ] Update rule files: automatically generated filenames will change (e.g. "Input" -> the control's Sample_ID).
-  * [ ] Update documentation (README, Read the Docs, example sample sheets) to reflect the new format.
-  * [ ] Update test sample sheets and test code.
-  * [ ] Validate with a full run of the S. pombe integration test.
+* [x] New sample sheet format streamlines and clarifies input specifications. Controls can now be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.) referenced by Sample_ID rather than a boolean flag. **Done**: New format with 9 columns (Sample_ID, Assay, Genome, Levels, Replicate_ID, Read_files, Read_layout, IP_target, Control). Central logic in `workflow/scripts/sample_sheet.py`. Migration script at `scripts/migrate_sample_sheet.py`.
+  * [x] Update Snakefile sample-sheet parsing to read the new columns and build sample metadata accordingly. **Done**: `read_sample_sheet()` + `add_compat_columns()` in Snakefile.
+  * [x] Update rule files: automatically generated filenames will change (e.g. "Input" -> the control's Sample_ID). **Done**: All 8 rule files migrated (ChIPseq, RNAseq, ATACseq, smallRNA, mC, combined_analysis, sample_download, environment_setup). TF env eliminated.
+  * [x] Update documentation (README, Read the Docs, example sample sheets) to reflect the new format. **Done**: README.md and CLAUDE.md updated.
+  * [x] Update test sample sheets and test code. **Done**: All 4 test sample sheets converted (pombe, colcen, chr5, dmc). Unit tests for sample_sheet.py (49 tests).
+  * [x] Validate with a full run of the S. pombe integration test. **Done**: 257 pipeline steps, all completed successfully.
 
   | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
   |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
@@ -33,17 +51,7 @@
 
 ##### Input validation
 
-* [ ] Per-field validation rules (implemented in both pipeline parsing and epicc-builder):
-  * Sample_ID: required, must be unique across the sheet, sanitize for filesystem-safe characters.
-  * Assay: required, must be one of the controlled vocabulary values.
-  * Genome: required, freetext with safety sanitization.
-  * Levels: required, comma-separated `factor:level` pairs. All samples must have the same number of pairs. Factor names must be consistent across samples.
-  * Replicate_ID: required, freetext with safety sanitization.
-  * Read_files: required, validate as a path (local file exists or matches SRA regex `SRR\d+`). For PE, validate comma-separated pair. For `+`-merged entries, validate each component.
-  * Read_layout: required, must be `SE` or `PE`.
-  * IP_target: required for ChIP_broad and ChIP_narrow (including controls), must be blank or absent for other assays.
-  * Control: must reference an existing Sample_ID. Required for ChIP_broad, ChIP_narrow, and RAMPAGE IP samples. Error if specified for other assays. No chaining (referenced sample must not itself have a Control).
-  * Cross-field: warn if Read_layout is PE but Read_files has only one path (and vice versa).
+* [x] Per-field validation rules are defined in [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) (the canonical specification) and implemented in `workflow/scripts/samplefile_validation.py`. The epicc-builder app should implement the same rules. See the spec file for the full list of per-field constraints, cross-field checks, and derived name definitions.
 
 #### epicc-builder
 
@@ -61,9 +69,9 @@
   * [ ] Hamburger menu on each sample row allows for common actions like "Add a replicate", "Insert duplicate below", "Remove sample", etc.
   * [ ] Sample rows are reorderable.
   * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
-  * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. It should be possible for the user to edit the suggestion.
+  * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. The user can edit the suggestion.
 
-  **Validation**:
+  **Validation** (see [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) for the canonical rules):
   * [ ] Perform the same input validation as the pipeline code, and give users feedback through diagnostic messages.
   * [ ] Continuously evaluate user input as the table is filled out, opportunistically assigning defaults to sample column entries when there is sufficient input to do so.
 
@@ -161,6 +169,10 @@ Do we currently have a way to specify whether one or the other or both should be
 * [ ] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug)
 
 ## Testing
+
+### Pico and EMseq
+
+* [ ] Check that Pico and EMseq work (following adapter trimming improvement mentioned above)
 
 ### Schizosaccharomyces pombe test case
 
