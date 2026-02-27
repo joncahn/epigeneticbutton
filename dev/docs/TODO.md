@@ -4,6 +4,8 @@
 
 * [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
 
+* [ ] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt
+
 ## Analysis
 
 ### (Differential) splicing analysis for RNAseq
@@ -189,6 +191,12 @@ Do we currently have a way to specify whether one or the other or both should be
 * [x] Search only R.A. Martienssen publication datasets for additional RNA-seq and ChIP libraries. **Done**: used 3 Martienssen lab datasets + 1 Ekwall lab dataset.
 
 * [x] Any necessary data caching for the development of this test case should be done in the untracked test-data-prep directory. **Done**: structural RNA build intermediates in `test-data-prep/pombe-structural-rna/`.
+
+* [x] Add targeted rule tests executing real samtools commands on synthetic SAM data (filter_chip_pe, filter_chip_se, filter_rna_se, bamCoverage). **Done**: `tests/unit/test_rule_commands.py` (14 tests, 12 pass + 2 skip when bamCoverage unavailable).
+
+* [x] Add post-run validation tests checking all pipeline outputs for existence, format integrity, and correct structure. **Done**: `tests/integration/test_pombe_postrun.py` (29 tests, marked `@slow`, auto-skips if no completed run).
+
+* [x] Add validate-pombe orchestration script and Claude Code skill. **Done**: `scripts/validate_pombe.sh` (`--dry`/`--full`/`--check`/`--all`), `.claude/commands/validate-pombe.md` (`/validate-pombe` skill).
 
 ### Complete A. thaliana ColCEN Chr5 test case
 
