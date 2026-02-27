@@ -126,7 +126,7 @@ analysis_samples["sample_name"] = analysis_samples.apply(
 )
 
 pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
-analysis_samples[["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]].to_csv(pathtoanalysisfile, sep="\t", index=False)
+analysis_samples[["Assay", "Genome", "Levels", "IP_target", "env", "sample_name"]].to_csv(pathtoanalysisfile, sep="\t", index=False)
 
 # ---------------------------------------------------------------------------
 # Backward-compat helper functions (used by rule files during migration)
