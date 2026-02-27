@@ -55,6 +55,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Per-field validation rules are defined in [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) (the canonical specification) and implemented in `workflow/scripts/samplefile_validation.py`. The epicc-builder app should implement the same rules. See the spec file for the full list of per-field constraints, cross-field checks, and derived name definitions.
 
+#### Harmonize analysis_samplefiles
+
+* [x] Analysis samplefiles need to be updated to follow the conventions of the new input samplefile format. **Done**: `analysis_samplefile_*.tsv` now uses new-format columns (Assay, Genome, Levels, IP_target, env, sample_name).
+
 #### epicc-builder
 
 * [ ] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser.
