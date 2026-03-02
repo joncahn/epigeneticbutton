@@ -64,6 +64,9 @@
     transition: background 0.15s;
   }
   .toolbar button:hover, .toolbar label:hover { background: var(--accent); }
+  .toolbar button:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+  .toolbar .btn-accent { background: var(--accent); color: #fff; }
+  .toolbar .btn-accent:hover { background: #c73a52; }
   .toolbar input[type="file"] { display: none; }
   main {
     display: flex;
@@ -168,8 +171,8 @@
     font-style: italic;
   }
 
-  /* Example row — dimmed until user edits it */
-  .tabulator-row.example-row .tabulator-cell {
+  /* Example cell — dimmed until user edits it */
+  .tabulator-row .tabulator-cell.cell-example {
     color: var(--text-dim) !important;
     font-style: italic;
   }
@@ -242,14 +245,14 @@
 <header>
   <h1><span>EPICC</span> Sample Sheet Builder</h1>
   <div class="toolbar">
-    <label for="import-file" role="button" aria-label="Import TSV file" tabindex="0"
+    <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
+    <button id="btn-dup-selected" aria-label="Duplicate selected rows" disabled>Duplicate Selected</button>
+    <button id="btn-del-selected" aria-label="Delete selected rows" disabled>Delete Selected</button>
+    <label for="import-file" class="btn-accent" role="button" aria-label="Import TSV file" tabindex="0"
            onkeydown="if(event.key==='Enter')this.click()">Import TSV
       <input type="file" id="import-file" accept=".tsv,.txt,.tab" aria-label="Choose TSV file to import">
     </label>
-    <button id="btn-export" aria-label="Export sample sheet as TSV">Export TSV</button>
-    <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
-    <button id="btn-dup-selected" aria-label="Duplicate selected rows">Duplicate Selected</button>
-    <button id="btn-del-selected" aria-label="Delete selected rows">Delete Selected</button>
+    <button id="btn-export" class="btn-accent" aria-label="Export sample sheet as TSV">Export TSV</button>
   </div>
 </header>
 
@@ -407,6 +410,7 @@ function showDescription(field) {
 function refreshUI() {
   runValidation();
   applySuggestions();
+  applyExampleCellStyles();
 }
 
 function clearSuggestion(el) {
@@ -987,14 +991,23 @@ var EXAMPLE_DATA = [
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
 ];
 
-function applyExampleRowStyles() {
+// Per-cell example tracking: stash for restoring on edit cancel
+var _editingExampleStash = null; // { field, value } while an example cell is being edited
+
+function applyExampleCellStyles() {
   var rows = table.getRows();
-  for (var i = 0; i < rows.length; i++) {
-    var el = rows[i].getElement();
-    if (rows[i].getData()._example) {
-      el.classList.add("example-row");
-    } else {
-      el.classList.remove("example-row");
+  for (var ri = 0; ri < rows.length; ri++) {
+    var data = rows[ri].getData();
+    var exData = data._exampleData;
+    for (var ci = 0; ci < COLUMNS.length; ci++) {
+      var cell = rows[ri].getCell(COLUMNS[ci]);
+      if (!cell) continue;
+      var el = cell.getElement();
+      if (exData && COLUMNS[ci] in exData) {
+        el.classList.add("cell-example");
+      } else {
+        el.classList.remove("cell-example");
+      }
     }
   }
 }
@@ -1005,16 +1018,6 @@ function hasAnyExampleRows() {
     if (data[i]._example) return true;
   }
   return false;
-}
-
-function convertExampleRow(row) {
-  var data = row.getData();
-  if (!data._example) return;
-  // Clear the row data to empty and remove the example flag
-  var empty = emptyRow();
-  empty._example = false;
-  row.update(empty);
-  row.getElement().classList.remove("example-row");
 }
 
 // Editable column fields in Tab order (excludes _actions)
@@ -1073,6 +1076,14 @@ var _rowIdCounter = 0;
 table.on("dataLoaded", function(data) {
   for (var i = 0; i < data.length; i++) {
     if (!data[i].id) data[i].id = ++_rowIdCounter;
+    // Build per-cell example data map for example rows
+    if (data[i]._example && !data[i]._exampleData) {
+      var exData = {};
+      for (var j = 0; j < COLUMNS.length; j++) {
+        exData[COLUMNS[j]] = data[i][COLUMNS[j]] || "";
+      }
+      data[i]._exampleData = exData;
+    }
   }
 });
 table.on("rowAdded", function(row) {
@@ -1107,30 +1118,50 @@ function flushValidationIfIdle() {
   }
 }
 
-// When editing starts on an example row, convert it to an empty real row.
-// For real rows, accept Sample_ID suggestions.
+// Per-cell example editing: blank only the edited cell, restore on cancel.
 table.on("cellEditing", function(cell) {
   _editingActive = true;
   var row = cell.getRow();
-  if (row.getData()._example) {
-    convertExampleRow(row);
-    return false; // cancel this edit — row data was just replaced; user clicks again to edit
-  }
-  if (cell.getField() === "Sample_ID") {
-    var val = (cell.getValue() || "").trim();
-    var el = cell.getElement();
-    var suggestion = el.getAttribute("data-suggestion");
-    if (!val && suggestion) {
-      cell.setValue(suggestion);
+  var data = row.getData();
+  var field = cell.getField();
+
+  // If this cell is still an example cell, blank it for editing and stash the original
+  if (data._exampleData && field in data._exampleData) {
+    _editingExampleStash = { field: field, value: data._exampleData[field] };
+    cell.setValue("");
+    cell.getElement().classList.remove("cell-example");
+  } else {
+    _editingExampleStash = null;
+    // For real rows, accept Sample_ID suggestions
+    if (field === "Sample_ID") {
+      var val = (cell.getValue() || "").trim();
+      var el = cell.getElement();
+      var suggestion = el.getAttribute("data-suggestion");
+      if (!val && suggestion) {
+        cell.setValue(suggestion);
+      }
     }
   }
 });
 
 table.on("cellEdited", function(cell) {
   _editingActive = false;
+  var row = cell.getRow();
+  var data = row.getData();
+  var field = cell.getField();
+
+  // User committed an edit on an example cell — mark this field as real
+  if (data._exampleData && field in data._exampleData) {
+    delete data._exampleData[field];
+    // If first real edit on this row, enable validation by clearing _example
+    if (data._example) {
+      data._example = false;
+    }
+  }
+  _editingExampleStash = null;
+
   // When Assay changes, clear IP_target for non-ChIP
-  if (cell.getField() === "Assay") {
-    var row = cell.getRow();
+  if (field === "Assay") {
     var assay = (cell.getValue() || "").trim();
     if (!CHIP_ASSAYS.has(assay)) {
       row.update({ IP_target: "" });
@@ -1141,15 +1172,26 @@ table.on("cellEdited", function(cell) {
 
 table.on("cellEditCancelled", function(cell) {
   _editingActive = false;
+  // Restore example value if editing was cancelled on an example cell
+  if (_editingExampleStash && _editingExampleStash.field === cell.getField()) {
+    cell.setValue(_editingExampleStash.value);
+    cell.getElement().classList.add("cell-example");
+  }
+  _editingExampleStash = null;
   flushValidationIfIdle();
 });
 
 table.on("rowDeleted", function() { scheduleValidation(); });
 table.on("rowMoved", function() { scheduleValidation(); });
+table.on("rowSelectionChanged", function(rows) {
+  var hasSelection = rows.length > 0;
+  document.getElementById("btn-dup-selected").disabled = !hasSelection;
+  document.getElementById("btn-del-selected").disabled = !hasSelection;
+});
 
 // Initial state
 table.on("tableBuilt", function() {
-  applyExampleRowStyles();
+  applyExampleCellStyles();
   // Only run validation on non-example data
   if (!hasAnyExampleRows()) {
     refreshUI();
