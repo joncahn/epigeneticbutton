@@ -12,7 +12,7 @@ Test samples (from test_samples_pombe.tsv):
 
 Output paths use Sample_ID directly for per-replicate files.
 Analysis-level names use build_analysis_name():
-  {Assay}__{levels_label}__{IP_target}__{Genome}
+  {Assay}__{levels_label}__{IP_target}__{Genome} (empty parts omitted)
 """
 
 import pytest
@@ -42,8 +42,8 @@ INPUT_NARROW_TARGET = "results/ChIP/tracks/coverage__veg_cell_Input_rep1.bw"
 # Analysis-level names (Assay__levels_label__IP_target__Genome)
 CHIP_BROAD_ANALYSIS = "ChIP_broad__WT_cell__H3K9me2__Spombe"
 CHIP_NARROW_ANALYSIS = "ChIP_narrow__veg_cell__H3K4me3__Spombe"
-RNA_ANALYSIS_WT = "RNAseq__WT_cell____Spombe"
-SRNA_ANALYSIS_WT = "sRNA__WT_cell____Spombe"
+RNA_ANALYSIS_WT = "RNAseq__WT_cell__Spombe"
+SRNA_ANALYSIS_WT = "sRNA__WT_cell__Spombe"
 
 # Env checkpoint targets
 CHIP_CHECKPOINT = "results/ChIP/chkpts/ChIP_analysis__test_pombe__Spombe.done"

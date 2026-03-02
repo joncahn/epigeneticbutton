@@ -158,6 +158,10 @@
     border-left: 3px solid var(--warn) !important;
   }
 
+  /* Selected row highlight */
+  .tabulator-row.tabulator-selected { background: var(--surface2) !important; }
+  .tabulator-row.tabulator-selected:hover { background: #1a4a70 !important; }
+
   /* Placeholder styling for suggested Sample_ID */
   .cell-suggestion {
     color: var(--text-dim) !important;
@@ -244,6 +248,8 @@
     </label>
     <button id="btn-export" aria-label="Export sample sheet as TSV">Export TSV</button>
     <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
+    <button id="btn-dup-selected" aria-label="Duplicate selected rows">Duplicate Selected</button>
+    <button id="btn-del-selected" aria-label="Delete selected rows">Delete Selected</button>
   </div>
 </header>
 
@@ -290,6 +296,20 @@ const CONTROL_SOURCE_ASSAYS = {
   ChIP_narrow: CHIP_ASSAYS,
   RAMPAGE:     new Set(["RNAseq"]),
 };
+
+// Known marks and recommended assay type (derived from config/config.yaml peaktype)
+const KNOWN_MARKS = [
+  { pattern: /^(H3K27me[123]|H3K9me[123]|H4K20me[123]|H3K36me3|H3\.3|H3\.1|MGH3|CenH3|.*DDM1|PolIIS2P|H2AT120Ph|H2AKub)$/i, assay: "ChIP_broad" },
+  { pattern: /^(H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase)$/i, assay: "ChIP_narrow" },
+  { pattern: /^(H3|H4)$/i, assay: "ChIP_broad" },
+];
+
+function getRecommendedAssay(ipTarget) {
+  for (var i = 0; i < KNOWN_MARKS.length; i++) {
+    if (KNOWN_MARKS[i].pattern.test(ipTarget)) return KNOWN_MARKS[i].assay;
+  }
+  return null;
+}
 
 const UNSAFE_CHARS_RE = /[/\\\s'";&|<>$`!{}()\[\]?*~#]/;
 const DOUBLE_UNDERSCORE_RE = /__/;
@@ -610,8 +630,16 @@ function runValidation() {
 
     // IP_target
     if (CHIP_ASSAYS.has(assay)) {
-      if (!ipTarget)
+      if (!ipTarget) {
         addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target is required for " + assay);
+      } else {
+        // Check known marks vs assay recommendation
+        var recommended = getRecommendedAssay(ipTarget);
+        if (recommended && recommended !== assay) {
+          addIssue(cellIssues, warnings, rowKey, "IP_target",
+            "[!] Row #" + rowNum + " '" + sid + "': IP_target '" + ipTarget + "' is typically called with " + recommended + ", but Assay is " + assay, "warnings");
+        }
+      }
     } else if (assay) {
       if (ipTarget)
         addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target must be blank for " + assay);
@@ -892,6 +920,11 @@ function controlListValues(cell) {
 
 var columnDefs = [
   {
+    formatter: "rowSelection", titleFormatter: "rowSelection",
+    headerSort: false, width: 30, hozAlign: "center", resizable: false,
+    cellClick: function(e, cell) { cell.getRow().toggleSelect(); },
+  },
+  {
     title: "", field: "_actions", width: 36, headerSort: false,
     cssClass: "action-col", hozAlign: "center", resizable: false,
     formatter: function() {
@@ -991,6 +1024,7 @@ table = new Tabulator("#table-container", {
   data: EXAMPLE_DATA,
   columns: columnDefs,
   layout: "fitDataFill",
+  selectableRows: true,
   movableRows: true,
   history: true,
   placeholder: "No data \u2014 click '+ Add Row' or import a TSV file",
@@ -1143,6 +1177,26 @@ document.getElementById("import-file").addEventListener("change", function(e) {
 });
 
 document.getElementById("btn-export").addEventListener("click", exportTSV);
+
+document.getElementById("btn-del-selected").addEventListener("click", function() {
+  var selected = table.getSelectedRows();
+  if (selected.length === 0) return;
+  selected.forEach(function(row) { row.delete(); });
+  refreshUI();
+});
+
+document.getElementById("btn-dup-selected").addEventListener("click", function() {
+  var selected = table.getSelectedRows();
+  if (selected.length === 0) return;
+  for (var i = 0; i < selected.length; i++) {
+    var data = Object.assign({}, selected[i].getData());
+    data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
+    delete data.id;
+    table.addRow(data, false, selected[i]);
+  }
+  table.deselectRow();
+  refreshUI();
+});
 
 // ===========================================================================
 // Keyboard shortcuts

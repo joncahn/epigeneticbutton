@@ -4,7 +4,7 @@ Implements the rules defined in dev/docs/sample-sheet-spec.md.
 """
 
 import re
-from scripts.sample_sheet import VALID_ASSAYS, OLD_COLNAMES
+from scripts.sample_sheet import VALID_ASSAYS
 
 # Characters that are unsafe for filesystem use in Sample_ID
 _UNSAFE_CHARS = re.compile(r'[/\\\s\'\";&|<>$`!{}()\[\]?*~#]')
@@ -22,16 +22,6 @@ def check_table(tab):
     """
     errors = []
     warnings = []
-
-    # --- Old format detection ---
-    if list(tab.columns[:len(OLD_COLNAMES)]) == OLD_COLNAMES:
-        raise ValueError(
-            "Old-format sample sheet detected!\n"
-            "This pipeline version requires the new sample sheet format.\n"
-            "Run scripts/migrate_sample_sheet.py to convert your sample sheet.\n"
-            f"Expected columns: Sample_ID, Assay, Genome, Levels, Replicate_ID, "
-            f"Read_files, Read_layout, IP_target, Control"
-        )
 
     # --- Sample_ID: required, unique, filesystem-safe ---
     sample_ids = set()

@@ -18,11 +18,6 @@ NEW_COLNAMES = [
     "Read_files", "Read_layout", "IP_target", "Control",
 ]
 
-OLD_COLNAMES = [
-    "data_type", "line", "tissue", "sample_type", "replicate",
-    "seq_id", "fastq_path", "paired", "ref_genome",
-]
-
 VALID_ASSAYS = [
     "ChIP_broad", "ChIP_narrow", "ATAC",
     "RNAseq", "RAMPAGE",
@@ -153,21 +148,7 @@ def read_sample_sheet(filepath):
     """Read and validate a new-format sample sheet TSV.
 
     Returns a DataFrame sorted by [Genome, Assay, Levels, Sample_ID].
-    Raises ValueError if old-format columns are detected.
     """
-    with open(filepath) as f:
-        first_line = f.readline().strip().split("\t")
-
-    # Detect old format
-    if first_line == OLD_COLNAMES:
-        raise ValueError(
-            "Old-format sample sheet detected!\n"
-            "This pipeline version requires the new sample sheet format.\n"
-            "Run scripts/migrate_sample_sheet.py to convert your sample sheet.\n"
-            f"Expected columns: {', '.join(NEW_COLNAMES)}\n"
-            f"Found columns: {', '.join(first_line)}"
-        )
-
     df = pd.read_csv(filepath, sep="\t", header=0, dtype=str)
     df.columns = df.columns.str.strip()
 
@@ -207,11 +188,13 @@ def build_analysis_key(row):
 def build_analysis_name(row):
     """Build an analysis-level name string from a DataFrame row.
 
-    Returns: "{Assay}__{levels_label}__{IP_target}__{Genome}"
-    e.g. "ChIP_broad__WT_root__H3K9me2__ColCEN"
+    Components are joined with '__', omitting empty parts (e.g. blank IP_target).
+    Examples:
+      ChIP: "ChIP_broad__WT_root__H3K9me2__ColCEN"
+      RNA:  "RNAseq__WT_root__ColCEN"
     """
     key = build_analysis_key(row)
-    return "__".join(key)
+    return "__".join(part for part in key if part)
 
 
 def build_analysis_to_replicates(df):

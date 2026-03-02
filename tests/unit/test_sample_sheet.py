@@ -14,7 +14,6 @@ from sample_sheet import (
     ASSAY_TO_ENV,
     ASSAY_TO_PEAKTYPE,
     NEW_COLNAMES,
-    OLD_COLNAMES,
     parse_levels,
     levels_to_label,
     levels_to_factors,
@@ -211,7 +210,7 @@ class TestBuildAnalysisName:
     def test_rnaseq(self, pombe_df):
         row = pombe_df.iloc[5]
         name = build_analysis_name(row)
-        assert name == "RNAseq__WT_cell____Spombe"
+        assert name == "RNAseq__WT_cell__Spombe"
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,8 @@
 
 * [ ] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt
 
+* [ ] we should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark
+
 ## Analysis
 
 ### (Differential) splicing analysis for RNAseq
@@ -46,7 +48,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   Genome: Reference genome name
   Levels: Comma-separated list of factor:level pairs describing the experimental conditions for this sample. Uses the syntax `factor_name:level_value` (e.g. `genotype:WT,tissue:root`). Factors can be any experimental variable — genotype (B73, Mo17), tissue (root, leaf), temperature (37deg, 24deg), time point (T0, T1), etc. If multiple factors are specified, multifactorial comparisons will be performed. Factor names are not currently used in pipeline logic (only levels are used for constructing comparisons and plot labels), but they improve readability and enable epicc-builder to parse and validate entries progressively. **All samples must have the same number of factor:level pairs, including controls.** Controls should still specify meaningful levels where possible (e.g. `genotype:WT,tissue:root`).
   Replicate_ID: identifies biological or technical replicates (e.g. rep1, rep2, repA, repB, 1, 2). Replicates are treated independently in analysis and merged only for specific downstream steps like peak calling. Note: `+` in Read_files is for concatenating multi-file inputs from the same library (e.g. multiple lanes or runs) before any processing — this is distinct from replicate handling.
-  Read_files: Path to FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz). If multiple read files or SRA IDs are separated by a "+", they will be merged before any processing.
+  Read_files: Path to FASTA, FASTQ, BAM files, or bare SRA IDs. In this last case, read files will be downloaded from SRA. For paired-end FASTQs with separate mate files, use a comma to separate the R1 and R2 (/path/to/file.R1.fastq.gz,/path/to/file.R2.fastq.gz). If multiple read files or SRA IDs are separated by a "+", they will be merged before any processing.
   Read_layout: controlled vocabulary, single-end or paired-end sequencing (SE or PE)
   IP_target: Required for all ChIP_broad and ChIP_narrow samples, including controls. Describes what was pulled down — e.g. `H3K9me2` for an IP sample, or `Input`, `WCE`, `IgG` for a control sample.
   Control: Must be a valid Sample_ID. Used only for normalizing ChIP_broad, ChIP_narrow, and RAMPAGE samples. Validation rules: (1) the referenced Sample_ID must exist in the sheet, (2) a control sample must not itself reference another control (no chaining), (3) it is an error to specify a Control for non-ChIP/RAMPAGE assays, (4) multiple IP samples may share the same control.
@@ -59,35 +61,56 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Analysis samplefiles need to be updated to follow the conventions of the new input samplefile format. **Done**: `analysis_samplefile_*.tsv` now uses new-format columns (Assay, Genome, Levels, IP_target, env, sample_name).
 
+#### Remove old format detection in samplefile_validation.py
+
+* [x] Old format TSVs didn't always have headers, so we can't rely on column names for detection. Let's just get rid of the detection routine and make sure the README.md informs users that they can run migrate_sample_sheet.py if they're using the old format. **Done**: Removed old-format detection from `samplefile_validation.py` and `sample_sheet.py`. Removed `OLD_COLNAMES` constant (migration script defines its own). Added usage example to README.md and sample-sheet-spec.md.
+
+* [x] Ensure migrate_sample_sheet.py is up to date and remember to update it if any changes are made to the new sample sheet format. **Done**: Verified — handles all 9 new columns, all assay types, Control linking, and Sample_ID generation.
+
+#### Derived Names
+
+* [x] For samples without {IP_target}, we should avoid "____" in the filenames. Since many samples could lack an IP_target, best if we can do this by just eliminating the term and spacer, avoiding a placeholder like __NA__. This may already be the case, in which case we should just document the fact in sample-sheet-spec.md. **Done**: `build_analysis_name()` now filters empty parts before joining. E.g. `RNAseq__WT_cell__Spombe` (not `RNAseq__WT_cell____Spombe`). Documented in sample-sheet-spec.md.
+
 #### epicc-builder
 
-* [ ] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser.
+* [x] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser. **Done**: `tools/epicc-builder.html` (Tabulator 6.x, ~1165 lines), symlinked at repo root.
 
 ##### [ ] Implementation Stage 1: Sample sheet preparation helper
 
-  **Prerequisite research**: Identify a suitable JS library for table drawing and widgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can be bundled into a single HTML file).  **Decision reached: use [tabulator] <https://tabulator.info/>**.
+**Prerequisite research**: Identify a suitable JS library for table drawing andwidgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can bebundled into a single HTML file).  **Decision reached: use [tabulator] <https:/tabulator.info/>**.
 
-  **I/O**:
-  * [ ] Output format: TSV with the column header as the first row, matching the pipeline's expected input format.
-  * [ ] Import an existing sample sheet (TSV) for editing.
+**I/O**:
 
-  **UX**:
-  * [ ] Accessibility (to e.g. screen readers) is an important concern.
-  * [ ] When focus (keyboard or mouse) is on a column, the description of that column should be shown to the user via a dynamic text display.
-  * [ ] Hamburger menu on each sample row allows for common actions like "Add a replicate", "Insert duplicate below", "Remove sample", etc.
-  * [ ] Sample rows are reorderable.
-  * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. The user can edit the suggestion.
-  * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
-  * [ ] The drop-down for Control should be filtered based on the Assay of the current row to show only compatible types. For ChIP_broad and ChIP_narrow, both are valid Assay sources for Control. For RAMPAGE, only RNAseq Assays are valid Controls. If controls are available, instead of an empty dropdown list, show an unselectable message item "None available" or similar.
-  * [ ] Replace underscores in the header row with spaces for display purposes only.
+* [x] Output format: TSV with the column header as the first row, matching thepipeline's expected input format. **Done**.
+* [x] Import an existing sample sheet (TSV) for editing. **Done**.
 
-  **Validation** (see [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) for the canonical rules):
-  * [ ] Perform the same input validation as the pipeline code, and give users feedback through diagnostic messages.
-  * [ ] Continuously evaluate user input as the table is filled out, opportunistically assigning defaults to sample column entries when there is sufficient input to do so.
+**UX**:
 
-##### [ ] Implementation Stage 2: Config file helper
+* [x] Accessibility (to e.g. screen readers) is an important concern. **Done**: aria labels, roles, keyboard-contained Tab navigation.
+* [x] When focus (keyboard or mouse) is on a column, the description of that columnshould be shown to the user via a dynamic text display. **Done**: description panel updates on header/cell click.
+* [x] Hamburger menu on each sample row allows for common actions like "Add areplicate", "Insert duplicate below", "Remove sample", etc. **Done**: context menu with Add replicate, Duplicate, Move up/down, Remove.
+* [x] Sample rows are reorderable. **Done**: Tabulator movableRows + Move up/down in context menu.
+* [x] Example text is shown for the freetext fields until a user enters information.For example, epicc-builder has the opportunity to progressively suggest uniquesample IDs as a user fills out the other fields for that sample. The user can editthe suggestion. **Done**: per-row example data (dimmed, individually cleared on edit), progressive Sample_ID suggestion with auto-accept.
+* [x] Controlled-vocabulary fields are represented as a drop-down menu. **Done**: Assay, Read_layout, Control as list editors.
+* [x] The drop-down for Control should be filtered based on the Assay of the currentrow to show only compatible types. For ChIP_broad and ChIP_narrow, both are validAssay sources for Control. For RAMPAGE, only RNAseq Assays are valid Controls. Ifcontrols are available, instead of an empty dropdown list, show an unselectablemessage item "None available" or similar. **Done**: CONTROL_SOURCE_ASSAYS constant drives filtering.
+* [x] Replace underscores in the header row with spaces for display purposes only. **Done**.
+* [x] Add a selection widget to each row to support multi-row selection and actions like delete and duplicate. **Done**: Checkbox column with `rowSelection` formatter, `selectableRows: true`, "Delete Selected" and "Duplicate Selected" toolbar buttons.
 
-* [ ] Yet to be specified.
+**Validation** (see [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) for thecanonical rules):
+
+* [x] Perform the same input validation as the pipeline code, and give usersfeedback through diagnostic messages. **Done**: full validation engine ported from samplefile_validation.py, diagnostics panel.
+* [x] Continuously evaluate user input as the table is filled out, opportunisticallyassigning defaults to sample column entries when there is sufficient input to do so. **Done**: editing-aware validation scheduling, auto IP_target clearing on Assay change.
+* [x] Cells with unresolved warnings should show an indicator of this in the UI.Possibilities are yellow cell border or small yellow circle or exclamation mark inthe cell. Same for errors, but with red. **Done**: red left border for errors, yellow for warnings.
+* [x] When a user enters an IP_target, we should compare with the list of knownmarks, and if the user has entered a ChIP_broad or ChIP_narrow value that conflictswith the recommendation in the known marks, we should warn. **Done**: `KNOWN_MARKS` constant with regex patterns from `config/config.yaml` peaktype mappings. Warning emitted during validation when assay conflicts with recommendation.
+
+##### [ ] Implementation Stage 2: Config file helper and concordance with original hosted app
+
+* [ ] Augment the sample sheet builder with another interactive section just above allowing for the creation, editing, removal of the factors that will be used in Levels in the sample file. This can be something like an New Factor text field and button. Committed factors will then appear as tiles showing their name with an "x" inside to enable removal. Then, in the sample sheet builder, instead of showing the Levels as a table column, we should automatically populate/update the table GUI with columns having the names of the factors, so the users will just enter the level value there. The TSV will keep the same factor:level format for the Levels column, so epicc-builder should handle this transformation on import/export.
+
+* [ ] Implement all currently unimplemented functionality from [the original epicc-builder](https://epicc-builder.streamlit.app/), but keep our updated sample sheet builder.
+  * [ ] We will need to alter the app presentation so we can show different sections (sample sheet and epicc configuration file form settings). This could be implemented with upper nav bar with "EPICC" as the home item in the menu, followed by Sample Sheet and Config File. Clicking EPICC resolves to the first menu item (Sample Sheet). Links to documentation and the EPICC/epigeneticbutton [Github repo](https://github.com/joncahn/epigeneticbutton) should also appear in this main nav menu.
+  * [ ] The dedicated sample file check button probably isn't necessary since we're doing real time validation.
+  * [ ] Keep all of the jokey prompts in the config file form.
 
 ### config.yaml
 

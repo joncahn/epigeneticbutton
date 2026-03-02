@@ -144,7 +144,11 @@ The sample metadata file is a tab-separated file (TSV) with 9 columns. Each row 
 | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
 |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
 
-A migration script (`scripts/migrate_sample_sheet.py`) is available to convert old-format sample sheets.
+A migration script is available to convert old-format sample sheets:
+
+```bash
+python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
+```
 
 ### Common to all types of samples
 

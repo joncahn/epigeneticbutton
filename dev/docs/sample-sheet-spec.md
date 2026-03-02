@@ -173,20 +173,24 @@ and `IP_target: Input`, then a ChIP sample can set `Control: WT_leaf_Input_rep1`
 | Read_layout vs Read_files (PE with single path) | Warning | PE layout but Read_files has only one non-BAM path per component |
 | Read_layout vs Read_files (SE with multiple paths) | Warning | SE layout but Read_files has multiple comma-separated paths |
 
-## Old-Format Detection
+## Old-Format Migration
 
-If the column header matches the old 9-column format (`data_type`, `line`,
-`tissue`, `sample_type`, `replicate`, `seq_id`, `fastq_path`, `paired`,
-`ref_genome`), validation raises an error directing the user to run
-`scripts/migrate_sample_sheet.py`.
+If you have an old-format sample sheet (with columns `data_type`, `line`,
+`tissue`, etc.), use the migration script to convert it:
+
+```bash
+python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
+```
 
 ## Derived Names
 
 These are not user-specified columns but are computed from the sample sheet:
 
 - **levels_label**: `_`-joined level values from Levels (e.g. `WT_root`)
-- **analysis_name**: `{Assay}__{levels_label}__{IP_target}__{Genome}`
-  (e.g. `ChIP_broad__WT_root__H3K9me2__ColCEN`)
+- **analysis_name**: Components `(Assay, levels_label, IP_target, Genome)` joined
+  with `__`, omitting empty parts. For ChIP samples (with IP_target):
+  `ChIP_broad__WT_root__H3K9me2__ColCEN`. For non-ChIP (blank IP_target):
+  `RNAseq__WT_root__ColCEN`.
 - **env**: Pipeline environment folder, mapped from Assay via `ASSAY_TO_ENV`
 - **peak_type**: `broad` or `narrow`, mapped from Assay via `ASSAY_TO_PEAKTYPE`
 

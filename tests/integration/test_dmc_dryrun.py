@@ -17,8 +17,8 @@ Output paths use Sample_ID directly:
   results/mC/tracks/{Sample_ID}__{context}.bw
 
 Analysis-level names (for DMRs) use build_analysis_name():
-  {Assay}__{levels_label}__{IP_target}__{Genome}
-  e.g. dmC__WT_leaf____test_genome
+  {Assay}__{levels_label}__{IP_target}__{Genome} (empty parts omitted)
+  e.g. dmC__WT_leaf__test_genome
 """
 
 import pytest
@@ -40,9 +40,9 @@ DMC_MODBAM_REP2_TARGET = "results/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
 BEDMETHYL_TARGET = "results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw"
 MUTANT_TARGET = "results/mC/tracks/mutant_leaf_dmC_rep1__CG.bw"
 
-# Analysis-level names (Assay__levels_label__IP_target__Genome)
-WT_LEAF_ANALYSIS = "dmC__WT_leaf____test_genome"
-MUTANT_LEAF_ANALYSIS = "dmC__mutant_leaf____test_genome"
+# Analysis-level names (empty parts omitted)
+WT_LEAF_ANALYSIS = "dmC__WT_leaf__test_genome"
+MUTANT_LEAF_ANALYSIS = "dmC__mutant_leaf__test_genome"
 
 # DMR target
 DMR_TARGET = f"results/mC/DMRs/summary__{WT_LEAF_ANALYSIS}__vs__{MUTANT_LEAF_ANALYSIS}__DMRs.txt"
