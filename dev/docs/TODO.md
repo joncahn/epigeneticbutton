@@ -76,8 +76,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [ ] When focus (keyboard or mouse) is on a column, the description of that column should be shown to the user via a dynamic text display.
   * [ ] Hamburger menu on each sample row allows for common actions like "Add a replicate", "Insert duplicate below", "Remove sample", etc.
   * [ ] Sample rows are reorderable.
-  * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
   * [ ] Example text is shown for the freetext fields until a user enters information. For example, epicc-builder has the opportunity to progressively suggest unique sample IDs as a user fills out the other fields for that sample. The user can edit the suggestion.
+  * [ ] Controlled-vocabulary fields are represented as a drop-down menu.
+  * [ ] The drop-down for Control should be filtered based on the Assay of the current row to show only compatible types. For ChIP_broad and ChIP_narrow, both are valid Assay sources for Control. For RAMPAGE, only RNAseq Assays are valid Controls. If controls are available, instead of an empty dropdown list, show an unselectable message item "None available" or similar.
+  * [ ] Replace underscores in the header row with spaces for display purposes only.
 
   **Validation** (see [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) for the canonical rules):
   * [ ] Perform the same input validation as the pipeline code, and give users feedback through diagnostic messages.
@@ -207,6 +209,8 @@ Do we currently have a way to specify whether one or the other or both should be
 * [x] Add post-run validation tests checking all pipeline outputs for existence, format integrity, and correct structure. **Done**: `tests/integration/test_pombe_postrun.py` (29 tests, marked `@slow`, auto-skips if no completed run).
 
 * [x] Add validate-pombe orchestration script and Claude Code skill. **Done**: `scripts/validate_pombe.sh` (`--dry`/`--full`/`--check`/`--all`), `.claude/commands/validate-pombe.md` (`/validate-pombe` skill).
+
+* [ ] Remove tissue:cell from test_samples_pombe sample sheet - no reason to have this factor as it is not differentiated among the samples.
 
 ### Complete A. thaliana ColCEN Chr5 test case
 

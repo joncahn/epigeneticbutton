@@ -131,12 +131,13 @@
     background: var(--surface);
   }
   .tabulator .tabulator-row .tabulator-cell {
-    border-right: 1px solid var(--border);
+    border: none !important;
+    border-right: 1px solid var(--border) !important;
     color: var(--text);
     padding: 4px 8px;
   }
   .tabulator .tabulator-row .tabulator-cell.tabulator-editing {
-    border: 1px solid var(--accent2);
+    border: 1px solid var(--accent2) !important;
     padding: 0;
   }
   .tabulator .tabulator-row .tabulator-cell.tabulator-editing input,
@@ -159,6 +160,12 @@
 
   /* Placeholder styling for suggested Sample_ID */
   .cell-suggestion {
+    color: var(--text-dim) !important;
+    font-style: italic;
+  }
+
+  /* Example row — dimmed until user edits it */
+  .tabulator-row.example-row .tabulator-cell {
     color: var(--text-dim) !important;
     font-style: italic;
   }
@@ -497,8 +504,9 @@ function runValidation() {
   var sampleIds = new Set();
   var rows = table.getRows();
 
-  // --- Per-row validation ---
+  // --- Per-row validation (skip example rows) ---
   for (var i = 0; i < data.length; i++) {
+    if (data[i]._example) continue;
     var row = data[i];
     var rowNum = i + 1;
     var sid = (row.Sample_ID || "").trim();
@@ -600,9 +608,10 @@ function runValidation() {
 
   // --- Cross-row validation ---
 
-  // Levels: consistent factors
+  // Levels: consistent factors (skip example rows)
   var allFactors = [];
   for (var i = 0; i < data.length; i++) {
+    if (data[i]._example) { allFactors.push(null); continue; }
     var levels = (data[i].Levels || "").trim();
     if (!levels) { allFactors.push(null); continue; }
     var parsed = parseLevels(levels);
@@ -630,9 +639,10 @@ function runValidation() {
     }
   }
 
-  // Control: reference validation
+  // Control: reference validation (skip example rows)
   var allSids = new Set(data.map(function(r) { return (r.Sample_ID || "").trim(); }).filter(Boolean));
   for (var i = 0; i < data.length; i++) {
+    if (data[i]._example) continue;
     var control = (data[i].Control || "").trim();
     var sid = (data[i].Sample_ID || "").trim();
     var rowNum = i + 1;
@@ -695,12 +705,24 @@ function updateCellStyles() {
   }
 }
 
+var _lastDiagKey = "";
+
 function renderDiagnostics(errors, warnings) {
+  // Skip DOM rebuild if content is unchanged — prevents focus theft
+  var newKey = errors.join("\n") + "\n---\n" + warnings.join("\n");
+  if (newKey === _lastDiagKey) return;
+  _lastDiagKey = newKey;
+
+  // Save and restore focus so panel rebuild doesn't steal it
+  var focused = document.activeElement;
+
   var panel = document.getElementById("diagnostics-panel");
-  // Clear panel using safe DOM methods
   while (panel.firstChild) panel.removeChild(panel.firstChild);
 
-  if (errors.length === 0 && warnings.length === 0) return;
+  if (errors.length === 0 && warnings.length === 0) {
+    if (focused && focused !== document.body) focused.focus();
+    return;
+  }
 
   if (errors.length > 0) {
     var summary = document.createElement("div");
@@ -725,6 +747,11 @@ function renderDiagnostics(errors, warnings) {
       div.textContent = warnings[i];
       panel.appendChild(div);
     }
+  }
+
+  // Restore focus if it was lost during rebuild
+  if (focused && focused !== document.body && document.activeElement !== focused) {
+    focused.focus();
   }
 }
 
@@ -802,7 +829,8 @@ function importTSV(text) {
 }
 
 function exportTSV() {
-  var data = table.getData();
+  var data = table.getData().filter(function(r) { return !r._example; });
+  if (data.length === 0) { alert("No data to export (example rows are excluded)."); return; }
   // Before export, accept suggestions for empty Sample_IDs
   for (var i = 0; i < data.length; i++) {
     if (!(data[i].Sample_ID || "").trim()) {
@@ -827,13 +855,45 @@ function exportTSV() {
 // Tabulator initialization
 // ===========================================================================
 
-function controlListValues() {
-  return [""].concat(getAllSampleIds());
+// Build a filtered list of compatible Control candidates for a given row's Assay.
+// ChIP_broad/ChIP_narrow: controls must be ChIP_broad or ChIP_narrow samples.
+// RAMPAGE: controls must be RNAseq samples.
+function controlListValues(cell) {
+  var rowData = cell.getRow().getData();
+  var assay = (rowData.Assay || "").trim();
+  var currentSid = (rowData.Sample_ID || "").trim();
+  var allData = table.getData();
+
+  // Determine which assays are valid sources for controls
+  var validSourceAssays;
+  if (assay === "ChIP_broad" || assay === "ChIP_narrow") {
+    validSourceAssays = CHIP_ASSAYS;
+  } else if (assay === "RAMPAGE") {
+    validSourceAssays = new Set(["RNAseq"]);
+  } else {
+    // Non-control assay — return empty (Control not allowed)
+    return [{ label: "(None available)", value: "", disabled: true }];
+  }
+
+  var candidates = [];
+  for (var i = 0; i < allData.length; i++) {
+    var sid = (allData[i].Sample_ID || "").trim();
+    var sAssay = (allData[i].Assay || "").trim();
+    if (!sid || sid === currentSid) continue;
+    if (validSourceAssays.has(sAssay)) {
+      candidates.push(sid);
+    }
+  }
+
+  if (candidates.length === 0) {
+    return [{ label: "(None available)", value: "", disabled: true }];
+  }
+  return [""].concat(candidates);
 }
 
 var columnDefs = [
   {
-    title: "", field: "_actions", width: 36, headerSort: false, frozen: true,
+    title: "", field: "_actions", width: 36, headerSort: false,
     cssClass: "action-col", hozAlign: "center", resizable: false,
     formatter: function() {
       return '<button class="row-action-btn" aria-label="Row actions" title="Row actions">\u22EE</button>';
@@ -843,7 +903,7 @@ var columnDefs = [
     }
   },
   {
-    title: "Sample_ID", field: "Sample_ID", editor: "input", width: 200,
+    title: "Sample ID", field: "Sample_ID", editor: "input", width: 160,
     editorParams: { elementAttributes: { placeholder: "auto-suggested or type your own" } },
     headerClick: function() { showDescription("Sample_ID"); },
     cellClick: function(e, cell) { showDescription("Sample_ID"); },
@@ -868,26 +928,26 @@ var columnDefs = [
     cellClick: function(e, cell) { showDescription("Levels"); },
   },
   {
-    title: "Replicate_ID", field: "Replicate_ID", editor: "input", width: 110,
+    title: "Replicate ID", field: "Replicate_ID", editor: "input", width: 110,
     editorParams: { elementAttributes: { placeholder: "e.g. rep1" } },
     headerClick: function() { showDescription("Replicate_ID"); },
     cellClick: function(e, cell) { showDescription("Replicate_ID"); },
   },
   {
-    title: "Read_files", field: "Read_files", editor: "input", width: 200,
+    title: "Read files", field: "Read_files", editor: "input", width: 200,
     editorParams: { elementAttributes: { placeholder: "e.g. SRR12345678" } },
     headerClick: function() { showDescription("Read_files"); },
     cellClick: function(e, cell) { showDescription("Read_files"); },
   },
   {
-    title: "Read_layout", field: "Read_layout", width: 110,
+    title: "Read layout", field: "Read_layout", width: 110,
     editor: "list",
     editorParams: { values: ["SE", "PE"], listOnEmpty: true, freetext: false },
     headerClick: function() { showDescription("Read_layout"); },
     cellClick: function(e, cell) { showDescription("Read_layout"); },
   },
   {
-    title: "IP_target", field: "IP_target", editor: "input", width: 120,
+    title: "IP target", field: "IP_target", editor: "input", width: 120,
     editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
     headerClick: function() { showDescription("IP_target"); },
     cellClick: function(e, cell) { showDescription("IP_target"); },
@@ -896,15 +956,58 @@ var columnDefs = [
     title: "Control", field: "Control", width: 200,
     editor: "list",
     editorParams: function(cell) {
-      return { values: controlListValues(), autocomplete: true, listOnEmpty: true, freetext: true };
+      return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
     },
     headerClick: function() { showDescription("Control"); },
     cellClick: function(e, cell) { showDescription("Control"); },
   },
 ];
 
+// Example rows — valid data shown dimmed per-row until that row is edited.
+// The _example flag marks rows as examples; removed when the row is first edited.
+var EXAMPLE_DATA = [
+  { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1", Read_layout: "PE", IP_target: "CenH3", Control: "rdr126ddm1_leaf_Input_rep1" },
+  { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep1", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep1", Read_files: "SRR12362026", Read_layout: "PE", IP_target: "", Control: "" },
+  { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
+];
+
+function applyExampleRowStyles() {
+  var rows = table.getRows();
+  for (var i = 0; i < rows.length; i++) {
+    var el = rows[i].getElement();
+    if (rows[i].getData()._example) {
+      el.classList.add("example-row");
+    } else {
+      el.classList.remove("example-row");
+    }
+  }
+}
+
+function hasAnyExampleRows() {
+  var data = table.getData();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i]._example) return true;
+  }
+  return false;
+}
+
+function convertExampleRow(row) {
+  var data = row.getData();
+  if (!data._example) return;
+  // Clear the row data to empty and remove the example flag
+  var empty = emptyRow();
+  empty._example = false;
+  row.update(empty);
+  row.getElement().classList.remove("example-row");
+}
+
+// Editable column fields in Tab order (excludes _actions)
+var EDIT_FIELDS = COLUMNS.slice(); // ["Sample_ID", "Assay", ..., "Control"]
+
 table = new Tabulator("#table-container", {
-  data: [emptyRow(), emptyRow(), emptyRow()],
+  data: EXAMPLE_DATA,
   columns: columnDefs,
   layout: "fitDataFill",
   movableRows: true,
@@ -913,6 +1016,41 @@ table = new Tabulator("#table-container", {
   rowHeight: 32,
   index: "id",
   reactiveData: false,
+  // Keep Tab within the table: wrap from last cell to next row, last row to first
+  navigatorNextCell: function(cell, direction) {
+    var row = cell.getRow();
+    var field = cell.getField();
+    var idx = EDIT_FIELDS.indexOf(field);
+    if (idx < EDIT_FIELDS.length - 1) {
+      // Move to next column in same row
+      return row.getCell(EDIT_FIELDS[idx + 1]);
+    }
+    // End of row — move to first column of next row
+    var rows = table.getRows();
+    var rowIdx = rows.indexOf(row);
+    if (rowIdx < rows.length - 1) {
+      return rows[rowIdx + 1].getCell(EDIT_FIELDS[0]);
+    }
+    // Last cell of last row — wrap to first cell of first row
+    return rows[0].getCell(EDIT_FIELDS[0]);
+  },
+  navigatorPrevCell: function(cell, direction) {
+    var row = cell.getRow();
+    var field = cell.getField();
+    var idx = EDIT_FIELDS.indexOf(field);
+    if (idx > 0) {
+      // Move to previous column in same row
+      return row.getCell(EDIT_FIELDS[idx - 1]);
+    }
+    // Start of row — move to last column of previous row
+    var rows = table.getRows();
+    var rowIdx = rows.indexOf(row);
+    if (rowIdx > 0) {
+      return rows[rowIdx - 1].getCell(EDIT_FIELDS[EDIT_FIELDS.length - 1]);
+    }
+    // First cell of first row — wrap to last cell of last row
+    return rows[rows.length - 1].getCell(EDIT_FIELDS[EDIT_FIELDS.length - 1]);
+  },
 });
 
 // Auto-increment IDs for row indexing
@@ -929,8 +1067,42 @@ table.on("rowAdded", function(row) {
   }
 });
 
-// Accept suggestion on edit start: if Sample_ID is empty but has suggestion, populate it
+// --- Editing-aware validation scheduling ---
+// Validation modifies DOM (cell classes, diagnostics panel) which steals focus
+// from Tabulator editors. We track editing state and only run validation when
+// no cell editor is open.
+var _editingActive = false;
+var _validationDirty = false;
+
+function scheduleValidation() {
+  _validationDirty = true;
+  // Check after a tick whether editing has stopped
+  setTimeout(function() {
+    if (!_editingActive && _validationDirty) {
+      _validationDirty = false;
+      runValidation();
+      applySuggestions();
+    }
+  }, 20);
+}
+
+function flushValidationIfIdle() {
+  if (!_editingActive && _validationDirty) {
+    _validationDirty = false;
+    runValidation();
+    applySuggestions();
+  }
+}
+
+// When editing starts on an example row, convert it to an empty real row.
+// For real rows, accept Sample_ID suggestions.
 table.on("cellEditing", function(cell) {
+  _editingActive = true;
+  var row = cell.getRow();
+  if (row.getData()._example) {
+    convertExampleRow(row);
+    return false; // cancel this edit — row data was just replaced; user clicks again to edit
+  }
   if (cell.getField() === "Sample_ID") {
     var val = (cell.getValue() || "").trim();
     var el = cell.getElement();
@@ -942,6 +1114,7 @@ table.on("cellEditing", function(cell) {
 });
 
 table.on("cellEdited", function(cell) {
+  _editingActive = false;
   // When Assay changes, clear IP_target for non-ChIP
   if (cell.getField() === "Assay") {
     var row = cell.getRow();
@@ -950,17 +1123,25 @@ table.on("cellEdited", function(cell) {
       row.update({ IP_target: "" });
     }
   }
-  runValidation();
-  applySuggestions();
+  scheduleValidation();
 });
 
-table.on("rowDeleted", function() { runValidation(); applySuggestions(); });
-table.on("rowMoved", function() { runValidation(); });
+table.on("cellEditCancelled", function(cell) {
+  _editingActive = false;
+  flushValidationIfIdle();
+});
+
+table.on("rowDeleted", function() { scheduleValidation(); });
+table.on("rowMoved", function() { scheduleValidation(); });
 
 // Initial state
 table.on("tableBuilt", function() {
-  runValidation();
-  applySuggestions();
+  applyExampleRowStyles();
+  // Only run validation on non-example data
+  if (!hasAnyExampleRows()) {
+    runValidation();
+    applySuggestions();
+  }
 });
 
 // ===========================================================================
