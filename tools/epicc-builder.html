@@ -280,8 +280,16 @@ const ASSAY_TO_ENV = {
   WGBS: "mC", EMseq: "mC", dmC: "mC"
 };
 
+const VALID_ASSAYS_SET = new Set(VALID_ASSAYS);
 const CHIP_ASSAYS = new Set(["ChIP_broad", "ChIP_narrow"]);
 const CONTROL_ASSAYS = new Set(["ChIP_broad", "ChIP_narrow", "RAMPAGE"]);
+
+// Which assays can provide a control for each control-bearing assay
+const CONTROL_SOURCE_ASSAYS = {
+  ChIP_broad:  CHIP_ASSAYS,
+  ChIP_narrow: CHIP_ASSAYS,
+  RAMPAGE:     new Set(["RNAseq"]),
+};
 
 const UNSAFE_CHARS_RE = /[/\\\s'";&|<>$`!{}()\[\]?*~#]/;
 const DOUBLE_UNDERSCORE_RE = /__/;
@@ -352,11 +360,6 @@ function suggestSampleId(rowData) {
   return label + "_" + short + "_" + rep;
 }
 
-function getAllSampleIds() {
-  if (!table) return [];
-  return table.getData().map(r => (r.Sample_ID || "").trim()).filter(Boolean);
-}
-
 function emptyRow() {
   return {
     Sample_ID: "", Assay: "", Genome: "", Levels: "", Replicate_ID: "",
@@ -379,6 +382,24 @@ function showDescription(field) {
     descPanel.appendChild(strong);
     descPanel.appendChild(document.createTextNode(" " + desc));
   }
+}
+
+function refreshUI() {
+  runValidation();
+  applySuggestions();
+}
+
+function clearSuggestion(el) {
+  el.classList.remove("cell-suggestion");
+  el.removeAttribute("data-suggestion");
+  el.title = "";
+}
+
+function descHooks(field) {
+  return {
+    headerClick: function() { showDescription(field); },
+    cellClick: function(e, cell) { showDescription(field); },
+  };
 }
 
 // ===========================================================================
@@ -461,8 +482,7 @@ function addReplicate(row) {
   data.Sample_ID = ""; // clear so suggestion kicks in
   delete data.id; // new internal id
   table.addRow(data, false, row);
-  runValidation();
-  applySuggestions();
+  refreshUI();
 }
 
 function duplicateRow(row) {
@@ -470,8 +490,7 @@ function duplicateRow(row) {
   data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
   delete data.id;
   table.addRow(data, false, row);
-  runValidation();
-  applySuggestions();
+  refreshUI();
 }
 
 function moveRow(row, direction) {
@@ -488,8 +507,7 @@ function moveRow(row, direction) {
 
 function removeRow(row) {
   row.delete();
-  runValidation();
-  applySuggestions();
+  refreshUI();
 }
 
 // ===========================================================================
@@ -534,7 +552,7 @@ function runValidation() {
     }
 
     // Assay
-    if (!VALID_ASSAYS.includes(assay))
+    if (!VALID_ASSAYS_SET.has(assay))
       addIssue(cellIssues, errors, rowKey, "Assay", "[X] Row #" + rowNum + " '" + sid + "': Assay '" + assay + "' not in [" + VALID_ASSAYS.join(", ") + "]");
 
     // Genome
@@ -583,9 +601,9 @@ function runValidation() {
           }
         } else {
           if (readLayout === "PE" && files.length === 1 && !first.endsWith(".bam"))
-            addIssueWarn(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)");
+            addIssue(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)", "warnings");
           if (readLayout === "SE" && files.length > 1)
-            addIssueWarn(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths");
+            addIssue(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths", "warnings");
         }
       }
     }
@@ -632,7 +650,7 @@ function runValidation() {
       if (factors.length !== refFactors.length) {
         addIssue(cellIssues, errors, rowKey, "Levels",
           "[X] Row #" + rowNum + ": Levels has " + factors.length + " factors, expected " + refFactors.length + " (matching row " + refRowNum + ")");
-      } else if (JSON.stringify(factors) !== JSON.stringify(refFactors)) {
+      } else if (factors.join("\0") !== refFactors.join("\0")) {
         addIssue(cellIssues, errors, rowKey, "Levels",
           "[X] Row #" + rowNum + ": Levels factor names [" + factors.join(",") + "] don't match row " + refRowNum + " [" + refFactors.join(",") + "]");
       }
@@ -640,7 +658,12 @@ function runValidation() {
   }
 
   // Control: reference validation (skip example rows)
-  var allSids = new Set(data.map(function(r) { return (r.Sample_ID || "").trim(); }).filter(Boolean));
+  // Build O(1) lookup from Sample_ID → row data (sampleIds Set already complete from per-row loop)
+  var sidToRow = new Map();
+  for (var i = 0; i < data.length; i++) {
+    var s = (data[i].Sample_ID || "").trim();
+    if (s) sidToRow.set(s, data[i]);
+  }
   for (var i = 0; i < data.length; i++) {
     if (data[i]._example) continue;
     var control = (data[i].Control || "").trim();
@@ -649,12 +672,12 @@ function runValidation() {
     var rowKey = rows[i] ? rows[i].getIndex() : i;
     if (!control) continue;
 
-    if (!allSids.has(control)) {
+    if (!sampleIds.has(control)) {
       addIssue(cellIssues, errors, rowKey, "Control",
         "[X] Row #" + rowNum + " '" + sid + "': Control '" + control + "' does not match any Sample_ID in the sheet");
     } else {
       // No chaining
-      var ctrlRow = data.find(function(r) { return (r.Sample_ID || "").trim() === control; });
+      var ctrlRow = sidToRow.get(control);
       if (ctrlRow) {
         var ctrlCtrl = (ctrlRow.Control || "").trim();
         if (ctrlCtrl) {
@@ -670,18 +693,11 @@ function runValidation() {
   renderDiagnostics(errors, warnings);
 }
 
-function addIssue(issues, list, rowKey, field, msg) {
+function addIssue(issues, list, rowKey, field, msg, severity) {
   list.push(msg);
   var key = rowKey + ":" + field;
   if (!issues[key]) issues[key] = { errors: [], warnings: [] };
-  issues[key].errors.push(msg);
-}
-
-function addIssueWarn(issues, list, rowKey, field, msg) {
-  list.push(msg);
-  var key = rowKey + ":" + field;
-  if (!issues[key]) issues[key] = { errors: [], warnings: [] };
-  issues[key].warnings.push(msg);
+  issues[key][severity || "errors"].push(msg);
 }
 
 function updateCellStyles() {
@@ -707,6 +723,20 @@ function updateCellStyles() {
 
 var _lastDiagKey = "";
 
+function appendDiagSection(panel, items, cssClass, label) {
+  if (items.length === 0) return;
+  var summary = document.createElement("div");
+  summary.className = "diag-summary " + cssClass;
+  summary.textContent = items.length + " " + label + (items.length > 1 ? "s" : "");
+  panel.appendChild(summary);
+  for (var i = 0; i < items.length; i++) {
+    var div = document.createElement("div");
+    div.className = cssClass;
+    div.textContent = items[i];
+    panel.appendChild(div);
+  }
+}
+
 function renderDiagnostics(errors, warnings) {
   // Skip DOM rebuild if content is unchanged — prevents focus theft
   var newKey = errors.join("\n") + "\n---\n" + warnings.join("\n");
@@ -724,30 +754,8 @@ function renderDiagnostics(errors, warnings) {
     return;
   }
 
-  if (errors.length > 0) {
-    var summary = document.createElement("div");
-    summary.className = "diag-summary diag-error";
-    summary.textContent = errors.length + " error" + (errors.length > 1 ? "s" : "");
-    panel.appendChild(summary);
-    for (var i = 0; i < errors.length; i++) {
-      var div = document.createElement("div");
-      div.className = "diag-error";
-      div.textContent = errors[i];
-      panel.appendChild(div);
-    }
-  }
-  if (warnings.length > 0) {
-    var summary = document.createElement("div");
-    summary.className = "diag-summary diag-warning";
-    summary.textContent = warnings.length + " warning" + (warnings.length > 1 ? "s" : "");
-    panel.appendChild(summary);
-    for (var i = 0; i < warnings.length; i++) {
-      var div = document.createElement("div");
-      div.className = "diag-warning";
-      div.textContent = warnings[i];
-      panel.appendChild(div);
-    }
-  }
+  appendDiagSection(panel, errors,   "diag-error",   "error");
+  appendDiagSection(panel, warnings, "diag-warning", "warning");
 
   // Restore focus if it was lost during rebuild
   if (focused && focused !== document.body && document.activeElement !== focused) {
@@ -778,14 +786,10 @@ function applySuggestions() {
           el.textContent = suggestion;
         }
       } else {
-        el.classList.remove("cell-suggestion");
-        el.removeAttribute("data-suggestion");
-        el.title = "";
+        clearSuggestion(el);
       }
     } else {
-      el.classList.remove("cell-suggestion");
-      el.removeAttribute("data-suggestion");
-      el.title = "";
+      clearSuggestion(el);
     }
   }
 }
@@ -825,7 +829,7 @@ function importTSV(text) {
   }
 
   table.setData(rows);
-  setTimeout(function() { runValidation(); applySuggestions(); }, 100);
+  setTimeout(function() { refreshUI(); }, 100);
 }
 
 function exportTSV() {
@@ -865,13 +869,8 @@ function controlListValues(cell) {
   var allData = table.getData();
 
   // Determine which assays are valid sources for controls
-  var validSourceAssays;
-  if (assay === "ChIP_broad" || assay === "ChIP_narrow") {
-    validSourceAssays = CHIP_ASSAYS;
-  } else if (assay === "RAMPAGE") {
-    validSourceAssays = new Set(["RNAseq"]);
-  } else {
-    // Non-control assay — return empty (Control not allowed)
+  var validSourceAssays = CONTROL_SOURCE_ASSAYS[assay];
+  if (!validSourceAssays) {
     return [{ label: "(None available)", value: "", disabled: true }];
   }
 
@@ -902,65 +901,47 @@ var columnDefs = [
       showCtxMenu(e, cell.getRow());
     }
   },
-  {
+  Object.assign({
     title: "Sample ID", field: "Sample_ID", editor: "input", width: 160,
     editorParams: { elementAttributes: { placeholder: "auto-suggested or type your own" } },
-    headerClick: function() { showDescription("Sample_ID"); },
-    cellClick: function(e, cell) { showDescription("Sample_ID"); },
-  },
-  {
+  }, descHooks("Sample_ID")),
+  Object.assign({
     title: "Assay", field: "Assay", width: 140,
     editor: "list",
     editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
-    headerClick: function() { showDescription("Assay"); },
-    cellClick: function(e, cell) { showDescription("Assay"); },
-  },
-  {
+  }, descHooks("Assay")),
+  Object.assign({
     title: "Genome", field: "Genome", editor: "input", width: 120,
     editorParams: { elementAttributes: { placeholder: "e.g. Spombe, ColCEN, hg38" } },
-    headerClick: function() { showDescription("Genome"); },
-    cellClick: function(e, cell) { showDescription("Genome"); },
-  },
-  {
+  }, descHooks("Genome")),
+  Object.assign({
     title: "Levels", field: "Levels", editor: "input", width: 220,
     editorParams: { elementAttributes: { placeholder: "e.g. genotype:WT,tissue:root" } },
-    headerClick: function() { showDescription("Levels"); },
-    cellClick: function(e, cell) { showDescription("Levels"); },
-  },
-  {
+  }, descHooks("Levels")),
+  Object.assign({
     title: "Replicate ID", field: "Replicate_ID", editor: "input", width: 110,
     editorParams: { elementAttributes: { placeholder: "e.g. rep1" } },
-    headerClick: function() { showDescription("Replicate_ID"); },
-    cellClick: function(e, cell) { showDescription("Replicate_ID"); },
-  },
-  {
+  }, descHooks("Replicate_ID")),
+  Object.assign({
     title: "Read files", field: "Read_files", editor: "input", width: 200,
     editorParams: { elementAttributes: { placeholder: "e.g. SRR12345678" } },
-    headerClick: function() { showDescription("Read_files"); },
-    cellClick: function(e, cell) { showDescription("Read_files"); },
-  },
-  {
+  }, descHooks("Read_files")),
+  Object.assign({
     title: "Read layout", field: "Read_layout", width: 110,
     editor: "list",
     editorParams: { values: ["SE", "PE"], listOnEmpty: true, freetext: false },
-    headerClick: function() { showDescription("Read_layout"); },
-    cellClick: function(e, cell) { showDescription("Read_layout"); },
-  },
-  {
+  }, descHooks("Read_layout")),
+  Object.assign({
     title: "IP target", field: "IP_target", editor: "input", width: 120,
     editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
-    headerClick: function() { showDescription("IP_target"); },
-    cellClick: function(e, cell) { showDescription("IP_target"); },
-  },
-  {
+  }, descHooks("IP_target")),
+  Object.assign({
     title: "Control", field: "Control", width: 200,
     editor: "list",
     editorParams: function(cell) {
       return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
     },
-    headerClick: function() { showDescription("Control"); },
-    cellClick: function(e, cell) { showDescription("Control"); },
-  },
+  }, descHooks("Control")),
 ];
 
 // Example rows — valid data shown dimmed per-row until that row is edited.
@@ -1080,8 +1061,7 @@ function scheduleValidation() {
   setTimeout(function() {
     if (!_editingActive && _validationDirty) {
       _validationDirty = false;
-      runValidation();
-      applySuggestions();
+      refreshUI();
     }
   }, 20);
 }
@@ -1089,8 +1069,7 @@ function scheduleValidation() {
 function flushValidationIfIdle() {
   if (!_editingActive && _validationDirty) {
     _validationDirty = false;
-    runValidation();
-    applySuggestions();
+    refreshUI();
   }
 }
 
@@ -1139,8 +1118,7 @@ table.on("tableBuilt", function() {
   applyExampleRowStyles();
   // Only run validation on non-example data
   if (!hasAnyExampleRows()) {
-    runValidation();
-    applySuggestions();
+    refreshUI();
   }
 });
 
@@ -1150,8 +1128,7 @@ table.on("tableBuilt", function() {
 
 document.getElementById("btn-add-row").addEventListener("click", function() {
   table.addRow(emptyRow());
-  runValidation();
-  applySuggestions();
+  refreshUI();
 });
 
 document.getElementById("import-file").addEventListener("change", function(e) {
@@ -1175,14 +1152,12 @@ document.addEventListener("keydown", function(e) {
   // Ctrl+Z: undo
   if (e.ctrlKey && e.key === "z" && !e.shiftKey) {
     table.undo();
-    runValidation();
-    applySuggestions();
+    refreshUI();
   }
   // Ctrl+Shift+Z or Ctrl+Y: redo
   if ((e.ctrlKey && e.shiftKey && e.key === "Z") || (e.ctrlKey && e.key === "y")) {
     table.redo();
-    runValidation();
-    applySuggestions();
+    refreshUI();
   }
 });
 </script>
