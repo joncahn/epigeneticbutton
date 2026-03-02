@@ -1118,18 +1118,24 @@ function flushValidationIfIdle() {
   }
 }
 
-// Per-cell example editing: blank only the edited cell, restore on cancel.
+// Per-cell example editing: let editor open with example text (user types over it).
+// cellEdited fires only when the value actually changes; cellEditCancelled fires
+// when the user presses Escape or commits without changing the value.
 table.on("cellEditing", function(cell) {
   _editingActive = true;
   var row = cell.getRow();
   var data = row.getData();
   var field = cell.getField();
 
-  // If this cell is still an example cell, blank it for editing and stash the original
   if (data._exampleData && field in data._exampleData) {
-    _editingExampleStash = { field: field, value: data._exampleData[field] };
-    cell.setValue("");
+    // Stash that this is an example cell; remove dimmed styling while editing
+    _editingExampleStash = { field: field };
     cell.getElement().classList.remove("cell-example");
+    // Select all text so typing immediately replaces the example value
+    setTimeout(function() {
+      var input = cell.getElement().querySelector("input");
+      if (input) input.select();
+    }, 0);
   } else {
     _editingExampleStash = null;
     // For real rows, accept Sample_ID suggestions
@@ -1150,10 +1156,10 @@ table.on("cellEdited", function(cell) {
   var data = row.getData();
   var field = cell.getField();
 
-  // User committed an edit on an example cell — mark this field as real
+  // User committed a real change on an example cell — mark this field as edited
   if (data._exampleData && field in data._exampleData) {
     delete data._exampleData[field];
-    // If first real edit on this row, enable validation by clearing _example
+    // Enable validation by clearing _example on first real edit
     if (data._example) {
       data._example = false;
     }
@@ -1172,9 +1178,8 @@ table.on("cellEdited", function(cell) {
 
 table.on("cellEditCancelled", function(cell) {
   _editingActive = false;
-  // Restore example value if editing was cancelled on an example cell
+  // Restore example styling — value was never changed so no need to restore it
   if (_editingExampleStash && _editingExampleStash.field === cell.getField()) {
-    cell.setValue(_editingExampleStash.value);
     cell.getElement().classList.add("cell-example");
   }
   _editingExampleStash = null;
