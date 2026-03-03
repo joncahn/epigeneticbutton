@@ -3,7 +3,7 @@ Targeted rule tests that execute real samtools commands on synthetic SAM data.
 
 These tests validate the actual shell logic extracted from Snakemake rules
 (filter_chip_pe, filter_chip_se, filter_rna_se) using minimal synthetic
-inputs. bamCoverage tests are skipped by default (not in smk9 env).
+inputs. bamCoverage tests are skipped by default (not in epicc env).
 
 Run with: pytest tests/unit/test_rule_commands.py -v
 """
@@ -335,7 +335,7 @@ class TestMakeCoverageChip:
     def coverage_outputs(self, se_chip_outputs):
         """Run bamCoverage on the filtered SE ChIP BAM."""
         if not shutil.which("bamCoverage"):
-            pytest.skip("bamCoverage not found (not in smk9 env)")
+            pytest.skip("bamCoverage not found (not in epicc env)")
         bam = se_chip_outputs["bam"]
         # Index the BAM first
         subprocess.run(["samtools", "index", str(bam)], check=True, timeout=30)

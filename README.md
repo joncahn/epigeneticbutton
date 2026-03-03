@@ -55,8 +55,8 @@ cd epigeneticbutton
 
 2. Install snakemake and other required packages from the depency file:
 ```bash
-conda create -n smk9 -y --file config/smk9.txt
-conda activate smk9
+conda create -n epicc -y --file config/epicc-env.txt
+conda activate epicc
 ```
 If you want to run the pipeline on a different platform than locally or slurm, you will need to also install the corresponding snakemake-executor-plugin
 

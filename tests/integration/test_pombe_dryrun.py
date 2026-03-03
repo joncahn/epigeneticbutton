@@ -29,21 +29,21 @@ pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 
 # Per-replicate targets
-CHIP_BROAD_TARGET = "results/ChIP/tracks/coverage__WT_cell_H3K9me2_rep1.bw"
-CHIP_BROAD_TARGET_REP2 = "results/ChIP/tracks/coverage__WT_cell_H3K9me2_rep2.bw"
-CHIP_NARROW_TARGET = "results/ChIP/tracks/coverage__veg_cell_H3K4me3_rep1.bw"
-RNA_TARGET = "results/RNA/mapped/final__WT_cell_RNA_rep1.bam"
-SRNA_TARGET = "results/sRNA/mapped/WT_cell_sRNA_rep1/Results.txt"
+CHIP_BROAD_TARGET = "results/ChIP/tracks/coverage__WT_H3K9me2_rep1.bw"
+CHIP_BROAD_TARGET_REP2 = "results/ChIP/tracks/coverage__WT_H3K9me2_rep2.bw"
+CHIP_NARROW_TARGET = "results/ChIP/tracks/coverage__veg_H3K4me3_rep1.bw"
+RNA_TARGET = "results/RNA/mapped/final__WT_RNA_rep1.bam"
+SRNA_TARGET = "results/sRNA/mapped/WT_sRNA_rep1/Results.txt"
 
 # Control sample targets
-INPUT_BROAD_TARGET = "results/ChIP/tracks/coverage__WT_cell_Input_rep1.bw"
-INPUT_NARROW_TARGET = "results/ChIP/tracks/coverage__veg_cell_Input_rep1.bw"
+INPUT_BROAD_TARGET = "results/ChIP/tracks/coverage__WT_Input_rep1.bw"
+INPUT_NARROW_TARGET = "results/ChIP/tracks/coverage__veg_Input_rep1.bw"
 
 # Analysis-level names (Assay__levels_label__IP_target__Genome)
-CHIP_BROAD_ANALYSIS = "ChIP_broad__WT_cell__H3K9me2__Spombe"
-CHIP_NARROW_ANALYSIS = "ChIP_narrow__veg_cell__H3K4me3__Spombe"
-RNA_ANALYSIS_WT = "RNAseq__WT_cell__Spombe"
-SRNA_ANALYSIS_WT = "sRNA__WT_cell__Spombe"
+CHIP_BROAD_ANALYSIS = "ChIP_broad__WT__H3K9me2__Spombe"
+CHIP_NARROW_ANALYSIS = "ChIP_narrow__veg__H3K4me3__Spombe"
+RNA_ANALYSIS_WT = "RNAseq__WT__Spombe"
+SRNA_ANALYSIS_WT = "sRNA__WT__Spombe"
 
 # Env checkpoint targets
 CHIP_CHECKPOINT = "results/ChIP/chkpts/ChIP_analysis__test_pombe__Spombe.done"
@@ -390,8 +390,8 @@ class TestControlLinking:
 
         output = result.stdout + result.stderr
 
-        assert "WT_cell_Input_rep1" in output, \
-            "ChIP broad workflow should reference WT_cell_Input_rep1 as control"
+        assert "WT_Input_rep1" in output, \
+            "ChIP broad workflow should reference WT_Input_rep1 as control"
 
     def test_chip_narrow_resolves_control(self, snakemake_available, repo_root, test_config):
         """Test that ChIP narrow workflow references veg Input control in peak calling."""
@@ -404,8 +404,8 @@ class TestControlLinking:
 
         output = result.stdout + result.stderr
 
-        assert "veg_cell_Input_rep1" in output, \
-            "ChIP workflow should reference veg_cell_Input_rep1 as control"
+        assert "veg_Input_rep1" in output, \
+            "ChIP workflow should reference veg_Input_rep1 as control"
 
     def test_input_control_processed(self, snakemake_available, repo_root, test_config):
         """Test that Input control samples can be processed independently."""
@@ -495,8 +495,8 @@ class TestReplicateHandling:
             pytest.skip("Snakemake not installed")
 
         targets = [
-            "results/RNA/mapped/final__WT_cell_RNA_rep1.bam",
-            "results/RNA/mapped/final__WT_cell_RNA_rep2.bam",
+            "results/RNA/mapped/final__WT_RNA_rep1.bam",
+            "results/RNA/mapped/final__WT_RNA_rep2.bam",
         ]
 
         for target in targets:

@@ -24,77 +24,77 @@ RESULTS = REPO_ROOT / "results"
 
 # ChIP per-replicate BAMs (11 samples)
 CHIP_PER_REP_BAMS = [
-    "WT_cell_H3K9me2_rep1",
-    "WT_cell_H3K9me2_rep2",
-    "WT_cell_H3K9me3_rep1",
-    "WT_cell_H3K9me3_rep2",
-    "dcr1_cell_H3K9me2_rep1",
-    "dcr1_cell_H3K9me3_rep1",
-    "WT_cell_Input_rep1",
-    "dcr1_cell_Input_rep1",
-    "veg_cell_H3K4me3_rep1",
-    "veg_cell_H3K4me3_rep2",
-    "veg_cell_Input_rep1",
+    "WT_H3K9me2_rep1",
+    "WT_H3K9me2_rep2",
+    "WT_H3K9me3_rep1",
+    "WT_H3K9me3_rep2",
+    "dcr1_H3K9me2_rep1",
+    "dcr1_H3K9me3_rep1",
+    "WT_Input_rep1",
+    "dcr1_Input_rep1",
+    "veg_H3K4me3_rep1",
+    "veg_H3K4me3_rep2",
+    "veg_Input_rep1",
 ]
 
 # ChIP analysis-level merged BAMs (3 analysis groups + 2 merged controls)
 CHIP_MERGED_ANALYSIS_BAMS = [
-    "ChIP_broad__WT_cell__H3K9me2__Spombe",
-    "ChIP_broad__WT_cell__H3K9me3__Spombe",
-    "ChIP_narrow__veg_cell__H3K4me3__Spombe",
+    "ChIP_broad__WT__H3K9me2__Spombe",
+    "ChIP_broad__WT__H3K9me3__Spombe",
+    "ChIP_narrow__veg__H3K4me3__Spombe",
 ]
 CHIP_MERGED_CONTROL_BAMS = [
-    "WT_cell_Input_rep1",
-    "veg_cell_Input_rep1",
+    "WT_Input_rep1",
+    "veg_Input_rep1",
 ]
 
 # ChIP non-Input samples (for FC bigwigs)
 CHIP_NON_INPUT_PER_REP = [
-    "WT_cell_H3K9me2_rep1",
-    "WT_cell_H3K9me2_rep2",
-    "WT_cell_H3K9me3_rep1",
-    "WT_cell_H3K9me3_rep2",
-    "dcr1_cell_H3K9me2_rep1",
-    "dcr1_cell_H3K9me3_rep1",
-    "veg_cell_H3K4me3_rep1",
-    "veg_cell_H3K4me3_rep2",
+    "WT_H3K9me2_rep1",
+    "WT_H3K9me2_rep2",
+    "WT_H3K9me3_rep1",
+    "WT_H3K9me3_rep2",
+    "dcr1_H3K9me2_rep1",
+    "dcr1_H3K9me3_rep1",
+    "veg_H3K4me3_rep1",
+    "veg_H3K4me3_rep2",
 ]
 
 # ChIP PE samples that should have broadPeak files
 CHIP_PE_PEAK_SAMPLES = [
-    "WT_cell_H3K9me2_rep1",
-    "WT_cell_H3K9me2_rep2",
-    "WT_cell_H3K9me3_rep1",
-    "WT_cell_H3K9me3_rep2",
-    "dcr1_cell_H3K9me2_rep1",
-    "dcr1_cell_H3K9me3_rep1",
+    "WT_H3K9me2_rep1",
+    "WT_H3K9me2_rep2",
+    "WT_H3K9me3_rep1",
+    "WT_H3K9me3_rep2",
+    "dcr1_H3K9me2_rep1",
+    "dcr1_H3K9me3_rep1",
 ]
 
 # ChIP SE samples that should have narrowPeak files
 CHIP_SE_PEAK_SAMPLES = [
-    "veg_cell_H3K4me3_rep1",
-    "veg_cell_H3K4me3_rep2",
+    "veg_H3K4me3_rep1",
+    "veg_H3K4me3_rep2",
 ]
 
 # RNA per-replicate samples (4)
 RNA_PER_REP = [
-    "WT_cell_RNA_rep1",
-    "WT_cell_RNA_rep2",
-    "dcr1_cell_RNA_rep1",
-    "dcr1_cell_RNA_rep2",
+    "WT_RNA_rep1",
+    "WT_RNA_rep2",
+    "dcr1_RNA_rep1",
+    "dcr1_RNA_rep2",
 ]
 
 # RNA merged BAMs (2)
 RNA_MERGED = [
-    "RNAseq__WT_cell____Spombe",
-    "RNAseq__dcr1_cell____Spombe",
+    "RNAseq__WT__Spombe",
+    "RNAseq__dcr1__Spombe",
 ]
 
 # sRNA per-replicate samples (3)
 SRNA_PER_REP = [
-    "WT_cell_sRNA_rep1",
-    "WT_cell_sRNA_rep2",
-    "dcr1_cell_sRNA_rep1",
+    "WT_sRNA_rep1",
+    "WT_sRNA_rep2",
+    "dcr1_sRNA_rep1",
 ]
 
 # sRNA size classes
@@ -104,9 +104,9 @@ SRNA_STRANDS = ["plus", "minus"]
 # Checkpoint files
 CHIP_CHECKPOINTS = [
     "ChIP_analysis__test_pombe__Spombe.done",
-    "idr__ChIP_broad__WT_cell__H3K9me2__Spombe.done",
-    "idr__ChIP_broad__WT_cell__H3K9me3__Spombe.done",
-    "idr__ChIP_narrow__veg_cell__H3K4me3__Spombe.done",
+    "idr__ChIP_broad__WT__H3K9me2__Spombe.done",
+    "idr__ChIP_broad__WT__H3K9me3__Spombe.done",
+    "idr__ChIP_narrow__veg__H3K4me3__Spombe.done",
 ] + [f"map_ChIP__{s}.done" for s in CHIP_PER_REP_BAMS]
 
 RNA_CHECKPOINTS = [
@@ -211,11 +211,11 @@ class TestChIPOutputs:
 
     def test_idr_files(self, results_exist):
         """IDR output files: 2 broadPeak + 1 narrowPeak."""
-        for name in ["ChIP_broad__WT_cell__H3K9me2__Spombe",
-                      "ChIP_broad__WT_cell__H3K9me3__Spombe"]:
+        for name in ["ChIP_broad__WT__H3K9me2__Spombe",
+                      "ChIP_broad__WT__H3K9me3__Spombe"]:
             idr = RESULTS / "ChIP" / "peaks" / f"idr_peaks__{name}.broadPeak"
             assert _file_exists_nonempty(idr), f"Missing or empty: {idr}"
-        idr_narrow = RESULTS / "ChIP" / "peaks" / "idr_peaks__ChIP_narrow__veg_cell__H3K4me3__Spombe.narrowPeak"
+        idr_narrow = RESULTS / "ChIP" / "peaks" / "idr_peaks__ChIP_narrow__veg__H3K4me3__Spombe.narrowPeak"
         assert _file_exists_nonempty(idr_narrow), f"Missing or empty: {idr_narrow}"
 
     def test_chip_checkpoints(self, results_exist):
@@ -272,7 +272,7 @@ class TestRNAOutputs:
 
     def test_deg_file(self, results_exist):
         """DEG file is non-empty and has expected header columns."""
-        deg = RESULTS / "RNA" / "DEG" / "DEG_test_pombe__Spombe__WT__cell_vs_dcr1__cell.txt"
+        deg = RESULTS / "RNA" / "DEG" / "DEG_test_pombe__Spombe__WT_vs_dcr1.txt"
         assert _file_exists_nonempty(deg), f"Missing or empty: {deg}"
         with open(deg) as f:
             header = f.readline().strip()
@@ -313,13 +313,13 @@ class TestSRNAOutputs:
         """Merged WT bigwigs (4 sizes x 2 strands)."""
         for size in SRNA_SIZES:
             for strand in SRNA_STRANDS:
-                bw = RESULTS / "sRNA" / "tracks" / f"sRNA__WT_cell____Spombe__{size}__{strand}.bw"
+                bw = RESULTS / "sRNA" / "tracks" / f"sRNA__WT__Spombe__{size}__{strand}.bw"
                 assert _file_exists_nonempty(bw), f"Missing or empty: {bw}"
 
     def test_cluster_deg_results(self, results_exist):
         """Cluster DEG results for on_new_clusters and on_all_genes."""
         for mode in ["on_new_clusters", "on_all_genes"]:
-            deg = RESULTS / "sRNA" / "clusters" / f"test_pombe__Spombe__{mode}" / "DEG_WT_cell_vs_dcr1_cell.txt"
+            deg = RESULTS / "sRNA" / "clusters" / f"test_pombe__Spombe__{mode}" / "DEG_WT_vs_dcr1.txt"
             assert _file_exists_nonempty(deg), f"Missing or empty: {deg}"
 
     def test_cluster_count_files(self, results_exist):
@@ -396,7 +396,7 @@ class TestOutputIntegrity:
     def test_bam_header_has_pombe_chromosomes(self, results_exist):
         """BAM header contains @SQ lines with pombe chromosomes (I, II, III)."""
         import subprocess
-        bam = RESULTS / "ChIP" / "mapped" / "final__WT_cell_H3K9me2_rep1.bam"
+        bam = RESULTS / "ChIP" / "mapped" / "final__WT_H3K9me2_rep1.bam"
         result = subprocess.run(
             ["samtools", "view", "-H", str(bam)],
             capture_output=True, text=True, timeout=30
@@ -413,7 +413,7 @@ class TestOutputIntegrity:
 
     def test_bigwig_magic_bytes(self, results_exist):
         """Bigwig files have valid magic bytes (0x888FFC26 or 0x26FC8F88)."""
-        bw = RESULTS / "ChIP" / "tracks" / "FC__final__WT_cell_H3K9me2_rep1.bw"
+        bw = RESULTS / "ChIP" / "tracks" / "FC__final__WT_H3K9me2_rep1.bw"
         magic = _read_bigwig_magic(bw)
         valid_magics = {0x888FFC26, 0x26FC8F88}
         assert magic in valid_magics, \
@@ -421,7 +421,7 @@ class TestOutputIntegrity:
 
     def test_broadpeak_has_9_columns(self, results_exist):
         """BroadPeak files have 9 tab-separated columns."""
-        peak = RESULTS / "ChIP" / "peaks" / "peaks_pe__final__WT_cell_H3K9me2_rep1_peaks.broadPeak"
+        peak = RESULTS / "ChIP" / "peaks" / "peaks_pe__final__WT_H3K9me2_rep1_peaks.broadPeak"
         with open(peak) as f:
             for i, line in enumerate(f):
                 line = line.strip()
@@ -434,7 +434,7 @@ class TestOutputIntegrity:
 
     def test_narrowpeak_has_10_columns(self, results_exist):
         """NarrowPeak files have 10 tab-separated columns."""
-        peak = RESULTS / "ChIP" / "peaks" / "peaks_se__final__veg_cell_H3K4me3_rep1_peaks.narrowPeak"
+        peak = RESULTS / "ChIP" / "peaks" / "peaks_se__final__veg_H3K4me3_rep1_peaks.narrowPeak"
         with open(peak) as f:
             for i, line in enumerate(f):
                 line = line.strip()

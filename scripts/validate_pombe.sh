@@ -40,7 +40,7 @@ usage() {
 
 run_dry() {
     echo -e "${YELLOW}=== Stage: Dry-Run Tests ===${NC}"
-    conda run -n smk9 pytest tests/integration/test_pombe_dryrun.py -v
+    conda run -n epicc pytest tests/integration/test_pombe_dryrun.py -v
     echo -e "${GREEN}=== Dry-run tests PASSED ===${NC}"
 }
 
@@ -58,14 +58,14 @@ run_full() {
 
     if command -v sbatch &>/dev/null; then
         echo -e "  SLURM detected — using profiles/slurm"
-        conda run -n smk9 snakemake \
+        conda run -n epicc snakemake \
             --profile profiles/slurm \
             --configfile "$CONFIG_FILE"
     else
         CORES=$(( $(nproc) / 2 ))
         [ "$CORES" -lt 1 ] && CORES=1
         echo -e "  No SLURM — running locally with $CORES cores"
-        conda run -n smk9 snakemake \
+        conda run -n epicc snakemake \
             --use-conda --conda-frontend conda \
             --cores "$CORES" \
             --configfile "$CONFIG_FILE"
@@ -76,7 +76,7 @@ run_full() {
 
 run_check() {
     echo -e "${YELLOW}=== Stage: Post-Run Validation ===${NC}"
-    conda run -n smk9 pytest tests/integration/test_pombe_postrun.py -v -m slow
+    conda run -n epicc pytest tests/integration/test_pombe_postrun.py -v -m slow
     echo -e "${GREEN}=== Post-run validation PASSED ===${NC}"
 }
 

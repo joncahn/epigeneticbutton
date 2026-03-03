@@ -4,7 +4,7 @@
 
 * [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
 
-* [ ] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt
+* [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
 
 * [ ] we should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark
 
@@ -112,9 +112,9 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
   * [x] Keep all of the jokey prompts in the config file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
-##### [ ] Deployment
+##### [x] Deployment
 
-* [ ] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally.
+* [x] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally. **Done**: GitHub Actions workflow `.github/workflows/deploy-builder.yml` deploys `tools/epicc-builder.html` as `index.html` on push to main. Requires enabling GitHub Pages (Source: GitHub Actions) in repo Settings > Pages.
 
 ### config.yaml
 
@@ -237,7 +237,7 @@ Do we currently have a way to specify whether one or the other or both should be
 
 * [x] Add validate-pombe orchestration script and Claude Code skill. **Done**: `scripts/validate_pombe.sh` (`--dry`/`--full`/`--check`/`--all`), `.claude/commands/validate-pombe.md` (`/validate-pombe` skill).
 
-* [ ] Remove tissue:cell from test_samples_pombe sample sheet - no reason to have this factor as it is not differentiated among the samples.
+* [x] Remove tissue:cell from test_samples_pombe sample sheet - no reason to have this factor as it is not differentiated among the samples. **Done**: Reduced Levels to single `genotype:X` factor, updated all Sample_IDs, analysis names, and test assertions across 5 files.
 
 ### Complete A. thaliana ColCEN Chr5 test case
 

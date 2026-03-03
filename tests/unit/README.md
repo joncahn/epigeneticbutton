@@ -20,7 +20,7 @@ Install test dependencies:
 
 ```bash
 # Activate your conda environment
-conda activate smk9
+conda activate epicc
 
 # Install pytest and dependencies
 pip install pytest pytest-cov pytest-mock
@@ -230,7 +230,7 @@ The modBAM validation tests use mocked subprocess calls, so samtools doesn't nee
 
 ```bash
 # Make sure samtools is in your PATH
-conda activate smk9
+conda activate epicc
 which samtools
 
 # Or install it

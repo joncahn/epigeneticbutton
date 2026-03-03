@@ -10,8 +10,8 @@ EpigeneticButton (EPICC - Epigenetic Pipeline for Integrative Chromatin Characte
 
 ```bash
 # Install environment
-conda create -n smk9 -y --file config/smk9.txt
-conda activate smk9
+conda create -n epicc -y --file config/epicc-env.txt
+conda activate epicc
 
 # Run locally
 snakemake --use-conda --conda-frontend conda --cores 12
@@ -68,7 +68,7 @@ Sample metadata is defined in a TSV file with 9 columns:
 - **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `Input`). Blank for others.
 - **Control**: Sample_ID of the control sample (e.g. Input for ChIP). No chaining.
 
-Per-replicate files use `Sample_ID` directly (e.g. `final__WT_cell_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT_cell__H3K9me2__Spombe`).
+Per-replicate files use `Sample_ID` directly (e.g. `final__WT_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`).
 
 Peak type is determined by Assay: `ChIP_broad` → broad peaks (histone marks), `ChIP_narrow` → narrow peaks (transcription factors, H3K4me3, etc.). Both share the `ChIP` env (`results/ChIP/`).
 

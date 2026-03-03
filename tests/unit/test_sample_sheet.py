@@ -60,13 +60,13 @@ def pombe_df():
         ],
         "Genome": ["Spombe"] * 9,
         "Levels": [
-            "genotype:WT,tissue:cell", "genotype:WT,tissue:cell",
-            "genotype:WT,tissue:cell",
-            "genotype:dcr1,tissue:cell",
-            "genotype:dcr1,tissue:cell",
-            "genotype:WT,tissue:cell", "genotype:WT,tissue:cell",
-            "genotype:dcr1,tissue:cell",
-            "genotype:WT,tissue:cell",
+            "genotype:WT", "genotype:WT",
+            "genotype:WT",
+            "genotype:dcr1",
+            "genotype:dcr1",
+            "genotype:WT", "genotype:WT",
+            "genotype:dcr1",
+            "genotype:WT",
         ],
         "Replicate_ID": [
             "rep1", "rep2", "rep1", "rep1", "rep1",
@@ -193,24 +193,24 @@ class TestBuildAnalysisKey:
     def test_chip(self, pombe_df):
         row = pombe_df.iloc[0]
         key = build_analysis_key(row)
-        assert key == ("ChIP_broad", "WT_cell", "H3K9me2", "Spombe")
+        assert key == ("ChIP_broad", "WT", "H3K9me2", "Spombe")
 
     def test_rnaseq(self, pombe_df):
         row = pombe_df.iloc[5]
         key = build_analysis_key(row)
-        assert key == ("RNAseq", "WT_cell", "", "Spombe")
+        assert key == ("RNAseq", "WT", "", "Spombe")
 
 
 class TestBuildAnalysisName:
     def test_chip(self, pombe_df):
         row = pombe_df.iloc[0]
         name = build_analysis_name(row)
-        assert name == "ChIP_broad__WT_cell__H3K9me2__Spombe"
+        assert name == "ChIP_broad__WT__H3K9me2__Spombe"
 
     def test_rnaseq(self, pombe_df):
         row = pombe_df.iloc[5]
         name = build_analysis_name(row)
-        assert name == "RNAseq__WT_cell__Spombe"
+        assert name == "RNAseq__WT__Spombe"
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +221,7 @@ class TestBuildAnalysisToReplicates:
     def test_basic(self, pombe_df):
         a2r = build_analysis_to_replicates(pombe_df)
         # WT H3K9me2 ChIP has 2 reps
-        key = ("ChIP_broad", "WT_cell", "H3K9me2", "Spombe")
+        key = ("ChIP_broad", "WT", "H3K9me2", "Spombe")
         assert key in a2r
         assert a2r[key] == ["rep1", "rep2"]
 
@@ -233,7 +233,7 @@ class TestBuildAnalysisToReplicates:
 
     def test_single_rep(self, pombe_df):
         a2r = build_analysis_to_replicates(pombe_df)
-        key = ("ChIP_broad", "dcr1_cell", "H3K9me2", "Spombe")
+        key = ("ChIP_broad", "dcr1", "H3K9me2", "Spombe")
         assert key in a2r
         assert a2r[key] == ["rep1"]
 
@@ -354,11 +354,11 @@ class TestAddCompatColumns:
         chip_rows = result[result["Assay"] == "ChIP_broad"]
         assert (chip_rows["env"] == "ChIP").all()
 
-    def test_line_tissue_from_levels(self, pombe_df):
+    def test_line_from_levels(self, pombe_df):
         result = add_compat_columns(pombe_df)
         wt_row = result[result["Sample_ID"] == "WT_H3K9me2_rep1"].iloc[0]
         assert wt_row["line"] == "WT"
-        assert wt_row["tissue"] == "cell"
+        assert wt_row["tissue"] == ""
 
     def test_sample_type_chip(self, pombe_df):
         result = add_compat_columns(pombe_df)
@@ -389,4 +389,4 @@ class TestAddCompatColumns:
     def test_levels_label(self, pombe_df):
         result = add_compat_columns(pombe_df)
         row = result[result["Sample_ID"] == "WT_H3K9me2_rep1"].iloc[0]
-        assert row["levels_label"] == "WT_cell"
+        assert row["levels_label"] == "WT"
