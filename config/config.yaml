@@ -331,13 +331,13 @@ low_resources: &low
   threads: 1
   mem_mb: 1000
   tmp_mb: 1000
-  qos: "default"
+  qos: "slow_nice"
 
 standard_resources: &standard
   threads: 4
   mem_mb: 2000
   tmp_mb: 2000
-  qos: "default"
+  qos: "slow_nice"
 
 heavy_resources: &heavy
   threads: 4
