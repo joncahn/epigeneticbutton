@@ -140,6 +140,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 Do we currently have a way to specify whether one or the other or both should be used in the analysis?
 
+### Provide a front-end CLI executable script
+
+* [ ] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. It will have user-friendly help text, and could provide more flexibility for reporting, logging, intermediate file cleanup, and output/working folder designation (to run in a directory other than the one in which it is invoked). We should be able to pass through arbitrary arguments to snakemake as well (maybe through a --smk argument to the wrapper).
+
 ## Plotting
 
 * [ ] See if we can improve browser plot sample label readability
