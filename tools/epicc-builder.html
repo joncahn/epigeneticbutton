@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EPICC Builder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔘</text></svg>">
 <link href="https://unpkg.com/tabulator-tables@6/dist/css/tabulator_midnight.min.css" rel="stylesheet">
 <script src="https://unpkg.com/tabulator-tables@6/dist/js/tabulator.min.js"></script>
 <script src="https://unpkg.com/js-yaml@4/dist/js-yaml.min.js"></script>
@@ -113,6 +114,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    margin-right: 2px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -291,7 +293,6 @@
   }
   .cfg-msg {
     font-size: 13px;
-    font-style: italic;
     color: var(--text-dim);
     flex-basis: 100%;
     margin-top: -4px;
@@ -607,6 +608,11 @@ const UNSAFE_CHARS_RE = /[/\\\s'";&|<>$`!{}()\[\]?*~#]/;
 const DOUBLE_UNDERSCORE_RE = /__/;
 const SRA_REGEX = /^[SDE]RR\d+$/;
 
+// Factor column field prefix — internal only, never serialized
+const FACTOR_PREFIX = "_factor_";
+function factorField(name) { return FACTOR_PREFIX + name; }
+function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
+
 const COLUMN_DESCRIPTIONS = {
   Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
   Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), ATAC, RNAseq, RAMPAGE, sRNA, WGBS, EMseq, dmC.",
@@ -663,7 +669,7 @@ function buildLevelsFromFactors(rowData) {
   if (factors.length === 0) return "";
   var parts = [];
   for (var i = 0; i < factors.length; i++) {
-    var val = (rowData["_factor_" + factors[i]] || "").trim();
+    var val = (rowData[factorField(factors[i])] || "").trim();
     parts.push(factors[i] + ":" + val);
   }
   return parts.join(",");
@@ -674,33 +680,17 @@ function populateFactorsFromLevels(rowData) {
   var parsed = parseLevels(rowData.Levels || "");
   if (!parsed) return;
   for (var i = 0; i < parsed.length; i++) {
-    rowData["_factor_" + parsed[i].factor] = parsed[i].level;
+    rowData[factorField(parsed[i].factor)] = parsed[i].level;
   }
-}
-
-// Build levels label from factor fields
-function levelsLabelFromFactors(rowData) {
-  if (factors.length === 0) return "";
-  var parts = [];
-  for (var i = 0; i < factors.length; i++) {
-    var val = (rowData["_factor_" + factors[i]] || "").trim();
-    if (val) parts.push(val);
-  }
-  return parts.join("_");
 }
 
 function suggestSampleId(rowData) {
   const assay = (rowData.Assay || "").trim();
   const rep = (rowData.Replicate_ID || "").trim();
   const ip = (rowData.IP_target || "").trim();
-  var label = "";
-  if (factors.length > 0) {
-    label = levelsLabelFromFactors(rowData);
-  } else {
-    var levels = (rowData.Levels || "").trim();
-    if (!levels) return "";
-    label = levelsToLabel(levels);
-  }
+  var levels = factors.length > 0 ? buildLevelsFromFactors(rowData) : (rowData.Levels || "").trim();
+  if (!levels) return "";
+  var label = levelsToLabel(levels);
   if (!label || !rep) return "";
   if (CHIP_ASSAYS.has(assay)) {
     if (!ip) return "";
@@ -717,7 +707,7 @@ function emptyRow() {
     Read_files: "", Read_layout: "", IP_target: "", Control: ""
   };
   for (var i = 0; i < factors.length; i++) {
-    row["_factor_" + factors[i]] = "";
+    row[factorField(factors[i])] = "";
   }
   return row;
 }
@@ -730,7 +720,7 @@ function getVisibleFields() {
   if (factors.length > 0) {
     var fields = ["Sample_ID", "Assay", "Genome"];
     for (var i = 0; i < factors.length; i++) {
-      fields.push("_factor_" + factors[i]);
+      fields.push(factorField(factors[i]));
     }
     fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target", "Control");
     return fields;
@@ -762,8 +752,8 @@ function addFactor(name) {
   // Initialize factor field in all existing rows
   var allData = table.getData();
   for (var i = 0; i < allData.length; i++) {
-    if (!allData[i]["_factor_" + name]) {
-      allData[i]["_factor_" + name] = "";
+    if (!allData[i][factorField(name)]) {
+      allData[i][factorField(name)] = "";
     }
   }
   rebuildTableColumns();
@@ -803,8 +793,6 @@ function renderFactorTiles() {
 function rebuildTableColumns() {
   table.setColumns(buildColumnDefs());
   EDIT_FIELDS = getVisibleFields();
-  // Re-apply styles after column rebuild
-  setTimeout(function() { applyExampleCellStyles(); }, 50);
 }
 
 function buildColumnDefs() {
@@ -844,7 +832,7 @@ function buildColumnDefs() {
     for (var i = 0; i < factors.length; i++) {
       (function(fname) {
         defs.push(Object.assign({
-          title: fname, field: "_factor_" + fname, editor: "input", width: 120,
+          title: fname, field: factorField(fname), editor: "input", width: 120,
           editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
         }, descHooks("Levels")));
       })(factors[i]);
@@ -1084,8 +1072,8 @@ function runValidation() {
     if (factors.length > 0) {
       // Validate each factor field individually
       for (var fi = 0; fi < factors.length; fi++) {
-        var fval = (row["_factor_" + factors[fi]] || "").trim();
-        var fField = "_factor_" + factors[fi];
+        var fval = (row[factorField(factors[fi])] || "").trim();
+        var fField = factorField(factors[fi]);
         if (!fval)
           addIssue(cellIssues, errors, rowKey, fField, "[X] Row #" + rowNum + " '" + sid + "': " + factors[fi] + " level is required");
         else if (fval.includes(":") || fval.includes(","))
@@ -1254,14 +1242,14 @@ function updateCellStyles() {
       var field = visibleFields[ci];
       var cell = rows[ri].getCell(field);
       if (!cell) continue;
-      var el = cell.getElement();
-      el.classList.remove("cell-error", "cell-warning");
+      var cellEl = cell.getElement();
+      cellEl.classList.remove("cell-error", "cell-warning");
       var key = rowKey + ":" + field;
       var issues = cellIssues[key];
       if (issues && issues.errors.length > 0) {
-        el.classList.add("cell-error");
+        cellEl.classList.add("cell-error");
       } else if (issues && issues.warnings.length > 0) {
-        el.classList.add("cell-warning");
+        cellEl.classList.add("cell-warning");
       }
     }
   }
@@ -1320,22 +1308,22 @@ function applySuggestions() {
     var sid = (data.Sample_ID || "").trim();
     var cell = rows[ri].getCell("Sample_ID");
     if (!cell) continue;
-    var el = cell.getElement();
+    var cellEl = cell.getElement();
     if (!sid) {
       var suggestion = suggestSampleId(data);
       if (suggestion) {
-        el.classList.add("cell-suggestion");
-        el.setAttribute("data-suggestion", suggestion);
-        el.title = "Suggested: " + suggestion;
+        cellEl.classList.add("cell-suggestion");
+        cellEl.setAttribute("data-suggestion", suggestion);
+        cellEl.title = "Suggested: " + suggestion;
         // Show suggestion as cell content if not editing
-        if (!el.querySelector(".tabulator-editing")) {
-          el.textContent = suggestion;
+        if (!cellEl.querySelector(".tabulator-editing")) {
+          cellEl.textContent = suggestion;
         }
       } else {
-        clearSuggestion(el);
+        clearSuggestion(cellEl);
       }
     } else {
-      clearSuggestion(el);
+      clearSuggestion(cellEl);
     }
   }
 }
@@ -1343,6 +1331,25 @@ function applySuggestions() {
 // ===========================================================================
 // Import / Export
 // ===========================================================================
+
+function downloadBlob(content, mimeType, filename) {
+  var blob = new Blob([content], { type: mimeType });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+}
+
+function readFileAsText(inputElement, callback) {
+  var file = inputElement.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { callback(ev.target.result); };
+  reader.readAsText(file);
+  inputElement.value = "";
+}
 
 function importTSV(text) {
   var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
@@ -1418,13 +1425,7 @@ function exportTSV() {
   for (var i = 0; i < data.length; i++) {
     lines.push(COLUMNS.map(function(c) { var v = data[i][c]; return (v == null) ? "" : String(v); }).join("\t"));
   }
-  var blob = new Blob([lines.join("\n") + "\n"], { type: "text/tab-separated-values" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url;
-  a.download = "sample_sheet.tsv";
-  a.click();
-  setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+  downloadBlob(lines.join("\n") + "\n", "text/tab-separated-values", "sample_sheet.tsv");
 }
 
 // ===========================================================================
@@ -1467,7 +1468,7 @@ function controlListValues(cell) {
 var EXAMPLE_DATA = [
   { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1", Read_layout: "PE", IP_target: "Input", Control: "" },
   { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2", Read_layout: "PE", IP_target: "Input", Control: "" },
-  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1", Read_layout: "PE", IP_target: "CenH3", Control: "rdr126ddm1_leaf_Input_rep1" },
+  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1", Read_layout: "PE", IP_target: "CenH3", Control: "WT_leaf_Input_rep1" },
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep1", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep1", Read_files: "SRR12362026", Read_layout: "PE", IP_target: "", Control: "" },
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
 ];
@@ -1488,7 +1489,7 @@ function initExampleData() {
 initExampleData();
 
 // Per-cell example tracking: stash for restoring on edit cancel
-var _editingExampleStash = null; // { field, value } while an example cell is being edited
+var _editingExampleStash = null; // { field } while an example cell is being edited
 
 function applyExampleCellStyles() {
   var rows = table.getRows();
@@ -1499,13 +1500,13 @@ function applyExampleCellStyles() {
     for (var ci = 0; ci < visibleFields.length; ci++) {
       var cell = rows[ri].getCell(visibleFields[ci]);
       if (!cell) continue;
-      var el = cell.getElement();
+      var cellEl = cell.getElement();
       // For factor fields, check if the original COLUMNS field "Levels" is still in exData
-      var isFactorField = visibleFields[ci].indexOf("_factor_") === 0;
-      if (exData && ((visibleFields[ci] in exData) || (isFactorField && "Levels" in exData))) {
-        el.classList.add("cell-example");
+      var isFactor = isFactorField(visibleFields[ci]);
+      if (exData && ((visibleFields[ci] in exData) || (isFactor && "Levels" in exData))) {
+        cellEl.classList.add("cell-example");
       } else {
-        el.classList.remove("cell-example");
+        cellEl.classList.remove("cell-example");
       }
     }
   }
@@ -1629,7 +1630,7 @@ table.on("cellEditing", function(cell) {
 
   // For factor fields, check if "Levels" is still in exampleData
   var isExampleField = data._exampleData && (field in data._exampleData ||
-    (field.indexOf("_factor_") === 0 && "Levels" in data._exampleData));
+    (isFactorField(field) && "Levels" in data._exampleData));
 
   if (isExampleField) {
     // Stash that this is an example cell; remove dimmed styling while editing
@@ -1645,8 +1646,8 @@ table.on("cellEditing", function(cell) {
     // For real rows, accept Sample_ID suggestions
     if (field === "Sample_ID") {
       var val = (cell.getValue() || "").trim();
-      var el = cell.getElement();
-      var suggestion = el.getAttribute("data-suggestion");
+      var cellEl = cell.getElement();
+      var suggestion = cellEl.getAttribute("data-suggestion");
       if (!val && suggestion) {
         cell.setValue(suggestion);
       }
@@ -1664,13 +1665,13 @@ table.on("cellEdited", function(cell) {
   if (data._exampleData) {
     if (field in data._exampleData) {
       delete data._exampleData[field];
-    } else if (field.indexOf("_factor_") === 0 && "Levels" in data._exampleData) {
+    } else if (isFactorField(field) && "Levels" in data._exampleData) {
       // Editing any factor field clears the Levels example
       delete data._exampleData["Levels"];
       // Also clear all factor fields from exampleData
       var keys = Object.keys(data._exampleData);
       for (var ki = 0; ki < keys.length; ki++) {
-        if (keys[ki].indexOf("_factor_") === 0) delete data._exampleData[keys[ki]];
+        if (isFactorField(keys[ki])) delete data._exampleData[keys[ki]];
       }
     }
     // Enable validation by clearing _example on first real edit
@@ -1727,14 +1728,7 @@ document.getElementById("btn-add-row").addEventListener("click", function() {
 });
 
 document.getElementById("import-file").addEventListener("change", function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    importTSV(ev.target.result);
-  };
-  reader.readAsText(file);
-  e.target.value = ""; // reset so same file can be re-imported
+  readFileAsText(e.target, importTSV);
 });
 
 document.getElementById("btn-export").addEventListener("click", exportTSV);
@@ -1780,6 +1774,7 @@ document.addEventListener("keydown", function(e) {
 // Config File Form — State, Builder, YAML I/O
 // ===========================================================================
 
+var _configFormBuilt = false;
 var configState = {
   // Required
   repo_folder: "/path/to/epigeneticbutton/repo",
@@ -1933,6 +1928,15 @@ function buildToggleRow(label, key, msgOn, msgOff) {
   return wrap;
 }
 
+function buildBoundTextRow(label, stateObj, key, placeholder) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { textContent: label }));
+  var inp = el("input", { type: "text", placeholder: placeholder, value: stateObj[key] || "" });
+  inp.addEventListener("input", function() { stateObj[key] = this.value; });
+  row.appendChild(inp);
+  return row;
+}
+
 function buildGenomeSection(genomeName) {
   if (!configState.genomes[genomeName]) {
     configState.genomes[genomeName] = {
@@ -1950,14 +1954,7 @@ function buildGenomeSection(genomeName) {
     ["GTF file", "gtf_file", "/path/to/genes.gtf.gz"],
   ];
   for (var i = 0; i < fields.length; i++) {
-    (function(f) {
-      var row = el("div", { className: "cfg-row" });
-      row.appendChild(el("label", { textContent: f[0] }));
-      var inp = el("input", { type: "text", placeholder: f[2], value: g[f[1]] || "" });
-      inp.addEventListener("input", function() { g[f[1]] = this.value; });
-      row.appendChild(inp);
-      group.appendChild(row);
-    })(fields[i]);
+    group.appendChild(buildBoundTextRow(fields[i][0], g, fields[i][1], fields[i][2]));
   }
   // Optional files in a collapsible
   var details = el("details", { className: "cfg-details" });
@@ -1970,14 +1967,7 @@ function buildGenomeSection(genomeName) {
     ["Structural RNA FASTA", "structural_rna_fafile", "data/zm_structural_RNAs.fa.gz"],
   ];
   for (var i = 0; i < optFields.length; i++) {
-    (function(f) {
-      var row = el("div", { className: "cfg-row" });
-      row.appendChild(el("label", { textContent: f[0] }));
-      var inp = el("input", { type: "text", placeholder: f[2], value: g[f[1]] || "" });
-      inp.addEventListener("input", function() { g[f[1]] = this.value; });
-      row.appendChild(inp);
-      body.appendChild(row);
-    })(optFields[i]);
+    body.appendChild(buildBoundTextRow(optFields[i][0], g, optFields[i][1], optFields[i][2]));
   }
   details.appendChild(body);
   group.appendChild(details);
@@ -2025,14 +2015,7 @@ function buildSpeciesSection(speciesName) {
     ["GO database", "go_database", "e.g. org.Athaliana.eg.db"],
   ];
   for (var i = 0; i < optFields.length; i++) {
-    (function(f) {
-      var row = el("div", { className: "cfg-row" });
-      row.appendChild(el("label", { textContent: f[0] }));
-      var inp = el("input", { type: "text", placeholder: f[2], value: s[f[1]] || "" });
-      inp.addEventListener("input", function() { s[f[1]] = this.value; });
-      row.appendChild(inp);
-      body.appendChild(row);
-    })(optFields[i]);
+    body.appendChild(buildBoundTextRow(optFields[i][0], s, optFields[i][1], optFields[i][2]));
   }
   details.appendChild(body);
   group.appendChild(details);
@@ -2236,6 +2219,7 @@ function buildConfigForm() {
   // --- Footer ---
   container.appendChild(el("div", { className: "cfg-footer",
     textContent: "More options are available to those who can directly change the yamls... \uD83E\uDD13" }));
+  _configFormBuilt = true;
 }
 
 // Get unique genome names from sample sheet data
@@ -2270,7 +2254,7 @@ function getSpeciesFromGenomes() {
 // Rebuild only the dynamic genome and species sections
 function updateConfigDynamicSections() {
   var container = document.getElementById("config-content");
-  if (!container.firstChild) {
+  if (!_configFormBuilt) {
     buildConfigForm();
     return;
   }
@@ -2438,13 +2422,7 @@ function configStateToYAML() {
 function exportYAML() {
   var cfg = configStateToYAML();
   var yamlStr = jsyaml.dump(cfg, { sortKeys: false, lineWidth: -1, noRefs: true });
-  var blob = new Blob([yamlStr], { type: "application/x-yaml" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url;
-  a.download = "config.yaml";
-  a.click();
-  setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+  downloadBlob(yamlStr, "application/x-yaml", "config.yaml");
 }
 
 function handleYAMLImport(text) {
@@ -2591,12 +2569,7 @@ function handleYAMLImport(text) {
 
 // Config toolbar event handlers
 document.getElementById("import-yaml").addEventListener("change", function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) { handleYAMLImport(ev.target.result); };
-  reader.readAsText(file);
-  e.target.value = "";
+  readFileAsText(e.target, handleYAMLImport);
 });
 document.getElementById("btn-export-yaml").addEventListener("click", exportYAML);
 

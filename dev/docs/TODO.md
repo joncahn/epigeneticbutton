@@ -112,6 +112,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
   * [x] Keep all of the jokey prompts in the config file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
+##### [ ] Deployment
+
+* [ ] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally.
+
 ### config.yaml
 
 * [ ] Parameters in the config file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
