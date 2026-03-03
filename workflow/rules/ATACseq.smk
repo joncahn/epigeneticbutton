@@ -94,7 +94,7 @@ rule atac_bam_to_bed:
     input:
         bamfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam"
     output:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz"
+        bedfile = temp("results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz")
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:

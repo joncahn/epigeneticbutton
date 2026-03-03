@@ -416,7 +416,6 @@ rule merging_rna_replicates:
             for sid in get_replicate_sample_ids(wildcards.sample_name, samples)
         ]
     output:
-        temp = temp("results/RNA/mapped/temp__{sample_name}.bam"),
         mergefile = maybe_temp("results/RNA/mapped/merged__{sample_name}.bam", config.get('keep_merged_bams', False))
     params:
         sname = lambda wildcards: wildcards.sample_name
@@ -432,9 +431,8 @@ rule merging_rna_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-		samtools merge -@ {threads} {output.temp} {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} {output.temp}
-		samtools index -@ {threads} {output.mergefile}
+        samtools merge -u -@ {threads} {input.bamfiles} | samtools sort -@ {threads} -o {output.mergefile}
+        samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -531,8 +529,8 @@ rule prep_files_for_DEGs:
     input:
         lambda wildcards: define_RNA_input_for_degs(wildcards.ref_genome)
     output:
-        rna_samples = "results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt",
-        rna_counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt"
+        rna_samples = temp("results/RNA/DEG/samples__{analysis_name}__{ref_genome}.txt"),
+        rna_counts = temp("results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt")
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         strand = config['rna_tracks']['RNAseq']['strandedness']
@@ -586,7 +584,7 @@ rule call_all_DEGs:
         counts = "results/RNA/DEG/counts__{analysis_name}__{ref_genome}.txt",
         region_file = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
     output:
-        rdata = "results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData",
+        rdata = temp("results/RNA/DEG/ReadyToPlot__{analysis_name}__{ref_genome}.RData"),
         unique_degs = "results/RNA/DEG/unique_DEGs__{analysis_name}__{ref_genome}.txt",
         mds_plot = "results/combined/plots/MDS_RNAseq_{analysis_name}_{ref_genome}_d12.pdf",
         touch = "results/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done"
@@ -668,8 +666,8 @@ rule plot_expression_levels:
 rule create_GO_database:
     output:
         godb = directory("genomes/{ref_genome}/GO/{dbname}"),
-        tempgaf = "genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gaf_file.tab",
-        tempgeneinfo = "genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gene_info.tab"
+        tempgaf = temp("genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gaf_file.tab"),
+        tempgeneinfo = temp("genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gene_info.tab")
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,

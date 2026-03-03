@@ -853,7 +853,6 @@ rule merging_chip_replicates:
             for sid in get_replicate_sample_ids(wildcards.sample_name, samples)
         ]
     output:
-        temp_merge = temp("results/{env}/mapped/temp_merged__{sample_name}.bam"),
         mergefile = maybe_temp("results/{env}/mapped/merged__{sample_name}.bam", config.get('keep_merged_bams', False)),
         mergebai = maybe_temp("results/{env}/mapped/merged__{sample_name}.bam.bai", config.get('keep_merged_bams', False))
     wildcard_constraints:
@@ -873,9 +872,8 @@ rule merging_chip_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-		samtools merge -@ {threads} {output.temp_merge} {input.bamfiles}
-		samtools sort -@ {threads} -o {output.mergefile} {output.temp_merge}
-		samtools index -@ {threads} {output.mergefile}
+        samtools merge -u -@ {threads} {input.bamfiles} | samtools sort -@ {threads} -o {output.mergefile}
+        samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
 

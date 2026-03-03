@@ -75,9 +75,9 @@ analysis = config['full_analysis']
 # Intermediate file retention
 # ---------------------------------------------------------------------------
 TIER_DEFAULTS = {
-    'none':     {'keep_trimmed_fastqs': False, 'keep_final_bams': False, 'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False},
-    'standard': {'keep_trimmed_fastqs': False, 'keep_final_bams': True,  'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False},
-    'all':      {'keep_trimmed_fastqs': True,  'keep_final_bams': True,  'keep_merged_bams': True,  'keep_shifted_bams': True,  'keep_cx_reports': True},
+    'none':     {'keep_trimmed_fastqs': False, 'keep_final_bams': False, 'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False, 'keep_dmc_intermediates': False},
+    'standard': {'keep_trimmed_fastqs': False, 'keep_final_bams': True,  'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False, 'keep_dmc_intermediates': False},
+    'all':      {'keep_trimmed_fastqs': True,  'keep_final_bams': True,  'keep_merged_bams': True,  'keep_shifted_bams': True,  'keep_cx_reports': True,  'keep_dmc_intermediates': True},
 }
 
 _tier = config.get('keep_intermediates', 'standard')

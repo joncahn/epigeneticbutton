@@ -183,9 +183,9 @@ Do we currently have a way to specify whether one or the other or both should be
 
 * [x] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...) **Done**: Added `keep_intermediates` tiered config (`none`/`standard`/`custom`/`all`) with per-category booleans (`keep_trimmed_fastqs`, `keep_final_bams`, `keep_merged_bams`, `keep_shifted_bams`, `keep_cx_reports`). `maybe_temp()` helper in Snakefile conditionally wraps outputs with `temp()`. epicc-builder exposes tier selector and custom toggles.
 
-* [ ] Review to ensure all non-retainable (via the granular retention options) intermediate files are only ever written to temp storage. Snakemake has built-in capabilities to chain inputs to outputs. 
+* [x] Review to ensure all non-retainable (via the granular retention options) intermediate files are only ever written to temp storage. **Done**: Audited all rule files; applied unconditional `temp()` to ATAC shifted BED, sRNA clean FASTQs, RNA DEG intermediates (samples/counts/RData), and GO database temp files. Added `keep_dmc_intermediates` config option for dmC aligned modBAMs and bedMethyl pileups.
 
-* [ ] Consider whether this can help reduce intermediate file storage with any performance benefit.
+* [x] Refactor merge rules to pipe `samtools merge -u` into `samtools sort`, eliminating temp intermediate BAMs. **Done**: ChIPseq `merging_chip_replicates` and RNAseq `merging_rna_replicates` now pipe directly, removing `temp_merge`/`temp` output declarations.
 
 * [x] ChIPseq.smk - we should not be writing SAM files to disk. Wasteful of both network storage I/O (slow) and disk space. **Done**: Merged bowtie2_map + filter_chip rules into single piped rules (filter_chip_pe, filter_chip_se). Bowtie2 stdout pipes directly into samtools view → fixmate → sort, eliminating the SAM-to-disk step and reducing intermediate BAMs from 3 to 1.
 

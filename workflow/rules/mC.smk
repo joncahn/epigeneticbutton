@@ -741,8 +741,8 @@ rule prepare_modbam_for_pileup:
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        aligned_bam = "results/mC/dmc/aligned__{sample_name}.bam",
-        aligned_bai = "results/mC/dmc/aligned__{sample_name}.bam.bai"
+        aligned_bam = maybe_temp("results/mC/dmc/aligned__{sample_name}.bam", config.get('keep_dmc_intermediates', False)),
+        aligned_bai = maybe_temp("results/mC/dmc/aligned__{sample_name}.bam.bai", config.get('keep_dmc_intermediates', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -820,7 +820,7 @@ rule modkit_pileup_dmc:
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         modkit = MODKIT_BIN
     output:
-        bedmethyl = "results/mC/dmc/pileup_modbam__{sample_name}.bedmethyl.gz"
+        bedmethyl = maybe_temp("results/mC/dmc/pileup_modbam__{sample_name}.bedmethyl.gz", config.get('keep_dmc_intermediates', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -858,7 +858,7 @@ rule copy_bedmethyl_input:
         validated = "results/mC/dmc/validated__{sample_name}.input",
         type_marker = "results/mC/dmc/input_type__{sample_name}.txt"
     output:
-        bedmethyl = "results/mC/dmc/pileup_bedmethyl__{sample_name}.bedmethyl.gz"
+        bedmethyl = maybe_temp("results/mC/dmc/pileup_bedmethyl__{sample_name}.bedmethyl.gz", config.get('keep_dmc_intermediates', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:

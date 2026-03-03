@@ -1795,6 +1795,7 @@ var configState = {
   keep_merged_bams: false,
   keep_shifted_bams: false,
   keep_cx_reports: false,
+  keep_dmc_intermediates: false,
   // Motifs
   motifs: true,
   jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt",
@@ -2114,6 +2115,9 @@ function buildConfigForm() {
   customPanel.appendChild(buildToggleRow("Keep CX reports", "keep_cx_reports",
     "Per-replicate CX reports will be retained",
     "Per-replicate CX reports will be cleaned after merging"));
+  customPanel.appendChild(buildToggleRow("Keep dmC intermediates", "keep_dmc_intermediates",
+    "dmC aligned modBAMs and bedMethyl pileups will be retained",
+    "dmC aligned modBAMs and bedMethyl pileups will be cleaned after downstream steps"));
   outSec.appendChild(customPanel);
 
   // Show/hide custom panel based on tier selection
@@ -2371,6 +2375,7 @@ function configStateToYAML() {
     cfg.keep_merged_bams = configState.keep_merged_bams;
     cfg.keep_shifted_bams = configState.keep_shifted_bams;
     cfg.keep_cx_reports = configState.keep_cx_reports;
+    cfg.keep_dmc_intermediates = configState.keep_dmc_intermediates;
   }
 
   // Species
@@ -2503,6 +2508,7 @@ function handleYAMLImport(text) {
   if (cfg.keep_merged_bams != null) configState.keep_merged_bams = !!cfg.keep_merged_bams;
   if (cfg.keep_shifted_bams != null) configState.keep_shifted_bams = !!cfg.keep_shifted_bams;
   if (cfg.keep_cx_reports != null) configState.keep_cx_reports = !!cfg.keep_cx_reports;
+  if (cfg.keep_dmc_intermediates != null) configState.keep_dmc_intermediates = !!cfg.keep_dmc_intermediates;
   if (cfg.motifs != null) configState.motifs = !!cfg.motifs;
   if (cfg.jaspar_db != null) configState.jaspar_db = cfg.jaspar_db;
   if (cfg.motifs_allreps != null) configState.motifs_allreps = !!cfg.motifs_allreps;
@@ -2573,7 +2579,7 @@ function handleYAMLImport(text) {
   var knownKeys = new Set(["repo_folder","analysis_name","sample_file","full_analysis","te_analysis",
     "QC_option","GO","trimmed_fastqs","aligned_bams",
     "keep_intermediates","keep_trimmed_fastqs","keep_final_bams","keep_merged_bams",
-    "keep_shifted_bams","keep_cx_reports","motifs","jaspar_db","motifs_allreps",
+    "keep_shifted_bams","keep_cx_reports","keep_dmc_intermediates","motifs","jaspar_db","motifs_allreps",
     "trimming_quality","adapter1","adapter2","chip_mapping_option","atac_mapping_option",
     "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",
     "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","mC_context","pca_bs",

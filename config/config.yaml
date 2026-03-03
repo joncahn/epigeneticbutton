@@ -67,6 +67,7 @@ keep_final_bams: true        # per-replicate final BAMs and indices (consumed by
 keep_merged_bams: false      # merged-replicate BAMs and indices (consumed by analysis-level tracks/peaks)
 keep_shifted_bams: false     # ATAC Tn5-shifted BAMs and indices (consumed by ATAC bigwigs/peaks)
 keep_cx_reports: false       # per-replicate CX methylation reports (consumed by merging; keep if passing per-rep data to DMRcaller)
+keep_dmc_intermediates: false # dmC aligned modBAMs and bedMethyl pileup files (useful for IGV or custom modification analysis)
 
 # Species-dependent parameters:
 thaliana:

@@ -222,7 +222,7 @@ rule dispatch_srna_fastq:
     input:
         fastq = lambda wildcards: f"results/sRNA/fastq/{define_input_file_for_shortstack(wildcards.sample_name)}.fastq.gz"
     output:
-        fastq_file = "results/sRNA/fastq/clean__{sample_name}.fastq.gz"
+        fastq_file = temp("results/sRNA/fastq/clean__{sample_name}.fastq.gz")
     conda: CONDA_ENV_SRNA
     localrule: True
     shell:
