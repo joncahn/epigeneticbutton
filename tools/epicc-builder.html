@@ -199,6 +199,142 @@
     margin: 0 auto;
     padding: 24px 20px 60px;
   }
+  .cfg-section { margin-bottom: 24px; }
+  .cfg-section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent);
+    color: var(--text);
+  }
+  .cfg-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 12px 0 8px;
+    color: var(--accent2);
+  }
+  .cfg-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .cfg-row label {
+    min-width: 200px;
+    font-size: 13px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .cfg-row input[type="text"], .cfg-row input[type="number"], .cfg-row select {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .cfg-row input::placeholder { color: var(--text-dim); }
+  .cfg-row .cfg-help {
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-basis: 100%;
+  }
+  /* Toggle switch */
+  .cfg-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .cfg-toggle-row label {
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--surface2);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+  }
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+    background: white;
+  }
+  .cfg-msg {
+    font-size: 13px;
+    font-style: italic;
+    color: var(--text-dim);
+    flex-basis: 100%;
+    margin-top: -4px;
+  }
+  /* Collapsible details */
+  .cfg-details {
+    margin-bottom: 16px;
+  }
+  .cfg-details summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent2);
+    padding: 8px 0;
+    user-select: none;
+  }
+  .cfg-details summary:hover { color: var(--accent); }
+  .cfg-details[open] summary { margin-bottom: 8px; }
+  .cfg-details .cfg-details-body {
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+  }
+  /* Genome/species dynamic sections */
+  .cfg-genome-group, .cfg-species-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .cfg-genome-group h3, .cfg-species-group h3 {
+    margin-top: 0;
+    font-size: 14px;
+  }
+  .cfg-footer {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+  }
   #description-panel {
     padding: 8px 20px;
     background: var(--surface);
@@ -406,9 +542,14 @@
   </div>
 
   <div id="config-section" class="section">
-    <div class="config-content" id="config-content">
-      <p style="color: var(--text-dim); padding: 40px 0; text-align: center;">Config file editor loading...</p>
+    <div class="toolbar" id="cfg-toolbar">
+      <label for="import-yaml" class="btn-accent" role="button" aria-label="Import YAML config" tabindex="0"
+             onkeydown="if(event.key==='Enter')this.click()">Import YAML
+        <input type="file" id="import-yaml" accept=".yaml,.yml" aria-label="Choose YAML file to import">
+      </label>
+      <button id="btn-export-yaml" class="btn-accent" aria-label="Export config as YAML">Export YAML</button>
     </div>
+    <div class="config-content" id="config-content"></div>
   </div>
 </main>
 
@@ -1636,6 +1777,824 @@ document.addEventListener("keydown", function(e) {
 });
 
 // ===========================================================================
+// Config File Form — State, Builder, YAML I/O
+// ===========================================================================
+
+var configState = {
+  // Required
+  repo_folder: "/path/to/epigeneticbutton/repo",
+  analysis_name: "epicc",
+  sample_file: "config/all_samples.tsv",
+  // Output options
+  full_analysis: true,
+  te_analysis: false,
+  QC_option: "none",
+  GO: false,
+  // Input options
+  trimmed_fastqs: false,
+  aligned_bams: false,
+  // Motifs
+  motifs: true,
+  jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt",
+  motifs_allreps: false,
+  // ChIP advanced
+  trimming_quality_ChIP: "-q 10 -m 20",
+  adapter1_ChIP: "AGATCGGAAGAGCACACGTCTGAAC",
+  adapter2_ChIP: "AGATCGGAAGAGCGTCGTGTAGGGA",
+  chip_mapping_option: "default",
+  chip_tracks_binsize: 1,
+  chip_tracks_params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300",
+  chip_callpeaks_params: "--keep-dup 'all' --nomodel",
+  // ATAC advanced
+  trimming_quality_ATAC: "-q 10 -m 20",
+  adapter1_ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG",
+  adapter2_ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG",
+  atac_mapping_option: "default",
+  // RNA advanced
+  trimming_quality_RNA: "-q 10 -m 20",
+  adapter1_RNA: "AGATCGGAAGAGCACACGTCTGAAC",
+  adapter2_RNA: "AGATCGGAAGAGCGTCGTGTAGGGA",
+  rna_strandedness: "reverse",
+  rna_multimap: "multiple",
+  // mC advanced
+  trimming_quality_mC: "-q 10 -m 20",
+  adapter1_mC: "AGATCGGAAGAGCACACGTCTGAAC",
+  adapter2_mC: "AGATCGGAAGAGCGTCGTGTAGGGA",
+  mC_method: "default",
+  mC_max_insert: 1000,
+  custom_script_dmrs: false,
+  // sRNA advanced
+  trimming_quality_sRNA: "-q 10 -m 15",
+  adapter1_sRNA: "TGGAATTCTCGGGTGCCAAGG",
+  adapter2_sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA",
+  nextflex_v3_deduplication: false,
+  structural_rna_depletion: true,
+  srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna",
+  srna_min_size: 21,
+  srna_max_size: 24,
+  srna_heatmap_sizes: "21, 22, 24",
+  // Plotting
+  plot_allreps: false,
+  upset_allreps: false,
+  heatmaps_scales: "type",
+  stranded_heatmaps: true,
+  heatmaps_sort_options: "mean",
+  heatmap_sort_mc_after_others: true,
+  profiles_scale: "mean",
+  profiles_plot_params: "--plotType lines",
+  browser_TE_file: true,
+  browser_scales: "sample",
+  // Dynamic — keyed by genome name
+  genomes: {},
+  // Dynamic — keyed by species name
+  species: {},
+};
+
+// Shorthand DOM helper
+function el(tag, props, children) {
+  var e = document.createElement(tag);
+  if (props) {
+    for (var k in props) {
+      if (k === "className") e.className = props[k];
+      else if (k === "textContent") e.textContent = props[k];
+      else if (k === "htmlFor") e.htmlFor = props[k];
+      else if (k.indexOf("on") === 0) e.addEventListener(k.slice(2), props[k]);
+      else e.setAttribute(k, props[k]);
+    }
+  }
+  if (children) {
+    if (!Array.isArray(children)) children = [children];
+    for (var i = 0; i < children.length; i++) {
+      if (typeof children[i] === "string") e.appendChild(document.createTextNode(children[i]));
+      else if (children[i]) e.appendChild(children[i]);
+    }
+  }
+  return e;
+}
+
+function buildTextRow(label, key, placeholder, help) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
+  var inp = el("input", {
+    type: "text", id: "cfg-" + key, placeholder: placeholder || "",
+    value: configState[key] || "",
+    oninput: function() { configState[key] = this.value; }
+  });
+  row.appendChild(inp);
+  if (help) row.appendChild(el("div", { className: "cfg-help", textContent: help }));
+  return row;
+}
+
+function buildSelectRow(label, key, options) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
+  var sel = el("select", {
+    id: "cfg-" + key,
+    onchange: function() { configState[key] = this.value; }
+  });
+  for (var i = 0; i < options.length; i++) {
+    var opt = el("option", { value: options[i], textContent: options[i] });
+    if (configState[key] === options[i]) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  row.appendChild(sel);
+  return row;
+}
+
+function buildNumberRow(label, key, min, max) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
+  var inp = el("input", {
+    type: "number", id: "cfg-" + key, min: String(min || 1), max: String(max || 100000),
+    value: String(configState[key] || 0),
+    oninput: function() { configState[key] = parseFloat(this.value) || 0; }
+  });
+  row.appendChild(inp);
+  return row;
+}
+
+function buildToggleRow(label, key, msgOn, msgOff) {
+  var wrap = el("div", { className: "cfg-toggle-row" });
+  var sw = el("label", { className: "toggle-switch" });
+  var cb = el("input", { type: "checkbox" });
+  cb.checked = !!configState[key];
+  var slider = el("span", { className: "toggle-slider" });
+  sw.appendChild(cb);
+  sw.appendChild(slider);
+  wrap.appendChild(sw);
+  wrap.appendChild(el("label", { textContent: label }));
+  var msgEl = el("div", { className: "cfg-msg" });
+  msgEl.textContent = configState[key] ? msgOn : msgOff;
+  cb.addEventListener("change", function() {
+    configState[key] = this.checked;
+    msgEl.textContent = this.checked ? msgOn : msgOff;
+  });
+  wrap.appendChild(msgEl);
+  return wrap;
+}
+
+function buildGenomeSection(genomeName) {
+  if (!configState.genomes[genomeName]) {
+    configState.genomes[genomeName] = {
+      species: "", fasta_file: "", gff_file: "", gtf_file: "",
+      gaf_file: "", gene_info_file: "", te_file: "", structural_rna_fafile: ""
+    };
+  }
+  var g = configState.genomes[genomeName];
+  var group = el("div", { className: "cfg-genome-group" });
+  group.appendChild(el("h3", { textContent: "Reference Genome: " + genomeName }));
+  var fields = [
+    ["Species name", "species", "e.g. thaliana, mays"],
+    ["FASTA file", "fasta_file", "/path/to/genome.fa.gz"],
+    ["GFF file", "gff_file", "/path/to/genes.gff3.gz"],
+    ["GTF file", "gtf_file", "/path/to/genes.gtf.gz"],
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    (function(f) {
+      var row = el("div", { className: "cfg-row" });
+      row.appendChild(el("label", { textContent: f[0] }));
+      var inp = el("input", { type: "text", placeholder: f[2], value: g[f[1]] || "" });
+      inp.addEventListener("input", function() { g[f[1]] = this.value; });
+      row.appendChild(inp);
+      group.appendChild(row);
+    })(fields[i]);
+  }
+  // Optional files in a collapsible
+  var details = el("details", { className: "cfg-details" });
+  details.appendChild(el("summary", { textContent: "Optional files" }));
+  var body = el("div", { className: "cfg-details-body" });
+  var optFields = [
+    ["GAF file (Gene Ontology)", "gaf_file", "data/ColCEN_infoGO.tab.gz"],
+    ["Gene info file (Gene Ontology)", "gene_info_file", "data/ColCEN_genes_info.tab.gz"],
+    ["TE bed file", "te_file", "/path/to/TEs.bed.gz"],
+    ["Structural RNA FASTA", "structural_rna_fafile", "data/zm_structural_RNAs.fa.gz"],
+  ];
+  for (var i = 0; i < optFields.length; i++) {
+    (function(f) {
+      var row = el("div", { className: "cfg-row" });
+      row.appendChild(el("label", { textContent: f[0] }));
+      var inp = el("input", { type: "text", placeholder: f[2], value: g[f[1]] || "" });
+      inp.addEventListener("input", function() { g[f[1]] = this.value; });
+      row.appendChild(inp);
+      body.appendChild(row);
+    })(optFields[i]);
+  }
+  details.appendChild(body);
+  group.appendChild(details);
+  return group;
+}
+
+function buildSpeciesSection(speciesName) {
+  if (!configState.species[speciesName]) {
+    configState.species[speciesName] = {
+      star_index: "--genomeSAindexNbases 12",
+      genomesize: "1.3e8",
+      ncbiID: "",
+      genus: "",
+      go_database: ""
+    };
+  }
+  var s = configState.species[speciesName];
+  var group = el("div", { className: "cfg-species-group" });
+  group.appendChild(el("h3", { textContent: "Species: " + speciesName }));
+
+  // star_index — just the number
+  var starRow = el("div", { className: "cfg-row" });
+  starRow.appendChild(el("label", { textContent: "STAR genomeSAindexNbases" }));
+  var starVal = (s.star_index || "").replace(/.*--genomeSAindexNbases\s*/, "") || "12";
+  var starInp = el("input", { type: "number", min: "10", max: "16", value: starVal });
+  starInp.addEventListener("input", function() { s.star_index = "--genomeSAindexNbases " + this.value; });
+  starRow.appendChild(starInp);
+  group.appendChild(starRow);
+
+  // genome size
+  var gsRow = el("div", { className: "cfg-row" });
+  gsRow.appendChild(el("label", { textContent: "Genome size" }));
+  var gsInp = el("input", { type: "text", value: String(s.genomesize || "1.3e8"), placeholder: "e.g. 1.3e8" });
+  gsInp.addEventListener("input", function() { s.genomesize = this.value; });
+  gsRow.appendChild(gsInp);
+  group.appendChild(gsRow);
+
+  // Optional GO fields
+  var details = el("details", { className: "cfg-details" });
+  details.appendChild(el("summary", { textContent: "Optional (Gene Ontology)" }));
+  var body = el("div", { className: "cfg-details-body" });
+  var optFields = [
+    ["NCBI species ID", "ncbiID", "e.g. 3702"],
+    ["Genus", "genus", "e.g. Arabidopsis"],
+    ["GO database", "go_database", "e.g. org.Athaliana.eg.db"],
+  ];
+  for (var i = 0; i < optFields.length; i++) {
+    (function(f) {
+      var row = el("div", { className: "cfg-row" });
+      row.appendChild(el("label", { textContent: f[0] }));
+      var inp = el("input", { type: "text", placeholder: f[2], value: s[f[1]] || "" });
+      inp.addEventListener("input", function() { s[f[1]] = this.value; });
+      row.appendChild(inp);
+      body.appendChild(row);
+    })(optFields[i]);
+  }
+  details.appendChild(body);
+  group.appendChild(details);
+  return group;
+}
+
+function buildConfigForm() {
+  var container = document.getElementById("config-content");
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // --- Required Parameters ---
+  var reqSec = el("div", { className: "cfg-section" });
+  reqSec.appendChild(el("h2", { textContent: "Required Parameters" }));
+  reqSec.appendChild(buildTextRow("Path to repo folder:", "repo_folder", "/path/to/epigeneticbutton/repo",
+    "Full path to where the epigeneticbutton repository is cloned."));
+  reqSec.appendChild(buildTextRow("Analysis name:", "analysis_name", "epicc", "Label for analysis plots."));
+  reqSec.appendChild(buildTextRow("Sample file path:", "sample_file", "config/all_samples.tsv",
+    "Path to the sample sheet created in the Sample Sheet tab."));
+  container.appendChild(reqSec);
+
+  // --- Per-Genome sections (dynamic) ---
+  var genomeSec = el("div", { className: "cfg-section", id: "cfg-genomes" });
+  genomeSec.appendChild(el("h2", { textContent: "Reference Genomes" }));
+  var genomes = getGenomesFromSampleSheet();
+  if (genomes.length === 0) {
+    genomeSec.appendChild(el("p", { className: "cfg-help",
+      textContent: "No genomes found. Add samples in the Sample Sheet tab first." }));
+  } else {
+    for (var i = 0; i < genomes.length; i++) {
+      genomeSec.appendChild(buildGenomeSection(genomes[i]));
+    }
+  }
+  container.appendChild(genomeSec);
+
+  // --- Per-Species sections (dynamic) ---
+  var speciesSec = el("div", { className: "cfg-section", id: "cfg-species" });
+  speciesSec.appendChild(el("h2", { textContent: "Species Parameters" }));
+  var speciesNames = getSpeciesFromGenomes();
+  if (speciesNames.length === 0) {
+    speciesSec.appendChild(el("p", { className: "cfg-help",
+      textContent: "No species defined. Set species names in genome sections above." }));
+  } else {
+    for (var i = 0; i < speciesNames.length; i++) {
+      speciesSec.appendChild(buildSpeciesSection(speciesNames[i]));
+    }
+  }
+  container.appendChild(speciesSec);
+
+  // --- Output Options ---
+  var outSec = el("div", { className: "cfg-section" });
+  outSec.appendChild(el("h2", { textContent: "Output Options" }));
+  outSec.appendChild(buildToggleRow("Complete analysis", "full_analysis",
+    "Complete analysis activated! Smash that button! \uD83D\uDCAA",
+    "Complete analysis deactivated. Only mapping will be performed. \uD83D\uDE1E"));
+  outSec.appendChild(buildToggleRow("Analysis on transposable elements", "te_analysis",
+    "TE analysis is ON! You know where it's at! \uD83D\uDC4F",
+    "TE analysis is deactivated. It's only junk DNA afterall... \uD83D\uDC40"));
+  outSec.appendChild(buildSelectRow("FastQC option:", "QC_option", ["none", "all"]));
+  outSec.appendChild(buildToggleRow("Gene Ontology analysis", "GO",
+    "Gene Ontology will be performed! Good luck! \uD83E\uDD1E",
+    "Gene ontology deactivated. Probably safer! \uD83D\uDE25"));
+  container.appendChild(outSec);
+
+  // --- Input Options ---
+  var inSec = el("div", { className: "cfg-section" });
+  inSec.appendChild(el("h2", { textContent: "Input Options" }));
+  inSec.appendChild(buildToggleRow("Trimmed FASTQs already available?", "trimmed_fastqs",
+    "I do my own trimming, thank you! \u2702\uFE0F",
+    "A little bit more off the top, please! \uD83D\uDC87\u200D\u2640\uFE0F\uD83D\uDC87\u200D\u2642\uFE0F"));
+  inSec.appendChild(buildToggleRow("Aligned BAMs already available?", "aligned_bams",
+    "Been there, done that! \u2714",
+    "Alignment coming right up! \uD83D\uDECE\uFE0F"));
+  container.appendChild(inSec);
+
+  // --- Motifs ---
+  var motSec = el("div", { className: "cfg-section" });
+  motSec.appendChild(el("h2", { textContent: "Motifs Analysis" }));
+  motSec.appendChild(buildToggleRow("Motifs analysis for TFs", "motifs",
+    "Motifs analysis selected! \uD83D\uDE00",
+    "No motifs analysis will be performed! \uD83D\uDE22"));
+  motSec.appendChild(buildTextRow("JASPAR database:", "jaspar_db",
+    "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt"));
+  motSec.appendChild(buildToggleRow("Motifs on all replicates", "motifs_allreps",
+    "Let's go! Motifs on all individual replicates it is! \uD83D\uDCB8",
+    "Motifs only on merged replicates."));
+  container.appendChild(motSec);
+
+  // --- Advanced: ChIP ---
+  var chipDet = el("details", { className: "cfg-details" });
+  chipDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ChIP-seq Advanced Options" }));
+  var chipBody = el("div", { className: "cfg-details-body" });
+  chipBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_ChIP", "-q 10 -m 20"));
+  chipBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ChIP", "AGATCGGAAGAGCACACGTCTGAAC"));
+  chipBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ChIP", "AGATCGGAAGAGCGTCGTGTAGGGA"));
+  chipBody.appendChild(buildSelectRow("Mapping option:", "chip_mapping_option",
+    ["default", "repeat", "repeatall", "all"]));
+  chipBody.appendChild(buildNumberRow("Bigwig bin size:", "chip_tracks_binsize", 1, 1000000));
+  chipBody.appendChild(buildTextRow("Bigwig parameters:", "chip_tracks_params",
+    "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"));
+  chipBody.appendChild(buildTextRow("Peak calling parameters:", "chip_callpeaks_params",
+    "--keep-dup 'all' --nomodel"));
+  chipDet.appendChild(chipBody);
+  container.appendChild(chipDet);
+
+  // --- Advanced: ATAC ---
+  var atacDet = el("details", { className: "cfg-details" });
+  atacDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ATAC-seq Advanced Options" }));
+  var atacBody = el("div", { className: "cfg-details-body" });
+  atacBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_ATAC", "-q 10 -m 20"));
+  atacBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ATAC", "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG"));
+  atacBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ATAC", "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"));
+  atacBody.appendChild(buildSelectRow("Mapping option:", "atac_mapping_option",
+    ["default", "repeat", "repeatall", "all"]));
+  atacDet.appendChild(atacBody);
+  container.appendChild(atacDet);
+
+  // --- Advanced: RNA ---
+  var rnaDet = el("details", { className: "cfg-details" });
+  rnaDet.appendChild(el("summary", { textContent: "\u2699\uFE0F RNA-seq Advanced Options" }));
+  var rnaBody = el("div", { className: "cfg-details-body" });
+  rnaBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_RNA", "-q 10 -m 20"));
+  rnaBody.appendChild(buildTextRow("Adapter 1:", "adapter1_RNA", "AGATCGGAAGAGCACACGTCTGAAC"));
+  rnaBody.appendChild(buildTextRow("Adapter 2:", "adapter2_RNA", "AGATCGGAAGAGCGTCGTGTAGGGA"));
+  rnaBody.appendChild(buildSelectRow("Strandedness:", "rna_strandedness", ["reverse", "forward", "unstranded"]));
+  rnaBody.appendChild(buildSelectRow("Mapped reads for bigwigs:", "rna_multimap", ["multiple", "unique"]));
+  rnaDet.appendChild(rnaBody);
+  container.appendChild(rnaDet);
+
+  // --- Advanced: mC ---
+  var mcDet = el("details", { className: "cfg-details" });
+  mcDet.appendChild(el("summary", { textContent: "\u2699\uFE0F mC (Methylation) Advanced Options" }));
+  var mcBody = el("div", { className: "cfg-details-body" });
+  mcBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_mC", "-q 10 -m 20"));
+  mcBody.appendChild(buildTextRow("Adapter 1:", "adapter1_mC", "AGATCGGAAGAGCACACGTCTGAAC"));
+  mcBody.appendChild(buildTextRow("Adapter 2:", "adapter2_mC", "AGATCGGAAGAGCGTCGTGTAGGGA"));
+  mcBody.appendChild(buildSelectRow("Library prep method:", "mC_method",
+    ["default", "WGBS", "Pico", "EMseq"]));
+  mcBody.appendChild(buildNumberRow("Max insert length (PE):", "mC_max_insert", 100, 50000));
+  mcBody.appendChild(buildToggleRow("Custom DMR calling script", "custom_script_dmrs",
+    "Using custom call_DMRs_custom.R script (more thorough, slower).",
+    "Standard DMR calling."));
+  mcDet.appendChild(mcBody);
+  container.appendChild(mcDet);
+
+  // --- Advanced: sRNA ---
+  var srnaDet = el("details", { className: "cfg-details" });
+  srnaDet.appendChild(el("summary", { textContent: "\u2699\uFE0F sRNA Advanced Options" }));
+  var srnaBody = el("div", { className: "cfg-details-body" });
+  srnaBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_sRNA", "-q 10 -m 15"));
+  srnaBody.appendChild(buildTextRow("Adapter 1:", "adapter1_sRNA", "TGGAATTCTCGGGTGCCAAGG"));
+  srnaBody.appendChild(buildTextRow("Adapter 2:", "adapter2_sRNA", "AGATCGGAAGAGCGTCGTGTAGGGAAAGA"));
+  srnaBody.appendChild(buildToggleRow("Nextflex V3 deduplication", "nextflex_v3_deduplication",
+    "Going old school, eh! \uD83D\uDC75\uD83D\uDC74",
+    "Standard deduplication."));
+  srnaBody.appendChild(buildToggleRow("Structural RNA depletion", "structural_rna_depletion",
+    "Depletion of structural RNA will be performed! Good riddance! \uD83E\uDDF9",
+    "No structural RNA depletion. rRNAs, here we come! \uD83E\uDEA1"));
+  srnaBody.appendChild(buildTextRow("Mapping parameters:", "srna_mapping_params",
+    "--mmap u --dicermin 21 --dicermax 24 --dn_mirna"));
+  srnaBody.appendChild(buildNumberRow("Min sRNA size:", "srna_min_size", 15, 100));
+  srnaBody.appendChild(buildNumberRow("Max sRNA size:", "srna_max_size", 15, 100));
+  srnaBody.appendChild(buildTextRow("Heatmap sizes (comma-separated):", "srna_heatmap_sizes", "21, 22, 24"));
+  srnaDet.appendChild(srnaBody);
+  container.appendChild(srnaDet);
+
+  // --- Plotting ---
+  var plotDet = el("details", { className: "cfg-details" });
+  plotDet.appendChild(el("summary", { textContent: "\u2699\uFE0F Plotting Options" }));
+  var plotBody = el("div", { className: "cfg-details-body" });
+  plotBody.appendChild(buildToggleRow("Use all replicates in plots", "plot_allreps",
+    "I want EVERYTHING! \uD83E\uDD24",
+    "Using merged replicates for plots."));
+  plotBody.appendChild(buildToggleRow("Use all replicates for Upset plots", "upset_allreps",
+    "All individual replicates for Upset plots!",
+    "Merged replicates for Upset plots."));
+  plotBody.appendChild(buildSelectRow("Heatmap scales:", "heatmaps_scales",
+    ["type", "sample", "default"]));
+  plotBody.appendChild(buildToggleRow("Stranded heatmaps", "stranded_heatmaps",
+    "If possible, heatmaps will be split by strand and then merged! Awesome! \uD83D\uDD00",
+    "No strandedness in my heatmaps, thank you. \u27A1\uFE0F"));
+  plotBody.appendChild(buildSelectRow("Heatmap sort:", "heatmaps_sort_options",
+    ["mean", "median", "no"]));
+  plotBody.appendChild(buildToggleRow("Sort mC heatmap based on other samples", "heatmap_sort_mc_after_others",
+    "mC follows the sort order of other samples.",
+    "mC uses its own sort order."));
+  plotBody.appendChild(buildSelectRow("Profile scale:", "profiles_scale", ["mean", "median"]));
+  plotBody.appendChild(buildTextRow("Profile plot parameters:", "profiles_plot_params", "--plotType lines"));
+  plotBody.appendChild(buildSelectRow("Browser scales:", "browser_scales", ["sample", "type"]));
+  plotBody.appendChild(buildToggleRow("Include TE track in browser", "browser_TE_file",
+    "Wait, it's all repeats?! \uD83D\uDD2B",
+    "No TE track in browser."));
+  plotDet.appendChild(plotBody);
+  container.appendChild(plotDet);
+
+  // --- Footer ---
+  container.appendChild(el("div", { className: "cfg-footer",
+    textContent: "More options are available to those who can directly change the yamls... \uD83E\uDD13" }));
+}
+
+// Get unique genome names from sample sheet data
+function getGenomesFromSampleSheet() {
+  var data = table.getData();
+  var seen = {};
+  var genomes = [];
+  for (var i = 0; i < data.length; i++) {
+    var g = (data[i].Genome || "").trim();
+    if (g && !seen[g]) {
+      seen[g] = true;
+      genomes.push(g);
+    }
+  }
+  return genomes;
+}
+
+// Get unique species names from genome config
+function getSpeciesFromGenomes() {
+  var seen = {};
+  var result = [];
+  for (var gn in configState.genomes) {
+    var sp = (configState.genomes[gn].species || "").trim();
+    if (sp && !seen[sp]) {
+      seen[sp] = true;
+      result.push(sp);
+    }
+  }
+  return result;
+}
+
+// Rebuild only the dynamic genome and species sections
+function updateConfigDynamicSections() {
+  var container = document.getElementById("config-content");
+  if (!container.firstChild) {
+    buildConfigForm();
+    return;
+  }
+  // Rebuild genome section
+  var genomeSec = document.getElementById("cfg-genomes");
+  if (genomeSec) {
+    while (genomeSec.firstChild) genomeSec.removeChild(genomeSec.firstChild);
+    genomeSec.appendChild(el("h2", { textContent: "Reference Genomes" }));
+    var genomes = getGenomesFromSampleSheet();
+    if (genomes.length === 0) {
+      genomeSec.appendChild(el("p", { className: "cfg-help",
+        textContent: "No genomes found. Add samples in the Sample Sheet tab first." }));
+    } else {
+      for (var i = 0; i < genomes.length; i++) {
+        genomeSec.appendChild(buildGenomeSection(genomes[i]));
+      }
+    }
+  }
+  // Rebuild species section
+  var speciesSec = document.getElementById("cfg-species");
+  if (speciesSec) {
+    while (speciesSec.firstChild) speciesSec.removeChild(speciesSec.firstChild);
+    speciesSec.appendChild(el("h2", { textContent: "Species Parameters" }));
+    var speciesNames = getSpeciesFromGenomes();
+    if (speciesNames.length === 0) {
+      speciesSec.appendChild(el("p", { className: "cfg-help",
+        textContent: "No species defined. Set species names in genome sections above." }));
+    } else {
+      for (var i = 0; i < speciesNames.length; i++) {
+        speciesSec.appendChild(buildSpeciesSection(speciesNames[i]));
+      }
+    }
+  }
+}
+
+// ===========================================================================
+// YAML Export / Import
+// ===========================================================================
+
+function configStateToYAML() {
+  var cfg = {};
+  cfg.repo_folder = configState.repo_folder;
+  cfg.analysis_name = configState.analysis_name;
+  cfg.sample_file = configState.sample_file;
+
+  // Genomes
+  for (var gn in configState.genomes) {
+    var g = configState.genomes[gn];
+    cfg[gn] = {};
+    if (g.species) cfg[gn].species = g.species;
+    if (g.fasta_file) cfg[gn].fasta_file = g.fasta_file;
+    if (g.gff_file) cfg[gn].gff_file = g.gff_file;
+    if (g.gtf_file) cfg[gn].gtf_file = g.gtf_file;
+    if (g.gaf_file) cfg[gn].gaf_file = g.gaf_file;
+    if (g.gene_info_file) cfg[gn].gene_info_file = g.gene_info_file;
+    if (g.te_file) cfg[gn].te_file = g.te_file;
+    if (g.structural_rna_fafile) cfg[gn].structural_rna_fafile = g.structural_rna_fafile;
+  }
+
+  // Output options
+  cfg.full_analysis = configState.full_analysis;
+  cfg.te_analysis = configState.te_analysis;
+  cfg.QC_option = configState.QC_option;
+  cfg.GO = configState.GO;
+
+  // Input options
+  cfg.trimmed_fastqs = configState.trimmed_fastqs;
+  cfg.aligned_bams = configState.aligned_bams;
+
+  // Species
+  for (var sp in configState.species) {
+    var s = configState.species[sp];
+    cfg[sp] = {};
+    if (s.star_index) cfg[sp].star_index = s.star_index;
+    if (s.genomesize) {
+      var gs = parseFloat(s.genomesize);
+      cfg[sp].genomesize = isNaN(gs) ? s.genomesize : gs;
+    }
+    if (s.ncbiID) cfg[sp].ncbiID = s.ncbiID;
+    if (s.genus) cfg[sp].genus = s.genus;
+    if (s.go_database) cfg[sp].go_database = s.go_database;
+  }
+
+  // Trimming
+  cfg.trimming_quality = {
+    ChIP: configState.trimming_quality_ChIP,
+    RNA: configState.trimming_quality_RNA,
+    TF: configState.trimming_quality_ChIP, // TF shares ChIP settings
+    mC: configState.trimming_quality_mC,
+    sRNA: configState.trimming_quality_sRNA,
+    ATAC: configState.trimming_quality_ATAC
+  };
+  cfg.adapter1 = {
+    ChIP: configState.adapter1_ChIP,
+    RNA: configState.adapter1_RNA,
+    TF: configState.adapter1_ChIP,
+    mC: configState.adapter1_mC,
+    sRNA: configState.adapter1_sRNA,
+    ATAC: configState.adapter1_ATAC
+  };
+  cfg.adapter2 = {
+    ChIP: configState.adapter2_ChIP,
+    RNA: configState.adapter2_RNA,
+    TF: configState.adapter2_ChIP,
+    mC: configState.adapter2_mC,
+    sRNA: configState.adapter2_sRNA,
+    ATAC: configState.adapter2_ATAC
+  };
+
+  cfg.chip_mapping_option = configState.chip_mapping_option;
+  cfg.atac_mapping_option = configState.atac_mapping_option;
+  cfg.chip_tracks = {
+    binsize: configState.chip_tracks_binsize,
+    params: configState.chip_tracks_params
+  };
+  cfg.chip_callpeaks = {
+    params: configState.chip_callpeaks_params
+  };
+  cfg.upset_allreps = configState.upset_allreps;
+
+  // RNA
+  cfg.rna_tracks = {
+    RNAseq: {
+      file_order: "rnaseq",
+      param_bg: "--outWigType bedGraph",
+      strandedness: configState.rna_strandedness,
+      multimap: configState.rna_multimap
+    }
+  };
+
+  // mC
+  cfg.custom_script_dmrs = configState.custom_script_dmrs;
+
+  // sRNA
+  cfg.nextflex_v3_deduplication = configState.nextflex_v3_deduplication;
+  cfg.structural_rna_depletion = configState.structural_rna_depletion;
+  cfg.srna_mapping_params = configState.srna_mapping_params;
+  cfg.srna_min_size = configState.srna_min_size;
+  cfg.srna_max_size = configState.srna_max_size;
+  // Parse heatmap sizes string to array
+  var heatSizes = (configState.srna_heatmap_sizes || "").split(",").map(function(s) {
+    return parseInt(s.trim());
+  }).filter(function(n) { return !isNaN(n); });
+  cfg.srna_heatmap_sizes = heatSizes;
+
+  // Motifs
+  cfg.motifs = configState.motifs;
+  cfg.motifs_allreps = configState.motifs_allreps;
+  cfg.jaspar_db = configState.jaspar_db;
+
+  // Plotting
+  cfg.plot_allreps = configState.plot_allreps;
+  cfg.heatmaps_scales = configState.heatmaps_scales;
+  cfg.stranded_heatmaps = configState.stranded_heatmaps;
+  cfg.heatmaps_sort_options = configState.heatmaps_sort_options;
+  cfg.heatmap_sort_mc_after_others = configState.heatmap_sort_mc_after_others;
+  cfg.profiles_scale = configState.profiles_scale;
+  cfg.profiles_plot_params = configState.profiles_plot_params;
+  cfg.browser_TE_file = configState.browser_TE_file;
+  cfg.browser_scales = configState.browser_scales;
+
+  return cfg;
+}
+
+function exportYAML() {
+  var cfg = configStateToYAML();
+  var yamlStr = jsyaml.dump(cfg, { sortKeys: false, lineWidth: -1, noRefs: true });
+  var blob = new Blob([yamlStr], { type: "application/x-yaml" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "config.yaml";
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+}
+
+function handleYAMLImport(text) {
+  var cfg;
+  try {
+    cfg = jsyaml.load(text);
+  } catch (e) {
+    alert("YAML parse error: " + e.message);
+    return;
+  }
+  if (!cfg || typeof cfg !== "object") {
+    alert("Invalid YAML: expected an object at the top level.");
+    return;
+  }
+
+  // Simple fields
+  if (cfg.repo_folder != null) configState.repo_folder = cfg.repo_folder;
+  if (cfg.analysis_name != null) configState.analysis_name = cfg.analysis_name;
+  if (cfg.sample_file != null) configState.sample_file = cfg.sample_file;
+  if (cfg.full_analysis != null) configState.full_analysis = !!cfg.full_analysis;
+  if (cfg.te_analysis != null) configState.te_analysis = !!cfg.te_analysis;
+  if (cfg.QC_option != null) configState.QC_option = String(cfg.QC_option);
+  if (cfg.GO != null) configState.GO = !!cfg.GO;
+  if (cfg.trimmed_fastqs != null) configState.trimmed_fastqs = !!cfg.trimmed_fastqs;
+  if (cfg.aligned_bams != null) configState.aligned_bams = !!cfg.aligned_bams;
+  if (cfg.motifs != null) configState.motifs = !!cfg.motifs;
+  if (cfg.jaspar_db != null) configState.jaspar_db = cfg.jaspar_db;
+  if (cfg.motifs_allreps != null) configState.motifs_allreps = !!cfg.motifs_allreps;
+  if (cfg.chip_mapping_option != null) configState.chip_mapping_option = cfg.chip_mapping_option;
+  if (cfg.atac_mapping_option != null) configState.atac_mapping_option = cfg.atac_mapping_option;
+  if (cfg.custom_script_dmrs != null) configState.custom_script_dmrs = !!cfg.custom_script_dmrs;
+  if (cfg.nextflex_v3_deduplication != null) configState.nextflex_v3_deduplication = !!cfg.nextflex_v3_deduplication;
+  if (cfg.structural_rna_depletion != null) configState.structural_rna_depletion = !!cfg.structural_rna_depletion;
+  if (cfg.srna_mapping_params != null) configState.srna_mapping_params = cfg.srna_mapping_params;
+  if (cfg.srna_min_size != null) configState.srna_min_size = cfg.srna_min_size;
+  if (cfg.srna_max_size != null) configState.srna_max_size = cfg.srna_max_size;
+  if (cfg.srna_heatmap_sizes != null) {
+    configState.srna_heatmap_sizes = Array.isArray(cfg.srna_heatmap_sizes)
+      ? cfg.srna_heatmap_sizes.join(", ") : String(cfg.srna_heatmap_sizes);
+  }
+  if (cfg.plot_allreps != null) configState.plot_allreps = !!cfg.plot_allreps;
+  if (cfg.upset_allreps != null) configState.upset_allreps = !!cfg.upset_allreps;
+  if (cfg.heatmaps_scales != null) configState.heatmaps_scales = cfg.heatmaps_scales;
+  if (cfg.stranded_heatmaps != null) configState.stranded_heatmaps = !!cfg.stranded_heatmaps;
+  if (cfg.heatmaps_sort_options != null) configState.heatmaps_sort_options = cfg.heatmaps_sort_options;
+  if (cfg.heatmap_sort_mc_after_others != null) configState.heatmap_sort_mc_after_others = !!cfg.heatmap_sort_mc_after_others;
+  if (cfg.profiles_scale != null) configState.profiles_scale = cfg.profiles_scale;
+  if (cfg.profiles_plot_params != null) configState.profiles_plot_params = cfg.profiles_plot_params;
+  if (cfg.browser_TE_file != null) configState.browser_TE_file = !!cfg.browser_TE_file;
+  if (cfg.browser_scales != null) configState.browser_scales = cfg.browser_scales;
+
+  // Trimming/adapter nested objects
+  if (cfg.trimming_quality) {
+    if (cfg.trimming_quality.ChIP) configState.trimming_quality_ChIP = cfg.trimming_quality.ChIP;
+    if (cfg.trimming_quality.RNA) configState.trimming_quality_RNA = cfg.trimming_quality.RNA;
+    if (cfg.trimming_quality.mC) configState.trimming_quality_mC = cfg.trimming_quality.mC;
+    if (cfg.trimming_quality.sRNA) configState.trimming_quality_sRNA = cfg.trimming_quality.sRNA;
+    if (cfg.trimming_quality.ATAC) configState.trimming_quality_ATAC = cfg.trimming_quality.ATAC;
+  }
+  if (cfg.adapter1) {
+    if (cfg.adapter1.ChIP) configState.adapter1_ChIP = cfg.adapter1.ChIP;
+    if (cfg.adapter1.RNA) configState.adapter1_RNA = cfg.adapter1.RNA;
+    if (cfg.adapter1.mC) configState.adapter1_mC = cfg.adapter1.mC;
+    if (cfg.adapter1.sRNA) configState.adapter1_sRNA = cfg.adapter1.sRNA;
+    if (cfg.adapter1.ATAC) configState.adapter1_ATAC = cfg.adapter1.ATAC;
+  }
+  if (cfg.adapter2) {
+    if (cfg.adapter2.ChIP) configState.adapter2_ChIP = cfg.adapter2.ChIP;
+    if (cfg.adapter2.RNA) configState.adapter2_RNA = cfg.adapter2.RNA;
+    if (cfg.adapter2.mC) configState.adapter2_mC = cfg.adapter2.mC;
+    if (cfg.adapter2.sRNA) configState.adapter2_sRNA = cfg.adapter2.sRNA;
+    if (cfg.adapter2.ATAC) configState.adapter2_ATAC = cfg.adapter2.ATAC;
+  }
+
+  // ChIP tracks
+  if (cfg.chip_tracks) {
+    if (cfg.chip_tracks.binsize != null) configState.chip_tracks_binsize = cfg.chip_tracks.binsize;
+    if (cfg.chip_tracks.params != null) configState.chip_tracks_params = cfg.chip_tracks.params;
+  }
+  if (cfg.chip_callpeaks && cfg.chip_callpeaks.params != null) {
+    configState.chip_callpeaks_params = cfg.chip_callpeaks.params;
+  }
+
+  // RNA
+  if (cfg.rna_tracks && cfg.rna_tracks.RNAseq) {
+    if (cfg.rna_tracks.RNAseq.strandedness) configState.rna_strandedness = cfg.rna_tracks.RNAseq.strandedness;
+    if (cfg.rna_tracks.RNAseq.multimap) configState.rna_multimap = cfg.rna_tracks.RNAseq.multimap;
+  }
+
+  // Detect genome sections (objects with species or fasta_file key)
+  configState.genomes = {};
+  configState.species = {};
+  var knownKeys = new Set(["repo_folder","analysis_name","sample_file","full_analysis","te_analysis",
+    "QC_option","GO","trimmed_fastqs","aligned_bams","motifs","jaspar_db","motifs_allreps",
+    "trimming_quality","adapter1","adapter2","chip_mapping_option","atac_mapping_option",
+    "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",
+    "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","mC_context","pca_bs",
+    "pca_step","mC_mapping","custom_script_dmrs","dmc_methylation","dmc_dmr_method",
+    "nextflex_v3_deduplication","structural_rna_depletion","srna_mapping_params",
+    "srna_min_size","srna_max_size","srna_heatmap_sizes","plot_allreps","heatmaps_scales",
+    "stranded_heatmaps","heatmaps_sort_options","heatmap_sort_mc_after_others",
+    "profiles_scale","profiles_plot_params","heatmaps_plot_params","heatmaps",
+    "heat_mcg","heat_mchg","heat_mchh","browser_TE_file","browser_scales",
+    "chromosome_bs","fixed_mc_scales","fixed_mcg","fixed_mchg","fixed_mchh",
+    "motif_target_file_label","motif_target_file","motif_ref_genome",
+    "rnaseq_target_file_label","rnaseq_target_file","rnaseq_background_file",
+    "srna_target_file_label","srna_target_file","heatmap_target_file_label",
+    "heatmap_target_file","browser_target_file_label","browser_target_file",
+    "low_resources","standard_resources","heavy_resources","heavier_resources",
+    "max_resources","single_thread","resources"]);
+
+  for (var key in cfg) {
+    if (knownKeys.has(key)) continue;
+    var val = cfg[key];
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      if (val.fasta_file || val.species || val.gff_file) {
+        // Genome section
+        configState.genomes[key] = {
+          species: val.species || "",
+          fasta_file: val.fasta_file || "",
+          gff_file: val.gff_file || "",
+          gtf_file: val.gtf_file || "",
+          gaf_file: val.gaf_file || "",
+          gene_info_file: val.gene_info_file || "",
+          te_file: val.te_file || "",
+          structural_rna_fafile: val.structural_rna_fafile || ""
+        };
+      } else if (val.star_index != null || val.genomesize != null) {
+        // Species section
+        configState.species[key] = {
+          star_index: val.star_index || "",
+          genomesize: String(val.genomesize || ""),
+          ncbiID: val.ncbiID ? String(val.ncbiID) : "",
+          genus: val.genus || "",
+          go_database: val.go_database || ""
+        };
+      }
+    }
+  }
+
+  // Rebuild the form
+  buildConfigForm();
+}
+
+// Config toolbar event handlers
+document.getElementById("import-yaml").addEventListener("change", function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { handleYAMLImport(ev.target.result); };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+document.getElementById("btn-export-yaml").addEventListener("click", exportYAML);
+
+// ===========================================================================
 // Section switching (navigation)
 // ===========================================================================
 
@@ -1658,10 +2617,6 @@ function switchSection(sectionId) {
   if (sectionId === "config-section") {
     updateConfigDynamicSections();
   }
-}
-
-function updateConfigDynamicSections() {
-  // Stub — implemented in Phase 3
 }
 </script>
 </body>
