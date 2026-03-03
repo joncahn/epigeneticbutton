@@ -171,17 +171,21 @@ Do we currently have a way to specify whether one or the other or both should be
 
 * [ ] Switch to direct fastq.gz downloads from ENA for download speed, better transitory disk space usage? Maybe add alternative fastq_path=ENA, or try ENA first and fall back to SRA. Look into storing SRA downloads as compressed FASTQs to avoid writing huge uncompressed data to disk, and the post-hoc wait for compression.
 
-* [ ] pigz appears to be limited to 4 threads for at least local runs, which can bottleneck the pipeline when there are few samples, but with a high read volume.
-
 * [ ] it looks like mate file compression for PE SRA accessions after fasterq-dump happens serially - the R1 file must complete before R2. I don't think there's any reason for this constraint provided sufficient resources are available. I noticed this on a local run, not sure if it's true on the cluster.
+
+* [ ] pigz appears to be limited to 4 threads for at least local runs, which can bottleneck the pipeline when there are few samples, but with a high read volume.
 
 ### Disk usage
 
-* [ ] See if we can refactor the conda envs to decrease required disk space - current config uses ~32GiB. Are there any low-hanging dependency fruits that can be removed? Would consolidation of at least some of the environments save disk space by eliminating core package redundancy?
+* [ ] See if we can refactor the conda envs to decrease required disk space - current config uses ~32GiB. Are there any low-hanging dependency fruits that can be removed? Would consolidation of the majority of the analysis packages into a single environment while maintaining packages with problematic dependencies or dependency version conflicts be an optimal solution to save disk space and initial installation time by eliminating core package redundancy? 
 
 * [ ] Should snakemake --conda-cleanup-envs be added to the pipeline to get rid of old envs? Can this be run inside of the pipeline snakemake run?
 
-* [ ] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...)
+* [x] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...) **Done**: Added `keep_intermediates` tiered config (`none`/`standard`/`custom`/`all`) with per-category booleans (`keep_trimmed_fastqs`, `keep_final_bams`, `keep_merged_bams`, `keep_shifted_bams`, `keep_cx_reports`). `maybe_temp()` helper in Snakefile conditionally wraps outputs with `temp()`. epicc-builder exposes tier selector and custom toggles.
+
+* [ ] Review to ensure all non-retainable (via the granular retention options) intermediate files are only ever written to temp storage. Snakemake has built-in capabilities to chain inputs to outputs. 
+
+* [ ] Consider whether this can help reduce intermediate file storage with any performance benefit.
 
 * [x] ChIPseq.smk - we should not be writing SAM files to disk. Wasteful of both network storage I/O (slow) and disk space. **Done**: Merged bowtie2_map + filter_chip rules into single piped rules (filter_chip_pe, filter_chip_se). Bowtie2 stdout pipes directly into samtools view → fixmate → sort, eliminating the SAM-to-disk step and reducing intermediate BAMs from 3 to 1.
 
@@ -212,6 +216,10 @@ Do we currently have a way to specify whether one or the other or both should be
 * [ ] Add time for all rules + in the profiles config
 
 * [ ] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug)
+
+### Full code review of all snakemake rules
+
+* [ ] Review the full workflow in parallel, and improve performance and resource usage where possible for all sample type analysis rules and the combined analysis.
 
 ## Testing
 

@@ -71,6 +71,28 @@ except OSError:
 configfile: "config/config.yaml"
 analysis = config['full_analysis']
 
+# ---------------------------------------------------------------------------
+# Intermediate file retention
+# ---------------------------------------------------------------------------
+TIER_DEFAULTS = {
+    'none':     {'keep_trimmed_fastqs': False, 'keep_final_bams': False, 'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False},
+    'standard': {'keep_trimmed_fastqs': False, 'keep_final_bams': True,  'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False},
+    'all':      {'keep_trimmed_fastqs': True,  'keep_final_bams': True,  'keep_merged_bams': True,  'keep_shifted_bams': True,  'keep_cx_reports': True},
+}
+
+_tier = config.get('keep_intermediates', 'standard')
+if _tier == 'custom':
+    for _key, _val in TIER_DEFAULTS['standard'].items():
+        config.setdefault(_key, _val)
+elif _tier in TIER_DEFAULTS:
+    config.update(TIER_DEFAULTS[_tier])
+else:
+    raise ValueError(f"Invalid keep_intermediates tier: '{_tier}'. Use: none, standard, custom, all")
+
+def maybe_temp(path, keep=False):
+    """Conditionally wrap a path with temp(). Used for configurable intermediate retention."""
+    return path if keep else temp(path)
+
 # Define the folder in which the snakemake pipeline has been cloned
 REPO_FOLDER = os.path.abspath(config["repo_folder"])
 if not os.path.isdir(REPO_FOLDER):

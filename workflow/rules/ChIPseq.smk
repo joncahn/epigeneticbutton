@@ -606,8 +606,8 @@ rule pe_or_se_chip_dispatch:
     input:
         assign_bam_file
     output:
-        bam = "results/{env}/mapped/final__{sample_name}.bam",
-        bai = "results/{env}/mapped/final__{sample_name}.bam.bai",
+        bam = maybe_temp("results/{env}/mapped/final__{sample_name}.bam", config.get('keep_final_bams', True)),
+        bai = maybe_temp("results/{env}/mapped/final__{sample_name}.bam.bai", config.get('keep_final_bams', True)),
         touch = "results/{env}/chkpts/map_{env}__{sample_name}.done"
     wildcard_constraints:
         env = "ChIP|ATAC"
@@ -854,8 +854,8 @@ rule merging_chip_replicates:
         ]
     output:
         temp_merge = temp("results/{env}/mapped/temp_merged__{sample_name}.bam"),
-        mergefile = "results/{env}/mapped/merged__{sample_name}.bam",
-        mergebai = "results/{env}/mapped/merged__{sample_name}.bam.bai"
+        mergefile = maybe_temp("results/{env}/mapped/merged__{sample_name}.bam", config.get('keep_merged_bams', False)),
+        mergebai = maybe_temp("results/{env}/mapped/merged__{sample_name}.bam.bai", config.get('keep_merged_bams', False))
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:

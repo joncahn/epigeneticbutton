@@ -162,8 +162,8 @@ rule bismark_map_pe:
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
         temp_bamfile = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
-        bamfile = "results/mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam",
-        cx_report = temp("results/mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        bamfile = maybe_temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam", config.get('keep_final_bams', True)),
+        cx_report = maybe_temp("results/mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
         metrics_alignement = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
     wildcard_constraints:
@@ -204,8 +204,8 @@ rule bismark_map_se:
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
         temp_bamfile = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
-        bamfile = "results/mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam",
-        cx_report = temp("results/mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz"),
+        bamfile = maybe_temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam", config.get('keep_final_bams', True)),
+        cx_report = maybe_temp("results/mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
         metrics_map = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
         metrics_dedup = temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
     wildcard_constraints:
@@ -1050,7 +1050,7 @@ rule convert_bedmethyl_to_cx_report:
         fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         fai = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.fai"
     output:
-        cx_report = "results/mC/dmc/cx_report__{sample_name}.CX_report.txt.gz"
+        cx_report = maybe_temp("results/mC/dmc/cx_report__{sample_name}.CX_report.txt.gz", config.get('keep_cx_reports', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:

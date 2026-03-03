@@ -397,7 +397,7 @@ rule pe_or_se_rna_dispatch:
         bamfile = lambda wildcards: assign_mapping_paired(wildcards, "filter_rna", "sorted_file"),
         countfile = lambda wildcards: assign_mapping_paired(wildcards, "STAR_map", "count_file")
     output:
-        bam_file = "results/RNA/mapped/final__{sample_name}.bam",
+        bam_file = maybe_temp("results/RNA/mapped/final__{sample_name}.bam", config.get('keep_final_bams', True)),
         count_file = "results/RNA/DEG/counts__{sample_name}.tab",
         touch = "results/RNA/chkpts/map_RNA__{sample_name}.done"
     localrule: True
@@ -417,7 +417,7 @@ rule merging_rna_replicates:
         ]
     output:
         temp = temp("results/RNA/mapped/temp__{sample_name}.bam"),
-        mergefile = "results/RNA/mapped/merged__{sample_name}.bam"
+        mergefile = maybe_temp("results/RNA/mapped/merged__{sample_name}.bam", config.get('keep_merged_bams', False))
     params:
         sname = lambda wildcards: wildcards.sample_name
     log:

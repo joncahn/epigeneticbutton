@@ -145,8 +145,8 @@ rule process_fastq_pe:
         raw_fastq1 = "results/{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
         raw_fastq2 = "results/{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
     output:
-        fastq1 = "results/{data_type}/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "results/{data_type}/fastq/trim__{sample_name}__R2.fastq.gz",
+        fastq1 = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R1.fastq.gz", config.get('keep_trimmed_fastqs', False)),
+        fastq2 = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R2.fastq.gz", config.get('keep_trimmed_fastqs', False)),
         metrics = "results/{data_type}/reports/trim_pe__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
@@ -184,7 +184,7 @@ rule process_fastq_se:
     input:
         raw_fastq = "results/{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
     output:
-        fastq = "results/{data_type}/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R0.fastq.gz", config.get('keep_trimmed_fastqs', False)),
         metrics = "results/{data_type}/reports/trim_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,

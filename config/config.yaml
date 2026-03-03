@@ -53,6 +53,21 @@ GO: false # If switching to true, make sure the database is created, or the requ
 trimmed_fastqs: false # if fastqs are already trimmed (fastq file(s) (can be gzipped) specified in the Read_files column of the sample sheet, 1 file if SE, comma-separated R1,R2 if PE)
 aligned_bams: false # if ChIP-seq alignments are already performed (a single sam or bam file specified in Read_files). Only works for ChIP-seq data (histone or TF) since other output from the alignment steps are necessary for the other data types (e.g. count table for RNA-seq)
 
+# Intermediate file retention
+# Tier presets control which intermediate files are kept after downstream rules finish.
+#   "standard" (default): keeps per-replicate final BAMs; cleans trimmed FASTQs, merged BAMs, shifted BAMs
+#   "none": cleans all intermediates including final BAMs (most aggressive)
+#   "all": keeps everything (most disk usage)
+#   "custom": uses the per-category options below
+keep_intermediates: "standard"
+
+# Per-category options (only used when keep_intermediates: "custom")
+keep_trimmed_fastqs: false   # trimmed FASTQ files (consumed by mapping rules)
+keep_final_bams: true        # per-replicate final BAMs and indices (consumed by bigwigs, peaks, merging)
+keep_merged_bams: false      # merged-replicate BAMs and indices (consumed by analysis-level tracks/peaks)
+keep_shifted_bams: false     # ATAC Tn5-shifted BAMs and indices (consumed by ATAC bigwigs/peaks)
+keep_cx_reports: false       # per-replicate CX methylation reports (consumed by merging; keep if passing per-rep data to DMRcaller)
+
 # Species-dependent parameters:
 thaliana:
   star_index: "--genomeSAindexNbases 12"

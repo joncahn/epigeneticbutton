@@ -66,8 +66,8 @@ rule atac_shift_bam:
     input:
         bamfile = "results/ATAC/mapped/{file_type}__{sample_name}.bam"
     output:
-        shifted_bam = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam",
-        shifted_bai = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam.bai"
+        shifted_bam = maybe_temp("results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam", config.get('keep_shifted_bams', False)),
+        shifted_bai = maybe_temp("results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam.bai", config.get('keep_shifted_bams', False))
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:
