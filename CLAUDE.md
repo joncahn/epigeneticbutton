@@ -65,14 +65,18 @@ Sample metadata is defined in a TSV file with 9 columns:
 - **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
 - **Read_files**: SRA accession (`SRR12345`), local path, or `+`-separated for merging multiple inputs
 - **Read_layout**: `SE` or `PE`
-- **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `Input`). Blank for others.
-- **Control**: Sample_ID of the control sample (e.g. Input for ChIP). No chaining.
+- **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
+- **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). No chaining.
 
 Per-replicate files use `Sample_ID` directly (e.g. `final__WT_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`).
 
 Peak type is determined by Assay: `ChIP_broad` → broad peaks (histone marks), `ChIP_narrow` → narrow peaks (transcription factors, H3K4me3, etc.). Both share the `ChIP` env (`results/ChIP/`).
 
 Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
+
+### Tools
+
+- `tools/epicc-builder.html` - Self-contained HTML5 app for building sample sheets and config files. Tabulator-based editor with validation, dynamic factor columns, per-cell examples, and YAML config export. Open directly in a browser.
 
 ### Configuration
 
@@ -85,6 +89,25 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 Results go to `results/{env}/` where env is one of: `ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`. Each contains `chkpts/` (checkpoint files for pipeline logic), `logs/`, `tracks/` (bigwigs), and analysis-specific subdirectories.
 
 Reference genomes are prepared in `genomes/{ref_genome}/`.
+
+## Testing
+
+```bash
+# Unit tests (sample_sheet.py logic, samtools rule commands)
+pytest tests/unit/ -v
+
+# Integration tests — S. pombe dry-run (no cluster needed)
+pytest tests/integration/test_pombe_dryrun.py -v
+
+# Full pombe validation (dry-run + postrun checks)
+scripts/validate_pombe.sh --all
+```
+
+- `tests/unit/test_sample_sheet.py` - Tests for `sample_sheet.py` functions
+- `tests/unit/test_rule_commands.py` - Tests samtools pipelines on synthetic SAM data (requires samtools)
+- `tests/integration/test_pombe_dryrun.py` - Snakemake dry-run validation with S. pombe test data
+- `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
+- `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (18 samples, 4 assays)
 
 ## Key Implementation Details
 
