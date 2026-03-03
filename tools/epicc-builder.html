@@ -90,6 +90,73 @@
   /* Section visibility */
   .section { display: none; flex-direction: column; flex: 1; overflow: hidden; }
   .section.active { display: flex; }
+
+  /* Factor management panel */
+  .factor-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    min-height: 40px;
+  }
+  .factor-panel .factor-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .factor-tile {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3px 8px 3px 12px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .factor-tile .factor-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 50%;
+    transition: color 0.15s, background 0.15s;
+  }
+  .factor-tile .factor-remove:hover {
+    color: var(--accent);
+    background: rgba(233,69,96,0.15);
+  }
+  .factor-panel input[type="text"] {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    width: 140px;
+  }
+  .factor-panel input[type="text"]::placeholder { color: var(--text-dim); }
+  .factor-panel button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .factor-panel button:hover { background: var(--accent); }
+
   .toolbar {
     display: flex;
     gap: 8px;
@@ -324,6 +391,13 @@
       </label>
       <button id="btn-export" class="btn-accent" aria-label="Export sample sheet as TSV">Export TSV</button>
     </div>
+    <div class="factor-panel" id="factor-panel" role="group" aria-label="Factor management">
+      <span class="factor-label">Factors:</span>
+      <span id="factor-tiles"></span>
+      <input type="text" id="factor-input" placeholder="e.g. genotype" aria-label="New factor name"
+             onkeydown="if(event.key==='Enter'){addFactorFromInput(); event.preventDefault();}">
+      <button onclick="addFactorFromInput()" aria-label="Add factor">+ Add</button>
+    </div>
     <div id="description-panel" aria-live="polite" role="status">
       Click a column header or cell to see its description.
     </div>
@@ -418,6 +492,9 @@ let table;
 let cellIssues = {}; // { "rowId:field": { errors: [], warnings: [] } }
 let activeCtxMenu = null;
 
+// Factor state — array of factor name strings (e.g. ["genotype", "tissue"])
+var factors = [];
+
 // ===========================================================================
 // Helpers
 // ===========================================================================
@@ -440,14 +517,50 @@ function levelsToLabel(str) {
   return parsed.map(p => p.level).join("_");
 }
 
+// Build Levels string from _factor_* fields on a row
+function buildLevelsFromFactors(rowData) {
+  if (factors.length === 0) return "";
+  var parts = [];
+  for (var i = 0; i < factors.length; i++) {
+    var val = (rowData["_factor_" + factors[i]] || "").trim();
+    parts.push(factors[i] + ":" + val);
+  }
+  return parts.join(",");
+}
+
+// Inverse: populate _factor_* fields from a Levels string
+function populateFactorsFromLevels(rowData) {
+  var parsed = parseLevels(rowData.Levels || "");
+  if (!parsed) return;
+  for (var i = 0; i < parsed.length; i++) {
+    rowData["_factor_" + parsed[i].factor] = parsed[i].level;
+  }
+}
+
+// Build levels label from factor fields
+function levelsLabelFromFactors(rowData) {
+  if (factors.length === 0) return "";
+  var parts = [];
+  for (var i = 0; i < factors.length; i++) {
+    var val = (rowData["_factor_" + factors[i]] || "").trim();
+    if (val) parts.push(val);
+  }
+  return parts.join("_");
+}
+
 function suggestSampleId(rowData) {
   const assay = (rowData.Assay || "").trim();
-  const levels = (rowData.Levels || "").trim();
   const rep = (rowData.Replicate_ID || "").trim();
   const ip = (rowData.IP_target || "").trim();
-  if (!levels || !rep) return "";
-  const label = levelsToLabel(levels);
-  if (!label) return "";
+  var label = "";
+  if (factors.length > 0) {
+    label = levelsLabelFromFactors(rowData);
+  } else {
+    var levels = (rowData.Levels || "").trim();
+    if (!levels) return "";
+    label = levelsToLabel(levels);
+  }
+  if (!label || !rep) return "";
   if (CHIP_ASSAYS.has(assay)) {
     if (!ip) return "";
     return label + "_" + ip + "_" + rep;
@@ -458,10 +571,179 @@ function suggestSampleId(rowData) {
 }
 
 function emptyRow() {
-  return {
-    Sample_ID: "", Assay: "", Genome: "", Levels: "", Replicate_ID: "",
+  var row = {
+    Sample_ID: "", Assay: "", Genome: "", Replicate_ID: "",
     Read_files: "", Read_layout: "", IP_target: "", Control: ""
   };
+  for (var i = 0; i < factors.length; i++) {
+    row["_factor_" + factors[i]] = "";
+  }
+  return row;
+}
+
+// ===========================================================================
+// Factor Management
+// ===========================================================================
+
+function getVisibleFields() {
+  if (factors.length > 0) {
+    var fields = ["Sample_ID", "Assay", "Genome"];
+    for (var i = 0; i < factors.length; i++) {
+      fields.push("_factor_" + factors[i]);
+    }
+    fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target", "Control");
+    return fields;
+  }
+  return COLUMNS.slice();
+}
+
+function addFactorFromInput() {
+  var input = document.getElementById("factor-input");
+  var name = (input.value || "").trim().replace(/\s+/g, "_");
+  input.value = "";
+  if (name) addFactor(name);
+  input.focus();
+}
+
+function addFactor(name) {
+  name = name.trim().replace(/\s+/g, "_");
+  if (!name) return;
+  // No duplicates
+  for (var i = 0; i < factors.length; i++) {
+    if (factors[i].toLowerCase() === name.toLowerCase()) return;
+  }
+  // Forbidden chars in factor names: : , __
+  if (name.includes(":") || name.includes(",") || name.includes("__")) {
+    alert("Factor name cannot contain ':', ',' or '__'.");
+    return;
+  }
+  factors.push(name);
+  // Initialize factor field in all existing rows
+  var allData = table.getData();
+  for (var i = 0; i < allData.length; i++) {
+    if (!allData[i]["_factor_" + name]) {
+      allData[i]["_factor_" + name] = "";
+    }
+  }
+  rebuildTableColumns();
+  renderFactorTiles();
+  refreshUI();
+}
+
+function removeFactor(name) {
+  factors = factors.filter(function(f) { return f !== name; });
+  rebuildTableColumns();
+  renderFactorTiles();
+  refreshUI();
+}
+
+function renderFactorTiles() {
+  var container = document.getElementById("factor-tiles");
+  while (container.firstChild) container.removeChild(container.firstChild);
+  for (var i = 0; i < factors.length; i++) {
+    var tile = document.createElement("span");
+    tile.className = "factor-tile";
+    var nameSpan = document.createElement("span");
+    nameSpan.textContent = factors[i];
+    tile.appendChild(nameSpan);
+    var btn = document.createElement("button");
+    btn.className = "factor-remove";
+    btn.textContent = "\u00d7";
+    btn.title = "Remove factor '" + factors[i] + "'";
+    btn.setAttribute("aria-label", "Remove factor " + factors[i]);
+    (function(fname) {
+      btn.addEventListener("click", function() { removeFactor(fname); });
+    })(factors[i]);
+    tile.appendChild(btn);
+    container.appendChild(tile);
+  }
+}
+
+function rebuildTableColumns() {
+  table.setColumns(buildColumnDefs());
+  EDIT_FIELDS = getVisibleFields();
+  // Re-apply styles after column rebuild
+  setTimeout(function() { applyExampleCellStyles(); }, 50);
+}
+
+function buildColumnDefs() {
+  var defs = [
+    {
+      formatter: "rowSelection", titleFormatter: "rowSelection",
+      headerSort: false, width: 30, hozAlign: "center", resizable: false,
+      cellClick: function(e, cell) { cell.getRow().toggleSelect(); },
+    },
+    {
+      title: "", field: "_actions", width: 36, headerSort: false,
+      cssClass: "action-col", hozAlign: "center", resizable: false,
+      formatter: function() {
+        return '<button class="row-action-btn" aria-label="Row actions" title="Row actions">\u22EE</button>';
+      },
+      cellClick: function(e, cell) {
+        showCtxMenu(e, cell.getRow());
+      }
+    },
+    Object.assign({
+      title: "Sample ID", field: "Sample_ID", editor: "input", width: 160,
+      editorParams: { elementAttributes: { placeholder: "auto-suggested or type your own" } },
+    }, descHooks("Sample_ID")),
+    Object.assign({
+      title: "Assay", field: "Assay", width: 140,
+      editor: "list",
+      editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
+    }, descHooks("Assay")),
+    Object.assign({
+      title: "Genome", field: "Genome", editor: "input", width: 120,
+      editorParams: { elementAttributes: { placeholder: "e.g. Spombe, ColCEN, hg38" } },
+    }, descHooks("Genome")),
+  ];
+
+  // Factor columns (or placeholder/Levels fallback)
+  if (factors.length > 0) {
+    for (var i = 0; i < factors.length; i++) {
+      (function(fname) {
+        defs.push(Object.assign({
+          title: fname, field: "_factor_" + fname, editor: "input", width: 120,
+          editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
+        }, descHooks("Levels")));
+      })(factors[i]);
+    }
+  } else {
+    // No factors defined — show Levels column with guidance
+    defs.push(Object.assign({
+      title: "Levels", field: "Levels", editor: "input", width: 220,
+      editorParams: { elementAttributes: { placeholder: "Add factors above, or type factor:level pairs" } },
+    }, descHooks("Levels")));
+  }
+
+  defs.push(
+    Object.assign({
+      title: "Replicate ID", field: "Replicate_ID", editor: "input", width: 110,
+      editorParams: { elementAttributes: { placeholder: "e.g. rep1" } },
+    }, descHooks("Replicate_ID")),
+    Object.assign({
+      title: "Read files", field: "Read_files", editor: "input", width: 200,
+      editorParams: { elementAttributes: { placeholder: "e.g. SRR12345678" } },
+    }, descHooks("Read_files")),
+    Object.assign({
+      title: "Read layout", field: "Read_layout", width: 110,
+      editor: "list",
+      editorParams: { values: ["SE", "PE"], listOnEmpty: true, freetext: false },
+    }, descHooks("Read_layout")),
+    Object.assign({
+      title: "IP target", field: "IP_target", editor: "input", width: 120,
+      editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
+    }, descHooks("IP_target")),
+    Object.assign({
+      title: "Control", field: "Control", width: 200,
+      editor: "list",
+      editorParams: function(cell) {
+        return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
+      },
+    }, descHooks("Control"))
+  );
+
+  return defs;
 }
 
 // ===========================================================================
@@ -657,21 +939,35 @@ function runValidation() {
     if (!genome)
       addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': Genome is required");
 
-    // Levels
-    if (!levels) {
-      addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels is required");
+    // Levels / Factor validation
+    if (factors.length > 0) {
+      // Validate each factor field individually
+      for (var fi = 0; fi < factors.length; fi++) {
+        var fval = (row["_factor_" + factors[fi]] || "").trim();
+        var fField = "_factor_" + factors[fi];
+        if (!fval)
+          addIssue(cellIssues, errors, rowKey, fField, "[X] Row #" + rowNum + " '" + sid + "': " + factors[fi] + " level is required");
+        else if (fval.includes(":") || fval.includes(","))
+          addIssue(cellIssues, errors, rowKey, fField, "[X] Row #" + rowNum + " '" + sid + "': " + factors[fi] + " level must not contain ':' or ','");
+      }
     } else {
-      var pairs = levels.split(",");
-      for (var pi = 0; pi < pairs.length; pi++) {
-        var p = pairs[pi].trim();
-        if (!p.includes(":")) {
-          addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels entry '" + p + "' must be 'factor:level' format");
-        } else {
-          var parts = p.split(":");
-          var factor = parts[0];
-          var level = parts.slice(1).join(":");
-          if (!factor.trim() || !level.trim())
-            addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': empty factor name or level in Levels");
+      // Fallback: validate Levels column directly
+      var levels = (row.Levels || "").trim();
+      if (!levels) {
+        addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels is required");
+      } else {
+        var pairs = levels.split(",");
+        for (var pi = 0; pi < pairs.length; pi++) {
+          var p = pairs[pi].trim();
+          if (!p.includes(":")) {
+            addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels entry '" + p + "' must be 'factor:level' format");
+          } else {
+            var parts = p.split(":");
+            var factor = parts[0];
+            var level = parts.slice(1).join(":");
+            if (!factor.trim() || !level.trim())
+              addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': empty factor name or level in Levels");
+          }
         }
       }
     }
@@ -732,33 +1028,35 @@ function runValidation() {
 
   // --- Cross-row validation ---
 
-  // Levels: consistent factors (skip example rows)
-  var allFactors = [];
-  for (var i = 0; i < data.length; i++) {
-    if (data[i]._example) { allFactors.push(null); continue; }
-    var levels = (data[i].Levels || "").trim();
-    if (!levels) { allFactors.push(null); continue; }
-    var parsed = parseLevels(levels);
-    allFactors.push(parsed ? parsed.map(function(p) { return p.factor; }) : null);
-  }
-  var refFactors = null;
-  var refRowNum = 1;
-  for (var i = 0; i < allFactors.length; i++) {
-    if (allFactors[i] !== null) { refFactors = allFactors[i]; refRowNum = i + 1; break; }
-  }
-  if (refFactors) {
-    for (var i = 0; i < allFactors.length; i++) {
-      var factors = allFactors[i];
-      if (factors === null) continue;
-      if (i + 1 === refRowNum) continue; // skip the reference row itself
-      var rowNum = i + 1;
-      var rowKey = rows[i] ? rows[i].getIndex() : i;
-      if (factors.length !== refFactors.length) {
-        addIssue(cellIssues, errors, rowKey, "Levels",
-          "[X] Row #" + rowNum + ": Levels has " + factors.length + " factors, expected " + refFactors.length + " (matching row " + refRowNum + ")");
-      } else if (factors.join("\0") !== refFactors.join("\0")) {
-        addIssue(cellIssues, errors, rowKey, "Levels",
-          "[X] Row #" + rowNum + ": Levels factor names [" + factors.join(",") + "] don't match row " + refRowNum + " [" + refFactors.join(",") + "]");
+  // Levels: consistent factors (only needed when factors are NOT managed via panel)
+  if (factors.length === 0) {
+    var allRowFactors = [];
+    for (var i = 0; i < data.length; i++) {
+      if (data[i]._example) { allRowFactors.push(null); continue; }
+      var lvl = (data[i].Levels || "").trim();
+      if (!lvl) { allRowFactors.push(null); continue; }
+      var parsed = parseLevels(lvl);
+      allRowFactors.push(parsed ? parsed.map(function(p) { return p.factor; }) : null);
+    }
+    var refFactorNames = null;
+    var refRowNum2 = 1;
+    for (var i = 0; i < allRowFactors.length; i++) {
+      if (allRowFactors[i] !== null) { refFactorNames = allRowFactors[i]; refRowNum2 = i + 1; break; }
+    }
+    if (refFactorNames) {
+      for (var i = 0; i < allRowFactors.length; i++) {
+        var rf = allRowFactors[i];
+        if (rf === null) continue;
+        if (i + 1 === refRowNum2) continue;
+        var rowNum = i + 1;
+        var rowKey = rows[i] ? rows[i].getIndex() : i;
+        if (rf.length !== refFactorNames.length) {
+          addIssue(cellIssues, errors, rowKey, "Levels",
+            "[X] Row #" + rowNum + ": Levels has " + rf.length + " factors, expected " + refFactorNames.length + " (matching row " + refRowNum2 + ")");
+        } else if (rf.join("\0") !== refFactorNames.join("\0")) {
+          addIssue(cellIssues, errors, rowKey, "Levels",
+            "[X] Row #" + rowNum + ": Levels factor names [" + rf.join(",") + "] don't match row " + refRowNum2 + " [" + refFactorNames.join(",") + "]");
+        }
       }
     }
   }
@@ -808,10 +1106,11 @@ function addIssue(issues, list, rowKey, field, msg, severity) {
 
 function updateCellStyles() {
   var rows = table.getRows();
+  var visibleFields = getVisibleFields();
   for (var ri = 0; ri < rows.length; ri++) {
     var rowKey = rows[ri].getIndex();
-    for (var ci = 0; ci < COLUMNS.length; ci++) {
-      var field = COLUMNS[ci];
+    for (var ci = 0; ci < visibleFields.length; ci++) {
+      var field = visibleFields[ci];
       var cell = rows[ri].getCell(field);
       if (!cell) continue;
       var el = cell.getElement();
@@ -934,6 +1233,26 @@ function importTSV(text) {
     rows.push(row);
   }
 
+  // Extract factors from the Levels column and set up factor columns
+  var importedFactors = [];
+  for (var i = 0; i < rows.length; i++) {
+    var parsed = parseLevels(rows[i].Levels || "");
+    if (parsed && parsed.length > 0) {
+      importedFactors = parsed.map(function(p) { return p.factor; });
+      break;
+    }
+  }
+
+  // Set global factors and populate _factor_* fields
+  factors = importedFactors;
+  for (var i = 0; i < rows.length; i++) {
+    populateFactorsFromLevels(rows[i]);
+  }
+
+  // Rebuild columns for the new factors
+  rebuildTableColumns();
+  renderFactorTiles();
+
   table.setData(rows);
   setTimeout(function() { refreshUI(); }, 100);
 }
@@ -941,7 +1260,13 @@ function importTSV(text) {
 function exportTSV() {
   var data = table.getData().filter(function(r) { return !r._example; });
   if (data.length === 0) { alert("No data to export (example rows are excluded)."); return; }
-  // Before export, accept suggestions for empty Sample_IDs
+  // Reconstruct Levels from factor fields before export
+  if (factors.length > 0) {
+    for (var i = 0; i < data.length; i++) {
+      data[i].Levels = buildLevelsFromFactors(data[i]);
+    }
+  }
+  // Accept suggestions for empty Sample_IDs
   for (var i = 0; i < data.length; i++) {
     if (!(data[i].Sample_ID || "").trim()) {
       var suggestion = suggestSampleId(data[i]);
@@ -996,65 +1321,6 @@ function controlListValues(cell) {
   return [""].concat(candidates);
 }
 
-var columnDefs = [
-  {
-    formatter: "rowSelection", titleFormatter: "rowSelection",
-    headerSort: false, width: 30, hozAlign: "center", resizable: false,
-    cellClick: function(e, cell) { cell.getRow().toggleSelect(); },
-  },
-  {
-    title: "", field: "_actions", width: 36, headerSort: false,
-    cssClass: "action-col", hozAlign: "center", resizable: false,
-    formatter: function() {
-      return '<button class="row-action-btn" aria-label="Row actions" title="Row actions">\u22EE</button>';
-    },
-    cellClick: function(e, cell) {
-      showCtxMenu(e, cell.getRow());
-    }
-  },
-  Object.assign({
-    title: "Sample ID", field: "Sample_ID", editor: "input", width: 160,
-    editorParams: { elementAttributes: { placeholder: "auto-suggested or type your own" } },
-  }, descHooks("Sample_ID")),
-  Object.assign({
-    title: "Assay", field: "Assay", width: 140,
-    editor: "list",
-    editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
-  }, descHooks("Assay")),
-  Object.assign({
-    title: "Genome", field: "Genome", editor: "input", width: 120,
-    editorParams: { elementAttributes: { placeholder: "e.g. Spombe, ColCEN, hg38" } },
-  }, descHooks("Genome")),
-  Object.assign({
-    title: "Levels", field: "Levels", editor: "input", width: 220,
-    editorParams: { elementAttributes: { placeholder: "e.g. genotype:WT,tissue:root" } },
-  }, descHooks("Levels")),
-  Object.assign({
-    title: "Replicate ID", field: "Replicate_ID", editor: "input", width: 110,
-    editorParams: { elementAttributes: { placeholder: "e.g. rep1" } },
-  }, descHooks("Replicate_ID")),
-  Object.assign({
-    title: "Read files", field: "Read_files", editor: "input", width: 200,
-    editorParams: { elementAttributes: { placeholder: "e.g. SRR12345678" } },
-  }, descHooks("Read_files")),
-  Object.assign({
-    title: "Read layout", field: "Read_layout", width: 110,
-    editor: "list",
-    editorParams: { values: ["SE", "PE"], listOnEmpty: true, freetext: false },
-  }, descHooks("Read_layout")),
-  Object.assign({
-    title: "IP target", field: "IP_target", editor: "input", width: 120,
-    editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
-  }, descHooks("IP_target")),
-  Object.assign({
-    title: "Control", field: "Control", width: 200,
-    editor: "list",
-    editorParams: function(cell) {
-      return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
-    },
-  }, descHooks("Control")),
-];
-
 // Example rows — valid data shown dimmed per-row until that row is edited.
 // The _example flag marks rows as examples; removed when the row is first edited.
 var EXAMPLE_DATA = [
@@ -1065,19 +1331,37 @@ var EXAMPLE_DATA = [
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
 ];
 
+// Initialize factors and factor fields from example data
+function initExampleData() {
+  // Extract factors from the first example row's Levels
+  var parsed = parseLevels(EXAMPLE_DATA[0].Levels || "");
+  if (parsed && parsed.length > 0) {
+    factors = parsed.map(function(p) { return p.factor; });
+  }
+  // Populate _factor_* fields on all example rows
+  for (var i = 0; i < EXAMPLE_DATA.length; i++) {
+    populateFactorsFromLevels(EXAMPLE_DATA[i]);
+  }
+  renderFactorTiles();
+}
+initExampleData();
+
 // Per-cell example tracking: stash for restoring on edit cancel
 var _editingExampleStash = null; // { field, value } while an example cell is being edited
 
 function applyExampleCellStyles() {
   var rows = table.getRows();
+  var visibleFields = getVisibleFields();
   for (var ri = 0; ri < rows.length; ri++) {
     var data = rows[ri].getData();
     var exData = data._exampleData;
-    for (var ci = 0; ci < COLUMNS.length; ci++) {
-      var cell = rows[ri].getCell(COLUMNS[ci]);
+    for (var ci = 0; ci < visibleFields.length; ci++) {
+      var cell = rows[ri].getCell(visibleFields[ci]);
       if (!cell) continue;
       var el = cell.getElement();
-      if (exData && COLUMNS[ci] in exData) {
+      // For factor fields, check if the original COLUMNS field "Levels" is still in exData
+      var isFactorField = visibleFields[ci].indexOf("_factor_") === 0;
+      if (exData && ((visibleFields[ci] in exData) || (isFactorField && "Levels" in exData))) {
         el.classList.add("cell-example");
       } else {
         el.classList.remove("cell-example");
@@ -1094,12 +1378,12 @@ function hasAnyExampleRows() {
   return false;
 }
 
-// Editable column fields in Tab order (excludes _actions)
-var EDIT_FIELDS = COLUMNS.slice(); // ["Sample_ID", "Assay", ..., "Control"]
+// Editable column fields in Tab order (excludes _actions) — updated by rebuildTableColumns()
+var EDIT_FIELDS = getVisibleFields();
 
 table = new Tabulator("#table-container", {
   data: EXAMPLE_DATA,
-  columns: columnDefs,
+  columns: buildColumnDefs(),
   layout: "fitDataFill",
   selectableRows: true,
   movableRows: true,
@@ -1153,8 +1437,9 @@ table.on("dataLoaded", function(data) {
     // Build per-cell example data map for example rows
     if (data[i]._example && !data[i]._exampleData) {
       var exData = {};
-      for (var j = 0; j < COLUMNS.length; j++) {
-        exData[COLUMNS[j]] = data[i][COLUMNS[j]] || "";
+      var visFields = getVisibleFields();
+      for (var j = 0; j < visFields.length; j++) {
+        exData[visFields[j]] = data[i][visFields[j]] || "";
       }
       data[i]._exampleData = exData;
     }
@@ -1201,7 +1486,11 @@ table.on("cellEditing", function(cell) {
   var data = row.getData();
   var field = cell.getField();
 
-  if (data._exampleData && field in data._exampleData) {
+  // For factor fields, check if "Levels" is still in exampleData
+  var isExampleField = data._exampleData && (field in data._exampleData ||
+    (field.indexOf("_factor_") === 0 && "Levels" in data._exampleData));
+
+  if (isExampleField) {
     // Stash that this is an example cell; remove dimmed styling while editing
     _editingExampleStash = { field: field };
     cell.getElement().classList.remove("cell-example");
@@ -1231,8 +1520,18 @@ table.on("cellEdited", function(cell) {
   var field = cell.getField();
 
   // User committed a real change on an example cell — mark this field as edited
-  if (data._exampleData && field in data._exampleData) {
-    delete data._exampleData[field];
+  if (data._exampleData) {
+    if (field in data._exampleData) {
+      delete data._exampleData[field];
+    } else if (field.indexOf("_factor_") === 0 && "Levels" in data._exampleData) {
+      // Editing any factor field clears the Levels example
+      delete data._exampleData["Levels"];
+      // Also clear all factor fields from exampleData
+      var keys = Object.keys(data._exampleData);
+      for (var ki = 0; ki < keys.length; ki++) {
+        if (keys[ki].indexOf("_factor_") === 0) delete data._exampleData[keys[ki]];
+      }
+    }
     // Enable validation by clearing _example on first real edit
     if (data._example) {
       data._example = false;
