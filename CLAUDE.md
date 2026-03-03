@@ -1,39 +1,13 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-EpigeneticButton (EPICC - Epigenetic Pipeline for Integrative Chromatin Characterization) is a Snakemake-based bioinformatics pipeline for analyzing and integrating epigenomics datasets: ChIP-seq, RNA-seq, small RNA-seq, bisulfite methylC-seq, and direct methylation from long-read sequencing.
+EPICC (Epigenetic Pipeline for Integrative Chromatin Characterization) — Snakemake pipeline for ChIP-seq, RNA-seq, small RNA-seq, bisulfite methylC-seq, and direct methylation from long-read sequencing.
 
 ## Running the Pipeline
 
 ```bash
-# Install environment
-conda create -n epicc -y --file config/epicc-env.txt
-conda activate epicc
-
-# Run locally
-snakemake --use-conda --conda-frontend conda --cores 12
-
-# Run on SLURM cluster
-snakemake --profile profiles/slurm
-
-# Run in background with logging
-snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
-
-# Generate DAG to validate configuration
-snakemake --dag | dot -Tpng > dag.png
-```
-
-### Intermediate Targets
-
-```bash
-# Mapping only (no analysis)
-snakemake --profile profiles/slurm map_only
-
-# ChIP coverage bigwigs only
-snakemake --profile profiles/slurm coverage_chip
+conda create -n epicc -y --file config/epicc-env.txt && conda activate epicc
+snakemake --use-conda --conda-frontend conda --cores 12      # local
+snakemake --profile profiles/slurm                            # SLURM cluster
 ```
 
 ## Architecture
@@ -84,12 +58,6 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 - `config/all_samples.tsv` - Sample metadata (see above)
 - `profiles/slurm/config.yaml` - SLURM executor settings
 
-### Output Structure
-
-Results go to `results/{env}/` where env is one of: `ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`. Each contains `chkpts/` (checkpoint files for pipeline logic), `logs/`, `tracks/` (bigwigs), and analysis-specific subdirectories.
-
-Reference genomes are prepared in `genomes/{ref_genome}/`.
-
 ## Testing
 
 ```bash
@@ -109,11 +77,8 @@ scripts/validate_pombe.sh --all
 - `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
 - `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (18 samples, 4 assays)
 
-## Key Implementation Details
+## Key Details
 
-- Requires Snakemake 9.0+
-- Control samples are linked explicitly via the `Control` column (a valid Sample_ID). Controls can be any sample (WCE, H3, IgG, etc.).
-- Peak types are determined by Assay (`ChIP_broad` → broad, `ChIP_narrow` → narrow). No regex config needed.
+- Snakemake 9.0+. Results go to `results/{env}/` (`ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`); genomes to `genomes/{ref_genome}/`.
 - Env mapping: `ChIP_broad`/`ChIP_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`EMseq`/`dmC` → `mC`
-- RNA-seq strandedness is configurable per protocol (RNAseq vs RAMPAGE)
-- Checkpoint files in `results/*/chkpts/` control re-running analyses; delete to force rerun
+- Checkpoint files in `results/*/chkpts/` control re-running analyses; delete to force rerun.
