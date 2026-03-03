@@ -1,4 +1,4 @@
-CONDA_ENV_SRNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_srna.yaml")
+CONDA_ENV_SRNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_rnaseq.yaml")
 
 def return_log_smallrna(sample_name, step, size):
     return os.path.join(REPO_FOLDER,"results","sRNA","logs",f"tmp__{sample_name}__{step}__{size}.log")

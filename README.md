@@ -135,6 +135,13 @@ snakemake --dag | dot -Tpng > dag.png
 *Even if snakemake is launched on a cluster with a profile option, the run will output a lot on the terminal. It is recommended to launch the command from a screen, to start it from a script submitted to the cluster, or to put the command in the background (which will still output snakemake commands but allows further action).*\
 *For full understanding of snakemake capabilities and options: https://snakemake.readthedocs.io/en/stable/*
 
+### Conda environment maintenance
+
+When conda environment YAML files are modified (e.g. after updating the pipeline), orphaned environment directories may accumulate under `.snakemake/conda/`. To clean them up:
+```bash
+snakemake --sdm conda --conda-cleanup-envs
+```
+
 ## Sample file configuration
 
 ### Overview
@@ -436,13 +443,10 @@ Different small RNAseq libraries have different chemistry and might need to be t
 3. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
-4. Patched ComplexUpset\
-Since ggplot2 version 4, the ComplexUpset version on CRAN is not compatible. A patch version exists which is installed from github and works fine for now.
-
-5. Quality-Of-Service slurm configuration\
+4. Quality-Of-Service slurm configuration\
 Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
 
-6. Help for local fastq files naming convention\
+5. Help for local fastq files naming convention\
 If using local fastq files for paired-end data, provide comma-separated R1 and R2 paths in the `Read_files` column (e.g. `/path/sample_R1.fq.gz,/path/sample_R2.fq.gz`). Files can use extensions `.fq` or `.fastq` and may be gzipped (`.gz`).
 
 ## Features under development

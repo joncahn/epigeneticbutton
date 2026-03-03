@@ -177,9 +177,9 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Disk usage
 
-* [ ] See if we can refactor the conda envs to decrease required disk space - current config uses ~32GiB. Are there any low-hanging dependency fruits that can be removed? Would consolidation of the majority of the analysis packages into a single environment while maintaining packages with problematic dependencies or dependency version conflicts be an optimal solution to save disk space and initial installation time by eliminating core package redundancy? 
+* [x] See if we can refactor the conda envs to decrease required disk space - current config uses ~32GiB. Are there any low-hanging dependency fruits that can be removed? Would consolidation of the majority of the analysis packages into a single environment while maintaining packages with problematic dependencies or dependency version conflicts be an optimal solution to save disk space and initial installation time by eliminating core package redundancy? **Done**: Consolidated 8 → 5 envs. Merged `epibutton_upset` into `epibutton` (removed install_github hack), `epibutton_srna` into `epibutton_rnaseq` (shared R/Bioconductor stack), `epibutton_dmc` into `epibutton_mc` (independent aligners, no conflicts). Estimated ~3-4.5 GB savings.
 
-* [ ] Should snakemake --conda-cleanup-envs be added to the pipeline to get rid of old envs? Can this be run inside of the pipeline snakemake run?
+* [x] Should snakemake --conda-cleanup-envs be added to the pipeline to get rid of old envs? Can this be run inside of the pipeline snakemake run? **Done**: Added `conda-cleanup-pkgs: tarballs` to SLURM profile. Documented `snakemake --sdm conda --conda-cleanup-envs` as a maintenance tip in README.md (standalone command, not inside pipeline runs).
 
 * [x] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...) **Done**: Added `keep_intermediates` tiered config (`none`/`standard`/`custom`/`all`) with per-category booleans (`keep_trimmed_fastqs`, `keep_final_bams`, `keep_merged_bams`, `keep_shifted_bams`, `keep_cx_reports`). `maybe_temp()` helper in Snakefile conditionally wraps outputs with `temp()`. epicc-builder exposes tier selector and custom toggles.
 
@@ -195,9 +195,9 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Read Mapping
 
-* [ ] (ChIP/ATAC):  look at adding option to use [Chromap](https://github.com/haowenz/chromap) for ~10X speedup (and possibly set as default), consider supporting different sensitivity levels if possible as with bt2.
+* [ ] (ChIP/ATAC):  look at adding option to use [Chromap](https://github.com/haowenz/chromap) for ~10X speedup (and set as default), consider supporting different sensitivity levels if possible as with bt2.
 
-* [ ] (WGBS):  consider switching to [bwa-meth](https://github.com/brentp/bwa-meth)
+* [ ] (WGBS):  consider switching to [bwa-meth](https://github.com/brentp/bwa-meth) as default pipeline, with option to use BISMARK.
 
 ### Local
 

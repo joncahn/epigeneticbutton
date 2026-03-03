@@ -1,4 +1,4 @@
-CONDA_ENV_RNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_rna.yaml")
+CONDA_ENV_RNA=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_rnaseq.yaml")
 
 def return_log_rna(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","RNA","logs",f"tmp__{sample_name}__{step}__{paired}.log")

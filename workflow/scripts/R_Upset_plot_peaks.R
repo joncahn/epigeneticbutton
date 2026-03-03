@@ -1,9 +1,5 @@
 #!/usr/bin/env Rscript
 
-library(remotes)
-
-### tmeporary patch for resolving issues with ggplot=4.0 
-remotes::install_github("krassowski/complex-upset#212")
 
 library(dplyr)
 library(tidyr)

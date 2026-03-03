@@ -1,13 +1,19 @@
-name: epibutton_rna
+name: epibutton_rnaseq
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
   - star
+  - shortstack>=4.1
+  - bowtie2
   - samtools
+  - pigz
+  - deeptools
   - ucsc-bedgraphtobigwig
+  - ucsc-bigwigtobedgraph
   - ucsc-bedsort
+  - seqtk
   - r-base
   - bioconductor-limma
   - bioconductor-edger

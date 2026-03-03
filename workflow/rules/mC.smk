@@ -534,7 +534,6 @@ rule all_mc:
 # Handles both modBAM (direct methylation basecalls) and pre-computed bedMethyl inputs
 ################################################################################
 
-CONDA_ENV_DMC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_dmc.yaml")
 MODKIT_VERSION = "0.6.1"
 MODKIT_BIN = os.path.join(REPO_FOLDER, "workflow", "bin", "modkit")
 
@@ -610,7 +609,7 @@ rule get_dmc_input:
         validate_script = os.path.join(REPO_FOLDER,"workflow","scripts","validate_dmc_input.py")
     log:
         temp(return_log_mc("{sample_name}", "get_dmc_input", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: config["resources"]["get_modbam"]["threads"]
     resources:
         mem_mb=config["resources"]["get_modbam"]["mem_mb"],
@@ -750,7 +749,7 @@ rule prepare_modbam_for_pileup:
         preset = config.get('dmc_methylation', {}).get('alignment', {}).get('preset', 'lr:hqae')
     log:
         temp(return_log_mc("{sample_name}", "prepare_modbam", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: config["resources"]["align_modbam"]["threads"]
     resources:
         mem_mb=config["resources"]["align_modbam"]["mem_mb"],
@@ -828,7 +827,7 @@ rule modkit_pileup_dmc:
         combine_mods = "--combine-mods" if config.get('dmc_methylation', {}).get('pileup', {}).get('combine_mods', True) else ""
     log:
         temp(return_log_mc("{sample_name}", "modkit_pileup", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: config["resources"]["modkit_pileup"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_pileup"]["mem_mb"],
@@ -865,7 +864,7 @@ rule copy_bedmethyl_input:
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         temp(return_log_mc("{sample_name}", "copy_bedmethyl", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: config["resources"]["get_bedmethyl"]["threads"]
     resources:
         mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
@@ -915,7 +914,7 @@ rule modkit_summary_dmc:
         sample_name = lambda wildcards: wildcards.sample_name
     log:
         temp(return_log_mc("{sample_name}", "modkit_summary", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: config["resources"]["modkit_summary"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
@@ -963,7 +962,7 @@ rule make_mc_stats_dmc:
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: config["resources"]["modkit_summary"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
@@ -1059,7 +1058,7 @@ rule convert_bedmethyl_to_cx_report:
         context = config['mC_context']
     log:
         temp(return_log_mc("{sample_name}", "bedmethyl_to_cx", "dmC"))
-    conda: CONDA_ENV_DMC
+    conda: CONDA_ENV_MC
     threads: 1
     resources:
         mem_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["mem_mb"],
