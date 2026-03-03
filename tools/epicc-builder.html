@@ -2090,7 +2090,13 @@ function buildConfigForm() {
   outSec.appendChild(buildToggleRow("Analysis on transposable elements", "te_analysis",
     "TE analysis is ON! You know where it's at! \uD83D\uDC4F",
     "TE analysis is deactivated. It's only junk DNA afterall... \uD83D\uDC40"));
-  outSec.appendChild(buildSelectRow("FastQC option:", "QC_option", ["none", "all"]));
+  var qcRow = buildSelectRow("FastQC option:", "QC_option", ["none", "all"]);
+  var qcMsg = el("div", { className: "cfg-msg" });
+  qcMsg.textContent = configState.QC_option === "all" ? "How good is that raw data, hum? \uD83E\uDDD0" : "";
+  qcRow.appendChild(qcMsg);
+  var qcSel = qcRow.querySelector("select");
+  qcSel.addEventListener("change", function() { qcMsg.textContent = this.value === "all" ? "How good is that raw data, hum? \uD83E\uDDD0" : ""; });
+  outSec.appendChild(qcRow);
   outSec.appendChild(buildToggleRow("Gene Ontology analysis", "GO",
     "Gene Ontology will be performed! Good luck! \uD83E\uDD1E",
     "Gene ontology deactivated. Probably safer! \uD83D\uDE25"));

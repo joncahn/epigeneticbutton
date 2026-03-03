@@ -75,7 +75,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser. **Done**: `tools/epicc-builder.html` (Tabulator 6.x, ~1165 lines), symlinked at repo root.
 
-##### [ ] Implementation Stage 1: Sample sheet preparation helper
+##### [x] Implementation Stage 1: Sample sheet preparation helper
 
 **Prerequisite research**: Identify a suitable JS library for table drawing andwidgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can bebundled into a single HTML file).  **Decision reached: use [tabulator] <https:/tabulator.info/>**.
 
@@ -103,14 +103,14 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [x] Cells with unresolved warnings should show an indicator of this in the UI.Possibilities are yellow cell border or small yellow circle or exclamation mark inthe cell. Same for errors, but with red. **Done**: red left border for errors, yellow for warnings.
 * [x] When a user enters an IP_target, we should compare with the list of knownmarks, and if the user has entered a ChIP_broad or ChIP_narrow value that conflictswith the recommendation in the known marks, we should warn. **Done**: `KNOWN_MARKS` constant with regex patterns from `config/config.yaml` peaktype mappings. Warning emitted during validation when assay conflicts with recommendation.
 
-##### [ ] Implementation Stage 2: Config file helper and concordance with original hosted app
+##### [x] Implementation Stage 2: Config file helper and concordance with original hosted app
 
-* [ ] Augment the sample sheet builder with another interactive section just above allowing for the creation, editing, removal of the factors that will be used in Levels in the sample file. This can be something like an New Factor text field and button. Committed factors will then appear as tiles showing their name with an "x" inside to enable removal. Then, in the sample sheet builder, instead of showing the Levels as a table column, we should automatically populate/update the table GUI with columns having the names of the factors, so the users will just enter the level value there. The TSV will keep the same factor:level format for the Levels column, so epicc-builder should handle this transformation on import/export.
+* [x] Augment the sample sheet builder with another interactive section just above allowing for the creation, editing, removal of the factors that will be used in Levels in the sample file. This can be something like an New Factor text field and button. Committed factors will then appear as tiles showing their name with an "x" inside to enable removal. Then, in the sample sheet builder, instead of showing the Levels as a table column, we should automatically populate/update the table GUI with columns having the names of the factors, so the users will just enter the level value there. The TSV will keep the same factor:level format for the Levels column, so epicc-builder should handle this transformation on import/export. **Done**: Factor panel with add/remove tiles, dynamic `_factor_*` columns replacing Levels, import/export round-trips correctly.
 
-* [ ] Implement all currently unimplemented functionality from [the original epicc-builder](https://epicc-builder.streamlit.app/), but keep our updated sample sheet builder.
-  * [ ] We will need to alter the app presentation so we can show different sections (sample sheet and epicc configuration file form settings). This could be implemented with upper nav bar with "EPICC" as the home item in the menu, followed by Sample Sheet and Config File. Clicking EPICC resolves to the first menu item (Sample Sheet). Links to documentation and the EPICC/epigeneticbutton [Github repo](https://github.com/joncahn/epigeneticbutton) should also appear in this main nav menu.
-  * [ ] The dedicated sample file check button probably isn't necessary since we're doing real time validation.
-  * [ ] Keep all of the jokey prompts in the config file form.
+* [x] Implement all currently unimplemented functionality from [the original epicc-builder](https://epicc-builder.streamlit.app/), but keep our updated sample sheet builder. **Done**: Config file form with all sections from original Streamlit app (required params, per-genome/species, output/input options, motifs, advanced ChIP/ATAC/RNA/mC/sRNA/plotting), YAML import/export via js-yaml@4.
+  * [x] We will need to alter the app presentation so we can show different sections (sample sheet and epicc configuration file form settings). This could be implemented with upper nav bar with "EPICC" as the home item in the menu, followed by Sample Sheet and Config File. Clicking EPICC resolves to the first menu item (Sample Sheet). Links to documentation and the EPICC/epigeneticbutton [Github repo](https://github.com/joncahn/epigeneticbutton) should also appear in this main nav menu. **Done**: Top nav bar with EPICC brand, Sample Sheet / Config File tabs, Docs / GitHub links.
+  * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
+  * [x] Keep all of the jokey prompts in the config file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
 ### config.yaml
 
