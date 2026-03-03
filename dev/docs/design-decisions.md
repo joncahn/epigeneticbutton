@@ -188,3 +188,15 @@ A reference for architectural choices in the pipeline. Intended for contributors
 **Rationale**: The original epicc-builder was a Streamlit web application that required a running Python server and became broken when the hosting environment changed. A self-contained HTML file has no runtime dependencies, works on air-gapped HPC login nodes, and can be committed to the repository and versioned alongside the pipeline code it describes. Tabulator (a JavaScript library that can be bundled into a single file) provides the interactive table functionality.
 
 **Alternatives considered**: Rebuilding as a Streamlit or Flask app. Rejected because server-side apps require deployment infrastructure and introduce a runtime dependency that can fail independently of the pipeline. A CLI tool was also considered but rejected because tabular data entry is substantially more usable with a graphical interface.
+
+---
+
+## Read Trimming
+
+### fastp replaces cutadapt for adapter removal and quality trimming
+
+**Decision**: Replace cutadapt with fastp across all assay types (ChIP, ATAC, RNA, sRNA, mC). The config structure was changed from tool-specific CLI strings (`trimming_quality: "-q 10 -m 20"`) to tool-agnostic keys (`quality_threshold`, `min_read_length`, `trim_front`). Standard Illumina adapters are set to `"auto"` for fastp auto-detection; non-standard adapters (NextFlex for sRNA, Nextera for ATAC) remain explicit. Trimming metrics output changed from cutadapt `.txt` to fastp `.json`, and HTML QC reports are now generated alongside.
+
+**Rationale**: fastp is 2-5x faster than cutadapt, actively maintained (v1.0 released 2025), and provides automatic adapter detection for both SE and PE reads, built-in HTML/JSON QC reports, and polyG tail trimming. The tool-agnostic config keys decouple the configuration from any specific trimming tool, making future tool changes easier. fastp also applies default read-level quality filtering (discard reads with >40% bases below Q15) that cutadapt does not have, which is generally beneficial for catching truly low-quality reads. The `trim_front` key replaces the previously unimplemented manual Pico/EMseq override comment with a functional config option.
+
+**Alternatives considered**: (1) skewer: unmaintained since ~2016, lacks QC reporting, would require a separate QC tool. (2) Keeping cutadapt with parallelized JSON output: cutadapt lacks built-in JSON metrics and auto-detection, so the benefit would be marginal. (3) trim_galore (a cutadapt wrapper): adds a dependency layer without significant speed improvement over cutadapt itself.

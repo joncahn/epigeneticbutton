@@ -525,7 +525,7 @@ rule filter_chip_se:
 
 rule make_chip_stats_pe:
     input:
-        metrics_trim = "results/{env}/reports/trim_pe__{sample_name}.txt",
+        metrics_trim = "results/{env}/reports/trim_pe__{sample_name}.json",
         metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
@@ -549,7 +549,7 @@ rule make_chip_stats_pe:
         """
         printf "\nMaking mapping statistics summary\n"
         if [[ "{params.trimmed_fastq}" == "False" ]]; then
-            tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+            tot=$(python3 -c "import json; print(json.load(open('{input.metrics_trim}'))['summary']['before_filtering']['total_reads'] // 2)")
         else
             tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
         fi
@@ -565,7 +565,7 @@ rule make_chip_stats_pe:
 
 rule make_chip_stats_se:
     input:
-        metrics_trim = "results/{env}/reports/trim_se__{sample_name}.txt",
+        metrics_trim = "results/{env}/reports/trim_se__{sample_name}.json",
         metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
@@ -589,7 +589,7 @@ rule make_chip_stats_se:
         """
         printf "\nMaking mapping statistics summary\n"
         if [[ "{params.trimmed_fastq}" == "False" ]]; then
-            tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+            tot=$(python3 -c "import json; print(json.load(open('{input.metrics_trim}'))['summary']['before_filtering']['total_reads'])")
         else
             tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
         fi

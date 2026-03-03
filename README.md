@@ -493,7 +493,7 @@ This pipeline is only a combination of great tools developped by others. A non-e
 - [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
 - [ComplexUpset](https://krassowski.github.io/complex-upset/index.html)
 - [Conda](https://anaconda.org/anaconda/conda)
-- [Cutadapt](https://cutadapt.readthedocs.io/en/stable/)
+- [fastp](https://github.com/OpenGene/fastp)
 - [deepTools](https://deeptools.readthedocs.io/en/develop/index.html)
 - [DMRcaller](https://bioconductor.org/packages/release/bioc/html/DMRcaller.html)
 - [edgeR](https://www.bioconductor.org/packages/release/bioc/html/edgeR.html)

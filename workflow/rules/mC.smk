@@ -257,7 +257,7 @@ rule pe_or_se_mc_dispatch:
 
 rule make_mc_stats_pe:
     input:
-        metrics_trim = "results/mC/reports/trim_pe__{sample_name}.txt",
+        metrics_trim = "results/mC/reports/trim_pe__{sample_name}.json",
         metrics_map = "results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
         metrics_dedup = "results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
@@ -288,7 +288,7 @@ rule make_mc_stats_pe:
         """
         printf "\nMaking mapping statistics summary\n"
         if [[ "{params.trimmed_fastq}" == "False" ]]; then
-            tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+            tot=$(python3 -c "import json; print(json.load(open('{input.metrics_trim}'))['summary']['before_filtering']['total_reads'] // 2)")
         else
             tot=$(grep "Sequence pairs analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
         fi
@@ -309,7 +309,7 @@ rule make_mc_stats_pe:
 
 rule make_mc_stats_se:
     input:
-        metrics_trim = "results/mC/reports/trim_se__{sample_name}.txt",
+        metrics_trim = "results/mC/reports/trim_se__{sample_name}.json",
         metrics_map = "results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
         metrics_dedup = "results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
         cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
@@ -340,7 +340,7 @@ rule make_mc_stats_se:
         """
         printf "\nMaking mapping statistics summary\n"
         if [[ "{params.trimmed_fastq}" == "False" ]]; then
-            tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+            tot=$(python3 -c "import json; print(json.load(open('{input.metrics_trim}'))['summary']['before_filtering']['total_reads'])")
         else
             tot=$(grep "Sequences analysed in total" "{input.metrics_map}" | awk '{{print $NF}}')
         fi

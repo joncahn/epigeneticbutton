@@ -207,13 +207,16 @@ rule process_fastq_pe:
     output:
         fastq1 = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R1.fastq.gz", config.get('keep_trimmed_fastqs', False)),
         fastq2 = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R2.fastq.gz", config.get('keep_trimmed_fastqs', False)),
-        metrics = "results/{data_type}/reports/trim_pe__{sample_name}.txt"
+        metrics = "results/{data_type}/reports/trim_pe__{sample_name}.json",
+        html_report = "results/{data_type}/reports/trim_pe__{sample_name}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         adapter1 = lambda wildcards: config['adapter1'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
         adapter2 = lambda wildcards: config['adapter2'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
-        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        quality_threshold = lambda wildcards: config['quality_threshold'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        min_read_length = lambda wildcards: config['min_read_length'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        trim_front = lambda wildcards: config['trim_front'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
         trimmed_fastqs = config['trimmed_fastqs']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "PE"))
@@ -226,18 +229,31 @@ rule process_fastq_pe:
     shell:
         """
         {{
-		if [[ "{params.trimmed_fastqs}" == "True" ]]; then
+        if [[ "{params.trimmed_fastqs}" == "True" ]]; then
             printf "\nFastq for {params.sample_name} is already trimmed\n"
             cp {input.raw_fastq1} {output.fastq1}
             cp {input.raw_fastq2} {output.fastq2}
-            touch {output.metrics}
+            printf '{{}}' > {output.metrics}
+            touch {output.html_report}
         else
-            #### Trimming illumina adapters with Cutadapt
-            printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
-            cutadapt --version
-            cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -A "{params.adapter2}" -o "{output.fastq1}" -p "{output.fastq2}" "{input.raw_fastq1}" "{input.raw_fastq2}" 2>&1 | tee "{output.metrics}"
+            printf "\nTrimming adapters for {params.sample_name} with fastp version:\n"
+            fastp --version 2>&1
+
+            fastp_args=""
+            [[ "{params.adapter1}" != "auto" ]] && fastp_args+=" --adapter_sequence {params.adapter1}"
+            [[ "{params.adapter2}" != "auto" ]] && fastp_args+=" --adapter_sequence_r2 {params.adapter2}"
+            [[ {params.trim_front} -gt 0 ]] && fastp_args+=" --trim_front1 {params.trim_front} --trim_front2 {params.trim_front}"
+
+            fastp --thread {threads} \
+                --cut_tail --cut_tail_mean_quality {params.quality_threshold} \
+                --length_required {params.min_read_length} \
+                --detect_adapter_for_pe \
+                $fastp_args \
+                --in1 "{input.raw_fastq1}" --in2 "{input.raw_fastq2}" \
+                --out1 "{output.fastq1}" --out2 "{output.fastq2}" \
+                --json "{output.metrics}" --html "{output.html_report}"
         fi
-        }} 2>&1 | tee -a "{log}"        
+        }} 2>&1 | tee -a "{log}"
         """
         
 rule process_fastq_se:
@@ -245,12 +261,15 @@ rule process_fastq_se:
         raw_fastq = "results/{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
     output:
         fastq = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R0.fastq.gz", config.get('keep_trimmed_fastqs', False)),
-        metrics = "results/{data_type}/reports/trim_se__{sample_name}.txt"
+        metrics = "results/{data_type}/reports/trim_se__{sample_name}.json",
+        html_report = "results/{data_type}/reports/trim_se__{sample_name}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         adapter1 = lambda wildcards: config['adapter1'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
-        trimming_quality = lambda wildcards: config['trimming_quality'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        quality_threshold = lambda wildcards: config['quality_threshold'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        min_read_length = lambda wildcards: config['min_read_length'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
+        trim_front = lambda wildcards: config['trim_front'][get_sample_info_from_name(wildcards.sample_name, samples, 'env')],
         trimmed_fastqs = config['trimmed_fastqs']
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "trimming", "SE"))
@@ -266,10 +285,23 @@ rule process_fastq_se:
         if [[ "{params.trimmed_fastqs}" == "True" ]]; then
             printf "\nFastq for {params.sample_name} is already trimmed\n"
             cp {input.raw_fastq} {output.fastq}
+            printf '{{}}' > {output.metrics}
+            touch {output.html_report}
         else
-            printf "\nTrimming Illumina adapters for {params.sample_name} with cutadapt version:\n"
-            cutadapt --version
-            cutadapt -j {threads} {params.trimming_quality} -a "{params.adapter1}" -o "{output.fastq}" "{input.raw_fastq}" 2>&1 | tee "{output.metrics}"
+            printf "\nTrimming adapters for {params.sample_name} with fastp version:\n"
+            fastp --version 2>&1
+
+            fastp_args=""
+            [[ "{params.adapter1}" != "auto" ]] && fastp_args+=" --adapter_sequence {params.adapter1}"
+            [[ {params.trim_front} -gt 0 ]] && fastp_args+=" --trim_front1 {params.trim_front}"
+
+            fastp --thread {threads} \
+                --cut_tail --cut_tail_mean_quality {params.quality_threshold} \
+                --length_required {params.min_read_length} \
+                $fastp_args \
+                --in1 "{input.raw_fastq}" \
+                --out1 "{output.fastq}" \
+                --json "{output.metrics}" --html "{output.html_report}"
         fi
         }} 2>&1 | tee -a "{log}"
         """

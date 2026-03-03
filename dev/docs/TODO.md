@@ -167,6 +167,10 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ## Performance/Resource Usage
 
+### Full code review of snakemake rules
+
+* [ ] Do a full code review of the full workflow in parallel with --simplify, and improve performance and resource usage where possible for all sample type analysis rules and the combined analysis.
+
 ### Data acquisition and preparation
 
 * [x] Switch to direct fastq.gz downloads from ENA for download speed, better transitory disk space usage? Maybe add alternative fastq_path=ENA, or try ENA first and fall back to SRA. Look into storing SRA downloads as compressed FASTQs to avoid writing huge uncompressed data to disk, and the post-hoc wait for compression. **Done**: ENA-first downloads via `workflow/scripts/ena_download.sh` with automatic fallback to fasterq-dump. ENA provides pre-compressed `.fastq.gz`, eliminating uncompressed intermediates. `fasterq-dump --temp "$TMPDIR"` uses SLURM scratch instead of `/tmp`.
@@ -191,7 +195,7 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Read trimming
 
-* [ ] Explore faster options than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the config.yaml). There are a number of different use cases for read trimming - let's investigate all to make sure a substitution would cover all of them.
+* [x] Explore faster options than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the config.yaml). There are a number of different use cases for read trimming - let's investigate all to make sure a substitution would cover all of them. **Done**: Replaced cutadapt with fastp across the pipeline. Config restructured: `trimming_quality` (CLI strings) replaced with tool-agnostic `quality_threshold`, `min_read_length`, `trim_front` keys. Standard Illumina adapters set to `"auto"` (fastp auto-detection); non-standard adapters (NextFlex, Nextera) kept explicit. Trimming metrics changed from `.txt` to `.json`; HTML QC reports added. All 6 downstream stats rules updated to parse fastp JSON. epicc-builder config form updated. TF keys removed.
 
 ### Read Mapping
 
@@ -217,9 +221,6 @@ Do we currently have a way to specify whether one or the other or both should be
 
 * [ ] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug)
 
-### Full code review of all snakemake rules
-
-* [ ] Review the full workflow in parallel, and improve performance and resource usage where possible for all sample type analysis rules and the combined analysis.
 
 ## Testing
 

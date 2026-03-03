@@ -40,15 +40,21 @@ dmc_methylation:
 # DMR calling method for dmC samples: "dmrcaller" (default) or "modkit"
 dmc_dmr_method: "dmrcaller"
 
-# Trimming parameters
-trimming_quality:
-  mC: "-q 10 -m 20"
+# Trimming parameters (fastp)
+quality_threshold:
+  mC: 10
+
+min_read_length:
+  mC: 20
+
+trim_front:
+  mC: 0
 
 adapter1:
-  mC: "AGATCGGAAGAGCACACGTCTGAAC"
+  mC: "auto"
 
 adapter2:
-  mC: "AGATCGGAAGAGCGTCGTGTAGGGA"
+  mC: "auto"
 
 # Bismark mapping parameters (for non-dmC samples)
 mC_mapping:

@@ -7,7 +7,7 @@ dependencies:
   - pigz
   - samtools
   - fastqc
-  - cutadapt
+  - fastp
   - sra-tools>=3
   - bedtools
   - deeptools

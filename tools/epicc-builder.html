@@ -1801,33 +1801,43 @@ var configState = {
   jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt",
   motifs_allreps: false,
   // ChIP advanced
-  trimming_quality_ChIP: "-q 10 -m 20",
-  adapter1_ChIP: "AGATCGGAAGAGCACACGTCTGAAC",
-  adapter2_ChIP: "AGATCGGAAGAGCGTCGTGTAGGGA",
+  quality_threshold_ChIP: 10,
+  min_read_length_ChIP: 20,
+  trim_front_ChIP: 0,
+  adapter1_ChIP: "auto",
+  adapter2_ChIP: "auto",
   chip_mapping_option: "default",
   chip_tracks_binsize: 1,
   chip_tracks_params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300",
   chip_callpeaks_params: "--keep-dup 'all' --nomodel",
   // ATAC advanced
-  trimming_quality_ATAC: "-q 10 -m 20",
+  quality_threshold_ATAC: 10,
+  min_read_length_ATAC: 20,
+  trim_front_ATAC: 0,
   adapter1_ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG",
   adapter2_ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG",
   atac_mapping_option: "default",
   // RNA advanced
-  trimming_quality_RNA: "-q 10 -m 20",
-  adapter1_RNA: "AGATCGGAAGAGCACACGTCTGAAC",
-  adapter2_RNA: "AGATCGGAAGAGCGTCGTGTAGGGA",
+  quality_threshold_RNA: 10,
+  min_read_length_RNA: 20,
+  trim_front_RNA: 0,
+  adapter1_RNA: "auto",
+  adapter2_RNA: "auto",
   rna_strandedness: "reverse",
   rna_multimap: "multiple",
   // mC advanced
-  trimming_quality_mC: "-q 10 -m 20",
-  adapter1_mC: "AGATCGGAAGAGCACACGTCTGAAC",
-  adapter2_mC: "AGATCGGAAGAGCGTCGTGTAGGGA",
+  quality_threshold_mC: 10,
+  min_read_length_mC: 20,
+  trim_front_mC: 0,
+  adapter1_mC: "auto",
+  adapter2_mC: "auto",
   mC_method: "default",
   mC_max_insert: 1000,
   custom_script_dmrs: false,
   // sRNA advanced
-  trimming_quality_sRNA: "-q 10 -m 15",
+  quality_threshold_sRNA: 10,
+  min_read_length_sRNA: 15,
+  trim_front_sRNA: 0,
   adapter1_sRNA: "TGGAATTCTCGGGTGCCAAGG",
   adapter2_sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA",
   nextflex_v3_deduplication: false,
@@ -2156,9 +2166,11 @@ function buildConfigForm() {
   var chipDet = el("details", { className: "cfg-details" });
   chipDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ChIP-seq Advanced Options" }));
   var chipBody = el("div", { className: "cfg-details-body" });
-  chipBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_ChIP", "-q 10 -m 20"));
-  chipBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ChIP", "AGATCGGAAGAGCACACGTCTGAAC"));
-  chipBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ChIP", "AGATCGGAAGAGCGTCGTGTAGGGA"));
+  chipBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_ChIP", 0, 40));
+  chipBody.appendChild(buildNumberRow("Min read length:", "min_read_length_ChIP", 1, 500));
+  chipBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_ChIP", 0, 100));
+  chipBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_ChIP", "auto"));
+  chipBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_ChIP", "auto"));
   chipBody.appendChild(buildSelectRow("Mapping option:", "chip_mapping_option",
     ["default", "repeat", "repeatall", "all"]));
   chipBody.appendChild(buildNumberRow("Bigwig bin size:", "chip_tracks_binsize", 1, 1000000));
@@ -2173,7 +2185,9 @@ function buildConfigForm() {
   var atacDet = el("details", { className: "cfg-details" });
   atacDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ATAC-seq Advanced Options" }));
   var atacBody = el("div", { className: "cfg-details-body" });
-  atacBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_ATAC", "-q 10 -m 20"));
+  atacBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_ATAC", 0, 40));
+  atacBody.appendChild(buildNumberRow("Min read length:", "min_read_length_ATAC", 1, 500));
+  atacBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_ATAC", 0, 100));
   atacBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ATAC", "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG"));
   atacBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ATAC", "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"));
   atacBody.appendChild(buildSelectRow("Mapping option:", "atac_mapping_option",
@@ -2185,9 +2199,11 @@ function buildConfigForm() {
   var rnaDet = el("details", { className: "cfg-details" });
   rnaDet.appendChild(el("summary", { textContent: "\u2699\uFE0F RNA-seq Advanced Options" }));
   var rnaBody = el("div", { className: "cfg-details-body" });
-  rnaBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_RNA", "-q 10 -m 20"));
-  rnaBody.appendChild(buildTextRow("Adapter 1:", "adapter1_RNA", "AGATCGGAAGAGCACACGTCTGAAC"));
-  rnaBody.appendChild(buildTextRow("Adapter 2:", "adapter2_RNA", "AGATCGGAAGAGCGTCGTGTAGGGA"));
+  rnaBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_RNA", 0, 40));
+  rnaBody.appendChild(buildNumberRow("Min read length:", "min_read_length_RNA", 1, 500));
+  rnaBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_RNA", 0, 100));
+  rnaBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_RNA", "auto"));
+  rnaBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_RNA", "auto"));
   rnaBody.appendChild(buildSelectRow("Strandedness:", "rna_strandedness", ["reverse", "forward", "unstranded"]));
   rnaBody.appendChild(buildSelectRow("Mapped reads for bigwigs:", "rna_multimap", ["multiple", "unique"]));
   rnaDet.appendChild(rnaBody);
@@ -2197,9 +2213,11 @@ function buildConfigForm() {
   var mcDet = el("details", { className: "cfg-details" });
   mcDet.appendChild(el("summary", { textContent: "\u2699\uFE0F mC (Methylation) Advanced Options" }));
   var mcBody = el("div", { className: "cfg-details-body" });
-  mcBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_mC", "-q 10 -m 20"));
-  mcBody.appendChild(buildTextRow("Adapter 1:", "adapter1_mC", "AGATCGGAAGAGCACACGTCTGAAC"));
-  mcBody.appendChild(buildTextRow("Adapter 2:", "adapter2_mC", "AGATCGGAAGAGCGTCGTGTAGGGA"));
+  mcBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_mC", 0, 40));
+  mcBody.appendChild(buildNumberRow("Min read length:", "min_read_length_mC", 1, 500));
+  mcBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_mC", 0, 100));
+  mcBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_mC", "auto"));
+  mcBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_mC", "auto"));
   mcBody.appendChild(buildSelectRow("Library prep method:", "mC_method",
     ["default", "WGBS", "Pico", "EMseq"]));
   mcBody.appendChild(buildNumberRow("Max insert length (PE):", "mC_max_insert", 100, 50000));
@@ -2213,7 +2231,9 @@ function buildConfigForm() {
   var srnaDet = el("details", { className: "cfg-details" });
   srnaDet.appendChild(el("summary", { textContent: "\u2699\uFE0F sRNA Advanced Options" }));
   var srnaBody = el("div", { className: "cfg-details-body" });
-  srnaBody.appendChild(buildTextRow("Trimming parameters:", "trimming_quality_sRNA", "-q 10 -m 15"));
+  srnaBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_sRNA", 0, 40));
+  srnaBody.appendChild(buildNumberRow("Min read length:", "min_read_length_sRNA", 1, 500));
+  srnaBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_sRNA", 0, 100));
   srnaBody.appendChild(buildTextRow("Adapter 1:", "adapter1_sRNA", "TGGAATTCTCGGGTGCCAAGG"));
   srnaBody.appendChild(buildTextRow("Adapter 2:", "adapter2_sRNA", "AGATCGGAAGAGCGTCGTGTAGGGAAAGA"));
   srnaBody.appendChild(buildToggleRow("Nextflex V3 deduplication", "nextflex_v3_deduplication",
@@ -2392,19 +2412,31 @@ function configStateToYAML() {
     if (s.go_database) cfg[sp].go_database = s.go_database;
   }
 
-  // Trimming
-  cfg.trimming_quality = {
-    ChIP: configState.trimming_quality_ChIP,
-    RNA: configState.trimming_quality_RNA,
-    TF: configState.trimming_quality_ChIP, // TF shares ChIP settings
-    mC: configState.trimming_quality_mC,
-    sRNA: configState.trimming_quality_sRNA,
-    ATAC: configState.trimming_quality_ATAC
+  // Trimming (fastp)
+  cfg.quality_threshold = {
+    ChIP: configState.quality_threshold_ChIP,
+    RNA: configState.quality_threshold_RNA,
+    mC: configState.quality_threshold_mC,
+    sRNA: configState.quality_threshold_sRNA,
+    ATAC: configState.quality_threshold_ATAC
+  };
+  cfg.min_read_length = {
+    ChIP: configState.min_read_length_ChIP,
+    RNA: configState.min_read_length_RNA,
+    mC: configState.min_read_length_mC,
+    sRNA: configState.min_read_length_sRNA,
+    ATAC: configState.min_read_length_ATAC
+  };
+  cfg.trim_front = {
+    ChIP: configState.trim_front_ChIP,
+    RNA: configState.trim_front_RNA,
+    mC: configState.trim_front_mC,
+    sRNA: configState.trim_front_sRNA,
+    ATAC: configState.trim_front_ATAC
   };
   cfg.adapter1 = {
     ChIP: configState.adapter1_ChIP,
     RNA: configState.adapter1_RNA,
-    TF: configState.adapter1_ChIP,
     mC: configState.adapter1_mC,
     sRNA: configState.adapter1_sRNA,
     ATAC: configState.adapter1_ATAC
@@ -2412,7 +2444,6 @@ function configStateToYAML() {
   cfg.adapter2 = {
     ChIP: configState.adapter2_ChIP,
     RNA: configState.adapter2_RNA,
-    TF: configState.adapter2_ChIP,
     mC: configState.adapter2_mC,
     sRNA: configState.adapter2_sRNA,
     ATAC: configState.adapter2_ATAC
@@ -2535,27 +2566,41 @@ function handleYAMLImport(text) {
   if (cfg.browser_TE_file != null) configState.browser_TE_file = !!cfg.browser_TE_file;
   if (cfg.browser_scales != null) configState.browser_scales = cfg.browser_scales;
 
-  // Trimming/adapter nested objects
-  if (cfg.trimming_quality) {
-    if (cfg.trimming_quality.ChIP) configState.trimming_quality_ChIP = cfg.trimming_quality.ChIP;
-    if (cfg.trimming_quality.RNA) configState.trimming_quality_RNA = cfg.trimming_quality.RNA;
-    if (cfg.trimming_quality.mC) configState.trimming_quality_mC = cfg.trimming_quality.mC;
-    if (cfg.trimming_quality.sRNA) configState.trimming_quality_sRNA = cfg.trimming_quality.sRNA;
-    if (cfg.trimming_quality.ATAC) configState.trimming_quality_ATAC = cfg.trimming_quality.ATAC;
+  // Trimming/adapter nested objects (fastp)
+  if (cfg.quality_threshold) {
+    if (cfg.quality_threshold.ChIP != null) configState.quality_threshold_ChIP = cfg.quality_threshold.ChIP;
+    if (cfg.quality_threshold.RNA != null) configState.quality_threshold_RNA = cfg.quality_threshold.RNA;
+    if (cfg.quality_threshold.mC != null) configState.quality_threshold_mC = cfg.quality_threshold.mC;
+    if (cfg.quality_threshold.sRNA != null) configState.quality_threshold_sRNA = cfg.quality_threshold.sRNA;
+    if (cfg.quality_threshold.ATAC != null) configState.quality_threshold_ATAC = cfg.quality_threshold.ATAC;
+  }
+  if (cfg.min_read_length) {
+    if (cfg.min_read_length.ChIP != null) configState.min_read_length_ChIP = cfg.min_read_length.ChIP;
+    if (cfg.min_read_length.RNA != null) configState.min_read_length_RNA = cfg.min_read_length.RNA;
+    if (cfg.min_read_length.mC != null) configState.min_read_length_mC = cfg.min_read_length.mC;
+    if (cfg.min_read_length.sRNA != null) configState.min_read_length_sRNA = cfg.min_read_length.sRNA;
+    if (cfg.min_read_length.ATAC != null) configState.min_read_length_ATAC = cfg.min_read_length.ATAC;
+  }
+  if (cfg.trim_front) {
+    if (cfg.trim_front.ChIP != null) configState.trim_front_ChIP = cfg.trim_front.ChIP;
+    if (cfg.trim_front.RNA != null) configState.trim_front_RNA = cfg.trim_front.RNA;
+    if (cfg.trim_front.mC != null) configState.trim_front_mC = cfg.trim_front.mC;
+    if (cfg.trim_front.sRNA != null) configState.trim_front_sRNA = cfg.trim_front.sRNA;
+    if (cfg.trim_front.ATAC != null) configState.trim_front_ATAC = cfg.trim_front.ATAC;
   }
   if (cfg.adapter1) {
-    if (cfg.adapter1.ChIP) configState.adapter1_ChIP = cfg.adapter1.ChIP;
-    if (cfg.adapter1.RNA) configState.adapter1_RNA = cfg.adapter1.RNA;
-    if (cfg.adapter1.mC) configState.adapter1_mC = cfg.adapter1.mC;
-    if (cfg.adapter1.sRNA) configState.adapter1_sRNA = cfg.adapter1.sRNA;
-    if (cfg.adapter1.ATAC) configState.adapter1_ATAC = cfg.adapter1.ATAC;
+    if (cfg.adapter1.ChIP != null) configState.adapter1_ChIP = cfg.adapter1.ChIP;
+    if (cfg.adapter1.RNA != null) configState.adapter1_RNA = cfg.adapter1.RNA;
+    if (cfg.adapter1.mC != null) configState.adapter1_mC = cfg.adapter1.mC;
+    if (cfg.adapter1.sRNA != null) configState.adapter1_sRNA = cfg.adapter1.sRNA;
+    if (cfg.adapter1.ATAC != null) configState.adapter1_ATAC = cfg.adapter1.ATAC;
   }
   if (cfg.adapter2) {
-    if (cfg.adapter2.ChIP) configState.adapter2_ChIP = cfg.adapter2.ChIP;
-    if (cfg.adapter2.RNA) configState.adapter2_RNA = cfg.adapter2.RNA;
-    if (cfg.adapter2.mC) configState.adapter2_mC = cfg.adapter2.mC;
-    if (cfg.adapter2.sRNA) configState.adapter2_sRNA = cfg.adapter2.sRNA;
-    if (cfg.adapter2.ATAC) configState.adapter2_ATAC = cfg.adapter2.ATAC;
+    if (cfg.adapter2.ChIP != null) configState.adapter2_ChIP = cfg.adapter2.ChIP;
+    if (cfg.adapter2.RNA != null) configState.adapter2_RNA = cfg.adapter2.RNA;
+    if (cfg.adapter2.mC != null) configState.adapter2_mC = cfg.adapter2.mC;
+    if (cfg.adapter2.sRNA != null) configState.adapter2_sRNA = cfg.adapter2.sRNA;
+    if (cfg.adapter2.ATAC != null) configState.adapter2_ATAC = cfg.adapter2.ATAC;
   }
 
   // ChIP tracks
@@ -2580,7 +2625,7 @@ function handleYAMLImport(text) {
     "QC_option","GO","trimmed_fastqs","aligned_bams",
     "keep_intermediates","keep_trimmed_fastqs","keep_final_bams","keep_merged_bams",
     "keep_shifted_bams","keep_cx_reports","keep_dmc_intermediates","motifs","jaspar_db","motifs_allreps",
-    "trimming_quality","adapter1","adapter2","chip_mapping_option","atac_mapping_option",
+    "quality_threshold","min_read_length","trim_front","adapter1","adapter2","chip_mapping_option","atac_mapping_option",
     "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",
     "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","mC_context","pca_bs",
     "pca_step","mC_mapping","custom_script_dmrs","dmc_methylation","dmc_dmr_method",

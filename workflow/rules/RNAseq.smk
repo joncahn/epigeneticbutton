@@ -318,7 +318,7 @@ rule filter_rna_se:
 
 rule make_rna_stats_pe:
     input:
-        metrics_trim = "results/RNA/reports/trim_pe__{sample_name}.txt",
+        metrics_trim = "results/RNA/reports/trim_pe__{sample_name}.json",
         metrics_map = "results/RNA/reports/star_pe__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
@@ -340,7 +340,7 @@ rule make_rna_stats_pe:
         """
         printf "\nMaking mapping statistics summary\n"
         if [[ "{params.trimmed_fastq}" == "False" ]]; then
-            tot=$(grep "Total read pairs processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+            tot=$(python3 -c "import json; print(json.load(open('{input.metrics_trim}'))['summary']['before_filtering']['total_reads'] // 2)")
         else
             tot=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
         fi
@@ -356,7 +356,7 @@ rule make_rna_stats_pe:
 
 rule make_rna_stats_se:
     input:
-        metrics_trim = "results/RNA/reports/trim_se__{sample_name}.txt",
+        metrics_trim = "results/RNA/reports/trim_se__{sample_name}.json",
         metrics_map = "results/RNA/reports/star_se__{sample_name}.txt",
         logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
@@ -378,7 +378,7 @@ rule make_rna_stats_se:
         """
         printf "\nMaking mapping statistics summary\n"
         if [[ "{params.trimmed_fastq}" == "False" ]]; then
-            tot=$(grep "Total reads processed:" "{input.metrics_trim}" | awk '{{print $NF}}' | sed 's/,//g')
+            tot=$(python3 -c "import json; print(json.load(open('{input.metrics_trim}'))['summary']['before_filtering']['total_reads'])")
         else
             tot=$(grep "Number of input reads" "{input.metrics_map}" | awk '{{print $NF}}')
         fi
