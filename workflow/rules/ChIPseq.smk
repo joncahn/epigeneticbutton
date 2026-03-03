@@ -425,74 +425,14 @@ rule make_bt2_indices:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule bowtie2_map_pe:
+rule filter_chip_pe:
     input:
         fastq1 = "results/{env}/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "results/{env}/fastq/trim__{sample_name}__R2.fastq.gz",
         indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
     output:
-        samfile = temp("results/{env}/mapped/mapped_pe__{sample_name}.sam"),
-        metrics = "results/{env}/reports/bt2_pe__{sample_name}.txt"
-    wildcard_constraints:
-        env = "ChIP|ATAC"
-    params:
-        sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        map_option = lambda wildcards: get_bt2_option(wildcards.env),
-        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['map_pe']
-    log:
-        temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "PE"))
-    conda: CONDA_ENV_CHIP
-    threads: config["resources"]["bowtie2_map_pe"]["threads"]
-    resources:
-        mem_mb=config["resources"]["bowtie2_map_pe"]["mem_mb"],
-        tmp_mb=config["resources"]["bowtie2_map_pe"]["tmp_mb"],
-        qos=config["resources"]["bowtie2_map_pe"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
-		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -1 "{input.fastq1}" -2 "{input.fastq2}" -S "{output.samfile}" 2>&1 | tee "{output.metrics}"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule bowtie2_map_se:
-    input:
-        fastq = "results/{env}/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
-    output:
-        samfile = temp("results/{env}/mapped/mapped_se__{sample_name}.sam"),
-        metrics = "results/{env}/reports/bt2_se__{sample_name}.txt"
-    wildcard_constraints:
-        env = "ChIP|ATAC"
-    params:
-        sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        map_option = lambda wildcards: get_bt2_option(wildcards.env),
-        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['map_se']
-    log:
-        temp(return_log_chip("{env}","{sample_name}", "mappingBT2", "SE"))
-    conda: CONDA_ENV_CHIP
-    threads: config["resources"]["bowtie2_map_se"]["threads"]
-    resources:
-        mem_mb=config["resources"]["bowtie2_map_se"]["mem_mb"],
-        tmp_mb=config["resources"]["bowtie2_map_se"]["tmp_mb"],
-        qos=config["resources"]["bowtie2_map_se"]["qos"]
-    shell:
-        """
-        {{
-        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters with bowtie2 version:\n"
-		bowtie2 --version
-		bowtie2 -p {threads} {params.mapping_params} -x "{input.indices}/{params.ref_genome}" -U "{input.fastq}" -S "{output.samfile}" 2>&1 | tee "{output.metrics}"
-        }} 2>&1 | tee -a "{log}"
-        """
-
-rule filter_chip_pe:
-    input:
-        samfile = "results/{env}/mapped/mapped_pe__{sample_name}.sam"
-    output:
         bamfile = temp("results/{env}/mapped/mapped_pe__{sample_name}.bam"),
+        metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
         metrics_dup = "results/{env}/reports/markdup_pe__{sample_name}.txt",
         metrics_flag = "results/{env}/reports/flagstat_pe__{sample_name}.txt"
     wildcard_constraints:
@@ -500,10 +440,11 @@ rule filter_chip_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: get_bt2_option(wildcards.env),
-        filtering_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['filter']
+        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['map_pe']
     log:
-        temp(return_log_chip("{env}","{sample_name}", "filteringChIP", "PE"))
+        temp(return_log_chip("{env}","{sample_name}", "map_filter", "PE"))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["filter_chip_pe"]["threads"]
     resources:
@@ -513,23 +454,34 @@ rule filter_chip_pe:
     shell:
         """
         {{
-        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {params.sample_name} file using {params.map_option} with samtools version:\n"
-        samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o "results/{params.env}/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
-        samtools fixmate -@ {threads} -m "results/{params.env}/mapped/temp1_{params.sample_name}.bam" "results/{params.env}/mapped/temp2_{params.sample_name}.bam"
-        samtools sort -@ {threads} -o "results/{params.env}/mapped/temp3_{params.sample_name}.bam" "results/{params.env}/mapped/temp2_{params.sample_name}.bam"
-        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "results/{params.env}/mapped/temp3_{params.sample_name}.bam" "{output.bamfile}"
+        set -o pipefail
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters and filtering with samtools\n"
+        bowtie2 --version
+        samtools --version | head -1
+
+        bowtie2 -p {threads} {params.mapping_params} \
+            -x "{input.indices}/{params.ref_genome}" \
+            -1 "{input.fastq1}" -2 "{input.fastq2}" \
+            2> "{output.metrics_map}" \
+        | samtools view -@ 2 -bh -q 10 -F 256 \
+        | samtools fixmate -@ 2 -m - - \
+        | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
+            "results/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f results/{params.env}/mapped/temp*"_{params.sample_name}.bam"
+        rm -f "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_chip_se:
     input:
-        samfile = "results/{env}/mapped/mapped_se__{sample_name}.sam"
+        fastq = "results/{env}/fastq/trim__{sample_name}__R0.fastq.gz",
+        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
     output:
         bamfile = temp("results/{env}/mapped/mapped_se__{sample_name}.bam"),
+        metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
         metrics_dup = "results/{env}/reports/markdup_se__{sample_name}.txt",
         metrics_flag = "results/{env}/reports/flagstat_se__{sample_name}.txt"
     wildcard_constraints:
@@ -537,10 +489,11 @@ rule filter_chip_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         map_option = lambda wildcards: get_bt2_option(wildcards.env),
-        filtering_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['filter']
+        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['map_se']
     log:
-        temp(return_log_chip("{env}","{sample_name}", "filteringChIP", "SE"))
+        temp(return_log_chip("{env}","{sample_name}", "map_filter", "SE"))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["filter_chip_se"]["threads"]
     resources:
@@ -550,14 +503,23 @@ rule filter_chip_se:
     shell:
         """
         {{
-        printf "\nRemoving low quality reads, secondary alignements and duplicates, sorting and indexing {params.sample_name} file using {params.map_option} with samtools version:\n"
-        samtools --version
-        samtools view -@ {threads} -b -h -q 10 -F 256 -o "results/{params.env}/mapped/temp1_{params.sample_name}.bam" "{input.samfile}"
-        samtools sort -@ {threads} -o "results/{params.env}/mapped/temp2_{params.sample_name}.bam" "results/{params.env}/mapped/temp1_{params.sample_name}.bam"
-        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} "results/{params.env}/mapped/temp2_{params.sample_name}.bam" "{output.bamfile}"
+        set -o pipefail
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters and filtering with samtools\n"
+        bowtie2 --version
+        samtools --version | head -1
+
+        bowtie2 -p {threads} {params.mapping_params} \
+            -x "{input.indices}/{params.ref_genome}" \
+            -U "{input.fastq}" \
+            2> "{output.metrics_map}" \
+        | samtools view -@ 2 -bh -q 10 -F 256 \
+        | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+
+        samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
+            "results/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f results/{params.env}/mapped/temp*"_{params.sample_name}.bam"
+        rm -f "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -565,7 +527,7 @@ rule make_chip_stats_pe:
     input:
         metrics_trim = "results/{env}/reports/trim_pe__{sample_name}.txt",
         metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filteringChIP"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
         stat_file = "results/{env}/reports/summary_{env}_PE_mapping_stats_{sample_name}.txt",
         log = "results/{env}/logs/process_chip_pe_sample__{sample_name}.log"
@@ -605,7 +567,7 @@ rule make_chip_stats_se:
     input:
         metrics_trim = "results/{env}/reports/trim_se__{sample_name}.txt",
         metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingBT2", "filteringChIP"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
         stat_file = "results/{env}/reports/summary_{env}_SE_mapping_stats_{sample_name}.txt",
         log = "results/{env}/logs/process_chip_se_sample__{sample_name}.log"

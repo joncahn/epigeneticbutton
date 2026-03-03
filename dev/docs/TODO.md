@@ -183,7 +183,7 @@ Do we currently have a way to specify whether one or the other or both should be
 
 * [ ] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...)
 
-* [ ] ChIPseq.smk - we should not be writing SAM files to disk. Wasteful of both network storage I/O (slow) and disk space.
+* [x] ChIPseq.smk - we should not be writing SAM files to disk. Wasteful of both network storage I/O (slow) and disk space. **Done**: Merged bowtie2_map + filter_chip rules into single piped rules (filter_chip_pe, filter_chip_se). Bowtie2 stdout pipes directly into samtools view → fixmate → sort, eliminating the SAM-to-disk step and reducing intermediate BAMs from 3 to 1.
 
 ### Read trimming
 

@@ -381,10 +381,8 @@ resources:
   get_available_bam: *standard
   # ChIPseq
   make_bt2_indices: *heavy
-  bowtie2_map_pe: *heavier
-  bowtie2_map_se: *heavier
-  filter_chip_pe: *heavy
-  filter_chip_se: *heavy
+  filter_chip_pe: *heavier
+  filter_chip_se: *heavier
   make_chip_stats_pe: *low
   make_chip_stats_se: *low
   pe_or_se_chip_dispatch: *standard
