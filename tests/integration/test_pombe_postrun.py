@@ -30,25 +30,25 @@ CHIP_PER_REP_BAMS = [
     "WT_H3K9me3_rep2",
     "dcr1_H3K9me2_rep1",
     "dcr1_H3K9me3_rep1",
+    "WT_WCE_rep1",
+    "dcr1_WCE_rep1",
+    "WT_H3K4me3_rep1",
+    "WT_H3K4me3_rep2",
     "WT_Input_rep1",
-    "dcr1_Input_rep1",
-    "veg_H3K4me3_rep1",
-    "veg_H3K4me3_rep2",
-    "veg_Input_rep1",
 ]
 
 # ChIP analysis-level merged BAMs (3 analysis groups + 2 merged controls)
 CHIP_MERGED_ANALYSIS_BAMS = [
     "ChIP_broad__WT__H3K9me2__Spombe",
     "ChIP_broad__WT__H3K9me3__Spombe",
-    "ChIP_narrow__veg__H3K4me3__Spombe",
+    "ChIP_narrow__WT__H3K4me3__Spombe",
 ]
 CHIP_MERGED_CONTROL_BAMS = [
+    "WT_WCE_rep1",
     "WT_Input_rep1",
-    "veg_Input_rep1",
 ]
 
-# ChIP non-Input samples (for FC bigwigs)
+# ChIP non-Input/WCE samples (for FC bigwigs)
 CHIP_NON_INPUT_PER_REP = [
     "WT_H3K9me2_rep1",
     "WT_H3K9me2_rep2",
@@ -56,8 +56,8 @@ CHIP_NON_INPUT_PER_REP = [
     "WT_H3K9me3_rep2",
     "dcr1_H3K9me2_rep1",
     "dcr1_H3K9me3_rep1",
-    "veg_H3K4me3_rep1",
-    "veg_H3K4me3_rep2",
+    "WT_H3K4me3_rep1",
+    "WT_H3K4me3_rep2",
 ]
 
 # ChIP PE samples that should have broadPeak files
@@ -72,8 +72,8 @@ CHIP_PE_PEAK_SAMPLES = [
 
 # ChIP SE samples that should have narrowPeak files
 CHIP_SE_PEAK_SAMPLES = [
-    "veg_H3K4me3_rep1",
-    "veg_H3K4me3_rep2",
+    "WT_H3K4me3_rep1",
+    "WT_H3K4me3_rep2",
 ]
 
 # RNA per-replicate samples (4)
@@ -106,7 +106,7 @@ CHIP_CHECKPOINTS = [
     "ChIP_analysis__test_pombe__Spombe.done",
     "idr__ChIP_broad__WT__H3K9me2__Spombe.done",
     "idr__ChIP_broad__WT__H3K9me3__Spombe.done",
-    "idr__ChIP_narrow__veg__H3K4me3__Spombe.done",
+    "idr__ChIP_narrow__WT__H3K4me3__Spombe.done",
 ] + [f"map_ChIP__{s}.done" for s in CHIP_PER_REP_BAMS]
 
 RNA_CHECKPOINTS = [
@@ -215,7 +215,7 @@ class TestChIPOutputs:
                       "ChIP_broad__WT__H3K9me3__Spombe"]:
             idr = RESULTS / "ChIP" / "peaks" / f"idr_peaks__{name}.broadPeak"
             assert _file_exists_nonempty(idr), f"Missing or empty: {idr}"
-        idr_narrow = RESULTS / "ChIP" / "peaks" / "idr_peaks__ChIP_narrow__veg__H3K4me3__Spombe.narrowPeak"
+        idr_narrow = RESULTS / "ChIP" / "peaks" / "idr_peaks__ChIP_narrow__WT__H3K4me3__Spombe.narrowPeak"
         assert _file_exists_nonempty(idr_narrow), f"Missing or empty: {idr_narrow}"
 
     def test_chip_checkpoints(self, results_exist):
@@ -434,7 +434,7 @@ class TestOutputIntegrity:
 
     def test_narrowpeak_has_10_columns(self, results_exist):
         """NarrowPeak files have 10 tab-separated columns."""
-        peak = RESULTS / "ChIP" / "peaks" / "peaks_se__final__veg_H3K4me3_rep1_peaks.narrowPeak"
+        peak = RESULTS / "ChIP" / "peaks" / "peaks_se__final__WT_H3K4me3_rep1_peaks.narrowPeak"
         with open(peak) as f:
             for i, line in enumerate(f):
                 line = line.strip()

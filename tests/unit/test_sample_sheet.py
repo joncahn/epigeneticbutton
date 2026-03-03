@@ -42,9 +42,9 @@ def pombe_df():
     data = {
         "Sample_ID": [
             "WT_H3K9me2_rep1", "WT_H3K9me2_rep2",
-            "WT_Input_rep1",
+            "WT_WCE_rep1",
             "dcr1_H3K9me2_rep1",
-            "dcr1_Input_rep1",
+            "dcr1_WCE_rep1",
             "WT_RNA_rep1", "WT_RNA_rep2",
             "dcr1_RNA_rep1",
             "WT_sRNA_rep1",
@@ -86,13 +86,13 @@ def pombe_df():
             "SE", "SE", "SE", "SE",
         ],
         "IP_target": [
-            "H3K9me2", "H3K9me2", "Input",
-            "H3K9me2", "Input",
+            "H3K9me2", "H3K9me2", "WCE",
+            "H3K9me2", "WCE",
             "", "", "", "",
         ],
         "Control": [
-            "WT_Input_rep1", "WT_Input_rep1", "",
-            "dcr1_Input_rep1", "",
+            "WT_WCE_rep1", "WT_WCE_rep1", "",
+            "dcr1_WCE_rep1", "",
             "", "", "", "",
         ],
     }
@@ -229,7 +229,7 @@ class TestBuildAnalysisToReplicates:
         a2r = build_analysis_to_replicates(pombe_df)
         # Input samples should not appear as analysis keys
         for key in a2r:
-            assert key[2] != "Input"  # IP_target should never be "Input"
+            assert key[2] != "WCE"  # IP_target should never be a control type
 
     def test_single_rep(self, pombe_df):
         a2r = build_analysis_to_replicates(pombe_df)
@@ -245,20 +245,20 @@ class TestBuildAnalysisToReplicates:
 class TestIdentifyControlSamples:
     def test_basic(self, pombe_df):
         controls = identify_control_samples(pombe_df)
-        assert controls == {"WT_Input_rep1", "dcr1_Input_rep1"}
+        assert controls == {"WT_WCE_rep1", "dcr1_WCE_rep1"}
 
 
 class TestGetControlSampleId:
     def test_has_control(self, pombe_df):
         ctrl = get_control_sample_id("WT_H3K9me2_rep1", pombe_df)
-        assert ctrl == "WT_Input_rep1"
+        assert ctrl == "WT_WCE_rep1"
 
     def test_no_control(self, pombe_df):
         ctrl = get_control_sample_id("WT_RNA_rep1", pombe_df)
         assert ctrl is None
 
     def test_is_control(self, pombe_df):
-        ctrl = get_control_sample_id("WT_Input_rep1", pombe_df)
+        ctrl = get_control_sample_id("WT_WCE_rep1", pombe_df)
         assert ctrl is None
 
 
@@ -270,8 +270,8 @@ class TestGetAnalysisSamples:
     def test_controls_excluded(self, pombe_df):
         analysis = get_analysis_samples(pombe_df)
         # Controls should not appear
-        assert "WT_Input_rep1" not in analysis["Sample_ID"].values
-        assert "dcr1_Input_rep1" not in analysis["Sample_ID"].values
+        assert "WT_WCE_rep1" not in analysis["Sample_ID"].values
+        assert "dcr1_WCE_rep1" not in analysis["Sample_ID"].values
 
     def test_deduplicated(self, pombe_df):
         analysis = get_analysis_samples(pombe_df)

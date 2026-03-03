@@ -112,7 +112,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
   * [x] Keep all of the jokey prompts in the config file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
-##### [x] Deployment
+##### [ ] Deployment
 
 * [x] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally. **Done**: GitHub Actions workflow `.github/workflows/deploy-builder.yml` deploys `tools/epicc-builder.html` as `index.html` on push to main. Requires enabling GitHub Pages (Source: GitHub Actions) in repo Settings > Pages.
 
@@ -238,6 +238,8 @@ Do we currently have a way to specify whether one or the other or both should be
 * [x] Add validate-pombe orchestration script and Claude Code skill. **Done**: `scripts/validate_pombe.sh` (`--dry`/`--full`/`--check`/`--all`), `.claude/commands/validate-pombe.md` (`/validate-pombe` skill).
 
 * [x] Remove tissue:cell from test_samples_pombe sample sheet - no reason to have this factor as it is not differentiated among the samples. **Done**: Reduced Levels to single `genotype:X` factor, updated all Sample_IDs, analysis names, and test assertions across 5 files.
+
+* [x] Fix pombe test sample metadata: rename Ekwall `veg` → `WT` (HU3112 is WT), fix Kim/Chang WCE controls from `IP_target: Input` → `WCE` (SRR5445712 is whole-cell extract, not Input). **Done**: Updated test_samples_pombe.tsv, test_pombe_dryrun.py, test_pombe_postrun.py, test_sample_sheet.py.
 
 ### Complete A. thaliana ColCEN Chr5 test case
 
