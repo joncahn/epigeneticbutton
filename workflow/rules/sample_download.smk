@@ -12,7 +12,8 @@ rule get_fastq_pe:
         data_type = lambda wildcards: wildcards.data_type,
         trimmed_fastqs = config['trimmed_fastqs'],
         exist_fastq1 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
-        exist_fastq2 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz"
+        exist_fastq2 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz",
+        ena_script = os.path.join(REPO_FOLDER, "workflow", "scripts", "ena_download.sh")
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
     conda: CONDA_ENV
@@ -30,22 +31,54 @@ rule get_fastq_pe:
             cp {params.exist_fastq1} {output.fastq1}
             cp {params.exist_fastq2} {output.fastq2}
         elif [[ "{params.fastq_path}" == "SRA" ]]; then
-            printf "Using fasterq-dump for PE {params.sample_name} ({params.seq_id})\n"
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
-            fastq_files_r1=()
-            fastq_files_r2=()
+            outdir="results/{params.data_type}/fastq"
+            ena_ok=true
+
+            # Try ENA first (pre-compressed .fastq.gz)
+            printf "Attempting ENA download for PE {params.sample_name} ({params.seq_id})\n"
             for nb in ${{numbers}}; do
-                fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "${{nb}}"
-                fastq_files_r1+=("results/{params.data_type}/fastq/${{nb}}_1.fastq")
-                fastq_files_r2+=("results/{params.data_type}/fastq/${{nb}}_2.fastq")
+                if ! bash "{params.ena_script}" "${{nb}}" "${{outdir}}" "PE"; then
+                    ena_ok=false
+                    break
+                fi
             done
-            printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
-            cat "${{fastq_files_r1[@]}}" > "results/{params.data_type}/fastq/raw__{params.sample_name}__R1.fastq"
-            pigz -p {threads} "results/{params.data_type}/fastq/raw__{params.sample_name}__R1.fastq"
-            rm -f "${{fastq_files_r1[@]}}"
-            cat "${{fastq_files_r2[@]}}" > "results/{params.data_type}/fastq/raw__{params.sample_name}__R2.fastq"
-            pigz -p {threads} "results/{params.data_type}/fastq/raw__{params.sample_name}__R2.fastq"
-            rm -f "${{fastq_files_r2[@]}}"
+
+            if [[ "${{ena_ok}}" == true ]]; then
+                # ENA succeeded — concatenate per-accession files into final outputs
+                ena_files_r1=()
+                ena_files_r2=()
+                for nb in ${{numbers}}; do
+                    ena_files_r1+=("${{outdir}}/${{nb}}_1.fastq.gz")
+                    ena_files_r2+=("${{outdir}}/${{nb}}_2.fastq.gz")
+                done
+                cat "${{ena_files_r1[@]}}" > {output.fastq1}
+                cat "${{ena_files_r2[@]}}" > {output.fastq2}
+                rm -f "${{ena_files_r1[@]}}" "${{ena_files_r2[@]}}"
+                printf "ENA download complete for {params.sample_name}\n"
+            else
+                # ENA failed — clean up partial downloads and fall back to fasterq-dump
+                printf "ENA download failed, falling back to fasterq-dump for PE {params.sample_name}\n"
+                for nb in ${{numbers}}; do
+                    rm -f "${{outdir}}/${{nb}}_1.fastq.gz" "${{outdir}}/${{nb}}_2.fastq.gz"
+                done
+                fastq_files_r1=()
+                fastq_files_r2=()
+                for nb in ${{numbers}}; do
+                    fasterq-dump -e {threads} --temp "${{TMPDIR:-/tmp}}" --outdir "${{outdir}}" "${{nb}}"
+                    fastq_files_r1+=("${{outdir}}/${{nb}}_1.fastq")
+                    fastq_files_r2+=("${{outdir}}/${{nb}}_2.fastq")
+                done
+                printf "\n{params.sample_name} ({params.seq_id}) downloaded via fasterq-dump\nCompressing R1 and R2 in parallel\n"
+                half_threads=$(( {threads} / 2 ))
+                [[ "${{half_threads}}" -lt 1 ]] && half_threads=1
+                cat "${{fastq_files_r1[@]}}" | pigz -p "${{half_threads}}" > {output.fastq1} &
+                pid_r1=$!
+                cat "${{fastq_files_r2[@]}}" | pigz -p "${{half_threads}}" > {output.fastq2} &
+                pid_r2=$!
+                wait "${{pid_r1}}" "${{pid_r2}}"
+                rm -f "${{fastq_files_r1[@]}}" "${{fastq_files_r2[@]}}"
+            fi
         elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q.gz 2>/dev/null | wc -l) -eq 1 ]] && [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R2*f*q.gz 2>/dev/null | wc -l) -eq 1 ]]; then
             printf "Copying PE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q.gz "{output.fastq1}"
@@ -79,7 +112,8 @@ rule get_fastq_se:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         trimmed_fastqs = config['trimmed_fastqs'],
-        exist_fastq0 = lambda wildcards: f"results/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz"
+        exist_fastq0 = lambda wildcards: f"results/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz",
+        ena_script = os.path.join(REPO_FOLDER, "workflow", "scripts", "ena_download.sh")
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
     conda: CONDA_ENV
@@ -96,27 +130,53 @@ rule get_fastq_se:
             printf "Fastq already existing for SE {params.sample_name}\n"
             cp {params.exist_fastq0} {output.fastq0}
         elif [[ "{params.fastq_path}" == "SRA" ]]; then
-            printf "Using fasterq-dump for SE {params.sample_name} ({params.seq_id})\n"
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
-            fastq_files=()
+            outdir="results/{params.data_type}/fastq"
+            ena_ok=true
+
+            # Try ENA first (pre-compressed .fastq.gz)
+            printf "Attempting ENA download for SE {params.sample_name} ({params.seq_id})\n"
             for nb in ${{numbers}}; do
-                fasterq-dump -e {threads} --outdir "results/{params.data_type}/fastq" "${{nb}}"
-                fastq_files+=("results/{params.data_type}/fastq/${{nb}}.fastq")
+                if ! bash "{params.ena_script}" "${{nb}}" "${{outdir}}" "SE"; then
+                    ena_ok=false
+                    break
+                fi
             done
-            printf "\n{params.sample_name} ({params.seq_id}) downloaded\nGzipping and renaming files\n"
-            cat "${{fastq_files[@]}}" > "results/{params.data_type}/fastq/raw__{params.sample_name}__R0.fastq"
-            pigz -p {threads} "results/{params.data_type}/fastq/raw__{params.sample_name}__R0.fastq"
-            rm -f "${{fastq_files[@]}}"
+
+            if [[ "${{ena_ok}}" == true ]]; then
+                # ENA succeeded — concatenate per-accession files into final output
+                ena_files=()
+                for nb in ${{numbers}}; do
+                    ena_files+=("${{outdir}}/${{nb}}.fastq.gz")
+                done
+                cat "${{ena_files[@]}}" > {output.fastq0}
+                rm -f "${{ena_files[@]}}"
+                printf "ENA download complete for {params.sample_name}\n"
+            else
+                # ENA failed — clean up partial downloads and fall back to fasterq-dump
+                printf "ENA download failed, falling back to fasterq-dump for SE {params.sample_name}\n"
+                for nb in ${{numbers}}; do
+                    rm -f "${{outdir}}/${{nb}}.fastq.gz"
+                done
+                fastq_files=()
+                for nb in ${{numbers}}; do
+                    fasterq-dump -e {threads} --temp "${{TMPDIR:-/tmp}}" --outdir "${{outdir}}" "${{nb}}"
+                    fastq_files+=("${{outdir}}/${{nb}}.fastq")
+                done
+                printf "\n{params.sample_name} ({params.seq_id}) downloaded via fasterq-dump\nCompressing files\n"
+                cat "${{fastq_files[@]}}" | pigz -p {threads} > {output.fastq0}
+                rm -f "${{fastq_files[@]}}"
+            fi
         elif ls "{params.fastq_path}"/*"{params.seq_id}"*q.gz 1> /dev/null 2>&1; then
             printf "\nCopying SE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*q.gz "{output.fastq0}"
         elif ls "{params.fastq_path}"/*"{params.seq_id}"*q 1> /dev/null 2>&1; then
             printf "\nCopying and gzipping SE fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
-            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*q -c > "{output.fastq0}"          
+            pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*q -c > "{output.fastq0}"
         else
             printf "Error: No SE fastq found for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
         fi
-        }} 2>&1 | tee -a "{log}"        
+        }} 2>&1 | tee -a "{log}"
         """
 
 rule run_fastqc:

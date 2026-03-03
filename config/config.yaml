@@ -355,6 +355,12 @@ standard_resources: &standard
   tmp_mb: 2000
   qos: "default"
 
+download_resources: &download
+  threads: 8
+  mem_mb: 16000
+  tmp_mb: 48000
+  qos: "slow_nice"
+
 heavy_resources: &heavy
   threads: 4
   mem_mb: 16000
@@ -389,8 +395,8 @@ resources:
   prep_region_file: *low
   check_te_file: *standard
   # sample_download
-  get_fastq_pe: *heavy
-  get_fastq_se: *heavy
+  get_fastq_pe: *download
+  get_fastq_se: *download
   run_fastqc: *single
   process_fastq_pe: *heavy
   process_fastq_se: *heavy

@@ -121,6 +121,14 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 **Rationale**: Intermediate unsorted merged BAMs are large (sum of all replicate BAM sizes) and immediately consumed by sort. Writing them to disk provides no benefit and doubles the transient disk footprint of the merge operation.
 
+### ENA-first SRA downloads with fasterq-dump fallback
+
+**Decision**: SRA download rules (`get_fastq_pe`, `get_fastq_se`) first attempt to download pre-compressed `.fastq.gz` files from ENA via HTTPS, falling back to `fasterq-dump` only on failure. The ENA URL is constructed deterministically from the accession using a helper script (`workflow/scripts/ena_download.sh`). The fasterq-dump fallback uses `--temp "${TMPDIR:-/tmp}"` for scratch storage, and PE mate compression runs in parallel.
+
+**Rationale**: `fasterq-dump` writes uncompressed FASTQs (often 10-50 GB per mate) to disk, then `pigz` compresses them sequentially. ENA provides the same data pre-compressed, eliminating both the uncompressed intermediate and the compression step. This reduces peak disk usage by 2-3x and removes the I/O bottleneck of writing and reading large uncompressed files on NFS storage. The fallback ensures robustness: ENA may be unavailable, or accessions may not yet be mirrored (ENA mirrors lag SRA by hours to days). Using `$TMPDIR` for fasterq-dump scratch avoids filling shared `/tmp` and makes use of SLURM-allocated node-local storage. A dedicated `download` resource preset (8 threads) replaces the `heavy` preset (4 threads) for download rules, since both ENA downloads and pigz compression are I/O-bound and benefit from additional threads.
+
+**Alternatives considered**: (1) Aspera (ascp) protocol for faster ENA transfers. Rejected because the IBM Aspera client is a non-trivial dependency that many HPC sites do not install. (2) ENA file-report API for URL/checksum validation. Rejected because URL construction from accession numbers is deterministic and well-documented; a failed curl cleanly signals fallback. (3) Always using fasterq-dump with `--include-technical` and piping directly to gzip. Rejected because fasterq-dump does not support stdout output, so the uncompressed intermediate cannot be avoided.
+
 ---
 
 ## Testing Strategy

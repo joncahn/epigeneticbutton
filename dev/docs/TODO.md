@@ -169,11 +169,11 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Data acquisition and preparation
 
-* [ ] Switch to direct fastq.gz downloads from ENA for download speed, better transitory disk space usage? Maybe add alternative fastq_path=ENA, or try ENA first and fall back to SRA. Look into storing SRA downloads as compressed FASTQs to avoid writing huge uncompressed data to disk, and the post-hoc wait for compression.
+* [x] Switch to direct fastq.gz downloads from ENA for download speed, better transitory disk space usage? Maybe add alternative fastq_path=ENA, or try ENA first and fall back to SRA. Look into storing SRA downloads as compressed FASTQs to avoid writing huge uncompressed data to disk, and the post-hoc wait for compression. **Done**: ENA-first downloads via `workflow/scripts/ena_download.sh` with automatic fallback to fasterq-dump. ENA provides pre-compressed `.fastq.gz`, eliminating uncompressed intermediates. `fasterq-dump --temp "$TMPDIR"` uses SLURM scratch instead of `/tmp`.
 
-* [ ] it looks like mate file compression for PE SRA accessions after fasterq-dump happens serially - the R1 file must complete before R2. I don't think there's any reason for this constraint provided sufficient resources are available. I noticed this on a local run, not sure if it's true on the cluster.
+* [x] it looks like mate file compression for PE SRA accessions after fasterq-dump happens serially - the R1 file must complete before R2. I don't think there's any reason for this constraint provided sufficient resources are available. I noticed this on a local run, not sure if it's true on the cluster. **Done**: PE mate compression now runs in parallel (background `&` + `wait`), each using half the available threads.
 
-* [ ] pigz appears to be limited to 4 threads for at least local runs, which can bottleneck the pipeline when there are few samples, but with a high read volume.
+* [x] pigz appears to be limited to 4 threads for at least local runs, which can bottleneck the pipeline when there are few samples, but with a high read volume. **Done**: New `download` resource preset with 8 threads (up from 4 in `heavy`). Download rules (`get_fastq_pe`, `get_fastq_se`) now use this preset.
 
 ### Disk usage
 
@@ -191,7 +191,7 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Read trimming
 
-* [ ] consider switching to something faster than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the config.yaml)
+* [ ] Explore faster options than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the config.yaml). There are a number of different use cases for read trimming - let's investigate all to make sure a substitution would cover all of them.
 
 ### Read Mapping
 
