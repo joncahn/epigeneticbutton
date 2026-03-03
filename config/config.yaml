@@ -128,12 +128,18 @@ adapter2:
   sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # NextFlex
   ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG" # Nextera
 
-# Mapping option default
-chip_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
-atac_mapping_option: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+# Aligner for ChIP/ATAC: "chromap" (default, ~10x faster) or "bowtie2"
+# When chromap is selected but mapping_strategy is repeat/repeatall,
+# bowtie2 is used automatically (chromap lacks multi-mapping support).
+chip_aligner: "chromap"
+atac_aligner: "chromap"
 
-# Bowtie2-based mapping parameters (shared by ChIP, TF, and ATAC)
-# For mapping
+# Mapping strategy
+chip_mapping_strategy: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+atac_mapping_strategy: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+
+# Bowtie2-based mapping parameters (shared by ChIP and ATAC)
+# Also used when chromap auto-falls back to bowtie2 for repeat/repeatall strategies
 bt2_mapping_strategy:
   default:
     map_pe: "--end-to-end --maxins 1500"
@@ -414,6 +420,7 @@ resources:
   get_available_bam: *standard
   # ChIPseq
   make_bt2_indices: *heavy
+  make_chromap_index: *heavy
   filter_chip_pe: *heavier
   filter_chip_se: *heavier
   make_chip_stats_pe: *low

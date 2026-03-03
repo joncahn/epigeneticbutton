@@ -4,11 +4,48 @@ CONDA_ENV_IDR=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_idr.yaml")
 def return_log_chip(env, sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results",env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
-def get_bt2_option(env):
-    """Select mapping strategy option based on environment."""
+def get_mapping_strategy(env):
+    """Select mapping strategy based on environment."""
     if env == "ATAC":
-        return config['atac_mapping_option']
-    return config['chip_mapping_option']
+        return config.get('atac_mapping_strategy', config.get('atac_mapping_option', 'default'))
+    return config.get('chip_mapping_strategy', config.get('chip_mapping_option', 'default'))
+
+get_bt2_option = get_mapping_strategy  # backward compat
+
+def get_chip_aligner(env):
+    """Get configured aligner for ChIP or ATAC."""
+    if env == "ATAC":
+        return config.get('atac_aligner', 'chromap')
+    return config.get('chip_aligner', 'chromap')
+
+def get_effective_aligner(env):
+    """Get effective aligner, auto-falling back to bowtie2 for repeat/repeatall strategies."""
+    aligner = get_chip_aligner(env)
+    strategy = get_mapping_strategy(env)
+    if aligner == "chromap" and strategy in ("repeat", "repeatall"):
+        return "bowtie2"
+    return aligner
+
+def get_mapping_index(wildcards):
+    """Return the appropriate index path based on effective aligner."""
+    ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
+    aligner = get_effective_aligner(wildcards.env)
+    if aligner == "chromap":
+        return f"genomes/{ref_genome}/chromap_index/{ref_genome}.index"
+    return f"genomes/{ref_genome}/bt2_index"
+
+def get_mapping_fasta(wildcards):
+    """Return FASTA path (needed by chromap; always available from environment_setup)."""
+    ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
+    return f"genomes/{ref_genome}/{ref_genome}.fa"
+
+def get_mapq_filter(env):
+    """Extract MAPQ threshold from mapping strategy filter string."""
+    import re
+    strategy = get_mapping_strategy(env)
+    filter_str = config['bt2_mapping_strategy'][strategy]['filter']
+    match = re.search(r'-q\s+(\d+)', filter_str)
+    return int(match.group(1)) if match else 0
 
 def get_peaktype_for_env(sample_name_or_assay, env):
     """Return peaktype using the appropriate config for the environment.
@@ -425,11 +462,34 @@ rule make_bt2_indices:
         }} 2>&1 | tee -a "{log}"
         """
 
+rule make_chromap_index:
+    input:
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+    output:
+        index = "genomes/{ref_genome}/chromap_index/{ref_genome}.index"
+    log:
+        temp(os.path.join(REPO_FOLDER,"results","logs","chromap_index_{ref_genome}.log"))
+    conda: CONDA_ENV_CHIP
+    threads: config["resources"]["make_chromap_index"]["threads"]
+    resources:
+        mem_mb=config["resources"]["make_chromap_index"]["mem_mb"],
+        tmp_mb=config["resources"]["make_chromap_index"]["tmp_mb"],
+        qos=config["resources"]["make_chromap_index"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nBuilding Chromap index for {wildcards.ref_genome}\n"
+        mkdir -p genomes/{wildcards.ref_genome}/chromap_index
+        chromap -i -t {threads} -r "{input.fasta}" -o "{output.index}"
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule filter_chip_pe:
     input:
         fastq1 = "results/{env}/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "results/{env}/fastq/trim__{sample_name}__R2.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
+        index = get_mapping_index,
+        fasta = get_mapping_fasta
     output:
         bamfile = temp("results/{env}/mapped/mapped_pe__{sample_name}.bam"),
         metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
@@ -441,8 +501,10 @@ rule filter_chip_pe:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        map_option = lambda wildcards: get_bt2_option(wildcards.env),
-        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['map_pe']
+        aligner = lambda wildcards: get_effective_aligner(wildcards.env),
+        map_option = lambda wildcards: get_mapping_strategy(wildcards.env),
+        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_mapping_strategy(wildcards.env)]['map_pe'],
+        mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env)
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "PE"))
     conda: CONDA_ENV_CHIP
@@ -455,17 +517,29 @@ rule filter_chip_pe:
         """
         {{
         set -o pipefail
-        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters and filtering with samtools\n"
-        bowtie2 --version
+        aligner="{params.aligner}"
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with $aligner ({params.map_option}) and filtering with samtools\n"
         samtools --version | head -1
 
-        bowtie2 -p {threads} {params.mapping_params} \
-            -x "{input.indices}/{params.ref_genome}" \
-            -1 "{input.fastq1}" -2 "{input.fastq2}" \
-            2> "{output.metrics_map}" \
-        | samtools view -@ 2 -bh -q 10 -F 256 \
-        | samtools fixmate -@ 2 -m - - \
-        | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        if [[ "$aligner" == "chromap" ]]; then
+            chromap --version
+            chromap --preset chip -t {threads} \
+                -r "{input.fasta}" -x "{input.index}" \
+                -1 "{input.fastq1}" -2 "{input.fastq2}" \
+                --SAM 2> "{output.metrics_map}" \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools fixmate -@ 2 -m - - \
+            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        else
+            bowtie2 --version
+            bowtie2 -p {threads} {params.mapping_params} \
+                -x "{input.index}/{params.ref_genome}" \
+                -1 "{input.fastq1}" -2 "{input.fastq2}" \
+                2> "{output.metrics_map}" \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools fixmate -@ 2 -m - - \
+            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
             "results/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
@@ -478,7 +552,8 @@ rule filter_chip_pe:
 rule filter_chip_se:
     input:
         fastq = "results/{env}/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/bt2_index"
+        index = get_mapping_index,
+        fasta = get_mapping_fasta
     output:
         bamfile = temp("results/{env}/mapped/mapped_se__{sample_name}.bam"),
         metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
@@ -490,8 +565,10 @@ rule filter_chip_se:
         sample_name = lambda wildcards: wildcards.sample_name,
         env = lambda wildcards: wildcards.env,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        map_option = lambda wildcards: get_bt2_option(wildcards.env),
-        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_bt2_option(wildcards.env)]['map_se']
+        aligner = lambda wildcards: get_effective_aligner(wildcards.env),
+        map_option = lambda wildcards: get_mapping_strategy(wildcards.env),
+        mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_mapping_strategy(wildcards.env)]['map_se'],
+        mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env)
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "SE"))
     conda: CONDA_ENV_CHIP
@@ -504,16 +581,27 @@ rule filter_chip_se:
         """
         {{
         set -o pipefail
-        printf "\nMapping {params.sample_name} to {params.ref_genome} with {params.map_option} parameters and filtering with samtools\n"
-        bowtie2 --version
+        aligner="{params.aligner}"
+        printf "\nMapping {params.sample_name} to {params.ref_genome} with $aligner ({params.map_option}) and filtering with samtools\n"
         samtools --version | head -1
 
-        bowtie2 -p {threads} {params.mapping_params} \
-            -x "{input.indices}/{params.ref_genome}" \
-            -U "{input.fastq}" \
-            2> "{output.metrics_map}" \
-        | samtools view -@ 2 -bh -q 10 -F 256 \
-        | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        if [[ "$aligner" == "chromap" ]]; then
+            chromap --version
+            chromap --preset chip -t {threads} \
+                -r "{input.fasta}" -x "{input.index}" \
+                -1 "{input.fastq}" \
+                --SAM 2> "{output.metrics_map}" \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        else
+            bowtie2 --version
+            bowtie2 -p {threads} {params.mapping_params} \
+                -x "{input.index}/{params.ref_genome}" \
+                -U "{input.fastq}" \
+                2> "{output.metrics_map}" \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
             "results/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
@@ -553,9 +641,20 @@ rule make_chip_stats_pe:
         else
             tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
         fi
-        filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
-        multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
-        single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
+        # Detect aligner from metrics format
+        if grep -q "overall alignment rate" "{input.metrics_map}"; then
+            # bowtie2 format
+            filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
+            multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
+            single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
+        else
+            # chromap format
+            filt=$(grep -i "number of reads" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            mapped=$(grep -i "number of mapped" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            multi=$(grep -i "multiple" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            multi=${{multi:-0}}
+            single=$((mapped - multi))
+        fi
         allmap=$((multi+single))
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
@@ -593,9 +692,20 @@ rule make_chip_stats_se:
         else
             tot=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
         fi
-        filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
-        multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
-        single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
+        # Detect aligner from metrics format
+        if grep -q "overall alignment rate" "{input.metrics_map}"; then
+            # bowtie2 format
+            filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
+            multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
+            single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
+        else
+            # chromap format
+            filt=$(grep -i "number of reads" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            mapped=$(grep -i "number of mapped" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            multi=$(grep -i "multiple" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            multi=${{multi:-0}}
+            single=$((mapped - multi))
+        fi
         allmap=$((multi+single))
         printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
         awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"

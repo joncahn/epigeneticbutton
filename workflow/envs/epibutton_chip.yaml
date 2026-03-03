@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - bowtie2
+  - chromap
   - samtools
   - bedtools
   - deeptools

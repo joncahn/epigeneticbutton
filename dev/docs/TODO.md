@@ -138,7 +138,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Explicitly handle repeats vs coding gene annotations?
 
-Do we currently have a way to specify whether one or the other or both should be used in the analysis?
+* [ ]Do we currently have a way to specify whether one or the other or both should be used in the analysis?
 
 ### Provide a front-end CLI executable script
 
@@ -199,9 +199,7 @@ Do we currently have a way to specify whether one or the other or both should be
 
 ### Read Mapping
 
-* [ ] (ChIP/ATAC):  look at adding option to use [Chromap](https://github.com/haowenz/chromap) for ~10X speedup (and set as default), consider supporting different sensitivity levels if possible as with bt2.
-
-* [ ] (WGBS):  consider switching to [bwa-meth](https://github.com/brentp/bwa-meth) as default pipeline, with option to use BISMARK.
+* [x] (ChIP/ATAC):  look at adding option to use [Chromap](https://github.com/haowenz/chromap) for ~10X speedup (and set as default), consider supporting different sensitivity levels if possible as with bt2. **Done**: Chromap added as default aligner for ChIP/ATAC (`chip_aligner`/`atac_aligner` config keys). Auto-falls back to bowtie2 for `repeat`/`repeatall` strategies (chromap lacks `-k 100` multi-mapping). MAPQ filter extracted from config instead of hardcoded. Dual-format metrics parsing in stats rules. epicc-builder updated with aligner selection UI.
 
 ### Local
 
@@ -220,7 +218,6 @@ Do we currently have a way to specify whether one or the other or both should be
 * [ ] Add time for all rules + in the profiles config
 
 * [ ] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug)
-
 
 ## Testing
 
