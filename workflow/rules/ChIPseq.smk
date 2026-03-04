@@ -528,8 +528,8 @@ rule filter_chip_pe:
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq1}" -2 "{input.fastq2}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \
-            | samtools view -@ 1 -bh -q {params.mapq_filter} -F 256 \
-            | samtools fixmate -@ 1 -m - - \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools fixmate -@ 2 -m - - \
             | samtools sort -@ {threads} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
@@ -593,8 +593,8 @@ rule filter_chip_se:
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \
-            | samtools view -@ 1 -bh -q {params.mapq_filter} -F 256 \
-            | samtools fixmate -@ 1 -m - - \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools fixmate -@ 2 -m - - \
             | samtools sort -@ {threads} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
