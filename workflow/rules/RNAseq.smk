@@ -269,7 +269,7 @@ rule filter_rna_se:
     output:
         sorted_file=temp("results/RNA/mapped/star_se__{sample_name}_Aligned.sorted.out.bam"),
         metrics_flag = "results/RNA/reports/flagstat_se__{sample_name}.txt",
-        metrics_map = "results/RNA/reports/star_se__{sample_name}.txt"
+        metrics_map = "results/RNA/reports/flagstat_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']

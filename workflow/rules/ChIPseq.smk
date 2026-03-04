@@ -366,8 +366,8 @@ def define_final_chip_output(ref_genome):
                 b_dict = b._asdict()
                 sample1 = sample_name_str(a_dict, "analysis")
                 sample2 = sample_name_str(b_dict, "analysis")
-                peaktype1 = get_peaktype_per_env(a.sample_type, config["chip_callpeaks"]['peaktype'])
-                peaktype2 = get_peaktype_per_env(b.sample_type, config["chip_callpeaks"]['peaktype'])
+                peaktype1 = get_peaktype_for_env(a.sample_type, config["chip_callpeaks"]['peaktype'])
+                peaktype2 = get_peaktype_for_env(b.sample_type, config["chip_callpeaks"]['peaktype'])
                 if peaktype1 == peaktype2:
                     peak_files.append(f"results/ChIP/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
                 
