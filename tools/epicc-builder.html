@@ -183,6 +183,7 @@
   }
   .toolbar button:hover, .toolbar label:hover { background: var(--accent); }
   .toolbar button:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+  .toolbar .io-group { margin-left: auto; display: flex; gap: 8px; align-items: center; }
   .toolbar .btn-accent { background: var(--accent); color: #fff; }
   .toolbar .btn-accent:hover { background: #c73a52; }
   .toolbar input[type="file"] { display: none; }
@@ -601,11 +602,13 @@
       <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
       <button id="btn-dup-selected" aria-label="Duplicate selected rows" disabled>Duplicate Selected</button>
       <button id="btn-del-selected" aria-label="Delete selected rows" disabled>Delete Selected</button>
-      <label for="import-file" class="btn-accent" role="button" aria-label="Import TSV file" tabindex="0"
-             onkeydown="if(event.key==='Enter')this.click()">Import TSV
-        <input type="file" id="import-file" accept=".tsv,.txt,.tab" aria-label="Choose TSV file to import">
-      </label>
-      <button id="btn-export" class="btn-accent" aria-label="Export sample sheet as TSV">Export TSV</button>
+      <div class="io-group">
+        <label for="import-file" class="btn-accent" role="button" aria-label="Import TSV file" tabindex="0"
+               onkeydown="if(event.key==='Enter')this.click()">Import TSV
+          <input type="file" id="import-file" accept=".tsv,.txt,.tab" aria-label="Choose TSV file to import">
+        </label>
+        <button id="btn-export" class="btn-accent" aria-label="Export sample sheet as TSV">Export TSV</button>
+      </div>
     </div>
     <div class="factor-panel" id="factor-panel" role="group" aria-label="Factor management">
       <span class="factor-label">Factors:</span>
@@ -624,11 +627,13 @@
 
   <div id="config-section" class="section">
     <div class="toolbar" id="cfg-toolbar">
-      <label for="import-yaml" class="btn-accent" role="button" aria-label="Import YAML config" tabindex="0"
-             onkeydown="if(event.key==='Enter')this.click()">Import YAML
-        <input type="file" id="import-yaml" accept=".yaml,.yml" aria-label="Choose YAML file to import">
-      </label>
-      <button id="btn-export-yaml" class="btn-accent" aria-label="Export config as YAML">Export YAML</button>
+      <div class="io-group">
+        <label for="import-yaml" class="btn-accent" role="button" aria-label="Import YAML config" tabindex="0"
+               onkeydown="if(event.key==='Enter')this.click()">Import YAML
+          <input type="file" id="import-yaml" accept=".yaml,.yml" aria-label="Choose YAML file to import">
+        </label>
+        <button id="btn-export-yaml" class="btn-accent" aria-label="Export config as YAML">Export YAML</button>
+      </div>
     </div>
     <div class="config-content" id="config-content"></div>
   </div>
