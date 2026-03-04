@@ -28,6 +28,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ## UI/UX
 
+### Handling IDR failures
+
+* [ ] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and probably here reflects the biology of S. pombe. Should we 
+
 ### refactor sample sheet
 
 #### New format
@@ -56,6 +60,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 ##### Input validation
 
 * [x] Per-field validation rules are defined in [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) (the canonical specification) and implemented in `workflow/scripts/samplefile_validation.py`. The epicc-builder app should implement the same rules. See the spec file for the full list of per-field constraints, cross-field checks, and derived name definitions.
+
+* [ ] Add a check to ensure multiple samples don't share the same inputs files or SRA accessions. This is almost certainly a user data entry error, can't think of a reasonable use case. Should be validated both in the builder and in the workflow.
 
 #### Harmonize analysis_samplefiles
 
@@ -156,9 +162,6 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates
 
-* [ ] Should we use the Snakemake Wrapper Repository? Looks very actively maintained:
-    <https://github.com/snakemake/snakemake-wrappers>
-
 * [ ] Improve logging system (naming, concatenating, and cleaning if chosen)
 
 * [ ] Input checks for different files, including extra output, e.g. browser target file with bed+label=string(not starting with -)+binsize=Integer(min1)+optional (coordinates+width)
@@ -203,7 +206,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Local
 
-* [ ] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG.
+* [x] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG. **Done**: See `dev/docs/profiling-pombe.md`. Top bottleneck is `plotFingerprint` (45% of CPU time, ~14 min/job). Full pipeline completes in ~42 min on 56 cores (267/282 steps; remaining 15 are data/network failures, not code bugs).
 
 ### Cluster
 
