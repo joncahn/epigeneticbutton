@@ -2019,7 +2019,7 @@ function buildGenomeSection(genomeName) {
     configState.genomes[genomeName] = {
       species: "", fasta_file: "", gff_file: "", gtf_file: "",
       gaf_file: "", gene_info_file: "", te_file: "", structural_rna_fafile: "",
-      star_index: "--genomeSAindexNbases 12", genomesize: "1.3e8",
+      star_index: "", genomesize: "",
       ncbiID: "", genus: "", go_database: ""
     };
   }
@@ -2036,23 +2036,14 @@ function buildGenomeSection(genomeName) {
     group.appendChild(buildBoundTextRow(fields[i][0], g, fields[i][1], fields[i][2]));
   }
 
-  // Species-level parameters
-  // star_index — just the number
-  var starRow = el("div", { className: "cfg-row" });
-  starRow.appendChild(el("label", { textContent: "STAR genomeSAindexNbases" }));
-  var starVal = (g.star_index || "").replace(/.*--genomeSAindexNbases\s*/, "") || "12";
-  var starInp = el("input", { type: "number", min: "10", max: "16", value: starVal });
-  starInp.addEventListener("input", function() { g.star_index = "--genomeSAindexNbases " + this.value; });
-  starRow.appendChild(starInp);
-  group.appendChild(starRow);
-
-  // genome size
-  var gsRow = el("div", { className: "cfg-row" });
-  gsRow.appendChild(el("label", { textContent: "Genome size" }));
-  var gsInp = el("input", { type: "text", value: String(g.genomesize || "1.3e8"), placeholder: "e.g. 1.3e8" });
-  gsInp.addEventListener("input", function() { g.genomesize = this.value; });
-  gsRow.appendChild(gsInp);
-  group.appendChild(gsRow);
+  // Auto-computed parameters info
+  var autoRow = el("div", { className: "cfg-row" });
+  var autoInfo = el("span", {
+    textContent: "Genome size (MACS2) and STAR index are computed automatically from the reference FASTA. To override, add star_index / genomesize to your options YAML manually.",
+    style: "font-style: italic; color: #666; font-size: 0.9em;"
+  });
+  autoRow.appendChild(autoInfo);
+  group.appendChild(autoRow);
 
   // Optional files and GO fields in a collapsible
   var details = el("details", { className: "cfg-details" });

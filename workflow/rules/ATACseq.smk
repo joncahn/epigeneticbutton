@@ -118,7 +118,8 @@ rule atac_bam_to_bed:
 
 rule calling_peaks_atac:
     input:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz"
+        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz",
+        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
         peakfile = "results/ATAC/peaks/peaks_atac__{file_type}__{sample_name}_peaks.narrowPeak"
     wildcard_constraints:
@@ -127,7 +128,7 @@ rule calling_peaks_atac:
         ipname = lambda wildcards: wildcards.sample_name,
         filetype = lambda wildcards: wildcards.file_type,
         params = config["atac_callpeaks"]['params'],
-        genomesize = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']]['genomesize']
+        genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
         temp(return_log_chip("ATAC","{sample_name}", "{file_type}__narrowpeak_calling", ""))
     conda: CONDA_ENV_ATAC
@@ -139,10 +140,15 @@ rule calling_peaks_atac:
     shell:
         """
         {{
+        if [[ -n "{params.genomesize_override}" ]]; then
+            gsize="{params.genomesize_override}"
+        else
+            gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
+        fi
         printf "\nCalling narrow peaks for ATAC-seq {params.ipname} using macs2 version:\n"
         macs2 --version
         macs2 callpeak -t {input.bedfile} -f BED \
-            -g {params.genomesize} {params.params} \
+            -g $gsize {params.params} \
             -n peaks_atac__{params.filetype}__{params.ipname} \
             --outdir results/ATAC/peaks/
         }} 2>&1 | tee -a "{log}"

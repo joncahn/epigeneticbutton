@@ -155,11 +155,12 @@ def define_final_rna_output(ref_genome):
 rule make_STAR_indices:
     input:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
+        gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
+        genome_stats = "genomes/{ref_genome}/genome_stats.json"
     output:
         indices = directory("genomes/{ref_genome}/STAR_index")
     params:
-        star_index = lambda wildcards: config["genomes"][wildcards.ref_genome]['star_index']
+        star_index_override = lambda wildcards: config["genomes"][wildcards.ref_genome].get('star_index', '')
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","STAR_index_{ref_genome}.log"))
     conda: CONDA_ENV_RNA
@@ -171,9 +172,15 @@ rule make_STAR_indices:
     shell:
         """
         {{
-        printf "\nBuilding STAR index directory for {wildcards.ref_genome}\n"
+        if [[ -n "{params.star_index_override}" ]]; then
+            star_idx="{params.star_index_override}"
+        else
+            nbases=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['star_sa_index_nbases'])")
+            star_idx="--genomeSAindexNbases $nbases"
+        fi
+        printf "\nBuilding STAR index directory for {wildcards.ref_genome} ($star_idx)\n"
         mkdir "{output.indices}"
-        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}" {params.star_index}
+        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}" $star_idx
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -736,7 +743,8 @@ rule perform_GO_on_target_file:
 rule call_rampage_TSS:
     input:
         ipfile = lambda wildcards: f"results/RNA/mapped/{wildcards.file_type}__{wildcards.sample_name}.bam",
-        inputfile = lambda wildcards: f"results/RNA/mapped/{assign_rna_input(wildcards)}.bam"
+        inputfile = lambda wildcards: f"results/RNA/mapped/{assign_rna_input(wildcards)}.bam",
+        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
         peakfile = "results/RNA/TSS/TSS__{file_type}__{sample_name}_peaks.narrowPeak"
     wildcard_constraints:
@@ -746,7 +754,7 @@ rule call_rampage_TSS:
         inputname = lambda wildcards: assign_rna_input(wildcards),
         filetype = lambda wildcards: wildcards.file_type,
         params = config["rampage_calltss"]['params'],
-        genomesize = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']]['genomesize']
+        genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
         temp(return_log_rna("{sample_name}", "{file_type}__TSS_calling", "SE"))
     conda: CONDA_ENV_CHIP
@@ -758,9 +766,14 @@ rule call_rampage_TSS:
     shell:
         """
         {{
+        if [[ -n "{params.genomesize_override}" ]]; then
+            gsize="{params.genomesize_override}"
+        else
+            gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
+        fi
         printf "\nCalling TSS (narrow peaks) for {params.ipname} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n TSS__{params.filetype}__{params.ipname} --outdir results/RNA/TSS/
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g $gsize {params.params} -n TSS__{params.filetype}__{params.ipname} --outdir results/RNA/TSS/
         }} 2>&1 | tee -a "{log}"
         """
 

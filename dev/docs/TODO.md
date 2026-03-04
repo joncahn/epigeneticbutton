@@ -36,6 +36,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Change all references to the "config file" to refer to it as the "options file". This is currently config.yaml. It should become epicc-options.yaml. This will be an extensive rename - Make sure this change is uniformly applied throughout the workflow, documentation, test cases, and the builder. Keep the config/ directory name as-is. A full run configuration is actually the composite of a sample sheet and the information contained in the options file. **Done**: Renamed `config/config.yaml` → `config/epicc-options.yaml`, all test config files → `test_options_*.yaml`. Updated all references across workflow, rules, scripts, tests, builder, and documentation.
 
+* [ ]
+
 * [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
 
 ### refactor sample sheet
@@ -142,7 +144,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Add an explanation of what Factors are to the right of the +Add button. Something like: "Experimental variables used for grouping samples for comparative analysis. All rows must have the same factors, and may have different levels (values)."
 
-* [ ] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the References page will constrain which reference Genomes are available still be used in generating the Options file.
+* [ ] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file.
 
 ##### [ ] Bugs
 
@@ -156,7 +158,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### species-specific parameters
 
-* [ ] Species (as in Species-dependent parameters in epicc-options.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no?
+* [x] Reference Genome Species (as in Species-dependent parameters in epicc-options.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no? **Done**: Species params inlined into genome entries (earlier refactor). `genomesize` and `star_index` are now auto-computed from the reference FASTA by `compute_genome_stats` rule; user values in options file are optional overrides. Removed from test configs; kept in main config as override examples.
 
 ### Eliminate redundant requirement for GTF
 

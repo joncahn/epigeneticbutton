@@ -18,8 +18,8 @@ genomes:
     gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
     structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
-    star_index: "--genomeSAindexNbases 12"
-    genomesize: 1.3e8
+    star_index: "--genomeSAindexNbases 12"  # optional override (auto-computed from FASTA if omitted)
+    genomesize: 1.3e8  # optional override (auto-computed as total bases − N bases if omitted)
     ncbiID: "3702"
     genus: "Arabidopsis"
     go_database: org.Athaliana.eg.db
@@ -401,6 +401,7 @@ resources:
   check_gff: *standard
   check_gtf: *standard
   check_chrom_sizes: *single
+  compute_genome_stats: *single
   prep_region_file: *low
   check_te_file: *standard
   # sample_download

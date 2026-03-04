@@ -13,8 +13,6 @@ genomes:
     gff_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gff3.gz"
     gtf_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gtf.gz"
     structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
-    star_index: "--genomeSAindexNbases 12"
-    genomesize: 2.9e7  # Chr5 only
 
 # Analysis options
 full_analysis: true
@@ -104,6 +102,7 @@ resources:
   check_gff: *standard
   check_gtf: *standard
   check_chrom_sizes: *low
+  compute_genome_stats: *low
   prep_region_file: *low
 
   # dmC methylation rules

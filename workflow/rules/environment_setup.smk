@@ -7,8 +7,9 @@ rule prepare_reference:
         gff = "genomes/{ref_genome}/{ref_genome}.gff",
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
+        genome_stats = "genomes/{ref_genome}/genome_stats.json",
         region_files = ["results/combined/bedfiles/{ref_genome}__protein_coding_genes.bed", "results/combined/bedfiles/{ref_genome}__all_genes.bed"],
-        logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "region_file"] ]
+        logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "genome_stats", "region_file"] ]
     output:
         chkpt = "results/combined/chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"results","logs","ref_prep__{ref_genome}.log")
@@ -141,6 +142,35 @@ rule check_chrom_sizes:
         printf "\nMaking chrom.sizes file for {params.ref_genome}\n"
         samtools faidx {input.fasta}
         cut -f1,2 {output.fasta_index} > {output.chrom_sizes}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule compute_genome_stats:
+    input:
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        fai = "genomes/{ref_genome}/{ref_genome}.fa.fai"
+    output:
+        stats = "genomes/{ref_genome}/genome_stats.json"
+    log:
+        temp(return_log_env("{ref_genome}", "genome_stats"))
+    conda: CONDA_ENV
+    threads: config["resources"]["compute_genome_stats"]["threads"]
+    resources:
+        mem_mb=config["resources"]["compute_genome_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["compute_genome_stats"]["tmp_mb"],
+        qos=config["resources"]["compute_genome_stats"]["qos"]
+    shell:
+        """
+        {{
+        printf "\nComputing genome stats for {wildcards.ref_genome}\n"
+        total=$(awk '{{s+=$2}} END {{print s}}' {input.fai})
+        n_bases=$(awk '!/^>/ {{gsub(/[^Nn]/,""); n+=length}} END {{print n+0}}' {input.fasta})
+        effective=$((total - n_bases))
+        star_nbases=$(python3 -c "import math; print(min(14, int(math.log2($total)/2 - 1)))")
+        printf '{{"total_bases":%d,"n_bases":%d,"effective_size":%d,"star_sa_index_nbases":%d}}\n' \
+            "$total" "$n_bases" "$effective" "$star_nbases" > {output.stats}
+        printf "Genome stats: total=%d, N=%d, effective=%d, STAR_SAindexNbases=%d\n" \
+            "$total" "$n_bases" "$effective" "$star_nbases"
         }} 2>&1 | tee -a "{log}"
         """
 

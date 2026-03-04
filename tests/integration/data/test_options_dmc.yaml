@@ -13,8 +13,6 @@ genomes:
     gff_file: "tests/integration/data/mock_inputs/test_genome.gff3"
     gtf_file: "tests/integration/data/mock_inputs/test_genome.gtf"
     structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
-    star_index: "--genomeSAindexNbases 12"
-    genomesize: 1.0e8
 
 # Analysis options
 full_analysis: true
@@ -103,6 +101,7 @@ resources:
   check_gff: *standard
   check_gtf: *standard
   check_chrom_sizes: *low
+  compute_genome_stats: *low
   prep_region_file: *low
 
   # dmC methylation rules

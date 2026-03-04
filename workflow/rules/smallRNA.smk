@@ -11,10 +11,12 @@ def define_input_file_for_structural(sample_name):
 
 def get_bt1_indices(wildcards):
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
-    genomesize = float(config["genomes"][ref_genome]['genomesize'])
-    if genomesize > 4e9:
+    genomesize = config["genomes"][ref_genome].get('genomesize', '')
+    # Use large index only if genomesize is explicitly set and > 4 Gb;
+    # default to small index (covers all genomes < 4 Gb without needing config)
+    if genomesize and float(genomesize) > 4e9:
         return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl",".3.ebwtl",".4.ebwtl",".rev.1.ebwtl",".rev.2.ebwtl")
-    else: 
+    else:
         return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwt", ".2.ebwt",".3.ebwt",".4.ebwt",".rev.1.ebwt",".rev.2.ebwt")
         
 def define_input_file_for_shortstack(sample_name):

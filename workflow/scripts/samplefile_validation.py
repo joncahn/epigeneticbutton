@@ -221,8 +221,8 @@ def check_table(tab):
         )
 
 
-# Envs that require genomesize for peak calling / STAR index sizing
-_GENOMESIZE_ENVS = {"ChIP", "ATAC", "RNA", "sRNA"}
+# Envs that previously required genomesize — now auto-computed from FASTA
+# (kept for reference; genomesize and star_index are no longer validated as required)
 
 
 def check_genome_config(tab, config):
@@ -259,16 +259,8 @@ def check_genome_config(tab, config):
             if field not in gcfg:
                 errors.append(f"[X] Genome '{genome}': missing required field '{field}'")
 
-        # genomesize required for ChIP, ATAC, RNA, sRNA
-        if envs & _GENOMESIZE_ENVS and "genomesize" not in gcfg:
-            errors.append(
-                f"[X] Genome '{genome}': missing 'genomesize' "
-                f"(required for {', '.join(sorted(envs & _GENOMESIZE_ENVS))})"
-            )
-
-        # star_index required for RNA
-        if "RNA" in envs and "star_index" not in gcfg:
-            errors.append(f"[X] Genome '{genome}': missing 'star_index' (required for RNA-seq)")
+        # genomesize and star_index are auto-computed from the reference FASTA;
+        # user-provided values in the options file are optional overrides
 
         # structural_rna_fafile required for sRNA when structural RNA depletion is on
         if "sRNA" in envs and config.get("structural_rna_depletion", True):

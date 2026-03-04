@@ -228,3 +228,17 @@ A reference for architectural choices in the pipeline. Intended for contributors
 **Rationale**: The previous layout placed genome blocks as bare top-level keys alongside unrelated config (e.g. `ColCEN:` at the same level as `quality_threshold:`). Species parameters required a fragile two-hop lookup pattern: `config[config[ref_genome]['species']][field]`. This was error-prone (a typo in the `species` field silently broke all downstream lookups), hard to validate at startup, and confusing for new users. Namespacing under `genomes:` makes the config self-documenting, inlining eliminates the indirection, and startup validation catches missing fields before rule execution.
 
 **Alternatives considered**: (1) Keeping the two-level genome + species separation but namespacing both. Rejected because the indirection provided no real benefit — each genome already needed a unique species mapping, and most species blocks were used by exactly one genome. (2) Removing the `species` field entirely. Rejected because it still serves a documentation purpose and is used in the GO database naming convention.
+
+### Auto-computed genomesize and STAR index from reference FASTA
+
+**Decision**: `genomesize` (MACS2 `-g` effective genome size) and `star_index` (`--genomeSAindexNbases`) are computed automatically from the reference FASTA by a `compute_genome_stats` rule in `environment_setup.smk`. The rule produces `genomes/{ref_genome}/genome_stats.json` containing total bases, N bases, effective size, and STAR SA index nbases. Consumer rules (MACS2 peak calling, STAR index building) read the computed values from the JSON file at execution time. User-provided values in the options file take precedence (override check in shell blocks via params).
+
+**Formulas**:
+- `genomesize` = total bases − hard-masked (N/n) bases. This is appropriate for MACS2 `-g`, which needs the effective (non-N) genome size. Softmasked (lowercase) bases are NOT subtracted: they represent mappable repeats and should be included in the effective size.
+- `star_index` = `min(14, floor(log2(totalBases) / 2 - 1))` per the STAR manual recommendation.
+
+**Rationale**: Both values are fully derivable from the reference FASTA. Requiring users to specify them manually was error-prone (the S. pombe test case had an incorrect `star_index` of 11 instead of the correct 10) and created an unnecessary barrier for adding new genomes. The override mechanism preserves backward compatibility and allows expert users to tune values.
+
+**Design**: The stats are computed in a dedicated rule (not a params lambda) because Snakemake params lambdas run at DAG time before execution, so they cannot read files produced by other rules on a fresh run. The `genome_stats.json` file is added as an input to consumer rules, ensuring proper dependency ordering. The shell block checks for a config override first (via a params lambda using `.get()`), falling back to the JSON file read only when no override is provided.
+
+**Alternatives considered**: (1) Computing uniquely-mappable-regions for genomesize. Rejected because it is computationally heavyweight, read-length-dependent, and provides only marginal benefit for MACS2 peak calling. (2) Computing in a Python script imported at DAG time. Rejected because it would require the FASTA to exist before DAG resolution, breaking clean builds. (3) Using a checkpoint rule. Rejected as unnecessarily complex; a standard rule with input dependencies achieves the same effect.

@@ -829,7 +829,8 @@ rule make_fingerprint_plot:
 rule calling_peaks_macs2_pe:
     input:
         ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
+        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
         peakfile = "results/{env}/peaks/peaks_pe__{file_type}__{sample_name}_peaks.{peaktype}Peak"
     wildcard_constraints:
@@ -842,7 +843,7 @@ rule calling_peaks_macs2_pe:
         file_type = lambda wildcards: wildcards.file_type,
         env = lambda wildcards: wildcards.env,
         params = config["chip_callpeaks"]['params'],
-        genomesize = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']]['genomesize']
+        genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
         temp(return_log_chip("{env}","{sample_name}", "{file_type}__{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV_CHIP
@@ -854,6 +855,11 @@ rule calling_peaks_macs2_pe:
     shell:
         """
         {{
+        if [[ -n "{params.genomesize_override}" ]]; then
+            gsize="{params.genomesize_override}"
+        else
+            gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
+        fi
         if [[ "{params.peaktype}" == "broad" ]]; then
             add="--broad"
         else
@@ -861,14 +867,15 @@ rule calling_peaks_macs2_pe:
         fi
         printf "\nCalling {params.peaktype} peaks for paired-end {params.sample_name} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g {params.genomesize} {params.params} -n peaks_pe__{params.file_type}__{params.sample_name} --outdir results/{params.env}/peaks/ ${{add}}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g $gsize {params.params} -n peaks_pe__{params.file_type}__{params.sample_name} --outdir results/{params.env}/peaks/ ${{add}}
         }} 2>&1 | tee -a "{log}"
         """
 
 rule calling_peaks_macs2_se:
     input:
         ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
+        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
         peakfile = "results/{env}/peaks/peaks_se__{file_type}__{sample_name}_peaks.{peaktype}Peak"
     wildcard_constraints:
@@ -881,7 +888,7 @@ rule calling_peaks_macs2_se:
         file_type = lambda wildcards: wildcards.file_type,
         env = lambda wildcards: wildcards.env,
         params = config["chip_callpeaks"]['params'],
-        genomesize = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']]['genomesize']
+        genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
         temp(return_log_chip("{env}","{sample_name}", "{file_type}__{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV_CHIP
@@ -893,6 +900,11 @@ rule calling_peaks_macs2_se:
     shell:
         """
         {{
+        if [[ -n "{params.genomesize_override}" ]]; then
+            gsize="{params.genomesize_override}"
+        else
+            gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
+        fi
         if [[ "{params.peaktype}" == "broad" ]]; then
             add="--broad"
         else
@@ -900,7 +912,7 @@ rule calling_peaks_macs2_se:
         fi
         printf "\nCalling {params.peaktype} peaks for single-end {params.sample_name} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g {params.genomesize} {params.params} -n peaks_se__{params.file_type}__{params.sample_name} --outdir results/{params.env}/peaks/ ${{add}}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g $gsize {params.params} -n peaks_se__{params.file_type}__{params.sample_name} --outdir results/{params.env}/peaks/ ${{add}}
         }} 2>&1 | tee -a "{log}"
         """
 
