@@ -30,7 +30,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Handling IDR failures
 
-* [ ] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and probably here reflects the biology of S. pombe. Should we 
+* [ ] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and here reflects the biology of the S. pombe samples. If we can't work around the minimum requirement of 20 peaks by parameterizing IDR differently, we should also choose a different mark for the S. pombe test case that will be more likely to give a larger number of peaks. In any case, an IDR failure of this kind should not be a pipeline failure, and we should gracefully recover/continue and report.
 
 ### Configuration fileset
 
@@ -148,9 +148,9 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ##### [ ] Bugs
 
-* [ ] Sample sheet example should validate, be exportable.
+* [x] Sample sheet example should validate, be exportable. **Done**: Fixed PE example rows to include R1,R2 comma-separated paths. Removed `_example` skip guards from validation and export. Example rows now validate normally and are included in TSV export.
 
-* [ ] Help text for the factor levels columns should be better. Maybe should say: Levels   of factor {factor}. Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) in the sample sheet TSV 'Levels' column. All rows must have the same factors. Level values form the 'levels_label' in analysis names.
+* [x] Help text for the factor levels columns should be better. Maybe should say: Levels   of factor {factor}. Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) in the sample sheet TSV 'Levels' column. All rows must have the same factors. Level values form the 'levels_label' in analysis names. **Done**: Factor columns now show factor-specific description via `showFactorDescription()` instead of generic "Levels" text.
 
 ### custom adapter handling
 

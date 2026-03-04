@@ -835,7 +835,10 @@ function buildColumnDefs() {
         defs.push(Object.assign({
           title: fname, field: factorField(fname), editor: "input", width: 120,
           editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
-        }, descHooks("Levels")));
+        }, {
+          headerClick: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
+          cellClick: (function(fn) { return function(e, cell) { showFactorDescription(fn); }; })(fname),
+        }));
       })(factors[i]);
     }
   } else {
@@ -885,6 +888,19 @@ function buildColumnDefs() {
 // ===========================================================================
 
 const descPanel = document.getElementById("description-panel");
+function showFactorDescription(factorName) {
+  while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
+  var strong = document.createElement("strong");
+  strong.textContent = factorName;
+  descPanel.appendChild(strong);
+  descPanel.appendChild(document.createTextNode(
+    " Level of factor '" + factorName + "'. " +
+    "Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) " +
+    "in the sample sheet TSV 'Levels' column. All rows must have the same factors. " +
+    "Level values form the 'levels_label' in analysis names."
+  ));
+}
+
 function showDescription(field) {
   const desc = COLUMN_DESCRIPTIONS[field];
   if (desc) {
@@ -1038,9 +1054,8 @@ function runValidation() {
   var sampleIds = new Set();
   var rows = table.getRows();
 
-  // --- Per-row validation (skip example rows) ---
+  // --- Per-row validation ---
   for (var i = 0; i < data.length; i++) {
-    if (data[i]._example) continue;
     var row = data[i];
     var rowNum = i + 1;
     var sid = (row.Sample_ID || "").trim();
@@ -1168,7 +1183,6 @@ function runValidation() {
   if (factors.length === 0) {
     var allRowFactors = [];
     for (var i = 0; i < data.length; i++) {
-      if (data[i]._example) { allRowFactors.push(null); continue; }
       var lvl = (data[i].Levels || "").trim();
       if (!lvl) { allRowFactors.push(null); continue; }
       var parsed = parseLevels(lvl);
@@ -1200,7 +1214,6 @@ function runValidation() {
   // Read_files: cross-row duplicate check
   var seenInputs = {};  // path/accession -> Sample_ID
   for (var i = 0; i < data.length; i++) {
-    if (data[i]._example) continue;
     var readFiles = (data[i].Read_files || "").trim();
     var sid = (data[i].Sample_ID || "").trim();
     var rowNum = i + 1;
@@ -1222,7 +1235,7 @@ function runValidation() {
     }
   }
 
-  // Control: reference validation (skip example rows)
+  // Control: reference validation
   // Build O(1) lookup from Sample_ID → row data (sampleIds Set already complete from per-row loop)
   var sidToRow = new Map();
   for (var i = 0; i < data.length; i++) {
@@ -1230,7 +1243,6 @@ function runValidation() {
     if (s) sidToRow.set(s, data[i]);
   }
   for (var i = 0; i < data.length; i++) {
-    if (data[i]._example) continue;
     var control = (data[i].Control || "").trim();
     var sid = (data[i].Sample_ID || "").trim();
     var rowNum = i + 1;
@@ -1457,8 +1469,8 @@ function importTSV(text) {
 }
 
 function exportTSV() {
-  var data = table.getData().filter(function(r) { return !r._example; });
-  if (data.length === 0) { alert("No data to export (example rows are excluded)."); return; }
+  var data = table.getData();
+  if (data.length === 0) { alert("No data to export."); return; }
   // Reconstruct Levels from factor fields before export
   if (factors.length > 0) {
     for (var i = 0; i < data.length; i++) {
@@ -1517,9 +1529,9 @@ function controlListValues(cell) {
 // Example rows — valid data shown dimmed per-row until that row is edited.
 // The _example flag marks rows as examples; removed when the row is first edited.
 var EXAMPLE_DATA = [
-  { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1", Read_layout: "PE", IP_target: "Input", Control: "" },
-  { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2", Read_layout: "PE", IP_target: "Input", Control: "" },
-  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1", Read_layout: "PE", IP_target: "CenH3", Control: "WT_leaf_Input_rep1" },
+  { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1_R1.fq.gz,/path/to/fastqs/WT_Input_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2_R1.fq.gz,/path/to/fastqs/WT_Input_Rep2_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R1.fq.gz,/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "CenH3", Control: "WT_leaf_Input_rep1" },
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep1", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep1", Read_files: "SRR12362026", Read_layout: "PE", IP_target: "", Control: "" },
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
 ];
