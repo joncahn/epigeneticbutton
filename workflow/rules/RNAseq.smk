@@ -223,7 +223,7 @@ rule STAR_map_se:
         STAR --version
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
         mv "results/RNA/mapped/star_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
-        rm -f results/RNA/mapped/*"{params.sample_namparams.sample_name}_Log"*
+        rm -f results/RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
         """
         
