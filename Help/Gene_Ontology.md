@@ -64,20 +64,22 @@ genefile="B73_v5_genes_info.tab"  # Modified FILE2
 ref_genome="B73_v5"               # Reference genome name (matches sample file)
 genus="Zea"                       # Genus (capitalize first letter)
 species="mays"                    # Species (lowercase)
-ncbiID="4577"                     # NCBI taxonomy ID
+ncbi_taxid="4577"                 # NCBI taxonomy ID (auto-resolved from genus+species if omitted)
 
-Rscript ${script} ${infofile} ${genefile} ${ref_genome} ${genus} ${species} ${ncbiID}
+Rscript ${script} ${infofile} ${genefile} ${ref_genome} ${genus} ${species} ${ncbi_taxid} ${ref_genome}
 ```
 
 ### Configuration
 
-Update the `GOdatabase` entry in your options file:
+The GO database name is auto-derived from the genus, species, and genome name:
 
-```yaml
-GOdatabase: "org.Zmays.eg.db"
+```
+org.<G><species>_<GenomeName>.eg.db
 ```
 
-The naming convention is: `org.<FirstLetterGenus><species>.eg.db`
+For example, `org.Zmays_B73_v5.eg.db` for genome `B73_v5` with genus `Zea` and species `mays`.
+
+The NCBI TaxId is also auto-resolved from genus and species using `ncbi-datasets-cli`. To override, set `ncbi_taxid` in your genome's options file entry.
 
 ### Alternative: Using Snakemake
 
@@ -87,7 +89,7 @@ You can also build the database through Snakemake after filling in the options f
 snakemake --cores 1 genomes/<ref_genome>/GO/<dbname>
 
 # Example:
-snakemake --cores 1 genomes/ColCEN/GO/org.Zmays.eg.db
+snakemake --cores 1 genomes/B73_v5/GO/org.Zmays_B73_v5.eg.db
 ```
 
 ## When to Run

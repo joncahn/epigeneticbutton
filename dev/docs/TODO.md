@@ -36,8 +36,6 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Change all references to the "config file" to refer to it as the "options file". This is currently config.yaml. It should become epicc-options.yaml. This will be an extensive rename - Make sure this change is uniformly applied throughout the workflow, documentation, test cases, and the builder. Keep the config/ directory name as-is. A full run configuration is actually the composite of a sample sheet and the information contained in the options file. **Done**: Renamed `config/config.yaml` → `config/epicc-options.yaml`, all test config files → `test_options_*.yaml`. Updated all references across workflow, rules, scripts, tests, builder, and documentation.
 
-* [ ]
-
 * [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
 
 ### refactor sample sheet
@@ -159,6 +157,14 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 ### species-specific parameters
 
 * [x] Reference Genome Species (as in Species-dependent parameters in epicc-options.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no? **Done**: Species params inlined into genome entries (earlier refactor). `genomesize` and `star_index` are now auto-computed from the reference FASTA by `compute_genome_stats` rule; user values in options file are optional overrides. Removed from test configs; kept in main config as override examples.
+
+* [x] Let's move the Genus prompt in the Reference Genomes builder form up to the top above Species. For the Species example, make it thaliana (no mays, confusing to have more than one example). Remove all "e.g." prefixes from the example text for the Reference Genome fields. They're obviously examples from the styling. However, will screen-reader users have a way to understand these are examples? **Done**: Genus moved above Species in builder. Species label changed to "Species (specific epithet)" with placeholder "thaliana". All "e.g." prefixes removed. `aria-label` attributes added to inputs with example placeholders for screen reader accessibility.
+
+* [x] Add a lookup using the genus and species name to get ncbi TaxId - The ncbi-datasets-cli conda package should do the trick with something like "datasets summary taxonomy taxon "Homo sapiens" | jq '.reports[0].taxonomy.tax_id'". NCBI species ID field (should rename this TaxId throughout the code base) should have a default value of "\<auto\>", but can be overridden. **Done**: Renamed `ncbiID` → `ncbi_taxid` throughout codebase. New `resolve_taxid` rule in `environment_setup.smk` uses `ncbi-datasets-cli` to auto-resolve TaxId from genus+species, with user override support. Builder shows `<auto>` placeholder. `ncbi-datasets-cli` added to `epibutton.yaml` conda env.
+
+* [x] Derive the custom GO database name from user-inputted fields. Probably need to add the ID as a suffix to avoid collisions in the case of multiple ref genomes with the same binomial. **Done**: GO database name auto-derived as `org.<G><species>_<GenomeName>.eg.db` (e.g. `org.Athaliana_ColCEN.eg.db`). `go_database` config field removed entirely. `get_go_database()` in `RNAseq.smk` computes the name. `R_build_GO_database.R` takes `ref_genome` as 7th argument. Builder no longer shows GO database field. `samplefile_validation.py` no longer requires `go_database` or `ncbiID` for GO analysis.
+
+  If we cannot find a match (and the option is set to auto), gracefully warn and skip the dependent analysis. If the user overrides, and their value doesn't match an actual OrgDb, then Error instead of warn.
 
 ### Eliminate redundant requirement for GTF
 

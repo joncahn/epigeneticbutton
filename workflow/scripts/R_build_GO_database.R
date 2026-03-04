@@ -19,8 +19,9 @@ genes<-read.delim(args[2], header=TRUE) %>%
 refgenome<-args[3]
 genus<-args[4]
 species<-args[5]
-ncbiID<-args[6]
-dbname<-paste0("org.",substr(genus,1,1),species,".eg.db")
+ncbi_taxid<-args[6]
+refgenome<-args[7]
+dbname<-paste0("org.",substr(genus,1,1),species,"_",refgenome,".eg.db")
 
 fGO<-unique(gaf[,c(1,6,10)])
 colnames(fGO)<-c("GID","GO","EVIDENCE")
@@ -35,7 +36,7 @@ makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               maintainer="user <user@epicbutton>",
               author="user <user@epicbutton>",
               outputDir = paste0("./genomes/",refgenome,"/GO"),
-              tax_id = ncbiID,
+              tax_id = ncbi_taxid,
               genus = genus,
               species = species,
               goTable="go")

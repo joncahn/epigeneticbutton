@@ -272,7 +272,7 @@ def check_genome_config(tab, config):
 
         # GO fields when GO: true
         if config.get("GO", False) and "RNA" in envs:
-            for field in ("go_database", "genus", "species", "ncbiID", "gaf_file", "gene_info_file"):
+            for field in ("genus", "species", "gaf_file", "gene_info_file"):
                 if field not in gcfg:
                     errors.append(
                         f"[X] Genome '{genome}': missing '{field}' (required when GO: true)"

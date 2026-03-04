@@ -33,7 +33,7 @@ def define_rnaseq_background_file(wildcards):
 def get_go_database(ref_genome):
     species=config["genomes"][ref_genome]['species']
     genus=config["genomes"][ref_genome]['genus']
-    return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
+    return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}_{ref_genome}.eg.db"
 
 def assign_rna_input(wildcards):
     """Find the RNA control bam for a RAMPAGE sample.
@@ -671,6 +671,8 @@ rule plot_expression_levels:
         """
 
 rule create_GO_database:
+    input:
+        taxid_file = "genomes/{ref_genome}/taxid.json"
     output:
         godb = directory("genomes/{ref_genome}/GO/{dbname}"),
         tempgaf = temp("genomes/{ref_genome}/GO/{dbname}_{ref_genome}_gaf_file.tab"),
@@ -680,7 +682,6 @@ rule create_GO_database:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         species = lambda wildcards: config["genomes"][wildcards.ref_genome]['species'],
         genus = lambda wildcards: config["genomes"][wildcards.ref_genome]['genus'],
-        ncbiID = lambda wildcards: config["genomes"][wildcards.ref_genome]['ncbiID'],
         gaffile = lambda wildcards: config["genomes"][wildcards.ref_genome]['gaf_file'],
         geneinfofile = lambda wildcards: config["genomes"][wildcards.ref_genome]['gene_info_file']
     log:
@@ -705,21 +706,22 @@ rule create_GO_database:
         else
             cp {params.geneinfofile} {output.tempgeneinfo}
         fi
-        printf "Creating GO database for {params.ref_genome}\n"
-        Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "{params.ncbiID}"
+        ncbi_taxid=$(python3 -c "import json; print(json.load(open('{input.taxid_file}'))['ncbi_taxid'])")
+        printf "Creating GO database for {params.ref_genome} (TaxId: $ncbi_taxid)\n"
+        Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "$ncbi_taxid" "{params.ref_genome}"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule perform_GO_on_target_file:
     input:
-        godb = lambda wildcards: directory(f"genomes/{wildcards.ref_genome}/GO/{config['genomes'][wildcards.ref_genome]['go_database']}"),
+        godb = lambda wildcards: directory(get_go_database(wildcards.ref_genome)),
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
         touch = "results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_GO_analysis.R"),
-        dbname = lambda wildcards: config["genomes"][wildcards.ref_genome]['go_database'],
+        dbname = lambda wildcards: os.path.basename(get_go_database(wildcards.ref_genome)),
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name

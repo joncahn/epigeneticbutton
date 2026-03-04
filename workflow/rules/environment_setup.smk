@@ -8,8 +8,9 @@ rule prepare_reference:
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
         chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
         genome_stats = "genomes/{ref_genome}/genome_stats.json",
+        taxid = "genomes/{ref_genome}/taxid.json",
         region_files = ["results/combined/bedfiles/{ref_genome}__protein_coding_genes.bed", "results/combined/bedfiles/{ref_genome}__all_genes.bed"],
-        logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "genome_stats", "region_file"] ]
+        logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "genome_stats", "taxid", "region_file"] ]
     output:
         chkpt = "results/combined/chkpts/ref__{ref_genome}.done",
         log = os.path.join(REPO_FOLDER,"results","logs","ref_prep__{ref_genome}.log")
@@ -171,6 +172,43 @@ rule compute_genome_stats:
             "$total" "$n_bases" "$effective" "$star_nbases" > {output.stats}
         printf "Genome stats: total=%d, N=%d, effective=%d, STAR_SAindexNbases=%d\n" \
             "$total" "$n_bases" "$effective" "$star_nbases"
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule resolve_taxid:
+    output:
+        taxid_file = "genomes/{ref_genome}/taxid.json"
+    params:
+        genus = lambda wildcards: config["genomes"][wildcards.ref_genome].get("genus", ""),
+        species = lambda wildcards: config["genomes"][wildcards.ref_genome].get("species", ""),
+        override = lambda wildcards: str(config["genomes"][wildcards.ref_genome].get("ncbi_taxid", ""))
+    log:
+        temp(return_log_env("{ref_genome}", "taxid"))
+    conda: CONDA_ENV
+    threads: config["resources"]["resolve_taxid"]["threads"]
+    resources:
+        mem_mb=config["resources"]["resolve_taxid"]["mem_mb"],
+        tmp_mb=config["resources"]["resolve_taxid"]["tmp_mb"],
+        qos=config["resources"]["resolve_taxid"]["qos"]
+    shell:
+        """
+        {{
+        override="{params.override}"
+        if [[ -n "$override" && "$override" != "<auto>" ]]; then
+            printf "Using user-provided NCBI TaxId: %s\n" "$override"
+            printf '{{"ncbi_taxid":"%s"}}\n' "$override" > {output.taxid_file}
+        else
+            printf "Looking up NCBI TaxId for {params.genus} {params.species}\n"
+            taxid=$(datasets summary taxonomy taxon "{params.genus} {params.species}" \
+                | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['reports'][0]['taxonomy']['tax_id'])" 2>/dev/null) || true
+            if [[ -n "$taxid" ]]; then
+                printf "Resolved NCBI TaxId: %s\n" "$taxid"
+                printf '{{"ncbi_taxid":"%s"}}\n' "$taxid" > {output.taxid_file}
+            else
+                printf "WARNING: Could not resolve NCBI TaxId for {params.genus} {params.species}. GO analysis requiring TaxId may fail.\n" >&2
+                printf '{{"ncbi_taxid":null}}\n' > {output.taxid_file}
+            fi
+        fi
         }} 2>&1 | tee -a "{log}"
         """
 

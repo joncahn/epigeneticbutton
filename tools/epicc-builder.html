@@ -2216,10 +2216,12 @@ function buildToggleRow(label, key, msgOn, msgOff) {
   return wrap;
 }
 
-function buildBoundTextRow(label, stateObj, key, placeholder) {
+function buildBoundTextRow(label, stateObj, key, placeholder, ariaHint) {
   var row = el("div", { className: "cfg-row" });
   row.appendChild(el("label", { textContent: label }));
-  var inp = el("input", { type: "text", placeholder: placeholder, value: stateObj[key] || "" });
+  var attrs = { type: "text", placeholder: placeholder, value: stateObj[key] || "" };
+  if (ariaHint) attrs["aria-label"] = label + " (example: " + ariaHint + ")";
+  var inp = el("input", attrs);
   inp.addEventListener("input", function() { stateObj[key] = this.value; });
   row.appendChild(inp);
   return row;
@@ -2228,29 +2230,32 @@ function buildBoundTextRow(label, stateObj, key, placeholder) {
 function buildGenomeSection(genomeName) {
   if (!configState.genomes[genomeName]) {
     configState.genomes[genomeName] = {
-      species: "", fasta_file: "", gff_file: "", gtf_file: "",
+      genus: "", species: "",
+      fasta_file: "", gff_file: "", gtf_file: "",
       gaf_file: "", gene_info_file: "", te_file: "", structural_rna_fafile: "",
       star_index: "", genomesize: "",
-      ncbiID: "", genus: "", go_database: ""
+      ncbi_taxid: ""
     };
   }
   var g = configState.genomes[genomeName];
   var group = el("div", { className: "cfg-genome-group" });
   group.appendChild(el("h3", { textContent: "Reference Genome: " + genomeName }));
   var fields = [
-    ["Species name (binomial)", "species", "e.g. Arabidopsis thaliana"],
+    ["Genus", "genus", "Arabidopsis", "Arabidopsis"],
+    ["Species (specific epithet)", "species", "thaliana", "thaliana"],
     ["FASTA file", "fasta_file", "/path/to/genome.fa.gz"],
     ["GFF file", "gff_file", "/path/to/genes.gff3.gz"],
     ["GTF file", "gtf_file", "/path/to/genes.gtf.gz"],
   ];
   for (var i = 0; i < fields.length; i++) {
-    group.appendChild(buildBoundTextRow(fields[i][0], g, fields[i][1], fields[i][2]));
+    var ariaHint = fields[i].length > 3 ? fields[i][3] : null;
+    group.appendChild(buildBoundTextRow(fields[i][0], g, fields[i][1], fields[i][2], ariaHint));
   }
 
   // Auto-computed parameters info
   var autoRow = el("div", { className: "cfg-row" });
   var autoInfo = el("span", {
-    textContent: "Genome size (MACS2) and STAR index are computed automatically from the reference FASTA. To override, add star_index / genomesize to your options YAML manually.",
+    textContent: "Genome size (MACS2), STAR index, NCBI TaxId, and GO database name are computed automatically. To override TaxId, set it below. To override genome size or STAR index, add star_index / genomesize to your options YAML manually.",
     style: "font-style: italic; color: #666; font-size: 0.9em;"
   });
   autoRow.appendChild(autoInfo);
@@ -2261,16 +2266,15 @@ function buildGenomeSection(genomeName) {
   details.appendChild(el("summary", { textContent: "Optional files & Gene Ontology" }));
   var body = el("div", { className: "cfg-details-body" });
   var optFields = [
-    ["GAF file (Gene Ontology)", "gaf_file", "data/ColCEN_infoGO.tab.gz"],
-    ["Gene info file (Gene Ontology)", "gene_info_file", "data/ColCEN_genes_info.tab.gz"],
+    ["GAF file (Gene Ontology)", "gaf_file", "data/ColCEN_infoGO.tab.gz", "data/ColCEN_infoGO.tab.gz"],
+    ["Gene info file (Gene Ontology)", "gene_info_file", "data/ColCEN_genes_info.tab.gz", "data/ColCEN_genes_info.tab.gz"],
     ["TE bed file", "te_file", "/path/to/TEs.bed.gz"],
-    ["Structural RNA FASTA", "structural_rna_fafile", "data/zm_structural_RNAs.fa.gz"],
-    ["NCBI species ID", "ncbiID", "e.g. 3702"],
-    ["Genus", "genus", "e.g. Arabidopsis"],
-    ["GO database", "go_database", "e.g. org.Athaliana.eg.db"],
+    ["Structural RNA FASTA", "structural_rna_fafile", "data/zm_structural_RNAs.fa.gz", "data/zm_structural_RNAs.fa.gz"],
+    ["NCBI TaxId", "ncbi_taxid", "<auto>"],
   ];
   for (var i = 0; i < optFields.length; i++) {
-    body.appendChild(buildBoundTextRow(optFields[i][0], g, optFields[i][1], optFields[i][2]));
+    var ariaHint = optFields[i].length > 3 ? optFields[i][3] : null;
+    body.appendChild(buildBoundTextRow(optFields[i][0], g, optFields[i][1], optFields[i][2], ariaHint));
   }
   details.appendChild(body);
   group.appendChild(details);
@@ -2549,9 +2553,8 @@ function configStateToYAML() {
       var gs = parseFloat(g.genomesize);
       cfg.genomes[gn].genomesize = isNaN(gs) ? g.genomesize : gs;
     }
-    if (g.ncbiID) cfg.genomes[gn].ncbiID = g.ncbiID;
+    if (g.ncbi_taxid && g.ncbi_taxid !== "<auto>") cfg.genomes[gn].ncbi_taxid = g.ncbi_taxid;
     if (g.genus) cfg.genomes[gn].genus = g.genus;
-    if (g.go_database) cfg.genomes[gn].go_database = g.go_database;
   }
 
   // Output options
@@ -2793,6 +2796,7 @@ function handleYAMLImport(text) {
   function importGenomeBlock(key, val) {
     if (definedGenomes.indexOf(key) < 0) definedGenomes.push(key);
     configState.genomes[key] = {
+      genus: val.genus || "",
       species: val.species || "",
       fasta_file: val.fasta_file || "",
       gff_file: val.gff_file || "",
@@ -2803,9 +2807,7 @@ function handleYAMLImport(text) {
       structural_rna_fafile: val.structural_rna_fafile || "",
       star_index: val.star_index || "",
       genomesize: String(val.genomesize || ""),
-      ncbiID: val.ncbiID ? String(val.ncbiID) : "",
-      genus: val.genus || "",
-      go_database: val.go_database || ""
+      ncbi_taxid: val.ncbi_taxid ? String(val.ncbi_taxid) : (val.ncbiID ? String(val.ncbiID) : "")
     };
   }
 
