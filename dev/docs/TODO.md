@@ -138,7 +138,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Explicitly handle repeats vs coding gene annotations?
 
-* [ ]Do we currently have a way to specify whether one or the other or both should be used in the analysis?
+* [ ] Do we currently have a way to specify whether one or the other or both should be used in the analysis?
 
 ### Provide a front-end CLI executable script
 

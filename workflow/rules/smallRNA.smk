@@ -334,7 +334,8 @@ rule make_cluster_bedfiles:
 rule make_srna_size_stats:
     input:
         bamfile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam",
-        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi"
+        baifile = "results/sRNA/mapped/{sample_name}/clean__{sample_name}_condensed.bam.csi",
+        trimmed_fastq = "results/sRNA/fastq/trim__{sample_name}__R0.fastq.gz"
     output:
         report = "results/sRNA/reports/sizes_stats__{sample_name}.txt"
     params:
@@ -355,9 +356,9 @@ rule make_srna_size_stats:
         printf "\nGetting filtered stats for {params.sample_name}\n"
         if [[ -s results/sRNA/reports/deduplicated_sizes_stats__{params.sample_name}.txt ]]; then
             cat results/sRNA/reports/deduplicated_sizes_stats__{params.sample_name}.txt >> "{output.report}"
-            zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) {{a=length($1)-8; if (a>=15) print a}}}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+            zcat {input.trimmed_fastq} | awk '{{if(NR%4==2) {{a=length($1)-8; if (a>=15) print a}}}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
         else
-            zcat results/sRNA/fastq/trim__{params.sample_name}__R0.fastq.gz | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
+            zcat {input.trimmed_fastq} | awk '{{if(NR%4==2) print length($1)}}' | sort -n | uniq -c | awk -v OFS="\t" -v n={params.sample_name} '{{print n,"trimmed",$2,$1}}' >> "{output.report}"
         fi
         if [[ -s results/sRNA/reports/filtered_sizes_stats__{params.sample_name}.txt ]]; then
             cat results/sRNA/reports/filtered_sizes_stats__{params.sample_name}.txt >> "{output.report}"

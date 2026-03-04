@@ -523,13 +523,14 @@ rule filter_chip_pe:
 
         if [[ "$aligner" == "chromap" ]]; then
             chromap --version
-            chromap --preset chip -t {threads} \
+            chromap -t {threads} \
+                -l 2000 --SAM -q 0 \
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq1}" -2 "{input.fastq2}" \
-                --SAM 2> "{output.metrics_map}" \
-            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+                -o /dev/stdout 2> "{output.metrics_map}" \
+            | samtools view -@ 1 -bh -q {params.mapq_filter} -F 256 \
+            | samtools fixmate -@ 1 -m - - \
+            | samtools sort -@ {threads} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -587,12 +588,14 @@ rule filter_chip_se:
 
         if [[ "$aligner" == "chromap" ]]; then
             chromap --version
-            chromap --preset chip -t {threads} \
+            chromap -t {threads} \
+                --SAM -q 0 \
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq}" \
-                --SAM 2> "{output.metrics_map}" \
-            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+                -o /dev/stdout 2> "{output.metrics_map}" \
+            | samtools view -@ 1 -bh -q {params.mapq_filter} -F 256 \
+            | samtools fixmate -@ 1 -m - - \
+            | samtools sort -@ {threads} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -643,16 +646,20 @@ rule make_chip_stats_pe:
         fi
         # Detect aligner from metrics format
         if grep -q "overall alignment rate" "{input.metrics_map}"; then
-            # bowtie2 format
+            # bowtie2 format (numbers are read pairs for PE)
             filt=$(grep "reads" "{input.metrics_map}" | awk '{{print $1}}')
             multi=$(grep "aligned concordantly >1 times" "{input.metrics_map}" | awk '{{print $1}}')
             single=$(grep "aligned concordantly exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         else
-            # chromap format
-            filt=$(grep -i "number of reads" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
-            mapped=$(grep -i "number of mapped" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
-            multi=$(grep -i "multiple" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            # chromap format — numbers have trailing dots, and count individual reads (not pairs)
+            filt=$(grep "^Number of reads:" "{input.metrics_map}" | awk '{{sub(/\\.$/, ""); print $NF}}')
+            mapped=$(grep "^Number of mapped reads:" "{input.metrics_map}" | awk '{{sub(/\\.$/, ""); print $NF}}')
+            multi=$(grep "^Number of reads have multi-mappings:" "{input.metrics_map}" | awk '{{sub(/\\.$/, ""); print $NF}}')
             multi=${{multi:-0}}
+            # Convert individual reads to pairs for PE
+            filt=$((filt / 2))
+            mapped=$((mapped / 2))
+            multi=$((multi / 2))
             single=$((mapped - multi))
         fi
         allmap=$((multi+single))
@@ -699,10 +706,10 @@ rule make_chip_stats_se:
             multi=$(grep "aligned >1 times" "{input.metrics_map}" | awk '{{print $1}}')
             single=$(grep "aligned exactly 1 time" "{input.metrics_map}" | awk '{{print $1}}')
         else
-            # chromap format
-            filt=$(grep -i "number of reads" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
-            mapped=$(grep -i "number of mapped" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
-            multi=$(grep -i "multiple" "{input.metrics_map}" | head -1 | awk '{{print $NF}}')
+            # chromap format — numbers have trailing dots
+            filt=$(grep "^Number of reads:" "{input.metrics_map}" | awk '{{sub(/\\.$/, ""); print $NF}}')
+            mapped=$(grep "^Number of mapped reads:" "{input.metrics_map}" | awk '{{sub(/\\.$/, ""); print $NF}}')
+            multi=$(grep "^Number of reads have multi-mappings:" "{input.metrics_map}" | awk '{{sub(/\\.$/, ""); print $NF}}')
             multi=${{multi:-0}}
             single=$((mapped - multi))
         fi
@@ -736,7 +743,8 @@ rule pe_or_se_chip_dispatch:
 
 rule make_coverage_chip:
     input:
-        bamfile = "results/{env}/mapped/final__{sample_name}.bam"
+        bamfile = "results/{env}/mapped/final__{sample_name}.bam",
+        bambai = "results/{env}/mapped/final__{sample_name}.bam.bai"
     output:
         bigwigcov = "results/{env}/tracks/coverage__{sample_name}.bw"
     wildcard_constraints:
@@ -757,7 +765,9 @@ rule make_coverage_chip:
 rule make_bigwig_chip:
     input:
         ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
+        ipbai = "results/{env}/mapped/{file_type}__{sample_name}.bam.bai",
+        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        inputbai = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam.bai"
     output:
         bigwigfile = "results/{env}/tracks/FC__{file_type}__{sample_name}.bw"
     wildcard_constraints:
@@ -788,7 +798,9 @@ rule make_bigwig_chip:
 rule make_fingerprint_plot:
     input:
         ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam"
+        ipbai = "results/{env}/mapped/{file_type}__{sample_name}.bam.bai",
+        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        inputbai = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam.bai"
     output:
         pngplot = "results/{env}/plots/Fingerprint__{file_type}__{sample_name}.png"
     wildcard_constraints:
@@ -982,7 +994,7 @@ rule merging_chip_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-        samtools merge -u -@ {threads} {input.bamfiles} | samtools sort -@ {threads} -o {output.mergefile}
+        samtools merge -u -@ 2 - {input.bamfiles} | samtools sort -@ {threads} -o {output.mergefile}
         samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
