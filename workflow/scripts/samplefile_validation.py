@@ -255,7 +255,7 @@ def check_genome_config(tab, config):
         gcfg = genomes_cfg[genome]
 
         # Always required
-        for field in ("fasta_file", "gff_file", "gtf_file"):
+        for field in ("fasta_file", "gff_file"):
             if field not in gcfg:
                 errors.append(f"[X] Genome '{genome}': missing required field '{field}'")
 

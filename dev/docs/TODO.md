@@ -168,11 +168,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Eliminate redundant requirement for GTF
 
-* [ ] Currently, users must supply both a GFF annotation file and GTF transcript annotation file. We provide instructions for deriving the latter from the former in the README.md, but we should instead simply try to create the GTF without requiring it from the user. If GTF creation fails we can raise a clear error message and ask the user to supply one explicitly and re-run.
+* [x] Currently, users must supply both a GFF annotation file and GTF transcript annotation file. We provide instructions for deriving the latter from the former in the README.md, but we should instead simply try to create the GTF without requiring it from the user. If GTF creation fails we can raise a clear error message and ask the user to supply one explicitly and re-run. **Done**: `gtf_file` defaults to `<auto>`, auto-derived from GFF via `gffread` in `check_gtf` rule. User-provided paths still work as overrides. `gffread` added to `epibutton.yaml`. Validation no longer requires `gtf_file`. Builder shows `<auto>` placeholder and skips it on YAML export.
 
-### Consider using Infernal workflow for building structural_rna_depletion FASTA database
+### Use Infernal workflow for building structural_rna_depletion FASTA database
 
-* [ ] Current suggested approach is cumbersome and results in a FASTA database that isn't ref genome specific. If we instead just run Infernal (with lots of threads and paralellized by chromosome if on the cluster) and filter overlapping hits, determine an e-value threshold, we could incorporate this into the pipeline and/or provide a subcommand to perform this task in the event that the user doesn't specify a file.
+* [ ] Current suggested approach is cumbersome and results in a FASTA database that isn't ref genome specific. If we instead just run Infernal (with lots of threads and paralellized by chromosome if on the cluster) and filter overlapping hits, determine an e-value threshold, we could incorporate this into the pipeline in the event that the user doesn't specify an override file. Research whether this approach will have significantly different outcomes than the currently prescribed approach.
 
 ### Explicitly handle repeats vs coding gene annotations?
 

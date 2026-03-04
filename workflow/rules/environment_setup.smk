@@ -89,10 +89,12 @@ rule check_gff:
         """
 
 rule check_gtf:
+    input:
+        gff = "genomes/{ref_genome}/{ref_genome}.gff"
     output:
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
     params:
-        gtf = lambda wildcards: config["genomes"][wildcards.ref_genome]['gtf_file'],
+        gtf = lambda wildcards: config["genomes"][wildcards.ref_genome].get('gtf_file', '<auto>'),
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "gtf"))
@@ -105,18 +107,28 @@ rule check_gtf:
     shell:
         """
         {{
-        if [[ ! -s {params.gtf} ]]; then
-            printf "\nGTF file for {params.ref_genome} does not exist:\n{params.gtf}\n"
-            exit 1
-        elif [[ {params.gtf} == *.gtf.gz ]]; then
-            printf "\nGzipped gtf file found: {params.gtf}\n"
-            pigz -p {threads} -dc {params.gtf} > {output.gtf}
-        elif [[ {params.gtf} == *.gtf ]]; then
-            printf "\nUnzipped gtf file found: {params.gtf}\n"
-            cp {params.gtf} {output.gtf}
+        override="{params.gtf}"
+        if [[ "$override" != "<auto>" && -n "$override" ]]; then
+            if [[ ! -s "$override" ]]; then
+                printf "\nGTF file for {params.ref_genome} does not exist:\n$override\n"
+                exit 1
+            elif [[ "$override" == *.gtf.gz ]]; then
+                printf "\nGzipped gtf file found: $override\n"
+                pigz -p {threads} -dc "$override" > {output.gtf}
+            elif [[ "$override" == *.gtf ]]; then
+                printf "\nUnzipped gtf file found: $override\n"
+                cp "$override" {output.gtf}
+            else
+                printf "\nExtension of gtf file unknown, should be .gtf(.gz):\n $override\n"
+                exit 1
+            fi
         else
-            printf "\nExtension of gtf file unknown, should be .gtf(.gz):\n {params.gtf}\n"
-            exit 1
+            printf "\nDeriving GTF from GFF for {params.ref_genome} using gffread\n"
+            gffread -T {input.gff} -o {output.gtf}
+            if [[ ! -s {output.gtf} ]]; then
+                printf "\nERROR: gffread produced empty GTF from {input.gff}. Supply a GTF explicitly via gtf_file.\n"
+                exit 1
+            fi
         fi
         }} 2>&1 | tee -a "{log}"
         """

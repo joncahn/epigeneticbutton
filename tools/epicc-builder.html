@@ -2250,7 +2250,7 @@ function buildGenomeSection(genomeName) {
     ["Species (specific epithet)", "species", "thaliana", "thaliana"],
     ["FASTA file", "fasta_file", "/path/to/genome.fa.gz"],
     ["GFF file", "gff_file", "/path/to/genes.gff3.gz"],
-    ["GTF file", "gtf_file", "/path/to/genes.gtf.gz"],
+    ["GTF file", "gtf_file", "<auto>"],
   ];
   for (var i = 0; i < fields.length; i++) {
     var ariaHint = fields[i].length > 3 ? fields[i][3] : null;
@@ -2260,7 +2260,7 @@ function buildGenomeSection(genomeName) {
   // Auto-computed parameters info
   var autoRow = el("div", { className: "cfg-row" });
   var autoInfo = el("span", {
-    textContent: "Genome size (MACS2), STAR index, NCBI TaxId, and GO database name are computed automatically. To override TaxId, set it below. To override genome size or STAR index, add star_index / genomesize to your options YAML manually.",
+    textContent: "GTF annotation (from GFF via gffread), genome size (MACS2), STAR index, NCBI TaxId, and GO database name are computed automatically. To override GTF, enter a path above. To override TaxId, set it below. To override genome size or STAR index, add star_index / genomesize to your options YAML manually.",
     style: "font-style: italic; color: #666; font-size: 0.9em;"
   });
   autoRow.appendChild(autoInfo);
@@ -2548,7 +2548,7 @@ function configStateToYAML() {
     if (g.species) cfg.genomes[gn].species = g.species.replace(/ /g, "_");
     if (g.fasta_file) cfg.genomes[gn].fasta_file = g.fasta_file;
     if (g.gff_file) cfg.genomes[gn].gff_file = g.gff_file;
-    if (g.gtf_file) cfg.genomes[gn].gtf_file = g.gtf_file;
+    if (g.gtf_file && g.gtf_file !== "<auto>") cfg.genomes[gn].gtf_file = g.gtf_file;
     if (g.gaf_file) cfg.genomes[gn].gaf_file = g.gaf_file;
     if (g.gene_info_file) cfg.genomes[gn].gene_info_file = g.gene_info_file;
     if (g.te_file) cfg.genomes[gn].te_file = g.te_file;

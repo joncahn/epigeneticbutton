@@ -10,6 +10,7 @@ dependencies:
   - fastp
   - sra-tools>=3
   - bedtools
+  - gffread
   - ncbi-datasets-cli
   - deeptools
   - ucsc-bedgraphtobigwig

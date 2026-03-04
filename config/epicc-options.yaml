@@ -14,7 +14,7 @@ genomes:
     species: "thaliana"
     fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # can be gzipped or not
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
     gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
@@ -28,7 +28,7 @@ genomes:
     species: "mays"
     fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0_Zm00001eb.1.gff3" # can be gzipped or not
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # can be gzipped or not
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # optional override (auto-derived from GFF via gffread if omitted)
     gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/B73_v5_TEs.bed.gz" # can be gzipped or not;
@@ -42,7 +42,7 @@ genomes:
     species: "aequinoctialis"
     fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.fasta.gz"
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.noname.gff3.gz"
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz"
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
     structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
     #star_index: "--genomeSAindexNbases 12"
     #genomesize: 8.0e8
@@ -52,7 +52,7 @@ genomes:
     species: "vitifera"
     fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz"
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
     structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
     #star_index: "--genomeSAindexNbases 12"

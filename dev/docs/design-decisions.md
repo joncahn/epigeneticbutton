@@ -252,3 +252,13 @@ A reference for architectural choices in the pipeline. Intended for contributors
 **Design**: A new `resolve_taxid` rule in `environment_setup.smk` produces `genomes/{ref_genome}/taxid.json`. When `ncbi_taxid` is set in config (and is not `<auto>`), the override is written directly. Otherwise, `datasets summary taxonomy taxon "{genus} {species}"` is called. If the lookup fails, the JSON contains `null` and a warning is emitted — dependent analysis (GO) will fail at the R script stage with a clear error. The `create_GO_database` rule reads the TaxId from the JSON file at execution time.
 
 **Alternatives considered**: (1) Looking up TaxId at DAG time via a params lambda calling `subprocess`. Rejected for the same reason as genome stats — it would require network access during DAG resolution and fail on air-gapped nodes. (2) Keeping `go_database` as an optional override. Rejected because no use case was identified for a user-specified name that deviates from the convention, and removing it simplifies the config surface.
+
+### Auto-derived GTF from GFF via gffread
+
+**Decision**: When `gtf_file` is omitted or set to `<auto>` in the genome config, the `check_gtf` rule automatically derives the GTF from the GFF using `gffread -T`. User-provided GTF paths continue to work as overrides. `gtf_file` is no longer a required field in startup validation.
+
+**Rationale**: The GTF is only consumed by STAR indexing (`make_STAR_indices`), and is fully derivable from the GFF annotation that users must already provide. Requiring both files was a common source of setup friction — users had to manually run `gffread` before starting the pipeline. Since the conversion is deterministic and fast, auto-deriving it follows the same pattern as `genomesize`, `star_index`, and `ncbi_taxid`: compute by default, allow override.
+
+**Design**: The `check_gtf` rule takes the GFF as an input (creating a dependency on `check_gff`), reads the `gtf_file` config value via `.get('gtf_file', '<auto>')`, and branches: user-provided paths are validated and copied/decompressed as before; `<auto>` triggers `gffread -T`. An empty-output guard catches GFF files that gffread cannot convert (e.g. non-standard GFF formats) and directs users to supply a GTF explicitly. `gffread` (bioconda) was added to the `epibutton.yaml` conda environment.
+
+**Alternatives considered**: (1) Using a checkpoint rule. Rejected as unnecessary — a standard rule with an input dependency on the GFF achieves the same ordering. (2) Running gffread unconditionally and ignoring user GTF files. Rejected because some users have curated GTF files with modifications not present in their GFF (e.g. additional transcript annotations).
