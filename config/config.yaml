@@ -43,6 +43,13 @@ CabSauv:
   te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
   structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"  
   
+Spombe:
+  species: "pombe"
+  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/pombe/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
+  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/pombe/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
+  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/pombe/Schizosaccharomyces_pombe_all_chromosomes.gtf.gz"
+  structural_rna_fafile: "/grid/martienssen/home/jcahn/nlsas/Genomes/pombe/sp_structural_RNAs.fa.gz"  
+  
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
 te_analysis: false
@@ -75,6 +82,10 @@ aequinoctialis:
 vitifera:
   star_index: "--genomeSAindexNbases 12"
   genomesize: 5.0e8
+  
+pombe:
+  star_index: "--genomeSAindexNbases 11"
+  genomesize: 1.25e7
   
 # Trimming and processing parameters:
 trimming_quality:
