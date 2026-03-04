@@ -140,11 +140,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ##### [ ] Tweaks
 
-* [ ] Show help text for column headers on mouse over of headers specifically, instead of just on click. Retain current show-on-click behavior for header row and value cells.
+* [x] Show help text for column headers on mouse over of headers specifically, instead of just on click. Retain current show-on-click behavior for header row and value cells. **Done**: Added `headerMouseEnter` callbacks alongside existing `headerClick` and `cellClick` in `descHooks()` and factor column inline hooks.
 
-* [ ] Add an explanation of what Factors are to the right of the +Add button. Something like: "Experimental variables used for grouping samples for comparative analysis. All rows must have the same factors, and may have different levels (values)."
+* [x] Add an explanation of what Factors are to the right of the +Add button. Something like: "Experimental variables used for grouping samples for comparative analysis. All rows must have the same factors, and may have different levels (values)." **Done**: Added `.factor-help` span with muted styling after the +Add button.
 
-* [ ] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file.
+* [x] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file. **Done**: New Reference Genomes tab with genome name management UI (add/remove tiles), per-genome config forms, Genome column in Samples tab constrained to dropdown (freetext still allowed). Genome data flows into YAML export via `configState.genomes`. EPICC brand links to genomes tab.
 
 ##### [ ] Bugs
 

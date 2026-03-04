@@ -147,6 +147,7 @@
     width: 140px;
   }
   .factor-panel input[type="text"]::placeholder { color: var(--text-dim); }
+  .factor-help { color: var(--text-dim); font-size: 12px; }
   .factor-panel button {
     background: var(--surface2);
     color: var(--text);
@@ -191,6 +192,79 @@
     flex: 1;
     overflow: hidden;
   }
+  /* Genomes section */
+  #genomes-section {
+    overflow-y: auto;
+    padding: 0;
+  }
+  #genomes-section .genomes-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .genome-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0 0 16px;
+    min-height: 40px;
+  }
+  .genome-panel .genome-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .genome-tile {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3px 8px 3px 12px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .genome-tile .genome-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 50%;
+    transition: color 0.15s, background 0.15s;
+  }
+  .genome-tile .genome-remove:hover {
+    color: var(--accent);
+    background: rgba(233,69,96,0.15);
+  }
+  .genome-panel input[type="text"] {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    width: 140px;
+  }
+  .genome-panel input[type="text"]::placeholder { color: var(--text-dim); }
+  .genome-panel button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .genome-panel button:hover { background: var(--accent); }
+  .genome-help { color: var(--text-dim); font-size: 12px; }
   /* Config section */
   #config-section {
     overflow-y: auto;
@@ -505,10 +579,11 @@
 <body>
 
 <nav class="topnav" role="navigation" aria-label="Main navigation">
-  <span class="brand" onclick="switchSection('samplesheet-section')" title="EPICC Builder">EPICC</span>
+  <span class="brand" onclick="switchSection('genomes-section')" title="EPICC Builder">EPICC</span>
   <div class="nav-tabs">
-    <span class="nav-tab active" data-section="samplesheet-section" onclick="switchSection('samplesheet-section')">Sample Sheet</span>
-    <span class="nav-tab" data-section="config-section" onclick="switchSection('config-section')">Options File</span>
+    <span class="nav-tab active" data-section="genomes-section" onclick="switchSection('genomes-section')">Reference Genomes</span>
+    <span class="nav-tab" data-section="samplesheet-section" onclick="switchSection('samplesheet-section')">Samples</span>
+    <span class="nav-tab" data-section="config-section" onclick="switchSection('config-section')">Options</span>
   </div>
   <div class="nav-links">
     <a href="https://epicc-documentation.readthedocs.io/" target="_blank" rel="noopener">Docs</a>
@@ -517,7 +592,11 @@
 </nav>
 
 <main>
-  <div id="samplesheet-section" class="section active">
+  <div id="genomes-section" class="section active">
+    <div class="genomes-content" id="genomes-content"></div>
+  </div>
+
+  <div id="samplesheet-section" class="section">
     <div class="toolbar" id="ss-toolbar">
       <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
       <button id="btn-dup-selected" aria-label="Duplicate selected rows" disabled>Duplicate Selected</button>
@@ -534,6 +613,7 @@
       <input type="text" id="factor-input" placeholder="e.g. genotype" aria-label="New factor name"
              onkeydown="if(event.key==='Enter'){addFactorFromInput(); event.preventDefault();}">
       <button onclick="addFactorFromInput()" aria-label="Add factor">+ Add</button>
+      <span class="factor-help">Experimental variables for grouping samples in comparative analysis. All rows must have the same factors, and may have different levels (values).</span>
     </div>
     <div id="description-panel" aria-live="polite" role="status">
       Click a column header or cell to see its description.
@@ -791,6 +871,118 @@ function renderFactorTiles() {
   }
 }
 
+// ===========================================================================
+// Genome Management (Reference Genomes tab)
+// ===========================================================================
+
+var definedGenomes = [];
+
+function getDefinedGenomes() {
+  // Union of manually added genomes + genomes found in sample sheet
+  var seen = {};
+  var result = [];
+  for (var i = 0; i < definedGenomes.length; i++) {
+    if (!seen[definedGenomes[i]]) {
+      seen[definedGenomes[i]] = true;
+      result.push(definedGenomes[i]);
+    }
+  }
+  if (typeof table !== "undefined") {
+    var data = table.getData();
+    for (var i = 0; i < data.length; i++) {
+      var g = (data[i].Genome || "").trim();
+      if (g && !seen[g]) {
+        seen[g] = true;
+        result.push(g);
+      }
+    }
+  }
+  return result;
+}
+
+function addGenomeFromInput() {
+  var input = document.getElementById("genome-input");
+  var name = (input.value || "").trim();
+  if (!name) return;
+  if (definedGenomes.indexOf(name) >= 0) {
+    input.value = "";
+    return;
+  }
+  definedGenomes.push(name);
+  input.value = "";
+  buildGenomesTab();
+}
+
+function removeDefinedGenome(name) {
+  definedGenomes = definedGenomes.filter(function(g) { return g !== name; });
+  // Also remove configState entry
+  if (configState.genomes && configState.genomes[name]) {
+    delete configState.genomes[name];
+  }
+  buildGenomesTab();
+}
+
+function renderGenomeTiles(container) {
+  var tilesSpan = container.querySelector("#genome-tiles");
+  while (tilesSpan.firstChild) tilesSpan.removeChild(tilesSpan.firstChild);
+  var allGenomes = getDefinedGenomes();
+  for (var i = 0; i < allGenomes.length; i++) {
+    var tile = document.createElement("span");
+    tile.className = "genome-tile";
+    var nameSpan = document.createElement("span");
+    nameSpan.textContent = allGenomes[i];
+    tile.appendChild(nameSpan);
+    var btn = document.createElement("button");
+    btn.className = "genome-remove";
+    btn.textContent = "\u00d7";
+    btn.title = "Remove genome '" + allGenomes[i] + "'";
+    btn.setAttribute("aria-label", "Remove genome " + allGenomes[i]);
+    (function(gname) {
+      btn.addEventListener("click", function() { removeDefinedGenome(gname); });
+    })(allGenomes[i]);
+    tile.appendChild(btn);
+    tilesSpan.appendChild(tile);
+  }
+}
+
+function buildGenomesTab() {
+  var container = document.getElementById("genomes-content");
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // Genome name management panel
+  var panel = el("div", { className: "genome-panel", id: "genome-panel" });
+  panel.setAttribute("role", "group");
+  panel.setAttribute("aria-label", "Reference genome management");
+  panel.appendChild(el("span", { className: "genome-label", textContent: "Genomes:" }));
+  panel.appendChild(el("span", { id: "genome-tiles" }));
+  var inp = el("input", { type: "text", id: "genome-input", placeholder: "e.g. Spombe" });
+  inp.setAttribute("aria-label", "New genome name");
+  inp.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { addGenomeFromInput(); e.preventDefault(); }
+  });
+  panel.appendChild(inp);
+  var addBtn = el("button", { textContent: "+ Add" });
+  addBtn.setAttribute("aria-label", "Add genome");
+  addBtn.addEventListener("click", addGenomeFromInput);
+  panel.appendChild(addBtn);
+  panel.appendChild(el("span", { className: "genome-help",
+    textContent: "Reference genomes used across samples. Configure paths and species parameters for each genome below." }));
+  container.appendChild(panel);
+
+  renderGenomeTiles(container);
+
+  // Per-genome config sections
+  var allGenomes = getDefinedGenomes();
+  if (allGenomes.length === 0) {
+    container.appendChild(el("p", { className: "cfg-help",
+      textContent: "No genomes defined yet. Add a genome above or add samples in the Samples tab." }));
+  } else {
+    for (var i = 0; i < allGenomes.length; i++) {
+      container.appendChild(buildGenomeSection(allGenomes[i]));
+    }
+  }
+}
+
 function rebuildTableColumns() {
   table.setColumns(buildColumnDefs());
   EDIT_FIELDS = getVisibleFields();
@@ -823,8 +1015,11 @@ function buildColumnDefs() {
       editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
     }, descHooks("Assay")),
     Object.assign({
-      title: "Genome", field: "Genome", editor: "input", width: 120,
-      editorParams: { elementAttributes: { placeholder: "e.g. Spombe, ColCEN, hg38" } },
+      title: "Genome", field: "Genome", width: 120,
+      editor: "list",
+      editorParams: function() {
+        return { values: getDefinedGenomes(), autocomplete: true, listOnEmpty: true, freetext: true };
+      },
     }, descHooks("Genome")),
   ];
 
@@ -837,6 +1032,7 @@ function buildColumnDefs() {
           editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
         }, {
           headerClick: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
+          headerMouseEnter: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
           cellClick: (function(fn) { return function(e, cell) { showFactorDescription(fn); }; })(fname),
         }));
       })(factors[i]);
@@ -928,6 +1124,7 @@ function clearSuggestion(el) {
 function descHooks(field) {
   return {
     headerClick: function() { showDescription(field); },
+    headerMouseEnter: function() { showDescription(field); },
     cellClick: function(e, cell) { showDescription(field); },
   };
 }
@@ -1786,6 +1983,8 @@ table.on("tableBuilt", function() {
   if (!hasAnyExampleRows()) {
     refreshUI();
   }
+  // Build genomes tab now that table data is available
+  buildGenomesTab();
 });
 
 // ===========================================================================
@@ -2039,7 +2238,7 @@ function buildGenomeSection(genomeName) {
   var group = el("div", { className: "cfg-genome-group" });
   group.appendChild(el("h3", { textContent: "Reference Genome: " + genomeName }));
   var fields = [
-    ["Species name", "species", "e.g. thaliana, mays"],
+    ["Species name (binomial)", "species", "e.g. Arabidopsis thaliana"],
     ["FASTA file", "fasta_file", "/path/to/genome.fa.gz"],
     ["GFF file", "gff_file", "/path/to/genes.gff3.gz"],
     ["GTF file", "gtf_file", "/path/to/genes.gtf.gz"],
@@ -2091,20 +2290,6 @@ function buildConfigForm() {
   reqSec.appendChild(buildTextRow("Sample file path:", "sample_file", "config/all_samples.tsv",
     "Path to the sample sheet created in the Sample Sheet tab."));
   container.appendChild(reqSec);
-
-  // --- Per-Genome sections (dynamic) ---
-  var genomeSec = el("div", { className: "cfg-section", id: "cfg-genomes" });
-  genomeSec.appendChild(el("h2", { textContent: "Reference Genomes" }));
-  var genomes = getGenomesFromSampleSheet();
-  if (genomes.length === 0) {
-    genomeSec.appendChild(el("p", { className: "cfg-help",
-      textContent: "No genomes found. Add samples in the Sample Sheet tab first." }));
-  } else {
-    for (var i = 0; i < genomes.length; i++) {
-      genomeSec.appendChild(buildGenomeSection(genomes[i]));
-    }
-  }
-  container.appendChild(genomeSec);
 
   // --- Output Options ---
   var outSec = el("div", { className: "cfg-section" });
@@ -2329,27 +2514,10 @@ function getGenomesFromSampleSheet() {
 }
 
 // Get unique species names from genome config
-// Rebuild the dynamic genome sections
+// Rebuild dynamic config sections (genomes are now in their own tab)
 function updateConfigDynamicSections() {
-  var container = document.getElementById("config-content");
   if (!_configFormBuilt) {
     buildConfigForm();
-    return;
-  }
-  // Rebuild genome section
-  var genomeSec = document.getElementById("cfg-genomes");
-  if (genomeSec) {
-    while (genomeSec.firstChild) genomeSec.removeChild(genomeSec.firstChild);
-    genomeSec.appendChild(el("h2", { textContent: "Reference Genomes" }));
-    var genomes = getGenomesFromSampleSheet();
-    if (genomes.length === 0) {
-      genomeSec.appendChild(el("p", { className: "cfg-help",
-        textContent: "No genomes found. Add samples in the Sample Sheet tab first." }));
-    } else {
-      for (var i = 0; i < genomes.length; i++) {
-        genomeSec.appendChild(buildGenomeSection(genomes[i]));
-      }
-    }
   }
 }
 
@@ -2368,7 +2536,7 @@ function configStateToYAML() {
   for (var gn in configState.genomes) {
     var g = configState.genomes[gn];
     cfg.genomes[gn] = {};
-    if (g.species) cfg.genomes[gn].species = g.species;
+    if (g.species) cfg.genomes[gn].species = g.species.replace(/ /g, "_");
     if (g.fasta_file) cfg.genomes[gn].fasta_file = g.fasta_file;
     if (g.gff_file) cfg.genomes[gn].gff_file = g.gff_file;
     if (g.gtf_file) cfg.genomes[gn].gtf_file = g.gtf_file;
@@ -2623,6 +2791,7 @@ function handleYAMLImport(text) {
   configState.genomes = {};
 
   function importGenomeBlock(key, val) {
+    if (definedGenomes.indexOf(key) < 0) definedGenomes.push(key);
     configState.genomes[key] = {
       species: val.species || "",
       fasta_file: val.fasta_file || "",
@@ -2730,11 +2899,16 @@ function switchSection(sectionId) {
   if (sectionId === "samplesheet-section") {
     table.redraw(true);
   }
+  // Rebuild genomes tab when switching to it
+  if (sectionId === "genomes-section") {
+    buildGenomesTab();
+  }
   // Rebuild dynamic config sections when switching to config
   if (sectionId === "config-section") {
     updateConfigDynamicSections();
   }
 }
+
 </script>
 </body>
 </html>
