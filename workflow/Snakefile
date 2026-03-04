@@ -13,7 +13,7 @@ import colorsys
 import time
 import atexit
 import traceback
-from scripts.samplefile_validation import check_table
+from scripts.samplefile_validation import check_table, check_genome_config
 from scripts.sample_sheet import (
     VALID_ASSAYS, ASSAY_TO_ENV, ASSAY_TO_PEAKTYPE,
     parse_levels, levels_to_label, levels_to_factors,
@@ -72,6 +72,33 @@ configfile: "config/epicc-options.yaml"
 analysis = config['full_analysis']
 
 # ---------------------------------------------------------------------------
+# Genome config namespace migration
+# ---------------------------------------------------------------------------
+# New format: genomes are under config["genomes"]. Old format had bare top-level
+# keys with a 'fasta_file' field plus separate species blocks.
+if "genomes" not in config:
+    config["genomes"] = {}
+    _bare_genome_keys = [
+        k for k, v in config.items()
+        if isinstance(v, dict) and "fasta_file" in v
+    ]
+    if _bare_genome_keys:
+        import warnings
+        warnings.warn(
+            "Genome config uses old bare-key format. "
+            "Please migrate to 'genomes:' namespace in your options file.",
+            FutureWarning,
+        )
+        for _gk in _bare_genome_keys:
+            _gblock = dict(config[_gk])
+            # Inline species params from the separate species block
+            _sp = _gblock.get("species")
+            if _sp and _sp in config and isinstance(config[_sp], dict):
+                for _sk, _sv in config[_sp].items():
+                    _gblock.setdefault(_sk, _sv)
+            config["genomes"][_gk] = _gblock
+
+# ---------------------------------------------------------------------------
 # Intermediate file retention
 # ---------------------------------------------------------------------------
 TIER_DEFAULTS = {
@@ -109,6 +136,7 @@ analysis_name = config["analysis_name"]
 # ---------------------------------------------------------------------------
 samples = read_sample_sheet(config["sample_file"])
 check_table(samples)
+check_genome_config(samples, config)
 
 # Add backward-compatible columns derived from new-format fields
 samples = add_compat_columns(samples)

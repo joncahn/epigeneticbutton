@@ -11,7 +11,7 @@ def define_input_file_for_structural(sample_name):
 
 def get_bt1_indices(wildcards):
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
-    genomesize = float(config[config[ref_genome]['species']]['genomesize'])
+    genomesize = float(config["genomes"][ref_genome]['genomesize'])
     if genomesize > 4e9:
         return multiext(f"genomes/{ref_genome}/{ref_genome}.fa", ".1.ebwtl", ".2.ebwtl",".3.ebwtl",".4.ebwtl",".rev.1.ebwtl",".rev.2.ebwtl")
     else: 
@@ -162,7 +162,7 @@ rule deduplicate_srna_nextflexv3:
 
 rule make_bt2_indices_for_structural_RNAs:
     input:
-        fasta = lambda wildcards: config[wildcards.ref_genome]['structural_rna_fafile']
+        fasta = lambda wildcards: config["genomes"][wildcards.ref_genome]['structural_rna_fafile']
     output:
         temp_fasta = temp("genomes/structural_RNAs/{ref_genome}/temp.fa"),
         indices = directory("genomes/structural_RNAs/{ref_genome}_bt2_index")

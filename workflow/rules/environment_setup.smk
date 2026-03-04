@@ -24,7 +24,7 @@ rule check_fasta:
     output:
         fasta = "genomes/{ref_genome}/{ref_genome}.fa"
     params:
-        fasta = lambda wildcards: config[wildcards.ref_genome]['fasta_file'],
+        fasta = lambda wildcards: config["genomes"][wildcards.ref_genome]['fasta_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "fasta"))
@@ -57,7 +57,7 @@ rule check_gff:
     output:
         gff = "genomes/{ref_genome}/{ref_genome}.gff"
     params:
-        gff = lambda wildcards: config[wildcards.ref_genome]['gff_file'],
+        gff = lambda wildcards: config["genomes"][wildcards.ref_genome]['gff_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "gff"))
@@ -90,7 +90,7 @@ rule check_gtf:
     output:
         gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
     params:
-        gtf = lambda wildcards: config[wildcards.ref_genome]['gtf_file'],
+        gtf = lambda wildcards: config["genomes"][wildcards.ref_genome]['gtf_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "gtf"))
@@ -174,7 +174,7 @@ rule check_te_file:
     output:
         te_file = "genomes/{ref_genome}/{ref_genome}__TE_file.bed"
     params:
-        te_file = lambda wildcards: config[wildcards.ref_genome]['te_file'],
+        te_file = lambda wildcards: config["genomes"][wildcards.ref_genome]['te_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
         temp(return_log_env("{ref_genome}", "TEs"))

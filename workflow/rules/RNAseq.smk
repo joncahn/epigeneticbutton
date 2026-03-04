@@ -31,8 +31,8 @@ def define_rnaseq_background_file(wildcards):
         return f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed"
 
 def get_go_database(ref_genome):
-    species=config[ref_genome]['species']
-    genus=config[config[ref_genome]['species']]['genus']
+    species=config["genomes"][ref_genome]['species']
+    genus=config["genomes"][ref_genome]['genus']
     return f"genomes/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
 
 def assign_rna_input(wildcards):
@@ -159,7 +159,7 @@ rule make_STAR_indices:
     output:
         indices = directory("genomes/{ref_genome}/STAR_index")
     params:
-        star_index = lambda wildcards: config[config[wildcards.ref_genome]['species']]['star_index']
+        star_index = lambda wildcards: config["genomes"][wildcards.ref_genome]['star_index']
     log:
         temp(os.path.join(REPO_FOLDER,"results","logs","STAR_index_{ref_genome}.log"))
     conda: CONDA_ENV_RNA
@@ -671,11 +671,11 @@ rule create_GO_database:
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
-        species = lambda wildcards: config[wildcards.ref_genome]['species'],
-        genus = lambda wildcards: config[config[wildcards.ref_genome]['species']]['genus'],
-        ncbiID = lambda wildcards: config[config[wildcards.ref_genome]['species']]['ncbiID'],
-        gaffile = lambda wildcards: config[wildcards.ref_genome]['gaf_file'],
-        geneinfofile = lambda wildcards: config[wildcards.ref_genome]['gene_info_file']
+        species = lambda wildcards: config["genomes"][wildcards.ref_genome]['species'],
+        genus = lambda wildcards: config["genomes"][wildcards.ref_genome]['genus'],
+        ncbiID = lambda wildcards: config["genomes"][wildcards.ref_genome]['ncbiID'],
+        gaffile = lambda wildcards: config["genomes"][wildcards.ref_genome]['gaf_file'],
+        geneinfofile = lambda wildcards: config["genomes"][wildcards.ref_genome]['gene_info_file']
     log:
         temp(return_log_rna("{ref_genome}", "build_GO", "{dbname}"))
     conda: CONDA_ENV_RNA
@@ -705,14 +705,14 @@ rule create_GO_database:
 
 rule perform_GO_on_target_file:
     input:
-        godb = lambda wildcards: directory(f"genomes/{wildcards.ref_genome}/GO/{config[config[wildcards.ref_genome]['species']]['go_database']}"),
+        godb = lambda wildcards: directory(f"genomes/{wildcards.ref_genome}/GO/{config['genomes'][wildcards.ref_genome]['go_database']}"),
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
         touch = "results/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{target_name}.done"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_GO_analysis.R"),
-        dbname = lambda wildcards: config[config[wildcards.ref_genome]['species']]['go_database'],
+        dbname = lambda wildcards: config["genomes"][wildcards.ref_genome]['go_database'],
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name
@@ -746,7 +746,7 @@ rule call_rampage_TSS:
         inputname = lambda wildcards: assign_rna_input(wildcards),
         filetype = lambda wildcards: wildcards.file_type,
         params = config["rampage_calltss"]['params'],
-        genomesize = lambda wildcards: config[config[parse_sample_name(wildcards.sample_name)['ref_genome']]['species']]['genomesize']
+        genomesize = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']]['genomesize']
     log:
         temp(return_log_rna("{sample_name}", "{file_type}__TSS_calling", "SE"))
     conda: CONDA_ENV_CHIP

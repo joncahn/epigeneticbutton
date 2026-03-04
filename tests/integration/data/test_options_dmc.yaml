@@ -6,17 +6,15 @@ analysis_name: "test_dmc"
 sample_file: "tests/integration/data/test_samples_dmc.tsv"
 
 # Minimal reference genome configuration for test_genome
-test_genome:
-  species: "test_species"
-  fasta_file: "tests/integration/data/mock_inputs/test_genome.fa"
-  gff_file: "tests/integration/data/mock_inputs/test_genome.gff3"
-  gtf_file: "tests/integration/data/mock_inputs/test_genome.gtf"
-  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
-
-# Species-specific parameters
-test_species:
-  star_index: "--genomeSAindexNbases 12"
-  genomesize: 1.0e8
+genomes:
+  test_genome:
+    species: "test_species"
+    fasta_file: "tests/integration/data/mock_inputs/test_genome.fa"
+    gff_file: "tests/integration/data/mock_inputs/test_genome.gff3"
+    gtf_file: "tests/integration/data/mock_inputs/test_genome.gtf"
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+    star_index: "--genomeSAindexNbases 12"
+    genomesize: 1.0e8
 
 # Analysis options
 full_analysis: true

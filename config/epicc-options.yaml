@@ -7,41 +7,56 @@ analysis_name: "epicc"
 # Path to the sample metadata file
 sample_file: "config/all_samples.tsv"
 
-# Path to the annotation files for each reference genome
-ColCEN: 
-  species: "thaliana"  
-  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
-  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
-  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # can be gzipped or not
-  gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
-  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+# Reference genomes — each entry defines paths to annotation files and species-level parameters
+genomes:
+  ColCEN:
+    species: "thaliana"
+    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
+    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # can be gzipped or not
+    gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+    gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+    te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+    star_index: "--genomeSAindexNbases 12"
+    genomesize: 1.3e8
+    ncbiID: "3702"
+    genus: "Arabidopsis"
+    go_database: org.Athaliana.eg.db
 
-B73_v5:
-  species: "mays" 
-  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
-  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0_Zm00001eb.1.gff3" # can be gzipped or not
-  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # can be gzipped or not
-  gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/B73_v5_TEs.bed.gz" # can be gzipped or not;
-  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+  B73_v5:
+    species: "mays"
+    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
+    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0_Zm00001eb.1.gff3" # can be gzipped or not
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # can be gzipped or not
+    gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+    gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+    te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/B73_v5_TEs.bed.gz" # can be gzipped or not;
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+    star_index: "--genomeSAindexNbases 14"
+    genomesize: 2.2e9
+    ncbiID: "4577"
+    genus: "Zea"
+    go_database: org.Zmays.eg.db
 
-la8011:
-  species: "aequinoctialis"
-  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.fasta.gz"
-  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.noname.gff3.gz"
-  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz"
-  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
-  
-CabSauv:
-  species: "vitifera"
-  fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
-  gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
-  gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz"
-  te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
-  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"  
+  la8011:
+    species: "aequinoctialis"
+    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.fasta.gz"
+    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.noname.gff3.gz"
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz"
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+    star_index: "--genomeSAindexNbases 12"
+    genomesize: 8.0e8
+
+  CabSauv:
+    species: "vitifera"
+    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
+    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
+    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz"
+    te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+    star_index: "--genomeSAindexNbases 12"
+    genomesize: 5.0e8  
   
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
@@ -69,29 +84,6 @@ keep_shifted_bams: false     # ATAC Tn5-shifted BAMs and indices (consumed by AT
 keep_cx_reports: false       # per-replicate CX methylation reports (consumed by merging; keep if passing per-rep data to DMRcaller)
 keep_dmc_intermediates: false # dmC aligned modBAMs and bedMethyl pileup files (useful for IGV or custom modification analysis)
 
-# Species-dependent parameters:
-thaliana:
-  star_index: "--genomeSAindexNbases 12"
-  genomesize: 1.3e8
-  ncbiID: "3702" 
-  genus: "Arabidopsis"
-  go_database: org.Athaliana.eg.db
-
-mays: 
-  star_index: "--genomeSAindexNbases 14"
-  genomesize: 2.2e9
-  ncbiID: "4577"
-  genus: "Zea"
-  go_database: org.Zmays.eg.db
-
-aequinoctialis:
-  star_index: "--genomeSAindexNbases 12"
-  genomesize: 8.0e8
-
-vitifera:
-  star_index: "--genomeSAindexNbases 12"
-  genomesize: 5.0e8
-  
 # Trimming and processing parameters (fastp):
 quality_threshold: # 3' quality trimming (Phred score)
   ChIP: 10

@@ -6,17 +6,15 @@ analysis_name: "test_chr5"
 sample_file: "tests/integration/data/test_samples_chr5.tsv"
 
 # Minimal reference genome configuration for ColCEN_Chr5
-ColCEN_Chr5:
-  species: "thaliana"
-  fasta_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.fa.gz"
-  gff_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gff3.gz"
-  gtf_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gtf.gz"
-  structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
-
-# Species-specific parameters
-thaliana:
-  star_index: "--genomeSAindexNbases 12"
-  genomesize: 2.9e7  # Chr5 only
+genomes:
+  ColCEN_Chr5:
+    species: "thaliana"
+    fasta_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.fa.gz"
+    gff_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gff3.gz"
+    gtf_file: "tests/integration/data/ColCEN_Chr5/ColCEN_Chr5.gtf.gz"
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+    star_index: "--genomeSAindexNbases 12"
+    genomesize: 2.9e7  # Chr5 only
 
 # Analysis options
 full_analysis: true

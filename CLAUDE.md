@@ -55,6 +55,9 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 ### Configuration
 
 - `config/epicc-options.yaml` - Main options file (paths, parameters, resource allocation)
+  - Reference genomes are namespaced under `genomes:`, each entry containing annotation file paths and species-level parameters (e.g. `genomesize`, `star_index`, `genus`, `ncbiID`, `go_database`)
+  - Access pattern in rule files: `config["genomes"][ref_genome][field]`
+  - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning
 - `config/all_samples.tsv` - Sample metadata (see Sample Sheet section above)
 - `profiles/slurm/config.yaml` - SLURM executor settings
 

@@ -17,18 +17,16 @@ structural_rna_depletion: true
 browser_TE_file: false
 
 # Reference genome
-Spombe:
-  species: "pombe"
-  fasta_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
-  gff_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
-  gtf_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.gtf.gz"
-  structural_rna_fafile: "tests/integration/data/Spombe/sp_structural_RNAs.fa.gz"
-
-# Species-dependent parameters
-pombe:
-  star_index: "--genomeSAindexNbases 11"  # log2(12.5e6)/2 - 1 ≈ 11
-  genomesize: 1.25e7
-  ncbiID: "4896"
-  genus: "Schizosaccharomyces"
+genomes:
+  Spombe:
+    species: "pombe"
+    fasta_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
+    gff_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
+    gtf_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.gtf.gz"
+    structural_rna_fafile: "tests/integration/data/Spombe/sp_structural_RNAs.fa.gz"
+    star_index: "--genomeSAindexNbases 11"  # log2(12.5e6)/2 - 1 ≈ 11
+    genomesize: 1.25e7
+    ncbiID: "4896"
+    genus: "Schizosaccharomyces"
 
 # Resource allocation (use defaults from main config)

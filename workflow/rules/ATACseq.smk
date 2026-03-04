@@ -127,7 +127,7 @@ rule calling_peaks_atac:
         ipname = lambda wildcards: wildcards.sample_name,
         filetype = lambda wildcards: wildcards.file_type,
         params = config["atac_callpeaks"]['params'],
-        genomesize = lambda wildcards: config[config[parse_sample_name(wildcards.sample_name)['ref_genome']]['species']]['genomesize']
+        genomesize = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']]['genomesize']
     log:
         temp(return_log_chip("ATAC","{sample_name}", "{file_type}__narrowpeak_calling", ""))
     conda: CONDA_ENV_ATAC

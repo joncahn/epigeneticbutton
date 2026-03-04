@@ -4,7 +4,7 @@ Implements the rules defined in dev/docs/sample-sheet-spec.md.
 """
 
 import re
-from scripts.sample_sheet import VALID_ASSAYS
+from scripts.sample_sheet import VALID_ASSAYS, ASSAY_TO_ENV
 
 # Characters that are unsafe for filesystem use in Sample_ID
 _UNSAFE_CHARS = re.compile(r'[/\\\s\'\";&|<>$`!{}()\[\]?*~#]')
@@ -218,4 +218,85 @@ def check_table(tab):
         raise ValueError(
             f"[X] Validation failed — please fix the errors below in your "
             f"samplefile and rerun.\n{full_message}\n\n"
+        )
+
+
+# Envs that require genomesize for peak calling / STAR index sizing
+_GENOMESIZE_ENVS = {"ChIP", "ATAC", "RNA", "sRNA"}
+
+
+def check_genome_config(tab, config):
+    """Validate that config['genomes'] has required fields for all genomes in the sample sheet.
+
+    Raises ValueError with all collected error messages if validation fails.
+    """
+    errors = []
+    genomes_cfg = config.get("genomes", {})
+
+    # Collect which envs are used per genome
+    genome_envs = {}
+    for _, row in tab.iterrows():
+        genome = str(row.get("Genome", "")).strip()
+        assay = str(row.get("Assay", "")).strip()
+        env = ASSAY_TO_ENV.get(assay)
+        if genome and genome != "nan":
+            genome_envs.setdefault(genome, set())
+            if env:
+                genome_envs[genome].add(env)
+
+    for genome, envs in genome_envs.items():
+        if genome not in genomes_cfg:
+            errors.append(
+                f"[X] Genome '{genome}': no entry in config['genomes']. "
+                f"Add it to the genomes: section of your options file."
+            )
+            continue
+
+        gcfg = genomes_cfg[genome]
+
+        # Always required
+        for field in ("fasta_file", "gff_file", "gtf_file"):
+            if field not in gcfg:
+                errors.append(f"[X] Genome '{genome}': missing required field '{field}'")
+
+        # genomesize required for ChIP, ATAC, RNA, sRNA
+        if envs & _GENOMESIZE_ENVS and "genomesize" not in gcfg:
+            errors.append(
+                f"[X] Genome '{genome}': missing 'genomesize' "
+                f"(required for {', '.join(sorted(envs & _GENOMESIZE_ENVS))})"
+            )
+
+        # star_index required for RNA
+        if "RNA" in envs and "star_index" not in gcfg:
+            errors.append(f"[X] Genome '{genome}': missing 'star_index' (required for RNA-seq)")
+
+        # structural_rna_fafile required for sRNA when structural RNA depletion is on
+        if "sRNA" in envs and config.get("structural_rna_depletion", True):
+            if "structural_rna_fafile" not in gcfg:
+                errors.append(
+                    f"[X] Genome '{genome}': missing 'structural_rna_fafile' "
+                    f"(required for sRNA with structural_rna_depletion: true)"
+                )
+
+        # GO fields when GO: true
+        if config.get("GO", False) and "RNA" in envs:
+            for field in ("go_database", "genus", "species", "ncbiID", "gaf_file", "gene_info_file"):
+                if field not in gcfg:
+                    errors.append(
+                        f"[X] Genome '{genome}': missing '{field}' (required when GO: true)"
+                    )
+
+    # motif_ref_genome must reference a valid genome when motifs are enabled
+    if config.get("motifs", False):
+        motif_genome = config.get("motif_ref_genome", "")
+        if motif_genome and motif_genome not in genomes_cfg:
+            errors.append(
+                f"[X] motif_ref_genome '{motif_genome}' not found in config['genomes']"
+            )
+
+    if errors:
+        full_message = "\n".join(errors)
+        raise ValueError(
+            f"[X] Genome config validation failed — please fix the errors below "
+            f"in your options file and rerun.\n{full_message}\n\n"
         )
