@@ -133,15 +133,36 @@ def check_table(tab):
             else:
                 # Local paths: validate PE has comma-separated pair
                 if layout == "PE" and len(files_in_comp) == 1 and not first.endswith(".bam"):
-                    warnings.append(
-                        f"[!] Row #{i} '{sid}': Read_layout is PE but Read_files "
+                    errors.append(
+                        f"[X] Row #{i} '{sid}': Read_layout is PE but Read_files "
                         f"has only one path (expected comma-separated pair)"
                     )
                 if layout == "SE" and len(files_in_comp) > 1:
-                    warnings.append(
-                        f"[!] Row #{i} '{sid}': Read_layout is SE but Read_files "
+                    errors.append(
+                        f"[X] Row #{i} '{sid}': Read_layout is SE but Read_files "
                         f"has multiple comma-separated paths"
                     )
+
+    # --- Read_files: cross-row duplicate check ---
+    seen_inputs = {}  # path/accession -> Sample_ID
+    for i, (_, row) in enumerate(tab.iterrows(), start=1):
+        read_files = str(row.get("Read_files", "")).strip()
+        sid = str(row.get("Sample_ID", "")).strip()
+        if not read_files or read_files == "nan":
+            continue
+        components = [c.strip() for c in read_files.split("+")]
+        for comp in components:
+            files_in_comp = [f.strip() for f in comp.split(",")]
+            for f in files_in_comp:
+                if not f:
+                    continue
+                if f in seen_inputs:
+                    errors.append(
+                        f"[X] Row #{i} '{sid}': Read_files entry '{f}' is also "
+                        f"used by '{seen_inputs[f]}'"
+                    )
+                else:
+                    seen_inputs[f] = sid
 
     # --- IP_target: required for ChIP, blank for others ---
     for i, (_, row) in enumerate(tab.iterrows(), start=1):

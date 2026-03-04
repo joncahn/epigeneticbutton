@@ -704,7 +704,8 @@ function suggestSampleId(rowData) {
 function emptyRow() {
   var row = {
     Sample_ID: "", Assay: "", Genome: "", Replicate_ID: "",
-    Read_files: "", Read_layout: "", IP_target: "", Control: ""
+    Read_files: "", Read_layout: "", IP_target: "", Control: "",
+    _sid_user_edited: false
   };
   for (var i = 0; i < factors.length; i++) {
     row[factorField(factors[i])] = "";
@@ -862,6 +863,10 @@ function buildColumnDefs() {
     Object.assign({
       title: "IP target", field: "IP_target", editor: "input", width: 120,
       editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
+      editable: function(cell) {
+        var assay = (cell.getRow().getData().Assay || "").trim();
+        return CHIP_ASSAYS.has(assay);
+      },
     }, descHooks("IP_target")),
     Object.assign({
       title: "Control", field: "Control", width: 200,
@@ -989,6 +994,7 @@ function addReplicate(row) {
     data.Replicate_ID = rep ? rep + "_2" : "rep1";
   }
   data.Sample_ID = ""; // clear so suggestion kicks in
+  data._sid_user_edited = false;
   delete data.id; // new internal id
   table.addRow(data, false, row);
   refreshUI();
@@ -997,6 +1003,7 @@ function addReplicate(row) {
 function duplicateRow(row) {
   var data = Object.assign({}, row.getData());
   data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
+  data._sid_user_edited = !!data.Sample_ID;
   delete data.id;
   table.addRow(data, false, row);
   refreshUI();
@@ -1124,9 +1131,9 @@ function runValidation() {
           }
         } else {
           if (readLayout === "PE" && files.length === 1 && !first.endsWith(".bam"))
-            addIssue(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)", "warnings");
+            addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)");
           if (readLayout === "SE" && files.length > 1)
-            addIssue(cellIssues, warnings, rowKey, "Read_files", "[!] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths", "warnings");
+            addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths");
         }
       }
     }
@@ -1185,6 +1192,31 @@ function runValidation() {
         } else if (rf.join("\0") !== refFactorNames.join("\0")) {
           addIssue(cellIssues, errors, rowKey, "Levels",
             "[X] Row #" + rowNum + ": Levels factor names [" + rf.join(",") + "] don't match row " + refRowNum2 + " [" + refFactorNames.join(",") + "]");
+        }
+      }
+    }
+  }
+
+  // Read_files: cross-row duplicate check
+  var seenInputs = {};  // path/accession -> Sample_ID
+  for (var i = 0; i < data.length; i++) {
+    if (data[i]._example) continue;
+    var readFiles = (data[i].Read_files || "").trim();
+    var sid = (data[i].Sample_ID || "").trim();
+    var rowNum = i + 1;
+    var rowKey = rows[i] ? rows[i].getIndex() : i;
+    if (!readFiles) continue;
+    var components = readFiles.split("+").map(function(s) { return s.trim(); });
+    for (var ci = 0; ci < components.length; ci++) {
+      var files = components[ci].split(",").map(function(s) { return s.trim(); });
+      for (var fi = 0; fi < files.length; fi++) {
+        var f = files[fi];
+        if (!f) continue;
+        if (seenInputs[f]) {
+          addIssue(cellIssues, errors, rowKey, "Read_files",
+            "[X] Row #" + rowNum + " '" + sid + "': Read_files entry '" + f + "' is also used by '" + seenInputs[f] + "'");
+        } else {
+          seenInputs[f] = sid;
         }
       }
     }
@@ -1272,6 +1304,18 @@ function appendDiagSection(panel, items, cssClass, label) {
 }
 
 function renderDiagnostics(errors, warnings) {
+  // Toggle export button based on validation errors
+  var exportBtn = document.getElementById("btn-export");
+  if (errors.length > 0) {
+    exportBtn.disabled = true;
+    exportBtn.title = "Fix validation errors to enable export";
+    exportBtn.setAttribute("aria-disabled", "true");
+  } else {
+    exportBtn.disabled = false;
+    exportBtn.title = "";
+    exportBtn.removeAttribute("aria-disabled");
+  }
+
   // Skip DOM rebuild if content is unchanged — prevents focus theft
   var newKey = errors.join("\n") + "\n---\n" + warnings.join("\n");
   if (newKey === _lastDiagKey) return;
@@ -1306,23 +1350,28 @@ function applySuggestions() {
   for (var ri = 0; ri < rows.length; ri++) {
     var data = rows[ri].getData();
     var sid = (data.Sample_ID || "").trim();
+    var userEdited = !!data._sid_user_edited;
     var cell = rows[ri].getCell("Sample_ID");
     if (!cell) continue;
     var cellEl = cell.getElement();
-    if (!sid) {
-      var suggestion = suggestSampleId(data);
+    var suggestion = suggestSampleId(data);
+
+    if (!userEdited) {
+      // Auto-update: set the actual cell value to the suggestion
       if (suggestion) {
+        if (sid !== suggestion) {
+          cell.setValue(suggestion, true);  // true = don't trigger cellEdited
+        }
         cellEl.classList.add("cell-suggestion");
         cellEl.setAttribute("data-suggestion", suggestion);
         cellEl.title = "Suggested: " + suggestion;
-        // Show suggestion as cell content if not editing
-        if (!cellEl.querySelector(".tabulator-editing")) {
-          cellEl.textContent = suggestion;
-        }
+      } else if (!sid) {
+        clearSuggestion(cellEl);
       } else {
         clearSuggestion(cellEl);
       }
     } else {
+      // User has manually edited — don't touch the value
       clearSuggestion(cellEl);
     }
   }
@@ -1395,6 +1444,8 @@ function importTSV(text) {
   factors = importedFactors;
   for (var i = 0; i < rows.length; i++) {
     populateFactorsFromLevels(rows[i]);
+    // Imported rows with a Sample_ID are treated as user-edited
+    rows[i]._sid_user_edited = !!(rows[i].Sample_ID || "").trim();
   }
 
   // Rebuild columns for the new factors
@@ -1643,15 +1694,8 @@ table.on("cellEditing", function(cell) {
     }, 0);
   } else {
     _editingExampleStash = null;
-    // For real rows, accept Sample_ID suggestions
-    if (field === "Sample_ID") {
-      var val = (cell.getValue() || "").trim();
-      var cellEl = cell.getElement();
-      var suggestion = cellEl.getAttribute("data-suggestion");
-      if (!val && suggestion) {
-        cell.setValue(suggestion);
-      }
-    }
+    // For real rows, the Sample_ID already has the suggestion as its value
+    // (set by applySuggestions), so no special handling needed here
   }
 });
 
@@ -1680,6 +1724,20 @@ table.on("cellEdited", function(cell) {
     }
   }
   _editingExampleStash = null;
+
+  // Track manual Sample_ID edits for auto-suggestion behavior
+  if (field === "Sample_ID") {
+    var newVal = (cell.getValue() || "").trim();
+    var suggestion = suggestSampleId(row.getData());
+    if (!newVal) {
+      // Clearing Sample_ID resumes auto-suggestion
+      row.update({ _sid_user_edited: false });
+    } else if (newVal !== suggestion) {
+      // User typed something different from the suggestion
+      row.update({ _sid_user_edited: true });
+    }
+    // If newVal === suggestion, keep current _sid_user_edited state
+  }
 
   // When Assay changes, clear IP_target for non-ChIP
   if (field === "Assay") {
@@ -1746,6 +1804,7 @@ document.getElementById("btn-dup-selected").addEventListener("click", function()
   for (var i = 0; i < selected.length; i++) {
     var data = Object.assign({}, selected[i].getData());
     data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
+    data._sid_user_edited = !!data.Sample_ID;
     delete data.id;
     table.addRow(data, false, selected[i]);
   }

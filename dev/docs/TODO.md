@@ -61,7 +61,15 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Per-field validation rules are defined in [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) (the canonical specification) and implemented in `workflow/scripts/samplefile_validation.py`. The epicc-builder app should implement the same rules. See the spec file for the full list of per-field constraints, cross-field checks, and derived name definitions.
 
-* [ ] Add a check to ensure multiple samples don't share the same inputs files or SRA accessions. This is almost certainly a user data entry error, can't think of a reasonable use case. Should be validated both in the builder and in the workflow.
+* [x] Add a check to ensure multiple samples don't share the same inputs files or SRA accessions. This is almost certainly a user data entry error, can't think of a reasonable use case. Should be validated both in the builder and in the workflow. **Done**: Cross-row duplicate check in `samplefile_validation.py` and `epicc-builder.html`. Documented in `sample-sheet-spec.md`.
+
+* [x] Make fatal the non-fatal warnings for PE with a single (non-BAM, non-SRA) path (i.e. just one FASTQ) and SE with more than one path passed with comma separation. **Done**: Changed from warnings to errors in both `samplefile_validation.py` and `epicc-builder.html`. Updated `sample-sheet-spec.md` severity.
+
+* [x] epicc-builder: don't allow the user to generate an invalid sample sheet. The export button should be inactive if the sheet is in a validation failed state, and we should instruct the user to fix errors in the sheet to enable export (could be a hover tool tip, let's try to be screenreader friendly). **Done**: Export button disabled when errors exist, with tooltip and `aria-disabled` attribute.
+
+* [x] epicc-builder: IP_target should not be editable if Assay is not chip_broad or chip_narrow. **Done**: Conditional `editable` function on IP_target column checks `CHIP_ASSAYS.has(assay)`.
+
+* [x] epicc-builder: Unless it has been edited by the user, the Sample_ID suggestion should be updated automatically and continuously as the user changes other fields for the sample. **Done**: `_sid_user_edited` flag tracks manual edits; `applySuggestions()` auto-updates cell value when not user-edited; clearing Sample_ID resumes auto-suggestion.
 
 #### Harmonize analysis_samplefiles
 

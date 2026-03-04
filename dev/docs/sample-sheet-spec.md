@@ -131,9 +131,11 @@ Path(s) to input data files or SRA accession(s). Must be non-empty.
 | No mixing | Within a single `+`-separated component, all entries must be the same type (all SRA or all paths) |
 | PE comma pair | For PE local FASTQs, each component should have a comma-separated R1,R2 pair |
 
-**Warnings** (non-fatal):
-- PE layout with a single (non-BAM) path per component
-- SE layout with multiple comma-separated paths
+| Rule | Detail |
+|------|--------|
+| PE comma pair required | PE layout with a single non-BAM path per component is an error |
+| SE single path required | SE layout with multiple comma-separated paths is an error |
+| No cross-row duplicates | The same file path or SRA accession must not appear in more than one sample's Read_files |
 
 ### Read_layout
 
@@ -170,8 +172,9 @@ and `IP_target: Input`, then a ChIP sample can set `Control: WT_leaf_Input_rep1`
 
 | Check | Severity | Detail |
 |-------|----------|--------|
-| Read_layout vs Read_files (PE with single path) | Warning | PE layout but Read_files has only one non-BAM path per component |
-| Read_layout vs Read_files (SE with multiple paths) | Warning | SE layout but Read_files has multiple comma-separated paths |
+| Read_layout vs Read_files (PE with single path) | Error | PE layout but Read_files has only one non-BAM path per component |
+| Read_layout vs Read_files (SE with multiple paths) | Error | SE layout but Read_files has multiple comma-separated paths |
+| Duplicate Read_files entries | Error | Same file path or SRA accession used by more than one Sample_ID |
 
 ## Old-Format Migration
 
