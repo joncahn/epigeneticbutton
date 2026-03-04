@@ -3,10 +3,9 @@ WT_H3K9me2_rep1	ChIP_broad	Spombe	genotype:WT	rep1	SRR20678305	PE	H3K9me2	WT_WCE
 WT_H3K9me2_rep2	ChIP_broad	Spombe	genotype:WT	rep2	SRR20678333	PE	H3K9me2	WT_WCE_rep1
 WT_H3K9me3_rep1	ChIP_broad	Spombe	genotype:WT	rep1	SRR20678311	PE	H3K9me3	WT_WCE_rep1
 WT_H3K9me3_rep2	ChIP_broad	Spombe	genotype:WT	rep2	SRR20678336	PE	H3K9me3	WT_WCE_rep1
-dcr1_H3K9me2_rep1	ChIP_broad	Spombe	genotype:dcr1	rep1	SRR20678308	PE	H3K9me2	dcr1_WCE_rep1
-dcr1_H3K9me3_rep1	ChIP_broad	Spombe	genotype:dcr1	rep1	SRR20678314	PE	H3K9me3	dcr1_WCE_rep1
+dcr1_H3K9me2_rep1	ChIP_broad	Spombe	genotype:dcr1	rep1	SRR20678308	PE	H3K9me2	WT_WCE_rep1
+dcr1_H3K9me3_rep1	ChIP_broad	Spombe	genotype:dcr1	rep1	SRR20678314	PE	H3K9me3	WT_WCE_rep1
 WT_WCE_rep1	ChIP_broad	Spombe	genotype:WT	rep1	SRR5445712	PE	WCE
-dcr1_WCE_rep1	ChIP_broad	Spombe	genotype:dcr1	rep1	SRR5445712	PE	WCE
 WT_H3K4me3_rep1	ChIP_narrow	Spombe	genotype:WT	rep1	SRR31073789	SE	H3K4me3	WT_Input_rep1
 WT_H3K4me3_rep2	ChIP_narrow	Spombe	genotype:WT	rep2	SRR31073812	SE	H3K4me3	WT_Input_rep1
 WT_Input_rep1	ChIP_narrow	Spombe	genotype:WT	rep1	SRR31073785	SE	Input

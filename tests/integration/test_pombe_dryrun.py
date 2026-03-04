@@ -5,7 +5,7 @@ These tests verify that the Snakemake DAG can be correctly built and wildcards
 resolved for all four assay types without actually executing the rules.
 
 Test samples (from test_samples_pombe.tsv):
-  ChIP_broad (8): WT/dcr1 x H3K9me2/me3 + 2 Inputs, PE
+  ChIP_broad (7): WT/dcr1 x H3K9me2/me3 + 1 shared WCE, PE
   ChIP_narrow (3): veg H3K4me3 x 2 reps + Input, SE
   RNAseq (4): WT/dcr1 x 2 reps, SE
   sRNA (3): WT x 2 reps + dcr1 x 1 rep, SE

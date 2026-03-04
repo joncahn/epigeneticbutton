@@ -44,7 +44,6 @@ def pombe_df():
             "WT_H3K9me2_rep1", "WT_H3K9me2_rep2",
             "WT_WCE_rep1",
             "dcr1_H3K9me2_rep1",
-            "dcr1_WCE_rep1",
             "WT_RNA_rep1", "WT_RNA_rep2",
             "dcr1_RNA_rep1",
             "WT_sRNA_rep1",
@@ -53,46 +52,43 @@ def pombe_df():
             "ChIP_broad", "ChIP_broad",
             "ChIP_broad",
             "ChIP_broad",
-            "ChIP_broad",
             "RNAseq", "RNAseq",
             "RNAseq",
             "sRNA",
         ],
-        "Genome": ["Spombe"] * 9,
+        "Genome": ["Spombe"] * 8,
         "Levels": [
             "genotype:WT", "genotype:WT",
             "genotype:WT",
-            "genotype:dcr1",
             "genotype:dcr1",
             "genotype:WT", "genotype:WT",
             "genotype:dcr1",
             "genotype:WT",
         ],
         "Replicate_ID": [
-            "rep1", "rep2", "rep1", "rep1", "rep1",
+            "rep1", "rep2", "rep1", "rep1",
             "rep1", "rep2", "rep1", "rep1",
         ],
         "Read_files": [
             "SRR20678305", "SRR20678333",
             "SRR5445712",
             "SRR20678308",
-            "SRR5445712",
             "SRR30889044", "SRR30889043",
             "SRR30889039",
             "SRR20678362",
         ],
         "Read_layout": [
-            "PE", "PE", "PE", "PE", "PE",
+            "PE", "PE", "PE", "PE",
             "SE", "SE", "SE", "SE",
         ],
         "IP_target": [
             "H3K9me2", "H3K9me2", "WCE",
-            "H3K9me2", "WCE",
+            "H3K9me2",
             "", "", "", "",
         ],
         "Control": [
             "WT_WCE_rep1", "WT_WCE_rep1", "",
-            "dcr1_WCE_rep1", "",
+            "WT_WCE_rep1",
             "", "", "", "",
         ],
     }
@@ -245,7 +241,7 @@ class TestBuildAnalysisToReplicates:
 class TestIdentifyControlSamples:
     def test_basic(self, pombe_df):
         controls = identify_control_samples(pombe_df)
-        assert controls == {"WT_WCE_rep1", "dcr1_WCE_rep1"}
+        assert controls == {"WT_WCE_rep1"}
 
 
 class TestGetControlSampleId:
@@ -271,7 +267,7 @@ class TestGetAnalysisSamples:
         analysis = get_analysis_samples(pombe_df)
         # Controls should not appear
         assert "WT_WCE_rep1" not in analysis["Sample_ID"].values
-        assert "dcr1_WCE_rep1" not in analysis["Sample_ID"].values
+        # dcr1_WCE_rep1 removed — no dcr1 WCE in public data; dcr1 samples use WT_WCE_rep1
 
     def test_deduplicated(self, pombe_df):
         analysis = get_analysis_samples(pombe_df)

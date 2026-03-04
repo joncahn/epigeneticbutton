@@ -22,7 +22,7 @@ RESULTS = REPO_ROOT / "results"
 # Expected file lists (verified against actual pombe run 2026-02-26)
 # ---------------------------------------------------------------------------
 
-# ChIP per-replicate BAMs (11 samples)
+# ChIP per-replicate BAMs (10 samples)
 CHIP_PER_REP_BAMS = [
     "WT_H3K9me2_rep1",
     "WT_H3K9me2_rep2",
@@ -31,7 +31,6 @@ CHIP_PER_REP_BAMS = [
     "dcr1_H3K9me2_rep1",
     "dcr1_H3K9me3_rep1",
     "WT_WCE_rep1",
-    "dcr1_WCE_rep1",
     "WT_H3K4me3_rep1",
     "WT_H3K4me3_rep2",
     "WT_Input_rep1",
