@@ -67,6 +67,11 @@ download_file() {
         rm -f "$dest"
         return 1
     fi
+    if ! gzip -t "$dest" 2>/dev/null; then
+        printf "ENA: gzip integrity check failed for %s\n" "$dest" >&2
+        rm -f "$dest"
+        return 1
+    fi
 }
 
 mkdir -p "$output_dir"
