@@ -267,9 +267,9 @@ rule filter_rna_se:
     input:
         bamfile = "results/RNA/mapped/star_se__{sample_name}_Aligned.out.bam"
     output:
-        sorted_file=temp("results/RNA/mapped/star_se__{sample_name}_Aligned.sorted.out.bam"),
-        metrics_flag = "results/RNA/reports/flagstat_se__{sample_name}.txt",
-        metrics_map = "results/RNA/reports/flagstat_se__{sample_name}.txt"
+        mrkdup=temp("results/RNA/mapped/star_se__{sample_name}_Processed.out.bam"),
+        sorted_file=temp("results/RNA/mapped/star_se__{sample_name}_Processed.sorted.out.bam"),
+        metrics_flag = "results/RNA/reports/flagstat_se__{sample_name}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
