@@ -25,10 +25,10 @@ Extracted from:
 
 ## Usage
 
-Use with `tests/integration/data/test_config_chr5.yaml` for integration testing:
+Use with `tests/integration/data/test_options_chr5.yaml` for integration testing:
 
 ```bash
-snakemake --configfile tests/integration/data/test_config_chr5.yaml \
+snakemake --configfile tests/integration/data/test_options_chr5.yaml \
     results/mC/tracks/rdr126ddm1_leaf_dmC_rep1__CG.bw
 ```
 

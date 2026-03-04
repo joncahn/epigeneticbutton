@@ -101,7 +101,7 @@ jobs:
         run: |
           conda install -c conda-forge graphviz
           snakemake --dag \
-            --configfile tests/integration/data/test_config_dmc.yaml \
+            --configfile tests/integration/data/test_options_dmc.yaml \
             results/mC/tracks/WT_leaf_dmC_rep1__CG.bw \
             | dot -Tpng > dag_dmc_test.png || true
 

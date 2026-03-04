@@ -42,7 +42,7 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 **Decision**: `ChIP_broad` triggers broad peak calling (suitable for histone marks such as H3K9me2, H3K27me3); `ChIP_narrow` triggers narrow peak calling (suitable for transcription factors and H3K4me3). The IP_target name is not inspected to determine peak type.
 
-**Rationale**: The previous approach pattern-matched `IP_target` strings against a regex list in the config file to assign peak type. This required users to maintain the regex list and could silently mis-classify marks not in the list. Encoding peak type in the Assay field makes the decision explicit at sample-sheet entry time and eliminates the regex config entirely.
+**Rationale**: The previous approach pattern-matched `IP_target` strings against a regex list in the options file to assign peak type. This required users to maintain the regex list and could silently mis-classify marks not in the list. Encoding peak type in the Assay field makes the decision explicit at sample-sheet entry time and eliminates the regex config entirely.
 
 **Alternatives considered**: Retaining the regex approach. Rejected because it is error-prone for novel marks and obscures the peak type setting from the sample sheet itself.
 
@@ -96,7 +96,7 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 ### Configurable intermediate file retention with tiered presets
 
-**Decision**: The `keep_intermediates` config key accepts four tiers: `none`, `standard`, `all`, and `custom`. The default is `standard`, which keeps per-replicate final BAMs and deletes trimmed FASTQs, merged BAMs, ATAC shifted BAMs, and bisulfite CX reports. A `maybe_temp()` helper in the Snakefile conditionally wraps output paths with Snakemake's `temp()` based on the resolved tier.
+**Decision**: The `keep_intermediates` options key accepts four tiers: `none`, `standard`, `all`, and `custom`. The default is `standard`, which keeps per-replicate final BAMs and deletes trimmed FASTQs, merged BAMs, ATAC shifted BAMs, and bisulfite CX reports. A `maybe_temp()` helper in the Snakefile conditionally wraps output paths with Snakemake's `temp()` based on the resolved tier.
 
 **Rationale**: Large intermediate files (trimmed FASTQs can reach 50 GB each; merged BAMs are also substantial) accumulate quickly in multi-sample experiments. Snakemake's `temp()` mechanism handles automatic deletion after downstream rules consume the file, but it was previously all-or-nothing. Users running on NFS-backed HPC storage have strong incentives to minimize disk footprint, while users doing exploratory analysis may want to retain intermediates for inspection. Tiered presets provide sensible defaults without requiring per-file configuration.
 
@@ -183,11 +183,23 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 ### epicc-builder as a self-contained, offline HTML5 application
 
-**Decision**: The sample sheet and config file builder is a single HTML file (`tools/epicc-builder.html`) that can be opened directly in any modern browser without a server, internet connection, or Python environment. It is also deployed to GitHub Pages for users who prefer not to download the file.
+**Decision**: The sample sheet and options file builder is a single HTML file (`tools/epicc-builder.html`) that can be opened directly in any modern browser without a server, internet connection, or Python environment. It is also deployed to GitHub Pages for users who prefer not to download the file.
 
 **Rationale**: The original epicc-builder was a Streamlit web application that required a running Python server and became broken when the hosting environment changed. A self-contained HTML file has no runtime dependencies, works on air-gapped HPC login nodes, and can be committed to the repository and versioned alongside the pipeline code it describes. Tabulator (a JavaScript library that can be bundled into a single file) provides the interactive table functionality.
 
 **Alternatives considered**: Rebuilding as a Streamlit or Flask app. Rejected because server-side apps require deployment infrastructure and introduce a runtime dependency that can fail independently of the pipeline. A CLI tool was also considered but rejected because tabular data entry is substantially more usable with a graphical interface.
+
+---
+
+## Configuration Naming
+
+### "Options file" replaces "config file" for the pipeline YAML
+
+**Decision**: The pipeline's main YAML configuration file was renamed from `config/config.yaml` to `config/epicc-options.yaml`, and all references to "config file" in documentation, code comments, and error messages were changed to "options file". Test config files were similarly renamed (e.g. `test_config_pombe.yaml` → `test_options_pombe.yaml`). The `config/` directory name, Snakemake's `--configfile` CLI flag, and profile config files (`profiles/slurm/config.yaml`) were left unchanged.
+
+**Rationale**: "Config" is overloaded in the Snakemake ecosystem — the pipeline's main YAML, the SLURM profile YAML, and Snakemake's own configuration all use `config.yaml`. Calling the pipeline's YAML the "options file" clarifies that a complete run configuration is the composite of a sample sheet and an options file, and eliminates confusion with profile configs. The `epicc-` prefix in the filename makes the file self-identifying when it appears outside the repository context.
+
+**Alternatives considered**: Renaming to `pipeline.yaml` or `settings.yaml`. Rejected because "options" better conveys user-tunable parameters, and the `epicc-` prefix ties it to the pipeline identity. Renaming the `config/` directory was considered but rejected because it would break Snakemake's default config path resolution and add unnecessary churn.
 
 ---
 
@@ -203,7 +215,7 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 ### Chromap as default aligner for ChIP-seq and ATAC-seq
 
-**Decision**: Add Chromap as the default aligner for ChIP-seq and ATAC-seq, with automatic fallback to bowtie2 for multi-mapping strategies. Config keys `chip_aligner`/`atac_aligner` select the aligner (default `"chromap"`); `chip_mapping_strategy`/`atac_mapping_strategy` replace the old `*_mapping_option` keys. When chromap is selected but the mapping strategy is `repeat` or `repeatall`, the pipeline automatically falls back to bowtie2 because chromap lacks bowtie2's `-k 100` multi-mapping mode. The MAPQ filter is extracted from the existing `bt2_mapping_strategy` config rather than hardcoded, making it aligner-agnostic. Stats rules auto-detect the metrics format (bowtie2 vs chromap stderr) for parsing.
+**Decision**: Add Chromap as the default aligner for ChIP-seq and ATAC-seq, with automatic fallback to bowtie2 for multi-mapping strategies. Options keys `chip_aligner`/`atac_aligner` select the aligner (default `"chromap"`); `chip_mapping_strategy`/`atac_mapping_strategy` replace the old `*_mapping_option` keys. When chromap is selected but the mapping strategy is `repeat` or `repeatall`, the pipeline automatically falls back to bowtie2 because chromap lacks bowtie2's `-k 100` multi-mapping mode. The MAPQ filter is extracted from the existing `bt2_mapping_strategy` config rather than hardcoded, making it aligner-agnostic. Stats rules auto-detect the metrics format (bowtie2 vs chromap stderr) for parsing.
 
 **Rationale**: Chromap is a minimizer-based aligner specifically designed for ChIP-seq and ATAC-seq data. Benchmarks show ~99.8% peak concordance with bowtie2 at 10-40x the speed. For large-genome organisms (e.g. maize at 2.2 Gb), this translates to substantial wall-clock savings on both local and cluster runs. Chromap is available on bioconda and actively maintained. The automatic fallback mechanism means users get the speed benefit by default while retaining bowtie2's multi-mapping capability when needed.
 

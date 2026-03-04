@@ -475,7 +475,7 @@ rule make_mc_bigwig_files:
             touch {output.bigwigchh} # they are required for downstream rules
             rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
         else
-            printf "Unknown sequence context selection! Check the config file and set 'mC_context' to either 'all' or 'CG-only'\n"
+            printf "Unknown sequence context selection! Check the options file and set 'mC_context' to either 'all' or 'CG-only'\n"
             exit 1
         fi
         touch {output.touch}

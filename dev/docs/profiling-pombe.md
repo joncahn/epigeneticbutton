@@ -2,7 +2,7 @@
 
 **Date**: 2026-03-04
 **Branch**: `big-refactor` @ `6cc1180`
-**Config**: `tests/integration/data/test_config_pombe.yaml` (18 samples, 4 assays)
+**Options**: `tests/integration/data/test_options_pombe.yaml` (18 samples, 4 assays)
 **Machine**: 112 cores available, run with `--cores 56`
 **Wall clock**: 42 minutes (00:01 → 00:43)
 **Steps completed**: 267 / 282 (95%)
@@ -85,7 +85,7 @@ sorting after merge.
 
 ### High impact
 
-- **plotFingerprint**: Consider making it optional via a config flag
+- **plotFingerprint**: Consider making it optional via an options flag
   (`chip_fingerprint_plots: true/false`), or reducing its `--numberOfSamples`
   parameter (default 500,000) to speed up computation at the cost of minor
   precision loss. Could also lower its thread allocation to allow more

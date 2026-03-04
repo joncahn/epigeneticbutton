@@ -13,7 +13,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 
-CONFIG_FILE="tests/integration/data/test_config_pombe.yaml"
+CONFIG_FILE="tests/integration/data/test_options_pombe.yaml"
 SAMPLE_FILE="tests/integration/data/test_samples_pombe.tsv"
 
 # Colors for output (if terminal supports it)
@@ -48,7 +48,7 @@ run_full() {
     echo -e "${YELLOW}=== Stage: Full Pipeline Run ===${NC}"
 
     if ! [ -f "$CONFIG_FILE" ]; then
-        echo -e "${RED}ERROR: Config file not found: $CONFIG_FILE${NC}" >&2
+        echo -e "${RED}ERROR: Options file not found: $CONFIG_FILE${NC}" >&2
         exit 1
     fi
     if ! [ -f "$SAMPLE_FILE" ]; then

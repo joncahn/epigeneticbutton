@@ -32,6 +32,12 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and probably here reflects the biology of S. pombe. Should we 
 
+### Configuration fileset
+
+* [x] Change all references to the "config file" to refer to it as the "options file". This is currently config.yaml. It should become epicc-options.yaml. This will be an extensive rename - Make sure this change is uniformly applied throughout the workflow, documentation, test cases, and the builder. Keep the config/ directory name as-is. A full run configuration is actually the composite of a sample sheet and the information contained in the options file. **Done**: Renamed `config/config.yaml` → `config/epicc-options.yaml`, all test config files → `test_options_*.yaml`. Updated all references across workflow, rules, scripts, tests, builder, and documentation.
+
+* [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
+
 ### refactor sample sheet
 
 #### New format
@@ -115,7 +121,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [x] Perform the same input validation as the pipeline code, and give usersfeedback through diagnostic messages. **Done**: full validation engine ported from samplefile_validation.py, diagnostics panel.
 * [x] Continuously evaluate user input as the table is filled out, opportunisticallyassigning defaults to sample column entries when there is sufficient input to do so. **Done**: editing-aware validation scheduling, auto IP_target clearing on Assay change.
 * [x] Cells with unresolved warnings should show an indicator of this in the UI.Possibilities are yellow cell border or small yellow circle or exclamation mark inthe cell. Same for errors, but with red. **Done**: red left border for errors, yellow for warnings.
-* [x] When a user enters an IP_target, we should compare with the list of knownmarks, and if the user has entered a ChIP_broad or ChIP_narrow value that conflictswith the recommendation in the known marks, we should warn. **Done**: `KNOWN_MARKS` constant with regex patterns from `config/config.yaml` peaktype mappings. Warning emitted during validation when assay conflicts with recommendation.
+* [x] When a user enters an IP_target, we should compare with the list of knownmarks, and if the user has entered a ChIP_broad or ChIP_narrow value that conflictswith the recommendation in the known marks, we should warn. **Done**: `KNOWN_MARKS` constant with regex patterns from `config/epicc-options.yaml` peaktype mappings. Warning emitted during validation when assay conflicts with recommendation.
 
 ##### [x] Implementation Stage 2: Config file helper and concordance with original hosted app
 
@@ -124,23 +130,33 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [x] Implement all currently unimplemented functionality from [the original epicc-builder](https://epicc-builder.streamlit.app/), but keep our updated sample sheet builder. **Done**: Config file form with all sections from original Streamlit app (required params, per-genome/species, output/input options, motifs, advanced ChIP/ATAC/RNA/mC/sRNA/plotting), YAML import/export via js-yaml@4.
   * [x] We will need to alter the app presentation so we can show different sections (sample sheet and epicc configuration file form settings). This could be implemented with upper nav bar with "EPICC" as the home item in the menu, followed by Sample Sheet and Config File. Clicking EPICC resolves to the first menu item (Sample Sheet). Links to documentation and the EPICC/epigeneticbutton [Github repo](https://github.com/joncahn/epigeneticbutton) should also appear in this main nav menu. **Done**: Top nav bar with EPICC brand, Sample Sheet / Config File tabs, Docs / GitHub links.
   * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
-  * [x] Keep all of the jokey prompts in the config file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
+  * [x] Keep all of the jokey prompts in the options file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
 ##### [ ] Deployment
 
 * [x] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally. **Done**: GitHub Actions workflow `.github/workflows/deploy-builder.yml` deploys `tools/epicc-builder.html` as `index.html` on push to main. Requires enabling GitHub Pages (Source: GitHub Actions) in repo Settings > Pages.
 
-### config.yaml
+##### [ ] Tweaks
 
-* [ ] Parameters in the config file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
+* [ ] Show help text for column headers on mouse over of headers specifically, instead of just on click. Retain current show-on-click behavior for header row and value cells.
+
+* [ ] Add an explanation of what Factors are to the right of the +Add button. Something like: "Experimental variables used for grouping samples for comparative analysis. All rows must have the same factors, and may have different levels (values)."
+
+* [ ] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the References page will constrain which reference Genomes are available still be used in generating the Options file.
+
+##### [ ] Bugs
+
+* [ ] Sample sheet example should validate, be exportable.
+
+* [ ] Help text for the factor levels columns should be better. Maybe should say: Levels   of factor {factor}. Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) in the sample sheet TSV 'Levels' column. All rows must have the same factors. Level values form the 'levels_label' in analysis names.
 
 ### custom adapter handling
 
-* [ ] Sequencing adapters could vary on a per-library. Maybe there should be an optional sample file column for custom adapters and we remove the global params from config.yaml. If we use skewer for trimming, auto-detection of most standard adapters is built-in if I’m not mistaken.
+* [ ] Sequencing adapters could vary on a per-library. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml. If we use skewer for trimming, auto-detection of most standard adapters is built-in if I’m not mistaken.
 
 ### species-specific parameters
 
-* [ ] Species (as in Species-dependent parameters in config.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no?
+* [ ] Species (as in Species-dependent parameters in epicc-options.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no?
 
 ### Eliminate redundant requirement for GTF
 
@@ -196,7 +212,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Should snakemake --conda-cleanup-envs be added to the pipeline to get rid of old envs? Can this be run inside of the pipeline snakemake run? **Done**: Added `conda-cleanup-pkgs: tarballs` to SLURM profile. Documented `snakemake --sdm conda --conda-cleanup-envs` as a maintenance tip in README.md (standalone command, not inside pipeline runs).
 
-* [x] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...) **Done**: Added `keep_intermediates` tiered config (`none`/`standard`/`custom`/`all`) with per-category booleans (`keep_trimmed_fastqs`, `keep_final_bams`, `keep_merged_bams`, `keep_shifted_bams`, `keep_cx_reports`). `maybe_temp()` helper in Snakefile conditionally wraps outputs with `temp()`. epicc-builder exposes tier selector and custom toggles.
+* [x] add option to keep all intermediate files, default to using pipelining and cleanup to avoid storing large intermediates like processed FASTQs, BAMs, etc. Also includes intermediate files for plotting (tracks, heatmap parameters, ...) **Done**: Added `keep_intermediates` tiered option (`none`/`standard`/`custom`/`all`) with per-category booleans (`keep_trimmed_fastqs`, `keep_final_bams`, `keep_merged_bams`, `keep_shifted_bams`, `keep_cx_reports`). `maybe_temp()` helper in Snakefile conditionally wraps outputs with `temp()`. epicc-builder exposes tier selector and custom toggles.
 
 * [x] Review to ensure all non-retainable (via the granular retention options) intermediate files are only ever written to temp storage. **Done**: Audited all rule files; applied unconditional `temp()` to ATAC shifted BED, sRNA clean FASTQs, RNA DEG intermediates (samples/counts/RData), and GO database temp files. Added `keep_dmc_intermediates` config option for dmC aligned modBAMs and bedMethyl pileups.
 
@@ -206,7 +222,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Read trimming
 
-* [x] Explore faster options than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the config.yaml). There are a number of different use cases for read trimming - let's investigate all to make sure a substitution would cover all of them. **Done**: Replaced cutadapt with fastp across the pipeline. Config restructured: `trimming_quality` (CLI strings) replaced with tool-agnostic `quality_threshold`, `min_read_length`, `trim_front` keys. Standard Illumina adapters set to `"auto"` (fastp auto-detection); non-standard adapters (NextFlex, Nextera) kept explicit. Trimming metrics changed from `.txt` to `.json`; HTML QC reports added. All 6 downstream stats rules updated to parse fastp JSON. epicc-builder config form updated. TF keys removed.
+* [x] Explore faster options than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the options file). There are a number of different use cases for read trimming - let's investigate all to make sure a substitution would cover all of them. **Done**: Replaced cutadapt with fastp across the pipeline. Config restructured: `trimming_quality` (CLI strings) replaced with tool-agnostic `quality_threshold`, `min_read_length`, `trim_front` keys. Standard Illumina adapters set to `"auto"` (fastp auto-detection); non-standard adapters (NextFlex, Nextera) kept explicit. Trimming metrics changed from `.txt` to `.json`; HTML QC reports added. All 6 downstream stats rules updated to parse fastp JSON. epicc-builder config form updated. TF keys removed.
 
 ### Read Mapping
 
@@ -238,7 +254,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Schizosaccharomyces pombe test case
 
-* [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 18 samples (11 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_config_pombe.yaml`.
+* [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 18 samples (11 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_options_pombe.yaml`.
 
 * [x] Gather all necessary genome reference resources (fasta, gff, gtf) from [Pombase.org](https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/). Derive an appropriate test config and test samplefile. **Done**: PomBase Feb 2026 FASTA/GFF3, gffread-derived GTF, Infernal/Rfam-15.0 structural RNA FASTA (261 loci). Files in `tests/integration/data/Spombe/`.
 

@@ -50,12 +50,12 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 
 ### Tools
 
-- `tools/epicc-builder.html` - Self-contained HTML5 app for building sample sheets and config files. Tabulator-based editor with validation, dynamic factor columns, per-cell examples, and YAML config export. Open directly in a browser.
+- `tools/epicc-builder.html` - Self-contained HTML5 app for building sample sheets and options files. Tabulator-based editor with validation, dynamic factor columns, per-cell examples, and YAML options export. Open directly in a browser.
 
 ### Configuration
 
-- `config/config.yaml` - Main configuration (paths, parameters, resource allocation)
-- `config/all_samples.tsv` - Sample metadata (see above)
+- `config/epicc-options.yaml` - Main options file (paths, parameters, resource allocation)
+- `config/all_samples.tsv` - Sample metadata (see Sample Sheet section above)
 - `profiles/slurm/config.yaml` - SLURM executor settings
 
 ## Testing

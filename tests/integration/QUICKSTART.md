@@ -32,7 +32,7 @@ tests/integration/
 ├── test_dmc_dryrun.py                  # dmC integration tests (25 tests)
 └── data/
     ├── test_samples_dmc.tsv           # Mock sample metadata
-    └── test_config_dmc.yaml           # Test configuration
+    └── test_options_dmc.yaml           # Test configuration
 ```
 
 ## Running Tests
@@ -108,17 +108,17 @@ Test individual targets manually:
 ```bash
 # dmC modBAM sample
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_leaf_dmC_rep1__CG.bw
 
 # bedMethyl sample
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw
 
 # DMR analysis
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/DMRs/summary__dmC__WT_leaf____test_genome__vs__dmC__mutant_leaf____test_genome__DMRs.txt
 ```
 
@@ -126,7 +126,7 @@ snakemake --dry-run \
 
 ```bash
 snakemake --dag \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_leaf_dmC_rep1__CG.bw \
     | dot -Tpng > dag_dmc.png
 ```
@@ -181,7 +181,7 @@ snakemake --version
 conda install -c conda-forge -c bioconda snakemake
 ```
 
-### "Config file not found"
+### "Options file not found"
 ```bash
 # Run from repository root
 cd /path/to/epigeneticbutton
@@ -197,7 +197,7 @@ timeout=120  # in subprocess.run() calls
 ## Adding New Tests
 
 1. Add test samples to `data/test_samples_dmc.tsv`
-2. Update config if needed: `data/test_config_dmc.yaml`
+2. Update config if needed: `data/test_options_dmc.yaml`
 3. Add test methods to `test_dmc_dryrun.py`
 
 Example:

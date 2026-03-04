@@ -107,7 +107,7 @@ esl-sfetch -f /path/to/Rfam.fa /path/to/good_accessions.txt > Rfam_ncRNAs.fa
    gzip Rfam_ncRNAs.fa
    ```
 
-2. Add the path to your config file:
+2. Add the path to your options file:
    ```yaml
    structural_rna_fafile: "/path/to/Rfam_ncRNAs.fa.gz"
    ```

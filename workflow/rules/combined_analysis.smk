@@ -27,7 +27,7 @@ def define_combined_target_file(wildcards):
     else:
         raise ValueError(   
             f"{target_name} does not match possible files. It can be 'combined_peaks', 'combined_clusters', 'all_genes', 'all_TEs'" 
-            "'full_chromosomes' or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
+            "'full_chromosomes' or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the options file"
         )
     
     return file

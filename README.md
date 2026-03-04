@@ -78,24 +78,24 @@ https://epicc-builder.streamlit.app/
    - `IP_target`: Required for ChIP assays — the IP target (e.g. `H3K9me2`) or control type (e.g. `Input`, `WCE`). Leave blank for other assays.
    - `Control`: Sample_ID of the control sample for this IP (e.g. the Input sample's Sample_ID). Required for ChIP and RAMPAGE IP samples. Leave blank for controls and non-ChIP assays.
 
-2. Update `config/config.yaml` with your paths and parameters:
+2. Update `config/epicc-options.yaml` with your paths and parameters:
    - Sample file: this is the full path to the file detailed above which contain your samples metadata. 
    - Reference genome files: for each reference genome in the sample file (last column), enter the full path of a fasta file, a gene gff file, and a gene gtf file (See [below](#common-to-all-types-of-samples) for more details)
    - Analysis parameters / options
    - Species-specific parameters
    - Resources allocation
    
-3. If you are running the pipeline on a different platform than CSHL slurm cluster, you will likely need to adjust the rule-specific resource parameters at the bottom of the `config/config.yaml` and the config file for your cluster scheduler (`profiles/slurm/config.yaml` for SLURM or create a new profile for your scheduler). In slurm, the default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
+3. If you are running the pipeline on a different platform than CSHL slurm cluster, you will likely need to adjust the rule-specific resource parameters at the bottom of the `config/epicc-options.yaml` and the config file for your cluster scheduler (`profiles/slurm/config.yaml` for SLURM or create a new profile for your scheduler). In slurm, the default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
 
 4. Default options: 
-   - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the config file ([see below](#main-output-options)).
-   - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the config file ([see below](#main-output-options)).
-   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the config file. Please refer to Additional output options #2 below and [Help GO](Help/Gene_Ontology.md) before setting it to `true` as it requires 2 other files. These files are available for Arabidopsis thaliana (Tair10 / ColCEN assembly) and Maize B73 (v5 or NAM assembly) in the `data` folder.
-   - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the config file ([see below](#main-output-options)).
-   - For ChIP-seq and ATAC-seq: the default aligner is Chromap (~10x faster than bowtie2). Change `chip_aligner`/`atac_aligner` in the config file to `"bowtie2"` for the traditional aligner. Mapping strategy options are available via `chip_mapping_strategy` ([see below](#chip-mapping-parameters)). When using `repeat` or `repeatall` strategies, bowtie2 is used automatically regardless of the aligner setting.
-   - For sRNA-seq: the default is not based on Netflex v3 library preparation. If your data was made with this kit, an additional deduplication and read trimming is required. To turn it ON, change the `Netflex_v3_deduplication` in the config file. See [Known issues #3](#known-potential-issues) below if you have mixed libraries.
-   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the config file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to the [Help structural RNAs](Help/Structural_RNAs_Rfam.md) before setting it to `true`. This file is available for Maize in the `data` folder.
-   - For sRNA-seq: the default is to only perform *de novo* micro RNA identification (`--dn_mirna` argument in ShortStack). If you also want the known microRNAs, download the fasta file from [miRbase](https://www.mirbase.org), filter it for your species of interest, and add to the `srna_mapping_params` entry in the config file `--known_miRNAs <path/to/known_miRNA_file.fa>`.
+   - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the options file ([see below](#main-output-options)).
+   - Limited QC output: By default, some QC options are not performed to limit the time and amount of output files. Change `QC_option` in the options file ([see below](#main-output-options)).
+   - No Gene Ontology analysis: Due to the difficulty in automating building a GO database, this option is OFF by default. Change `GO` option in the options file. Please refer to Additional output options #2 below and [Help GO](Help/Gene_Ontology.md) before setting it to `true` as it requires 2 other files. These files are available for Arabidopsis thaliana (Tair10 / ColCEN assembly) and Maize B73 (v5 or NAM assembly) in the `data` folder.
+   - No TE analysis: By default, no analysis on transposable elements is performed. Change `te_analysis` in the options file ([see below](#main-output-options)).
+   - For ChIP-seq and ATAC-seq: the default aligner is Chromap (~10x faster than bowtie2). Change `chip_aligner`/`atac_aligner` in the options file to `"bowtie2"` for the traditional aligner. Mapping strategy options are available via `chip_mapping_strategy` ([see below](#chip-mapping-parameters)). When using `repeat` or `repeatall` strategies, bowtie2 is used automatically regardless of the aligner setting.
+   - For sRNA-seq: the default is not based on Netflex v3 library preparation. If your data was made with this kit, an additional deduplication and read trimming is required. To turn it ON, change the `Netflex_v3_deduplication` in the options file. See [Known issues #3](#known-potential-issues) below if you have mixed libraries.
+   - For sRNA-seq: the default is not to filter structural RNAs prior to shortstack analysis. Change `structural_rna_depletion` in the options file.  While this step is recommended for small interfering RNA analysis, it requires a pre-build database of fasta files. Please refer to the [Help structural RNAs](Help/Structural_RNAs_Rfam.md) before setting it to `true`. This file is available for Maize in the `data` folder.
+   - For sRNA-seq: the default is to only perform *de novo* micro RNA identification (`--dn_mirna` argument in ShortStack). If you also want the known microRNAs, download the fasta file from [miRbase](https://www.mirbase.org), filter it for your species of interest, and add to the `srna_mapping_params` entry in the options file `--known_miRNAs <path/to/known_miRNA_file.fa>`.
 
 ### Running the Pipeline
 
@@ -168,7 +168,7 @@ python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
   - Local FASTQ path: `/archive/fastq/sample_R1.fq.gz` (SE) or `/archive/fastq/sample_R1.fq.gz,/archive/fastq/sample_R2.fq.gz` (PE, comma-separated)
   - Local BAM path for dmC: `/archive/bams/sample.bam`
 - **Read_layout**: `PE` for paired-end data or `SE` for single-end data.
-- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). For each genome, fasta, gff, and gtf files must be defined in `config/config.yaml`:
+- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). For each genome, fasta, gff, and gtf files must be defined in `config/epicc-options.yaml`:
 ```yaml
 ColCEN:
   fasta_file: path/to/ColCEN.fasta   # .fa(.gz) or .fasta(.gz)
@@ -236,26 +236,26 @@ To use different controls for different marks (e.g. H3 for one mark, H4 for anot
 
 ## Configuration Options
 
-More details can be found on the epicc-builder app or commented within the `config/config.yaml` file:
+More details can be found on the epicc-builder app or commented within the `config/epicc-options.yaml` file:
 https://epicc-builder.streamlit.app/
 
 ### Main output options
 - `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true` (default), will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP, heatmaps and metaplots on all genes).
-- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples on TEs. The name and path to the TE file in bed format must be filled in the config file for the corresponding reference genome. The name of each TE (4th column of the bed file) must be unique. Default is `false`.
+- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples on TEs. The name and path to the TE file in bed format must be filled in the options file for the corresponding reference genome. The name of each TE (4th column of the bed file) must be unique. Default is `false`.
 - `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files. Default is `false`.
 
 ### Intermediate input formats
 - `trimmed_fastqs`: When `false` (default), the analysis runs from raw, untrimmed fastq files and performs adapter trimming. If you already have trimmed fastqs, you can switch this config entry to `true` and no additional trimming will be performed (still compatible with nextflex_v3 deduplication and structural RNAs filtering for small RNAs).
 - `aligned_bams`: When `true` you can directly provide alignment files for ChIP-seq data (either histone modifications or TF). A single SAM or BAM file must be present in the `fastq_path` folder matching the `seq_id` value in the metadata samplefile (same logic than when providing raw fastq file locally). No mapping stats plot will be available when providing bam files this way. Default is `false`.
-- Note: These settings are applied to *all* samples in the analysis. If you have some samples to analyze from scratch and other already in an intermediate file: 
-	- 1) run the pipeline once with the samples to run from scratch - potentially switching `full_analysis` to `false` for less output. 
-	- 2) add the samples you already have intermediate files for in the samplefile and change the corresponding parameters in the config file. 
+- Note: These settings are applied to *all* samples in the analysis. If you have some samples to analyze from scratch and other already in an intermediate file:
+	- 1) run the pipeline once with the samples to run from scratch - potentially switching `full_analysis` to `false` for less output.
+	- 2) add the samples you already have intermediate files for in the samplefile and change the corresponding parameters in the options file.
 	- 3) run the pipeline normally again.
 	These steps can be repeated if you have raw data, trimmed fastqs and bam files, first creating all the fastq files and then the bam files.
 
 ###  Intermediate Target Rules
 - `map_only`: Only performs the alignement of all samples. It returns bam files, QC files and mapping metrics.
-- `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the config file `chip_tracks: binsize: 1`).
+- `coverage_chip`: Creates bigwig files of coverage for all ChIP samples. The binsize is by default 1bp (can be updated in the options file `chip_tracks: binsize: 1`).
 
 ###  Plotting parameters
 - `plot_allreps`: When `true`, all individual replicates are shown on heatmaps, metaplots and browsers (can be heavy). When `false` (default), one sample with all merged replicates is used for each sample.
@@ -273,15 +273,15 @@ https://epicc-builder.streamlit.app/
 	- CHG: `method="noise_filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
 	- CHH: `method="bins", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
 	These parameters were selected based on the most optimal results obtained by the authors [Catoni et al. 2018](https://academic.oup.com/nar/article/46/19/e114/5050634).
-- A deeper analysis is available to try different parameters and methods to call the DMRs. Toggle the `use custom_script_dmrs` on the config file to use it. Feel free to edit it as well for different parameters.
+- A deeper analysis is available to try different parameters and methods to call the DMRs. Toggle the `use custom_script_dmrs` on the options file to use it. Feel free to edit it as well for different parameters.
 
 ##  Additional output options
 Below is a list of *cool* outputs that can be generated once whole pipeline ran once. You'll find a basic structure for how to tell snakemake to generate them, feel free to replace the --cores 1 with the HPC profile you would rather use.
 
 ### **1. Plotting RNAseq expression levels on target genes**
 Given a list of genes (and optional labels), it will plot the expression levels in all the different samples in the samplefile and analysis name defined. Genes uniquely differentially regulated in one sample versus one or more samples are color coded. It is based on a Rdata file created during the Differential Expression analysis.\
-To run it, edit the config file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output pdf) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
-```bash 
+To run it, edit the options file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output pdf) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
+```bash
 snakemake --cores 1 results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf
 ```
 Note that the separators between the variables are two underscores next to each other `__`, except in `plot_expression`.\
@@ -293,8 +293,8 @@ Output is a single pdf file named `results/RNA/plots/plot_expression__<analysis_
 
 ### **2. Performing GO analysis on target genes**
 Given a file containing a list of genes to do GO analysis on, and optionally a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
-By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the config file, and the files to make the GO database should be defined in the config file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Gene_Ontology.md](Help/Gene_Ontology.md) for more details on how to create the GO database.\
-To run it, edit the config file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output files) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
+By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the options file, and the files to make the GO database should be defined in the options file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Gene_Ontology.md](Help/Gene_Ontology.md) for more details on how to create the GO database.\
+To run it, edit the options file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output files) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
 ```bash 
 snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.done
 ```
@@ -307,7 +307,7 @@ Output are two pdf files, one for the biological process terms `results/RNA/plot
 
 ### **3. Finding motifs on target regions**
 Given a bed file containing different regions, it will perform a motifs analysis with meme.\
-By default motifs analysis is only performed on the final selected TF peak files (`motifs: true` in the config file). Edit to `allrep: true` in the config file for motifs analysis to be performed on all replicates and pairwise idr peaks if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the config file `jaspar_db` and change the `motifs_ref_genome` to match the samples.\
+By default motifs analysis is only performed on the final selected TF peak files (`motifs: true` in the options file). Edit to `allrep: true` in the options file for motifs analysis to be performed on all replicates and pairwise idr peaks if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the options file `jaspar_db` and change the `motifs_ref_genome` to match the samples.\
 To run the analysis:
 ```bash 
 snakemake --cores 1 results/ChIP/chkpts/motifs__<motif_target_file_label>.done
@@ -322,7 +322,7 @@ When setting `motif_ref_genome`, it is safer to use a reference genome that has 
 For the target file chosen `motif_target_file`, if the regions are over 500bp, only the middle 400bp will be used.
 
 ### **4. Performing sRNA differential analysis on regions**
-Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, using all the samples from the sample file but limiting the mapping and counts to the loci in the target file. Edit `srna_target_file` and `srna_target_file_label` in the config file. To run the analysis: 
+Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, using all the samples from the sample file but limiting the mapping and counts to the loci in the target file. Edit `srna_target_file` and `srna_target_file_label` in the options file. To run the analysis: 
 ```bash 
 snakemake --cores 1 results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt
 ```
@@ -339,8 +339,8 @@ The bed or gff file of regions **MUST HAVE** a header with a column called "Name
 
 ### **5. Plotting heatmap on regions**
 Given a bed file, it will plot a heatmap using deeptools.
-Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
-```bash 
+Edit `heatmap_target_file` and `heatmap_target_file_label` in the options file. To run the analysis:
+```bash
 snakemake --cores 1 results/combined/plots/Heatmap__<matrix_param>__<env>__<analysis_name>__<ref_genome>__<target_name>.pdf
 ```
 - the <matrix_param> can be `regions` for scaled regions, `tss` for reference point on the TSS or `tes` for reference point on the TES.
@@ -359,29 +359,29 @@ An example running the pipeline on a slurm hpc, with <analysis_name>="test_smk",
 snakemake --profile profiles/slurm results/combined/plots/Heatmap__regions__most__test_smk__ColCEN__interesting_genes.pdf --config heatmap_target_file="data/target_genes.bed" heatmap_target_file_label="interesting_genes"
 ```
 Output is a pdf file, or two if sorted heatmap for mC samples was generated.\
-By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on an appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the config file `heatmaps_scales`.\
-By default, the heatmaps are sorted based on "mean" of all samples accross all regions. This can be changed in the config file `heatmaps_sort_options` to "median" or to "none", keeping the regions in the order of the bedfile.\
-If the given bedfile is stranded, the heatmap will be done by splitting the regions into plus and minus strand for proper stranded data (RNAseq and sRNAs) values. If this is not the wanted behavior, disable `stranded_heatmaps` in the config file.\
-The color scheme of the heatmap is "seismic" for all samples and "Oranges" for mC. This can be changed manually in the config file `heatmaps_plot_params`.
-The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the config file in `heatmaps` for each <matrix_params>.
+By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on an appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the options file `heatmaps_scales`.\
+By default, the heatmaps are sorted based on "mean" of all samples accross all regions. This can be changed in the options file `heatmaps_sort_options` to "median" or to "none", keeping the regions in the order of the bedfile.\
+If the given bedfile is stranded, the heatmap will be done by splitting the regions into plus and minus strand for proper stranded data (RNAseq and sRNAs) values. If this is not the wanted behavior, disable `stranded_heatmaps` in the options file.\
+The color scheme of the heatmap is "seismic" for all samples and "Oranges" for mC. This can be changed manually in the options file `heatmaps_plot_params`.
+The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the options file in `heatmaps` for each <matrix_params>.
 
 ### **6. Plotting metaplot profiles on regions**
 Given a bed file, it will plot a metaplot profile using deeptools.
-Edit `heatmap_target_file` and `heatmap_target_file_label` in the config file. To run the analysis: 
-```bash 
+Edit `heatmap_target_file` and `heatmap_target_file_label` in the options file. To run the analysis:
+```bash
 snakemake --cores 1 results/combined/plots/Profile__<matrix_param>__<env>__<analysis_name>__<ref_genome>__<target_name>.pdf
 ```
 Similar to heatmap above for the <matrix_param> options.\
 Use <env>="all" to include all samples (mC and others).\
 Output is two pdf files, where the samples are grouped by regions or not.\
-By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on their appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the config file `heatmaps_scales`.
-By default, the profiles represent the "mean" accross all regions. This can be changed in the config file `profile_scale` to "median".
-By default, the type of plots are "lines". See deeptools documentation for other options and edit `profiles_plot_params` in the config file.
-The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the config file in `heatmaps` for each <matrix_params>.
+By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on their appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the options file `heatmaps_scales`.
+By default, the profiles represent the "mean" accross all regions. This can be changed in the options file `profile_scale` to "median".
+By default, the type of plots are "lines". See deeptools documentation for other options and edit `profiles_plot_params` in the options file.
+The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the options file in `heatmaps` for each <matrix_params>.
 
 ### **7. Plotting browser screenshots on regions**
 Given a region file, it will plot a browser screenshot using R packages.
-Edit `browser_target_file` and `browser_target_file_label` in the config file. To run the analysis: 
+Edit `browser_target_file` and `browser_target_file_label` in the options file. To run the analysis: 
 ```bash 
 snakemake --cores 1 results/combined/plots/Browser_<target_name>__<env>__<analysis_name>__<ref_genome>.pdf
 ```
@@ -389,7 +389,7 @@ The target file is a bed-like file, with the following columns: Chr Start End ID
 Each region will be printed individually, and merged into a final PDF.\
 Hightlights columns are optional, and correspond to regions of the browser that will be highlighted for this specific region (boxed). As many highlights can be used in a comma-separated lists, the first highlight will be in blue and all the others in red. For example, if the region to plot is chr1:1000-5000, using col6=3000,4000 col7=50,200 will make a blue box higlighting chr1:3000-3050 and a red one highlighting chr1:4000:4200.\
 Use <env>="all" to include all samples, "most" for all data-types except mC, or any single environment for data type-specific browsers `[all, most, ChIP, ATAC, RNA, sRNA, mC]`.\
-By default, no TE file is used. If you want to add TE annotations, supply a bed-file in the config file `browser_TE_file`.
+By default, no TE file is used. If you want to add TE annotations, supply a bed-file in the options file `browser_TE_file`.
 
 ### **8. Rerunning a specific analysis**
 To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
@@ -400,7 +400,7 @@ If only the combined analysis is to be performed, and not everything else, delet
 
 ```
 epigeneticbutton/
-├── config/			# Location for the main config file and recommended location for sample files and target files
+├── config/			# Location for the main options file and recommended location for sample files and target files
 ├── data/			# Location for test material and examples (e.g. zm_structural_RNAs.fa.gz)
 ├── Help/			# Location for help files (e.g. Structural_RNAs_Rfam.md)
 ├── profiles/
@@ -444,7 +444,7 @@ Different small RNAseq libraries have different chemistry and might need to be t
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
 4. Quality-Of-Service slurm configuration\
-Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/config.yaml` file.
+Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/epicc-options.yaml` file.
 
 5. Help for local fastq files naming convention\
 If using local fastq files for paired-end data, provide comma-separated R1 and R2 paths in the `Read_files` column (e.g. `/path/sample_R1.fq.gz,/path/sample_R2.fq.gz`). Files can use extensions `.fq` or `.fastq` and may be gzipped (`.gz`).

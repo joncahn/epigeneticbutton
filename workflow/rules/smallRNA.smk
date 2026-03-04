@@ -59,7 +59,7 @@ def define_srna_target_file(wildcards):
         raise ValueError(   
             f"{wildcards.target_name} does not match possible files." 
             "It can be 'all_genes', 'protein_coding_genes' or the value of "
-            "'srna_target_file_name' in the config file"
+            "'srna_target_file_name' in the options file"
         )
 
 def define_final_srna_output(ref_genome):

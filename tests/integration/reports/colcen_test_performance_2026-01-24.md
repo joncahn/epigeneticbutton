@@ -1,7 +1,7 @@
 # Pipeline Performance Report - ColCEN Integration Test
 
 **Date:** January 24, 2026
-**Config:** `tests/integration/data/test_config_colcen.yaml`
+**Options:** `tests/integration/data/test_options_colcen.yaml`
 **Reference Genome:** ColCEN (full Arabidopsis genome with centromere assemblies)
 
 ## Overall Metrics

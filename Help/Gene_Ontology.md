@@ -71,7 +71,7 @@ Rscript ${script} ${infofile} ${genefile} ${ref_genome} ${genus} ${species} ${nc
 
 ### Configuration
 
-Update the `GOdatabase` entry in your config file:
+Update the `GOdatabase` entry in your options file:
 
 ```yaml
 GOdatabase: "org.Zmays.eg.db"
@@ -81,7 +81,7 @@ The naming convention is: `org.<FirstLetterGenus><species>.eg.db`
 
 ### Alternative: Using Snakemake
 
-You can also build the database through Snakemake after filling in the config file:
+You can also build the database through Snakemake after filling in the options file:
 
 ```bash
 snakemake --cores 1 genomes/<ref_genome>/GO/<dbname>

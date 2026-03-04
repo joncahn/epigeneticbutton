@@ -68,7 +68,7 @@ except OSError:
     pass
 
 # Configuration
-configfile: "config/config.yaml"
+configfile: "config/epicc-options.yaml"
 analysis = config['full_analysis']
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ def maybe_temp(path, keep=False):
 # Define the folder in which the snakemake pipeline has been cloned
 REPO_FOLDER = os.path.abspath(config["repo_folder"])
 if not os.path.isdir(REPO_FOLDER):
-    raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the config file!")
+    raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the options file!")
 
 # Define the conda environment to build
 CONDA_ENV = os.path.join(REPO_FOLDER,"workflow","envs","epibutton.yaml")

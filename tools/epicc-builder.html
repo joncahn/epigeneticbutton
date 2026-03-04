@@ -508,7 +508,7 @@
   <span class="brand" onclick="switchSection('samplesheet-section')" title="EPICC Builder">EPICC</span>
   <div class="nav-tabs">
     <span class="nav-tab active" data-section="samplesheet-section" onclick="switchSection('samplesheet-section')">Sample Sheet</span>
-    <span class="nav-tab" data-section="config-section" onclick="switchSection('config-section')">Config File</span>
+    <span class="nav-tab" data-section="config-section" onclick="switchSection('config-section')">Options File</span>
   </div>
   <div class="nav-links">
     <a href="https://epicc-documentation.readthedocs.io/" target="_blank" rel="noopener">Docs</a>
@@ -590,7 +590,7 @@ const CONTROL_SOURCE_ASSAYS = {
   RAMPAGE:     new Set(["RNAseq"]),
 };
 
-// Known marks and recommended assay type (derived from config/config.yaml peaktype)
+// Known marks and recommended assay type (derived from config/epicc-options.yaml peaktype)
 const KNOWN_MARKS = [
   { pattern: /^(H3K27me[123]|H3K9me[123]|H4K20me[123]|H3K36me3|H3\.3|H3\.1|MGH3|CenH3|.*DDM1|PolIIS2P|H2AT120Ph|H2AKub)$/i, assay: "ChIP_broad" },
   { pattern: /^(H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase)$/i, assay: "ChIP_narrow" },
@@ -1830,7 +1830,7 @@ document.addEventListener("keydown", function(e) {
 });
 
 // ===========================================================================
-// Config File Form — State, Builder, YAML I/O
+// Options File Form — State, Builder, YAML I/O
 // ===========================================================================
 
 var _configFormBuilt = false;
@@ -2574,7 +2574,7 @@ function configStateToYAML() {
 function exportYAML() {
   var cfg = configStateToYAML();
   var yamlStr = jsyaml.dump(cfg, { sortKeys: false, lineWidth: -1, noRefs: true });
-  downloadBlob(yamlStr, "application/x-yaml", "config.yaml");
+  downloadBlob(yamlStr, "application/x-yaml", "epicc-options.yaml");
 }
 
 function handleYAMLImport(text) {

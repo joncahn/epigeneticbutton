@@ -17,10 +17,10 @@ Format: 9-column TSV matching pipeline requirements
 - Uses mock paths (no actual files needed)
 - Uses test reference genome "test_genome"
 
-### 2. Test Configuration
-**File:** `tests/integration/data/test_config_dmc.yaml`
+### 2. Test Options File
+**File:** `tests/integration/data/test_options_dmc.yaml`
 
-Minimal configuration file for dry-run testing:
+Minimal options file for dry-run testing:
 - Points to test sample file
 - Defines mock reference genome (test_genome)
 - Includes dmC methylation parameters
@@ -113,7 +113,7 @@ tests/integration/
 ├── test_dmc_dryrun.py                 # Test suite (25 tests)
 └── data/
     ├── test_samples_dmc.tsv           # Mock sample metadata (5 samples)
-    └── test_config_dmc.yaml           # Test configuration
+    └── test_options_dmc.yaml           # Test configuration
 ```
 
 ## Usage
@@ -131,7 +131,7 @@ pytest tests/integration/test_dmc_dryrun.py --collect-only
 ### Manual Dry-Run
 ```bash
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_leaf_dmC_rep1__CG.bw
 ```
 
@@ -140,7 +140,7 @@ snakemake --dry-run \
 ```bash
 # Check file sizes
 du -h tests/integration/data/test_samples_dmc.tsv    # ~400 bytes
-du -h tests/integration/data/test_config_dmc.yaml    # ~3.5 KB
+du -h tests/integration/data/test_options_dmc.yaml    # ~3.5 KB
 du -h tests/integration/test_dmc_dryrun.py           # ~21 KB
 du -h tests/integration/README.md                     # ~19 KB
 du -h tests/integration/QUICKSTART.md                 # ~5 KB
@@ -219,7 +219,7 @@ These integration tests complement the existing unit tests:
 **Pipeline Files (Tested):**
 - `workflow/Snakefile` - Main pipeline orchestrator
 - `workflow/rules/mC.smk` - Methylation analysis rules (including dmC)
-- `config/config.yaml` - Example configuration
+- `config/epicc-options.yaml` - Example options file
 
 ## License
 

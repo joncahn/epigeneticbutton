@@ -27,7 +27,7 @@ Tests for direct methylation sequencing workflow (e.g., from Oxford Nanopore Tec
 
 1. `TestDmcDryRunBasic` - Basic setup validation
    - Snakemake installation check
-   - Config and sample file existence
+   - Options and sample file existence
 
 2. `TestDmcModBAMWorkflow` - dmC modBAM input workflow
    - Dry-run success for modBAM samples
@@ -84,8 +84,8 @@ Format matches the pipeline's 9-column TSV format:
 Sample_ID  Assay  Genome  Levels  Replicate_ID  Read_files  Read_layout  IP_target  Control
 ```
 
-### `test_config_dmc.yaml`
-Minimal test configuration that:
+### `test_options_dmc.yaml`
+Minimal test options file that:
 - Points to test sample file
 - Defines mock reference genome (test_genome)
 - Sets dmC methylation parameters
@@ -162,22 +162,22 @@ You can also manually test the dry-run:
 ```bash
 # Test dmC modBAM sample bigwig generation
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_leaf_dmC_rep1__CG.bw
 
 # Test bedMethyl sample
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw
 
 # Test DMR analysis
 snakemake --dry-run \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/DMRs/summary__dmC__WT_leaf____test_genome__vs__dmC__mutant_leaf____test_genome__DMRs.txt
 
 # Generate DAG visualization
 snakemake --dag \
-    --configfile tests/integration/data/test_config_dmc.yaml \
+    --configfile tests/integration/data/test_options_dmc.yaml \
     results/mC/tracks/WT_leaf_dmC_rep1__CG.bw \
     | dot -Tpng > dag_dmc.png
 ```
@@ -250,7 +250,7 @@ To add new integration tests:
 
 1. **Add test samples** to `test_samples_dmc.tsv` or create a new sample file
 
-2. **Update test config** if needed in `test_config_dmc.yaml` or create a new config
+2. **Update test options** if needed in `test_options_dmc.yaml` or create a new options file
 
 3. **Add test methods** to existing test classes or create new classes:
 
@@ -296,7 +296,7 @@ result = subprocess.run(
 )
 ```
 
-### "Config file not found"
+### "Options file not found"
 
 Verify you're running pytest from the repository root:
 ```bash

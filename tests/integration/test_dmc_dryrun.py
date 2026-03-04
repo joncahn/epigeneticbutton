@@ -55,10 +55,10 @@ def repo_root():
 
 
 @pytest.fixture(scope="module")
-def test_config(repo_root):
-    """Get the path to the test config file."""
-    config_path = repo_root / "tests" / "integration" / "data" / "test_config_dmc.yaml"
-    assert config_path.exists(), f"Test config not found at {config_path}"
+def test_options(repo_root):
+    """Get the path to the test options file."""
+    config_path = repo_root / "tests" / "integration" / "data" / "test_options_dmc.yaml"
+    assert config_path.exists(), f"Test options file not found at {config_path}"
     return str(config_path)
 
 
@@ -77,13 +77,13 @@ def snakemake_available():
         return False
 
 
-def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
+def run_snakemake_dryrun(repo_root, options_file, target=None, extra_args=None):
     """
     Run snakemake in dry-run mode with the given config.
 
     Args:
         repo_root: Path to repository root
-        config_file: Path to config file
+        options_file: Path to options file
         target: Optional target file/rule to request
         extra_args: Optional list of additional arguments
 
@@ -93,7 +93,7 @@ def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
     cmd = [
         "snakemake",
         "--dry-run",
-        "--configfile", config_file,
+        "--configfile", options_file,
         "--cores", "1",
         "--quiet", "progress",
     ]
@@ -117,13 +117,13 @@ def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
     return result
 
 
-def run_snakemake_dag(repo_root, config_file, target=None):
+def run_snakemake_dag(repo_root, options_file, target=None):
     """
     Generate the Snakemake DAG.
 
     Args:
         repo_root: Path to repository root
-        config_file: Path to config file
+        options_file: Path to options file
         target: Optional target file/rule to request
 
     Returns:
@@ -132,7 +132,7 @@ def run_snakemake_dag(repo_root, config_file, target=None):
     cmd = [
         "snakemake",
         "--dag",
-        "--configfile", config_file,
+        "--configfile", options_file,
         "--cores", "1",
     ]
 
@@ -160,9 +160,9 @@ class TestDmcDryRunBasic:
         if not snakemake_available:
             pytest.skip("Snakemake not installed or not in PATH")
 
-    def test_config_file_exists(self, test_config):
-        """Test that the test config file exists."""
-        assert Path(test_config).exists()
+    def test_options_file_exists(self, test_options):
+        """Test that the test options file exists."""
+        assert Path(test_options).exists()
 
     def test_sample_file_exists(self, repo_root):
         """Test that the test sample file exists."""
@@ -178,22 +178,22 @@ class TestDmcModBAMWorkflow:
         """Return target for dmC modBAM bigwig output."""
         return DMC_MODBAM_TARGET
 
-    def test_dmc_modbam_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
+    def test_dmc_modbam_dryrun_succeeds(self, snakemake_available, repo_root, test_options, dmc_modbam_target):
         """Test that dry-run succeeds for dmC modBAM sample."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, dmc_modbam_target)
+        result = run_snakemake_dryrun(repo_root, test_options, dmc_modbam_target)
 
         # Check that dry-run completed successfully
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_dmc_modbam_includes_expected_rules(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
+    def test_dmc_modbam_includes_expected_rules(self, snakemake_available, repo_root, test_options, dmc_modbam_target):
         """Test that dmC modBAM workflow includes expected rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, dmc_modbam_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, dmc_modbam_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -211,12 +211,12 @@ class TestDmcModBAMWorkflow:
         for rule in expected_rules:
             assert rule in output, f"Expected dmC rule '{rule}' not found in dry-run output"
 
-    def test_dmc_modbam_excludes_bismark_rules(self, snakemake_available, repo_root, test_config, dmc_modbam_target):
+    def test_dmc_modbam_excludes_bismark_rules(self, snakemake_available, repo_root, test_options, dmc_modbam_target):
         """Test that dmC workflow does not trigger Bismark rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, dmc_modbam_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, dmc_modbam_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -232,7 +232,7 @@ class TestDmcModBAMWorkflow:
         for rule in bismark_rules:
             assert rule not in output, f"Bismark rule '{rule}' should not be in dmC workflow"
 
-    def test_dmc_modbam_all_contexts(self, snakemake_available, repo_root, test_config):
+    def test_dmc_modbam_all_contexts(self, snakemake_available, repo_root, test_options):
         """Test that all three methylation contexts are generated."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
@@ -241,7 +241,7 @@ class TestDmcModBAMWorkflow:
 
         for context in contexts:
             target = f"results/mC/tracks/WT_leaf_dmC_rep1__{context}.bw"
-            result = run_snakemake_dryrun(repo_root, test_config, target)
+            result = run_snakemake_dryrun(repo_root, test_options, target)
 
             assert result.returncode == 0, f"Dry-run failed for {context} context: {result.stderr}"
 
@@ -254,21 +254,21 @@ class TestBedMethylWorkflow:
         """Return target for bedMethyl bigwig output."""
         return BEDMETHYL_TARGET
 
-    def test_bedmethyl_dryrun_succeeds(self, snakemake_available, repo_root, test_config, bedmethyl_target):
+    def test_bedmethyl_dryrun_succeeds(self, snakemake_available, repo_root, test_options, bedmethyl_target):
         """Test that dry-run succeeds for bedMethyl sample."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, bedmethyl_target)
+        result = run_snakemake_dryrun(repo_root, test_options, bedmethyl_target)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_bedmethyl_includes_expected_rules(self, snakemake_available, repo_root, test_config, bedmethyl_target):
+    def test_bedmethyl_includes_expected_rules(self, snakemake_available, repo_root, test_options, bedmethyl_target):
         """Test that bedMethyl workflow includes expected rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, bedmethyl_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, bedmethyl_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -287,12 +287,12 @@ class TestBedMethylWorkflow:
         for rule in expected_rules:
             assert rule in output, f"Expected bedMethyl rule '{rule}' not found in dry-run output"
 
-    def test_bedmethyl_skips_alignment_rules(self, snakemake_available, repo_root, test_config, bedmethyl_target):
+    def test_bedmethyl_skips_alignment_rules(self, snakemake_available, repo_root, test_options, bedmethyl_target):
         """Test that bedMethyl workflow skips alignment steps."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, bedmethyl_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, bedmethyl_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -324,21 +324,21 @@ class TestDmcDMRWorkflow:
         """
         return DMR_TARGET
 
-    def test_dmr_dryrun_succeeds(self, snakemake_available, repo_root, test_config, dmr_target):
+    def test_dmr_dryrun_succeeds(self, snakemake_available, repo_root, test_options, dmr_target):
         """Test that dry-run succeeds for DMR analysis."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, dmr_target)
+        result = run_snakemake_dryrun(repo_root, test_options, dmr_target)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_dmr_uses_dmrcaller_by_default(self, snakemake_available, repo_root, test_config, dmr_target):
+    def test_dmr_uses_dmrcaller_by_default(self, snakemake_available, repo_root, test_options, dmr_target):
         """Test that DMR workflow uses DMRcaller (same as Bismark) for dmC samples by default."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, dmr_target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, dmr_target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -353,22 +353,22 @@ class TestDmcDMRWorkflow:
 class TestDAGStructure:
     """Test DAG generation and structure."""
 
-    def test_dag_generation_succeeds(self, snakemake_available, repo_root, test_config):
+    def test_dag_generation_succeeds(self, snakemake_available, repo_root, test_options):
         """Test that DAG can be generated."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dag(repo_root, test_config, DMC_MODBAM_TARGET)
+        result = run_snakemake_dag(repo_root, test_options, DMC_MODBAM_TARGET)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
         assert len(result.stdout) > 0, "DAG output is empty"
 
-    def test_dag_contains_dmc_rules(self, snakemake_available, repo_root, test_config):
+    def test_dag_contains_dmc_rules(self, snakemake_available, repo_root, test_options):
         """Test that DAG contains dmC-specific rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dag(repo_root, test_config, DMC_MODBAM_TARGET)
+        result = run_snakemake_dag(repo_root, test_options, DMC_MODBAM_TARGET)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
 
@@ -386,12 +386,12 @@ class TestDAGStructure:
         for rule in expected_rules:
             assert rule in dag_output, f"Rule '{rule}' not found in DAG"
 
-    def test_dag_rule_dependencies(self, snakemake_available, repo_root, test_config):
+    def test_dag_rule_dependencies(self, snakemake_available, repo_root, test_options):
         """Test that DAG shows correct rule dependencies."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dag(repo_root, test_config, DMC_MODBAM_TARGET)
+        result = run_snakemake_dag(repo_root, test_options, DMC_MODBAM_TARGET)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
 
@@ -405,7 +405,7 @@ class TestDAGStructure:
 class TestWildcardResolution:
     """Test wildcard resolution for dmC samples."""
 
-    def test_dmc_sample_wildcards_resolve(self, snakemake_available, repo_root, test_config):
+    def test_dmc_sample_wildcards_resolve(self, snakemake_available, repo_root, test_options):
         """Test that wildcards are correctly resolved for dmC samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
@@ -418,15 +418,15 @@ class TestWildcardResolution:
         ]
 
         for target in targets:
-            result = run_snakemake_dryrun(repo_root, test_config, target)
+            result = run_snakemake_dryrun(repo_root, test_options, target)
             assert result.returncode == 0, f"Wildcard resolution failed for {target}: {result.stderr}"
 
-    def test_bedmethyl_sample_wildcards_resolve(self, snakemake_available, repo_root, test_config):
+    def test_bedmethyl_sample_wildcards_resolve(self, snakemake_available, repo_root, test_options):
         """Test that wildcards are correctly resolved for bedMethyl samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, BEDMETHYL_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, BEDMETHYL_TARGET)
 
         assert result.returncode == 0, f"Wildcard resolution failed for bedMethyl: {result.stderr}"
 
@@ -434,26 +434,26 @@ class TestWildcardResolution:
 class TestErrorHandling:
     """Test error handling for invalid configurations."""
 
-    def test_missing_sample_target(self, snakemake_available, repo_root, test_config):
+    def test_missing_sample_target(self, snakemake_available, repo_root, test_options):
         """Test that requesting a target for a non-existent sample fails gracefully."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # Request target with a sample name not in the sample sheet
         target = "results/mC/tracks/nonexistent_sample__CG.bw"
-        result = run_snakemake_dryrun(repo_root, test_config, target)
+        result = run_snakemake_dryrun(repo_root, test_options, target)
 
         # Should fail because sample is not in the sample sheet
         assert result.returncode != 0, "Should fail for non-existent sample"
 
-    def test_invalid_context(self, snakemake_available, repo_root, test_config):
+    def test_invalid_context(self, snakemake_available, repo_root, test_options):
         """Test that invalid methylation context fails."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # Request target with invalid context
         target = "results/mC/tracks/WT_leaf_dmC_rep1__INVALID.bw"
-        result = run_snakemake_dryrun(repo_root, test_config, target)
+        result = run_snakemake_dryrun(repo_root, test_options, target)
 
         # Should fail because INVALID is not a valid context
         assert result.returncode != 0, "Should fail for invalid methylation context"
@@ -467,25 +467,25 @@ class TestAllMCTarget:
     """
 
     @pytest.mark.skip(reason="all_mc rule needs merged replicate handling for dmC")
-    def test_all_mc_rule_with_dmc(self, snakemake_available, repo_root, test_config):
+    def test_all_mc_rule_with_dmc(self, snakemake_available, repo_root, test_options):
         """Test that all_mc rule works with dmC samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # Test the all_mc checkpoint rule
         target = "results/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
-        result = run_snakemake_dryrun(repo_root, test_config, target)
+        result = run_snakemake_dryrun(repo_root, test_options, target)
 
         assert result.returncode == 0, f"all_mc rule failed with dmC samples: {result.stderr}"
 
     @pytest.mark.skip(reason="all_mc rule needs merged replicate handling for dmC")
-    def test_all_mc_includes_dmc_outputs(self, snakemake_available, repo_root, test_config):
+    def test_all_mc_includes_dmc_outputs(self, snakemake_available, repo_root, test_options):
         """Test that all_mc includes dmC-specific outputs."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         target = "results/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
-        result = run_snakemake_dryrun(repo_root, test_config, target, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"all_mc rule failed: {result.stderr}"
 
@@ -499,12 +499,12 @@ class TestAllMCTarget:
 class TestCxReportConversion:
     """Test CX_report conversion for dmC samples."""
 
-    def test_cx_report_generated_for_dmc(self, snakemake_available, repo_root, test_config):
+    def test_cx_report_generated_for_dmc(self, snakemake_available, repo_root, test_options):
         """Test that CX_report conversion is in the DAG for dmC bigwig generation."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, DMC_MODBAM_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, DMC_MODBAM_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -512,12 +512,12 @@ class TestCxReportConversion:
         assert "convert_bedmethyl_to_cx_report" in output, \
             "CX_report conversion should be in the DAG for dmC samples"
 
-    def test_cx_report_generated_for_bedmethyl(self, snakemake_available, repo_root, test_config):
+    def test_cx_report_generated_for_bedmethyl(self, snakemake_available, repo_root, test_options):
         """Test that CX_report conversion is in the DAG for bedMethyl bigwig generation."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, BEDMETHYL_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, BEDMETHYL_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -529,7 +529,7 @@ class TestCxReportConversion:
 class TestMultipleReplicates:
     """Test handling of multiple replicates."""
 
-    def test_multiple_dmc_replicates(self, snakemake_available, repo_root, test_config):
+    def test_multiple_dmc_replicates(self, snakemake_available, repo_root, test_options):
         """Test that multiple dmC replicates are processed."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
@@ -541,15 +541,15 @@ class TestMultipleReplicates:
         ]
 
         for target in targets:
-            result = run_snakemake_dryrun(repo_root, test_config, target)
+            result = run_snakemake_dryrun(repo_root, test_options, target)
             assert result.returncode == 0, f"Replicate processing failed for {target}: {result.stderr}"
 
-    def test_merged_replicates_dmr(self, snakemake_available, repo_root, test_config):
+    def test_merged_replicates_dmr(self, snakemake_available, repo_root, test_options):
         """Test that DMR calling works with multiple replicates (merged automatically)."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         # DMR analysis uses analysis-level names (replicates merged automatically in the rule)
-        result = run_snakemake_dryrun(repo_root, test_config, DMR_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, DMR_TARGET)
 
         assert result.returncode == 0, f"Merged replicate DMR failed: {result.stderr}"

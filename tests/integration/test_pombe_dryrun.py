@@ -59,10 +59,10 @@ def repo_root():
 
 
 @pytest.fixture(scope="module")
-def test_config(repo_root):
-    """Get the path to the test config file."""
-    config_path = repo_root / "tests" / "integration" / "data" / "test_config_pombe.yaml"
-    assert config_path.exists(), f"Test config not found at {config_path}"
+def test_options(repo_root):
+    """Get the path to the test options file."""
+    config_path = repo_root / "tests" / "integration" / "data" / "test_options_pombe.yaml"
+    assert config_path.exists(), f"Test options file not found at {config_path}"
     return str(config_path)
 
 
@@ -81,13 +81,13 @@ def snakemake_available():
         return False
 
 
-def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
+def run_snakemake_dryrun(repo_root, options_file, target=None, extra_args=None):
     """
     Run snakemake in dry-run mode with the given config.
 
     Args:
         repo_root: Path to repository root
-        config_file: Path to config file
+        options_file: Path to options file
         target: Optional target file/rule to request
         extra_args: Optional list of additional arguments
 
@@ -97,7 +97,7 @@ def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
     cmd = [
         "snakemake",
         "--dry-run",
-        "--configfile", config_file,
+        "--configfile", options_file,
         "--cores", "1",
         "--quiet", "progress",
     ]
@@ -121,13 +121,13 @@ def run_snakemake_dryrun(repo_root, config_file, target=None, extra_args=None):
     return result
 
 
-def run_snakemake_dag(repo_root, config_file, target=None):
+def run_snakemake_dag(repo_root, options_file, target=None):
     """
     Generate the Snakemake DAG.
 
     Args:
         repo_root: Path to repository root
-        config_file: Path to config file
+        options_file: Path to options file
         target: Optional target file/rule to request
 
     Returns:
@@ -136,7 +136,7 @@ def run_snakemake_dag(repo_root, config_file, target=None):
     cmd = [
         "snakemake",
         "--dag",
-        "--configfile", config_file,
+        "--configfile", options_file,
         "--cores", "1",
     ]
 
@@ -164,9 +164,9 @@ class TestPombeDryRunBasic:
         if not snakemake_available:
             pytest.skip("Snakemake not installed or not in PATH")
 
-    def test_config_file_exists(self, test_config):
-        """Test that the test config file exists."""
-        assert Path(test_config).exists()
+    def test_options_file_exists(self, test_options):
+        """Test that the test options file exists."""
+        assert Path(test_options).exists()
 
     def test_sample_file_exists(self, repo_root):
         """Test that the test sample file exists."""
@@ -177,21 +177,21 @@ class TestPombeDryRunBasic:
 class TestChIPBroadWorkflow:
     """Test ChIP-seq broad-peak workflow dry-run (PE samples)."""
 
-    def test_chip_broad_dryrun_succeeds(self, snakemake_available, repo_root, test_config):
+    def test_chip_broad_dryrun_succeeds(self, snakemake_available, repo_root, test_options):
         """Test that dry-run succeeds for ChIP broad coverage bigwig."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_BROAD_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_BROAD_TARGET)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_chip_broad_includes_expected_rules(self, snakemake_available, repo_root, test_config):
+    def test_chip_broad_includes_expected_rules(self, snakemake_available, repo_root, test_options):
         """Test that ChIP broad workflow includes PE mapping and broad peak rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_BROAD_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_BROAD_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -205,12 +205,12 @@ class TestChIPBroadWorkflow:
         for rule in expected_rules:
             assert rule in output, f"Expected rule '{rule}' not found in dry-run output"
 
-    def test_chip_broad_excludes_se_mapping(self, snakemake_available, repo_root, test_config):
+    def test_chip_broad_excludes_se_mapping(self, snakemake_available, repo_root, test_options):
         """Test that PE ChIP broad samples do not trigger SE mapping rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_BROAD_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_BROAD_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -219,12 +219,12 @@ class TestChIPBroadWorkflow:
         assert "filter_chip_se" not in output, \
             "SE mapping rule should not appear for PE ChIP broad sample"
 
-    def test_chip_broad_peak_calling(self, snakemake_available, repo_root, test_config):
+    def test_chip_broad_peak_calling(self, snakemake_available, repo_root, test_options):
         """Test that ChIP broad uses PE peak calling with broad mode."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_CHECKPOINT, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_CHECKPOINT, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -239,21 +239,21 @@ class TestChIPBroadWorkflow:
 class TestChIPNarrowWorkflow:
     """Test ChIP-seq narrow-peak workflow dry-run (SE samples)."""
 
-    def test_chip_narrow_dryrun_succeeds(self, snakemake_available, repo_root, test_config):
+    def test_chip_narrow_dryrun_succeeds(self, snakemake_available, repo_root, test_options):
         """Test that dry-run succeeds for ChIP narrow coverage bigwig."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_NARROW_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_NARROW_TARGET)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_chip_narrow_includes_expected_rules(self, snakemake_available, repo_root, test_config):
+    def test_chip_narrow_includes_expected_rules(self, snakemake_available, repo_root, test_options):
         """Test that ChIP narrow workflow includes SE mapping rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_NARROW_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_NARROW_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -267,12 +267,12 @@ class TestChIPNarrowWorkflow:
         for rule in expected_rules:
             assert rule in output, f"Expected rule '{rule}' not found in dry-run output"
 
-    def test_chip_narrow_excludes_pe_mapping(self, snakemake_available, repo_root, test_config):
+    def test_chip_narrow_excludes_pe_mapping(self, snakemake_available, repo_root, test_options):
         """Test that SE ChIP narrow samples do not trigger PE mapping rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_NARROW_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_NARROW_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -285,21 +285,21 @@ class TestChIPNarrowWorkflow:
 class TestRNAseqWorkflow:
     """Test RNA-seq workflow dry-run (SE samples)."""
 
-    def test_rnaseq_dryrun_succeeds(self, snakemake_available, repo_root, test_config):
+    def test_rnaseq_dryrun_succeeds(self, snakemake_available, repo_root, test_options):
         """Test that dry-run succeeds for RNA-seq final BAM."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, RNA_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, RNA_TARGET)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_rnaseq_includes_expected_rules(self, snakemake_available, repo_root, test_config):
+    def test_rnaseq_includes_expected_rules(self, snakemake_available, repo_root, test_options):
         """Test that RNA-seq workflow includes SE STAR mapping and filtering."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, RNA_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, RNA_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -313,12 +313,12 @@ class TestRNAseqWorkflow:
         for rule in expected_rules:
             assert rule in output, f"Expected rule '{rule}' not found in dry-run output"
 
-    def test_rnaseq_deg_target(self, snakemake_available, repo_root, test_config):
+    def test_rnaseq_deg_target(self, snakemake_available, repo_root, test_options):
         """Test that DEG calling dry-run succeeds."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, RNA_CHECKPOINT, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, RNA_CHECKPOINT, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -331,21 +331,21 @@ class TestRNAseqWorkflow:
 class TestSmallRNAWorkflow:
     """Test small RNA-seq workflow dry-run (SE samples)."""
 
-    def test_srna_dryrun_succeeds(self, snakemake_available, repo_root, test_config):
+    def test_srna_dryrun_succeeds(self, snakemake_available, repo_root, test_options):
         """Test that dry-run succeeds for ShortStack results."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, SRNA_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, SRNA_TARGET)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_srna_includes_expected_rules(self, snakemake_available, repo_root, test_config):
+    def test_srna_includes_expected_rules(self, snakemake_available, repo_root, test_options):
         """Test that sRNA workflow includes ShortStack and cluster rules."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, SRNA_CHECKPOINT, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, SRNA_CHECKPOINT, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -359,12 +359,12 @@ class TestSmallRNAWorkflow:
         for rule in expected_rules:
             assert rule in output, f"Expected rule '{rule}' not found in dry-run output"
 
-    def test_srna_structural_rna_depletion(self, snakemake_available, repo_root, test_config):
+    def test_srna_structural_rna_depletion(self, snakemake_available, repo_root, test_options):
         """Test that structural RNA depletion rules are present."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, SRNA_TARGET, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, SRNA_TARGET, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -377,12 +377,12 @@ class TestSmallRNAWorkflow:
 class TestControlLinking:
     """Test that ChIP samples correctly resolve their Input controls."""
 
-    def test_chip_broad_resolves_control(self, snakemake_available, repo_root, test_config):
+    def test_chip_broad_resolves_control(self, snakemake_available, repo_root, test_options):
         """Test that ChIP broad workflow references WT Input control in peak calling."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_CHECKPOINT, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_CHECKPOINT, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -391,12 +391,12 @@ class TestControlLinking:
         assert "WT_WCE_rep1" in output, \
             "ChIP broad workflow should reference WT_WCE_rep1 as control"
 
-    def test_chip_narrow_resolves_control(self, snakemake_available, repo_root, test_config):
+    def test_chip_narrow_resolves_control(self, snakemake_available, repo_root, test_options):
         """Test that ChIP narrow workflow references WT Input control in peak calling."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_CHECKPOINT, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_CHECKPOINT, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -405,12 +405,12 @@ class TestControlLinking:
         assert "WT_Input_rep1" in output, \
             "ChIP workflow should reference WT_Input_rep1 as control"
 
-    def test_input_control_processed(self, snakemake_available, repo_root, test_config):
+    def test_input_control_processed(self, snakemake_available, repo_root, test_options):
         """Test that Input control samples can be processed independently."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, INPUT_BROAD_TARGET)
+        result = run_snakemake_dryrun(repo_root, test_options, INPUT_BROAD_TARGET)
 
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
@@ -418,22 +418,22 @@ class TestControlLinking:
 class TestDAGStructure:
     """Test DAG generation and structure."""
 
-    def test_dag_generation_succeeds(self, snakemake_available, repo_root, test_config):
+    def test_dag_generation_succeeds(self, snakemake_available, repo_root, test_options):
         """Test that DAG can be generated for final checkpoint."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dag(repo_root, test_config, FINAL_CHECKPOINT)
+        result = run_snakemake_dag(repo_root, test_options, FINAL_CHECKPOINT)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
         assert len(result.stdout) > 0, "DAG output is empty"
 
-    def test_dag_contains_all_assay_rules(self, snakemake_available, repo_root, test_config):
+    def test_dag_contains_all_assay_rules(self, snakemake_available, repo_root, test_options):
         """Test that DAG contains rules from all four assay types."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dag(repo_root, test_config, FINAL_CHECKPOINT)
+        result = run_snakemake_dag(repo_root, test_options, FINAL_CHECKPOINT)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
 
@@ -449,12 +449,12 @@ class TestDAGStructure:
         for assay, rule in assay_rules.items():
             assert rule in dag_output, f"Rule '{rule}' for {assay} not found in DAG"
 
-    def test_dag_has_dependencies(self, snakemake_available, repo_root, test_config):
+    def test_dag_has_dependencies(self, snakemake_available, repo_root, test_options):
         """Test that DAG has rule dependencies (edges)."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dag(repo_root, test_config, FINAL_CHECKPOINT)
+        result = run_snakemake_dag(repo_root, test_options, FINAL_CHECKPOINT)
 
         assert result.returncode == 0, f"DAG generation failed: {result.stderr}"
 
@@ -464,21 +464,21 @@ class TestDAGStructure:
 class TestReplicateHandling:
     """Test handling of multiple replicates."""
 
-    def test_chip_broad_replicates_resolve(self, snakemake_available, repo_root, test_config):
+    def test_chip_broad_replicates_resolve(self, snakemake_available, repo_root, test_options):
         """Test that both ChIP broad H3K9me2 replicates can be resolved."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
         for target in [CHIP_BROAD_TARGET, CHIP_BROAD_TARGET_REP2]:
-            result = run_snakemake_dryrun(repo_root, test_config, target)
+            result = run_snakemake_dryrun(repo_root, test_options, target)
             assert result.returncode == 0, f"Replicate failed for {target}: {result.stderr}"
 
-    def test_idr_analysis_present(self, snakemake_available, repo_root, test_config):
+    def test_idr_analysis_present(self, snakemake_available, repo_root, test_options):
         """Test that IDR analysis rule is present for replicated ChIP samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_CHECKPOINT, ["--printshellcmds"])
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_CHECKPOINT, ["--printshellcmds"])
 
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
 
@@ -487,7 +487,7 @@ class TestReplicateHandling:
         assert "idr_analysis_replicates" in output, \
             "IDR analysis should be present for replicated ChIP samples"
 
-    def test_rna_replicates_resolve(self, snakemake_available, repo_root, test_config):
+    def test_rna_replicates_resolve(self, snakemake_available, repo_root, test_options):
         """Test that multiple RNA-seq replicates can be resolved."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
@@ -498,41 +498,41 @@ class TestReplicateHandling:
         ]
 
         for target in targets:
-            result = run_snakemake_dryrun(repo_root, test_config, target)
+            result = run_snakemake_dryrun(repo_root, test_options, target)
             assert result.returncode == 0, f"Replicate failed for {target}: {result.stderr}"
 
 
 class TestEnvCheckpoints:
     """Test environment-level checkpoint targets (validates full DAG resolution)."""
 
-    def test_chip_checkpoint(self, snakemake_available, repo_root, test_config):
+    def test_chip_checkpoint(self, snakemake_available, repo_root, test_options):
         """Test that ChIP analysis checkpoint dry-run succeeds."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, CHIP_CHECKPOINT)
+        result = run_snakemake_dryrun(repo_root, test_options, CHIP_CHECKPOINT)
 
         assert result.returncode == 0, f"ChIP checkpoint failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_rna_checkpoint(self, snakemake_available, repo_root, test_config):
+    def test_rna_checkpoint(self, snakemake_available, repo_root, test_options):
         """Test that RNA analysis checkpoint dry-run succeeds."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, RNA_CHECKPOINT)
+        result = run_snakemake_dryrun(repo_root, test_options, RNA_CHECKPOINT)
 
         assert result.returncode == 0, f"RNA checkpoint failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_srna_checkpoint(self, snakemake_available, repo_root, test_config):
+    def test_srna_checkpoint(self, snakemake_available, repo_root, test_options):
         """Test that sRNA analysis checkpoint dry-run succeeds."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, SRNA_CHECKPOINT)
+        result = run_snakemake_dryrun(repo_root, test_options, SRNA_CHECKPOINT)
 
         assert result.returncode == 0, f"sRNA checkpoint failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_final_checkpoint(self, snakemake_available, repo_root, test_config):
+    def test_final_checkpoint(self, snakemake_available, repo_root, test_options):
         """Test that final combined checkpoint dry-run succeeds.
 
         This is the most comprehensive test — it forces Snakemake to resolve
@@ -541,7 +541,7 @@ class TestEnvCheckpoints:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, FINAL_CHECKPOINT)
+        result = run_snakemake_dryrun(repo_root, test_options, FINAL_CHECKPOINT)
 
         assert result.returncode == 0, f"Final checkpoint failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
@@ -549,20 +549,20 @@ class TestEnvCheckpoints:
 class TestMapOnly:
     """Test intermediate target rules."""
 
-    def test_map_only_target(self, snakemake_available, repo_root, test_config):
+    def test_map_only_target(self, snakemake_available, repo_root, test_options):
         """Test that map_only target dry-run succeeds."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, "map_only")
+        result = run_snakemake_dryrun(repo_root, test_options, "map_only")
 
         assert result.returncode == 0, f"map_only failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_coverage_chip_target(self, snakemake_available, repo_root, test_config):
+    def test_coverage_chip_target(self, snakemake_available, repo_root, test_options):
         """Test that coverage_chip target dry-run succeeds."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        result = run_snakemake_dryrun(repo_root, test_config, "coverage_chip")
+        result = run_snakemake_dryrun(repo_root, test_options, "coverage_chip")
 
         assert result.returncode == 0, f"coverage_chip failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"

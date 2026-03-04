@@ -17,7 +17,7 @@ def define_rnaseq_target_file(wildcards):
         raise ValueError(
             f"{wildcards.target_name} does not match possible files."
             "It can be 'unique_DEGs', or the value of "
-            "'rnaseq_target_file_name' in the config file"
+            "'rnaseq_target_file_name' in the options file"
         )
 
 def define_rnaseq_background_file(wildcards):
