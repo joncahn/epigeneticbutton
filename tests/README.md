@@ -64,9 +64,24 @@ pytest tests/unit/ -v
 
 ### Integration Tests (`tests/integration/`)
 
-Tests for complete workflows and pipelines. May require external tools (samtools, modkit).
+Tests for complete workflows and pipelines using S. pombe test data.
 
-**Status:** Placeholder directory for future integration tests
+- `test_pombe_dryrun.py` — Snakemake DAG resolution (fast, no data downloads)
+- `test_pombe_postrun.py` — Output file validation after a completed pipeline run
+- `data/test_samples_pombe.tsv` — 18-sample test sheet (4 assays). See `data/README.md` for source publications and data caveats.
+
+Full validation workflow:
+```bash
+scripts/validate_pombe.sh --all    # dry-run → full run → output checks
+```
+
+### Profiling completed runs
+
+After a pipeline run, profile execution timing with:
+```bash
+python dev/profile_snakemake_log.py --latest                # markdown report
+python dev/profile_snakemake_log.py --latest --html r.html  # HTML with Gantt chart
+```
 
 ## Test Files
 

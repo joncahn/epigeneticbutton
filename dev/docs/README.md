@@ -72,6 +72,17 @@ scripts/validate_pombe.sh --all
 
 See `tests/README.md` for detailed test documentation and `CLAUDE.md` for the full test command reference.
 
+## Profiling pipeline runs
+
+`dev/profile_snakemake_log.py` parses Snakemake log files and reports per-rule
+timing, phase summaries, slowest individual jobs, and parallelism stats.
+
+```bash
+python dev/profile_snakemake_log.py --latest                # markdown to stdout
+python dev/profile_snakemake_log.py --latest --html r.html  # self-contained HTML with Gantt chart
+python dev/profile_snakemake_log.py .snakemake/log/<file>.snakemake.log
+```
+
 ## Project layout (dev-relevant)
 
 ```
@@ -82,6 +93,7 @@ dev/
         sample-sheet-spec.md  # Sample sheet format specification
         TODO.md               # Active roadmap and backlog
     plans/                    # Archived implementation plans (gitignored)
+    profile_snakemake_log.py  # Snakemake run profiler (see above)
 tests/
     unit/                     # Fast unit tests
     integration/              # Snakemake dry-run and post-run tests
