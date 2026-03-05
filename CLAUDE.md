@@ -56,7 +56,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 
 - `config/epicc-options.yaml` - Main options file (paths, parameters, resource allocation)
   - Reference genomes are namespaced under `genomes:`, each entry containing annotation file paths and species-level parameters (e.g. `genus`, `species`, `ncbi_taxid`)
-  - `gtf_file`, `genomesize`, `star_index`, and `ncbi_taxid` are auto-computed at runtime (GTF derived from GFF via gffread, genome stats from FASTA, TaxId from NCBI Datasets CLI); user-provided values in the options file override the computed values
+  - `gtf_file`, `genomesize`, `star_index`, `ncbi_taxid`, and `structural_rna_fafile` are auto-computed at runtime (GTF derived from GFF via gffread, genome stats from FASTA, TaxId from NCBI Datasets CLI, structural RNA FASTA via Infernal/Rfam); user-provided values in the options file override the computed values
   - GO database name is auto-derived as `org.<G><species>_<GenomeName>.eg.db` (e.g. `org.Athaliana_ColCEN.eg.db`)
   - Access pattern in rule files: `config["genomes"][ref_genome][field]`
   - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning

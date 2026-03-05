@@ -3,6 +3,7 @@
 Implements the rules defined in dev/docs/sample-sheet-spec.md.
 """
 
+import os
 import re
 from scripts.sample_sheet import VALID_ASSAYS, ASSAY_TO_ENV
 
@@ -262,12 +263,14 @@ def check_genome_config(tab, config):
         # genomesize and star_index are auto-computed from the reference FASTA;
         # user-provided values in the options file are optional overrides
 
-        # structural_rna_fafile required for sRNA when structural RNA depletion is on
+        # structural_rna_fafile is optional: auto-derived via Infernal when absent or "<auto>"
+        # Validate that the file exists if a non-auto path is provided
         if "sRNA" in envs and config.get("structural_rna_depletion", True):
-            if "structural_rna_fafile" not in gcfg:
-                errors.append(
-                    f"[X] Genome '{genome}': missing 'structural_rna_fafile' "
-                    f"(required for sRNA with structural_rna_depletion: true)"
+            srna_fa = gcfg.get("structural_rna_fafile", "<auto>")
+            if srna_fa and srna_fa != "<auto>" and not os.path.exists(srna_fa):
+                warnings.append(
+                    f"[!] Genome '{genome}': structural_rna_fafile '{srna_fa}' "
+                    f"not found (will fail at runtime if not created)"
                 )
 
         # GO fields when GO: true

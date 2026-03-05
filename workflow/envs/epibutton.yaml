@@ -11,6 +11,7 @@ dependencies:
   - sra-tools>=3
   - bedtools
   - gffread
+  - infernal>=1.1
   - ncbi-datasets-cli
   - deeptools
   - ucsc-bedgraphtobigwig

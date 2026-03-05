@@ -2119,6 +2119,7 @@ var configState = {
   adapter2_sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA",
   nextflex_v3_deduplication: false,
   structural_rna_depletion: true,
+  infernal_threshold: "ga",
   srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna",
   srna_min_size: 21,
   srna_max_size: 24,
@@ -2274,7 +2275,7 @@ function buildGenomeSection(genomeName) {
     ["GAF file (Gene Ontology)", "gaf_file", "data/ColCEN_infoGO.tab.gz", "data/ColCEN_infoGO.tab.gz"],
     ["Gene info file (Gene Ontology)", "gene_info_file", "data/ColCEN_genes_info.tab.gz", "data/ColCEN_genes_info.tab.gz"],
     ["TE bed file", "te_file", "/path/to/TEs.bed.gz"],
-    ["Structural RNA FASTA", "structural_rna_fafile", "data/zm_structural_RNAs.fa.gz", "data/zm_structural_RNAs.fa.gz"],
+    ["Structural RNA FASTA", "structural_rna_fafile", "<auto>", "auto-derived via Infernal/Rfam; provide path to override"],
     ["NCBI TaxId", "ncbi_taxid", "<auto>"],
   ];
   for (var i = 0; i < optFields.length; i++) {
@@ -2464,6 +2465,8 @@ function buildConfigForm() {
   srnaBody.appendChild(buildToggleRow("Structural RNA depletion", "structural_rna_depletion",
     "Depletion of structural RNA will be performed! Good riddance! \uD83E\uDDF9",
     "No structural RNA depletion. rRNAs, here we come! \uD83E\uDEA1"));
+  srnaBody.appendChild(buildTextRow("Infernal threshold:", "infernal_threshold",
+    "ga", 'Rfam gathering threshold ("ga", recommended) or numeric E-value (e.g. 1e-5)'));
   srnaBody.appendChild(buildTextRow("Mapping parameters:", "srna_mapping_params",
     "--mmap u --dicermin 21 --dicermax 24 --dn_mirna"));
   srnaBody.appendChild(buildNumberRow("Min sRNA size:", "srna_min_size", 15, 100));
@@ -2552,7 +2555,7 @@ function configStateToYAML() {
     if (g.gaf_file) cfg.genomes[gn].gaf_file = g.gaf_file;
     if (g.gene_info_file) cfg.genomes[gn].gene_info_file = g.gene_info_file;
     if (g.te_file) cfg.genomes[gn].te_file = g.te_file;
-    if (g.structural_rna_fafile) cfg.genomes[gn].structural_rna_fafile = g.structural_rna_fafile;
+    if (g.structural_rna_fafile && g.structural_rna_fafile !== "<auto>") cfg.genomes[gn].structural_rna_fafile = g.structural_rna_fafile;
     if (g.star_index) cfg.genomes[gn].star_index = g.star_index;
     if (g.genomesize) {
       var gs = parseFloat(g.genomesize);
@@ -2649,6 +2652,7 @@ function configStateToYAML() {
   // sRNA
   cfg.nextflex_v3_deduplication = configState.nextflex_v3_deduplication;
   cfg.structural_rna_depletion = configState.structural_rna_depletion;
+  cfg.infernal_threshold = configState.infernal_threshold;
   cfg.srna_mapping_params = configState.srna_mapping_params;
   cfg.srna_min_size = configState.srna_min_size;
   cfg.srna_max_size = configState.srna_max_size;
@@ -2725,6 +2729,7 @@ function handleYAMLImport(text) {
   if (cfg.custom_script_dmrs != null) configState.custom_script_dmrs = !!cfg.custom_script_dmrs;
   if (cfg.nextflex_v3_deduplication != null) configState.nextflex_v3_deduplication = !!cfg.nextflex_v3_deduplication;
   if (cfg.structural_rna_depletion != null) configState.structural_rna_depletion = !!cfg.structural_rna_depletion;
+  if (cfg.infernal_threshold != null) configState.infernal_threshold = String(cfg.infernal_threshold);
   if (cfg.srna_mapping_params != null) configState.srna_mapping_params = cfg.srna_mapping_params;
   if (cfg.srna_min_size != null) configState.srna_min_size = cfg.srna_min_size;
   if (cfg.srna_max_size != null) configState.srna_max_size = cfg.srna_max_size;
@@ -2834,7 +2839,7 @@ function handleYAMLImport(text) {
       "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",
       "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","mC_context","pca_bs",
       "pca_step","mC_mapping","custom_script_dmrs","dmc_methylation","dmc_dmr_method",
-      "nextflex_v3_deduplication","structural_rna_depletion","srna_mapping_params",
+      "nextflex_v3_deduplication","structural_rna_depletion","infernal_threshold","srna_mapping_params",
       "srna_min_size","srna_max_size","srna_heatmap_sizes","plot_allreps","heatmaps_scales",
       "stranded_heatmaps","heatmaps_sort_options","heatmap_sort_mc_after_others",
       "profiles_scale","profiles_plot_params","heatmaps_plot_params","heatmaps",

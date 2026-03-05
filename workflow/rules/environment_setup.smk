@@ -250,6 +250,160 @@ rule prep_region_file:
         }} 2>&1 | tee -a "{log}"
         """
         
+rule download_rfam:
+    output:
+        cm = "genomes/rfam/Rfam.cm",
+        clanin = "genomes/rfam/Rfam.clanin",
+        pressed = touch("genomes/rfam/Rfam.cm.pressed")
+    log:
+        os.path.join(REPO_FOLDER,"results","logs","download_rfam.log")
+    conda: CONDA_ENV
+    threads: config["resources"]["download_rfam"]["threads"]
+    resources:
+        mem_mb=config["resources"]["download_rfam"]["mem_mb"],
+        tmp_mb=config["resources"]["download_rfam"]["tmp_mb"],
+        qos=config["resources"]["download_rfam"]["qos"]
+    shell:
+        """
+        {{
+        printf "Downloading Rfam covariance models and clan file\\n"
+        mkdir -p genomes/rfam
+        curl -fSL https://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz \
+            | pigz -dc > {output.cm}
+        curl -fSL https://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.clanin \
+            > {output.clanin}
+
+        printf "Pressing covariance model database\\n"
+        cmpress -F {output.cm}
+        }} 2>&1 | tee -a "{log}"
+        """
+
+rule build_structural_rna_db:
+    input:
+        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
+        fai = "genomes/{ref_genome}/{ref_genome}.fa.fai",
+        rfam_cm = "genomes/rfam/Rfam.cm",
+        rfam_clanin = "genomes/rfam/Rfam.clanin",
+        rfam_pressed = "genomes/rfam/Rfam.cm.pressed"
+    output:
+        structural_fa = "genomes/structural_RNAs/{ref_genome}/structural_rnas.fa",
+        tblout = "genomes/structural_RNAs/{ref_genome}/infernal.tblout"
+    params:
+        threshold = config.get("infernal_threshold", "ga"),
+        bin_size_bp = 1000000
+    log:
+        return_log_env("{ref_genome}", "structural_rna")
+    conda: CONDA_ENV
+    threads: config["resources"]["build_structural_rna_db"]["threads"]
+    resources:
+        mem_mb=config["resources"]["build_structural_rna_db"]["mem_mb"],
+        tmp_mb=config["resources"]["build_structural_rna_db"]["tmp_mb"],
+        qos=config["resources"]["build_structural_rna_db"]["qos"]
+    shell:
+        """
+        {{
+        printf "Building structural RNA database for {wildcards.ref_genome} via Infernal\\n"
+
+        workdir=$(mktemp -d)
+        trap 'rm -rf "$workdir"' EXIT
+        chroms_dir="$workdir/chroms"
+        mkdir -p "$chroms_dir"
+
+        # Compute search space: total bases * 2 (both strands), in Mb
+        search_space=$(awk '{{s+=$2}} END {{printf "%d", s*2/1000000}}' {input.fai})
+        printf "Search space (-Z): %s Mb\\n" "$search_space"
+
+        # Threshold flag
+        threshold="{params.threshold}"
+        if [[ "$threshold" == "ga" ]]; then
+            threshold_flag="--cut_ga"
+        else
+            threshold_flag="-E $threshold --incE $threshold"
+        fi
+        printf "Infernal threshold: %s (flag: %s)\\n" "$threshold" "$threshold_flag"
+
+        # Split genome: large contigs (>= bin_size) get their own file,
+        # small contigs (< bin_size) are binned together
+        bin_size={params.bin_size_bp}
+        bin_idx=0
+        bin_total=0
+        bin_file="$chroms_dir/bin_${{bin_idx}}.fa"
+
+        while IFS=$'\\t' read -r chrom size rest; do
+            if [[ "$size" -ge "$bin_size" ]]; then
+                samtools faidx {input.fasta} "$chrom" > "$chroms_dir/${{chrom}}.fa"
+            else
+                if [[ "$bin_total" -gt 0 && $(( bin_total + size )) -gt "$bin_size" ]]; then
+                    bin_idx=$(( bin_idx + 1 ))
+                    bin_total=0
+                    bin_file="$chroms_dir/bin_${{bin_idx}}.fa"
+                fi
+                samtools faidx {input.fasta} "$chrom" >> "$bin_file"
+                bin_total=$(( bin_total + size ))
+            fi
+        done < {input.fai}
+
+        n_chunks=$(find "$chroms_dir" -name '*.fa' | wc -l)
+        printf "Split genome into %d chunks (bin_size=%d bp)\\n" "$n_chunks" "$bin_size"
+
+        # Determine parallelism: allocate threads across chunks
+        if [[ "$n_chunks" -le 0 ]]; then
+            printf "ERROR: No genome chunks produced\\n" >&2
+            exit 1
+        fi
+        threads_per=$(( {threads} / n_chunks ))
+        if [[ "$threads_per" -lt 1 ]]; then threads_per=1; fi
+        n_parallel=$(( {threads} / threads_per ))
+        if [[ "$n_parallel" -lt 1 ]]; then n_parallel=1; fi
+        printf "Running %d parallel cmscan jobs with %d threads each\\n" "$n_parallel" "$threads_per"
+
+        # Run cmscan per chunk
+        find "$chroms_dir" -name '*.fa' | \
+            xargs -P "$n_parallel" -I {{}} bash -c '
+                cmscan --cpu '"$threads_per"' \
+                    -Z '"$search_space"' \
+                    '"$threshold_flag"' \
+                    --rfam --nohmmonly --fmt 2 \
+                    --tblout "{{}}.tblout" \
+                    --clanin {input.rfam_clanin} \
+                    {input.rfam_cm} \
+                    {{}} > /dev/null
+            '
+
+        # Merge tblout results: keep header from first file, concatenate data lines,
+        # remove lower-scoring clan overlaps (marked with " = " in olp column)
+        printf "Merging and filtering Infernal results\\n"
+        head -2 "$(find "$chroms_dir" -name '*.tblout' | head -1)" > {output.tblout}
+        cat "$chroms_dir"/*.tblout | grep -v '^#' | grep -v ' = ' \
+            | sort -k16,16g >> {output.tblout} || true
+
+        # Count significant hits
+        n_hits=$(grep -vc '^#' {output.tblout} || echo 0)
+        printf "Found %d structural RNA loci\\n" "$n_hits"
+
+        if [[ "$n_hits" -eq 0 ]]; then
+            printf "WARNING: No structural RNAs found for {wildcards.ref_genome}. Creating empty FASTA.\\n" >&2
+            touch {output.structural_fa}
+        else
+            # Convert tblout to BED (0-based coords)
+            awk '$0 !~ /^#/ {{
+                chrom = $4; start = $10; end = $11; name = $2; strand = $12
+                if (strand == "+") {{ s = start - 1; e = end }}
+                else {{ s = end - 1; e = start }}
+                printf "%s\\t%d\\t%d\\t%s::%s:%d-%d(%s)\\t0\\t%s\\n",
+                    chrom, s, e, name, chrom, s, e, strand, strand
+            }}' {output.tblout} \
+                | sort -k1,1 -k2,2n > "$workdir/structural.bed"
+
+            # Extract sequences
+            bedtools getfasta -fi {input.fasta} -bed "$workdir/structural.bed" \
+                -s -name -fo {output.structural_fa}
+        fi
+
+        printf "Structural RNA database built: %s\\n" "{output.structural_fa}"
+        }} 2>&1 | tee -a "{log}"
+        """
+
 rule check_te_file:
     output:
         te_file = "genomes/{ref_genome}/{ref_genome}__TE_file.bed"

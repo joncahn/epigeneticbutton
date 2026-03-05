@@ -18,7 +18,7 @@ genomes:
     gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # can be gzipped or not;
-    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
     star_index: "--genomeSAindexNbases 12"  # optional override (auto-computed from FASTA if omitted)
     #genomesize: 1.3e8  # optional override (auto-computed as total bases − N bases if omitted)
     ncbi_taxid: "3702"
@@ -32,7 +32,7 @@ genomes:
     gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/B73_v5_TEs.bed.gz" # can be gzipped or not;
-    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # default to structural RNAs from Zea mays present in data directory, prepared through Rfam (see corresponding Help)
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
     star_index: "--genomeSAindexNbases 14"
     ncbi_taxid: "4577"
     #genomesize: 2.2e9
@@ -43,7 +43,7 @@ genomes:
     fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.fasta.gz"
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.noname.gff3.gz"
     gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
-    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+    #structural_rna_fafile: "<auto>" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
     #star_index: "--genomeSAindexNbases 12"
     #genomesize: 8.0e8
 
@@ -54,7 +54,7 @@ genomes:
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
     gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
     te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
-    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+    #structural_rna_fafile: "<auto>" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
     #star_index: "--genomeSAindexNbases 12"
     #genomesize: 5.0e8  
   
@@ -264,6 +264,7 @@ dmc_dmr_method: "dmrcaller"
 # small RNA parameters
 nextflex_v3_deduplication: false # additional deduplication if nextflex v3 kit was used for sRNA library preparation
 structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
+infernal_threshold: "ga" # threshold for Infernal structural RNA annotation: "ga" (Rfam gathering threshold, recommended) or a numeric E-value (e.g. 1e-5 for more aggressive filtering). Only used when structural_rna_fafile is auto-derived.
 srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
 srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
@@ -384,7 +385,7 @@ heavier_resources: &heavier
   qos: "slow_nice"
   
 max_resources: &max
-  threads: 8
+  threads: 16
   mem_mb: 32000
   tmp_mb: 96000
   qos: "slow_nice"
@@ -404,6 +405,8 @@ resources:
   compute_genome_stats: *single
   resolve_taxid: *single
   prep_region_file: *low
+  download_rfam: *standard
+  build_structural_rna_db: *max
   check_te_file: *standard
   # sample_download
   get_fastq_pe: *download
