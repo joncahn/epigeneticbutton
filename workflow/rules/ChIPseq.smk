@@ -1244,7 +1244,21 @@ rule perform_pairwise_diff_peaks:
     shell:
         """
         {{
-        if [[ "{params.peakformat}" == "narrow" ]]; then
+        n1=$(wc -l < {input.peak_file1})
+        n2=$(wc -l < {input.peak_file2})
+        min_peaks=2
+
+        if [[ "$n1" -lt "$min_peaks" || "$n2" -lt "$min_peaks" ]]; then
+            printf "\n"
+            printf "========================================================================\n"
+            printf "WARNING: Skipping differential peak analysis for {wildcards.sample1} vs {wildcards.sample2}\n"
+            printf "Insufficient peaks for meaningful comparison (minimum %d required per sample).\n" "$min_peaks"
+            printf "{wildcards.sample1}: %d peaks, {wildcards.sample2}: %d peaks\n" "$n1" "$n2"
+            printf "This is an analytical outcome, not a pipeline error.\n"
+            printf "========================================================================\n"
+            mkdir -p {params.output_folder}
+            printf "# MAnorm skipped: insufficient peaks ({wildcards.sample1}=%d, {wildcards.sample2}=%d)\n" "$n1" "$n2" > {output.result}
+        elif [[ "{params.peakformat}" == "narrow" ]]; then
             printf "\nComparing {wildcards.sample1} with {wildcards.sample2} with .narrowPeak files with MAnorm version:\n"
             manorm --version
             manorm --p1 {input.peak_file1} --p2 {input.peak_file2} --r1 {input.read_file1} --r2 {input.read_file2} --n1 {wildcards.sample1} --n2 {wildcards.sample2} -o {params.output_folder} --rf "bam" --pf "narrowpeak" {params.diffpeaks}

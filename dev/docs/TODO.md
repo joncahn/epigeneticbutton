@@ -192,6 +192,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ## Codebase Hygiene
 
+* [ ] Snakemake issue - currently conda envs are created with cryptic names. Can we incorporate semantic naming for these so they reflect epibutton_chip, etc.?
+
 * [ ] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates
 
 * [ ] Improve logging system (naming, concatenating, and cleaning if chosen)
