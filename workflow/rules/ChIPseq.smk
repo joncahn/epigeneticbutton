@@ -945,7 +945,7 @@ rule idr_analysis_replicates:
         {{
         printf "\nLooping over each unique pair of biological replicates for {params.sname} to perform IDR with:\n"
         idr --version
-		if [[ "{params.env}" == "ATAC" ]]; then
+        if [[ "{params.env}" == "ATAC" ]]; then
             pre="atac"
         elif [[ "{params.paired}" == "PE" ]]; then
             pre="pe"
@@ -957,25 +957,50 @@ rule idr_analysis_replicates:
             printf "${{chr}}\t1\t${{max}}\n" >> "${{temp}}"
         done < "genomes/{params.ref_genome}/chrom.sizes"
         mkdir -p results/{params.env}/plots/
+        idr_failed=false
         for pair in {params.replicate_pairs}; do
             rep1_sid=$(echo ${{pair}} | cut -d":" -f1)
             rep2_sid=$(echo ${{pair}} | cut -d":" -f2)
             file1="results/{params.env}/peaks/peaks_${{pre}}__final__${{rep1_sid}}_peaks.{params.peaktype}Peak"
             file2="results/{params.env}/peaks/peaks_${{pre}}__final__${{rep2_sid}}_peaks.{params.peaktype}Peak"
             outfile="results/{params.env}/peaks/idr_${{pre}}__{params.sname}__${{rep1_sid}}_vs_${{rep2_sid}}_peaks.{params.peaktype}Peak"
-            printf "\nPerforming IDR for ${{rep1_sid}} vs ${{rep2_sid}}\n"
-            idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak --samples ${{file1}} ${{file2}} -o ${{outfile}} -l results/{params.env}/reports/idr_{params.sname}.log --plot || true
-            ## "|| true" avoids pipeline-breaking errors if no positive peaks were found
-            mv "${{outfile}}.png" results/{params.env}/plots/
-            filtered="${{outfile}}.filtered"
-            awk -v OFS="\t" '$5>=540 {{print $1,$2,$3}}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
-            new="${{temp}}.new"
-            bedtools intersect -a ${{temp}} -b ${{filtered}} > "${{new}}"
-            mv "${{new}}" "${{temp}}"
+
+            n1=$(wc -l < "${{file1}}")
+            n2=$(wc -l < "${{file2}}")
+            printf "\nPerforming IDR for ${{rep1_sid}} (%d peaks) vs ${{rep2_sid}} (%d peaks)\n" "${{n1}}" "${{n2}}"
+
+            if idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak \
+                    --samples ${{file1}} ${{file2}} -o ${{outfile}} \
+                    -l results/{params.env}/reports/idr_{params.sname}.log --plot 2>&1; then
+                mv "${{outfile}}.png" results/{params.env}/plots/ 2>/dev/null || true
+                filtered="${{outfile}}.filtered"
+                awk -v OFS="\t" '$5>=540 {{print $1,$2,$3}}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
+                new="${{temp}}.new"
+                bedtools intersect -a ${{temp}} -b ${{filtered}} > "${{new}}"
+                mv "${{new}}" "${{temp}}"
+            else
+                idr_failed=true
+                printf "\n"
+                printf "========================================================================\n"
+                printf "WARNING: IDR failed for %s vs %s\n" "${{rep1_sid}}" "${{rep2_sid}}"
+                printf "This is an analytical outcome, not a pipeline error.\n"
+                printf "Common causes: too few peaks (<20 after merge), low replicate concordance.\n"
+                printf "Rep1 peaks: %d, Rep2 peaks: %d\n" "${{n1}}" "${{n2}}"
+                printf "IDR-based peak filtering will be skipped for this comparison.\n"
+                printf "Peak selection will rely on merged + pseudoreplicate consistency.\n"
+                printf "========================================================================\n"
+            fi
         done
-        cat ${{temp}} > {output.merged}
-        bedtools intersect -a ${{file2}} -b ${{temp}} -u > "results/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
-        rm -f ${{temp}} ${{new}} ${{filtered}}
+
+        if [[ "${{idr_failed}}" == "true" ]]; then
+            printf "\nIDR analysis incomplete for {params.sname} — creating empty IDR output\n"
+            touch {output.merged}
+            touch "results/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
+        else
+            cat ${{temp}} > {output.merged}
+            bedtools intersect -a ${{file2}} -b ${{temp}} -u > "results/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
+        fi
+        rm -f ${{temp}} "${{temp}}.new" "${{outfile}}.filtered"
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """

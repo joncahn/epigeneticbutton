@@ -6,7 +6,7 @@
 
 * [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
 
-* [ ] we should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark
+* [ ] We should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark, and/or refer users to a discussion of this distinction elsewhere (perhaps in the MACS documentation). 
 
 ## Analysis
 
@@ -30,7 +30,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Handling IDR failures
 
-* [ ] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and here reflects the biology of the S. pombe samples. If we can't work around the minimum requirement of 20 peaks by parameterizing IDR differently, we should also choose a different mark for the S. pombe test case that will be more likely to give a larger number of peaks. In any case, an IDR failure of this kind should not be a pipeline failure, and we should gracefully recover/continue and report.
+* [x] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and here reflects the biology of the S. pombe samples. If we can't work around the minimum requirement of 20 peaks by parameterizing IDR differently, we should also choose a different mark for the S. pombe test case that will be more likely to give a larger number of peaks. In any case, an IDR failure of this kind should not be a pipeline failure, and we should gracefully recover/continue and report. **Done**: `idr_analysis_replicates` now checks IDR exit code instead of blanket `|| true`. On failure: emits a clear warning banner (cause, peak counts, explanation that this is analytical not a bug), creates empty IDR output files, and continues. Downstream `best_peaks_pseudoreps` already handles IDR=0 correctly — peak selection uses merged ∩ pseudoreplicate consistency, IDR is informational only. `mv` of PNG plot is now conditional on IDR success. Postrun test updated to allow empty IDR peak files.
 
 ### Configuration fileset
 
