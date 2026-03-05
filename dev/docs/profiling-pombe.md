@@ -91,7 +91,8 @@ sorting after merge.
      size (cap 100K, floor 10K). For pombe: 25K vs default 500K (20x reduction).
   3. Restricted to per-rep (`final`) BAMs only — merged fingerprints were
      vestigial (never requested by the output function).
-  Also added `--skipZeros` flag to avoid sampling empty bins.
+  Note: `--skipZeros` was tested but triggers an off-by-one bug in deeptools
+  3.5.x; samples are capped at 80% of genome bins to avoid the same issue.
 
 - **Duplicate SRA downloads**: `WT_WCE_rep1` and `dcr1_WCE_rep1` share the
   same accession (SRR5445712). The pipeline downloads it twice independently.
