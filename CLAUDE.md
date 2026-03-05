@@ -51,6 +51,12 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 ### Tools
 
 - `tools/epicc-builder.html` - Self-contained HTML5 app for building sample sheets and options files. Tabulator-based editor with validation, dynamic factor columns, per-cell examples, and YAML options export. Open directly in a browser.
+- `dev/profile_snakemake_log.py` - Snakemake log profiler. Parses `.snakemake/log/*.snakemake.log` files and reports per-rule timing, phase summary, slowest jobs, and parallelism stats. Supports markdown (stdout) and self-contained HTML with Gantt timeline chart.
+  ```bash
+  python dev/profile_snakemake_log.py --latest              # markdown to stdout
+  python dev/profile_snakemake_log.py --latest --html r.html # HTML report
+  python dev/profile_snakemake_log.py path/to/log.snakemake.log
+  ```
 
 ### Configuration
 
