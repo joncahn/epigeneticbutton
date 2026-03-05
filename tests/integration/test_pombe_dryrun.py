@@ -198,7 +198,7 @@ class TestChIPBroadWorkflow:
         output = result.stdout + result.stderr
 
         expected_rules = [
-            "filter_chip_pe",
+            "filter_bam_pe",
             "make_coverage_chip",
         ]
 
@@ -216,7 +216,7 @@ class TestChIPBroadWorkflow:
 
         output = result.stdout + result.stderr
 
-        assert "filter_chip_se" not in output, \
+        assert "filter_bam_se" not in output, \
             "SE mapping rule should not appear for PE ChIP broad sample"
 
     def test_chip_broad_peak_calling(self, snakemake_available, repo_root, test_options):
@@ -260,7 +260,7 @@ class TestChIPNarrowWorkflow:
         output = result.stdout + result.stderr
 
         expected_rules = [
-            "filter_chip_se",
+            "filter_bam_se",
             "make_coverage_chip",
         ]
 
@@ -278,7 +278,7 @@ class TestChIPNarrowWorkflow:
 
         output = result.stdout + result.stderr
 
-        assert "filter_chip_pe" not in output, \
+        assert "filter_bam_pe" not in output, \
             "PE mapping rule should not appear for SE ChIP narrow sample"
 
 
@@ -441,7 +441,7 @@ class TestDAGStructure:
 
         # Rules from each assay type
         assay_rules = {
-            "ChIP": "filter_chip",
+            "ChIP": "filter_bam",
             "RNA": "STAR_map",
             "sRNA": "shortstack_map",
         }

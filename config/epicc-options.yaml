@@ -425,18 +425,18 @@ resources:
   # ChIPseq
   make_bt2_indices: *heavy
   make_chromap_index: *heavy
-  filter_chip_pe: *heavier
-  filter_chip_se: *heavier
-  make_chip_stats_pe: *low
-  make_chip_stats_se: *low
-  pe_or_se_chip_dispatch: *standard
+  filter_bam_pe: *heavier
+  filter_bam_se: *heavier
+  make_mapping_stats_pe: *low
+  make_mapping_stats_se: *low
+  dispatch_final_bam: *standard
   make_coverage_chip: *heavy 
   make_bigwig_chip: *heavy
   make_fingerprint_plot: *heavy
   calling_peaks_macs2_pe: *heavy
   calling_peaks_macs2_se: *heavy
   idr_analysis_replicates: *single
-  merging_chip_replicates: *heavy
+  merging_bam_replicates: *heavy
   making_pseudo_replicates: *heavy
   best_peaks_pseudoreps: *low
   find_motifs_in_file: *heavy
@@ -499,8 +499,8 @@ resources:
   # combined_analysis
   prepping_mapping_stats: *low
   plotting_mapping_stats: *low
-  prepping_chip_peak_stats: *low
-  plotting_peaks_stats_chip_tf: *low
+  prepping_peak_stats: *low
+  plotting_peak_stats: *low
   prepping_srna_sizes_stats: *low
   plotting_srna_sizes_stats: *low
   combine_peakfiles: *low

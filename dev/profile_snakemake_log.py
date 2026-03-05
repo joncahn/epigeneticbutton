@@ -137,7 +137,7 @@ def analyze(jobs):
     # Phase analysis: group rules into logical phases
     phase_map = {
         "get_fastq": "Download", "process_fastq": "Download",
-        "filter_chip": "Alignment", "filter_rna": "Alignment",
+        "filter_bam": "Alignment", "filter_rna": "Alignment",
         "STAR_map": "Alignment", "map_chromap": "Alignment",
         "bowtie2_map": "Alignment",
         "filter_structural_rna": "Alignment", "dispatch_srna_fastq": "Alignment",
@@ -150,7 +150,7 @@ def analyze(jobs):
         "make_srna_stranded": "Tracks",
         "computing_matrix": "Heatmaps", "plot_heatmap": "Heatmaps",
         "combined_analysis": "Heatmaps",
-        "make_fingerprint": "QC", "make_chip_stats": "QC",
+        "make_fingerprint": "QC", "make_mapping_stats": "QC",
         "make_rna_stats": "QC", "make_peak_stats": "QC",
         "make_srna_size": "QC", "has_header": "QC", "is_stranded": "QC",
         "filter_size_srna": "sRNA analysis",

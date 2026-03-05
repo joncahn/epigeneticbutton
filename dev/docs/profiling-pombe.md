@@ -22,7 +22,7 @@
 | **make_fingerprint_plot** | 8 | 6928 | 866 | 1005 | **45.1%** |
 | get_fastq_pe | 8 | 1213 | 152 | 835 | 7.9% |
 | making_stranded_matrix_on_targetfile | 6 | 878 | 146 | 154 | 5.7% |
-| **filter_chip_pe** | 8 | 865 | 108 | 341 | 5.6% |
+| **filter_bam_pe** | 8 | 865 | 108 | 341 | 5.6% |
 | **make_bigwig_chip** | 11 | 849 | 77 | 86 | 5.5% |
 | get_fastq_se | 10 | 573 | 57 | 175 | 3.7% |
 | process_fastq_pe | 8 | 359 | 45 | 109 | 2.3% |
@@ -30,7 +30,7 @@
 | calling_peaks_macs2_pe | 16 | 315 | 20 | 27 | 2.1% |
 | process_fastq_se | 10 | 311 | 31 | 61 | 2.0% |
 | merging_rna_replicates | 2 | 303 | 152 | 168 | 2.0% |
-| filter_chip_se | 3 | 289 | 96 | 161 | 1.9% |
+| filter_bam_se | 3 | 289 | 96 | 161 | 1.9% |
 | make_rna_stranded_bigwigs | 6 | 261 | 44 | 80 | 1.7% |
 | STAR_map_se | 4 | 210 | 53 | 58 | 1.4% |
 | making_pseudo_replicates | 8 | 191 | 24 | 64 | 1.2% |
@@ -54,7 +54,7 @@ All 8 jobs ran concurrently in the final phase of the pipeline and were the last
 thing to finish — they extended wall clock time by ~15 minutes after all other
 rules had completed.
 
-### 2. filter_chip_pe shows bimodal timing
+### 2. filter_bam_pe shows bimodal timing
 
 Two WCE (whole-cell extract) samples took ~340s each while the six IP samples
 averaged ~33s. WCE files are larger (more reads, no enrichment-based filtering
@@ -103,9 +103,10 @@ sorting after merge.
   and emits a warning banner with empty output on failure. MAnorm also
   gracefully skips when either sample has <2 peaks.
 
-- **samtools sort memory**: The sort step in filter_chip_pe/se uses default
-  memory. Adding `-m` (memory per thread) could reduce I/O pressure on large
-  BAMs.
+- **samtools sort memory**: ✅ **Addressed.** `filter_bam_pe`/`filter_bam_se`
+  now auto-compute `-m` (per-thread sort memory) as 75% of `mem_mb` divided by
+  threads, with a 768M floor. For the default `heavier` profile (32GB, 8
+  threads): `-m 3000M` per thread. Reduces temporary disk I/O on large BAMs.
 
 ### Low impact
 

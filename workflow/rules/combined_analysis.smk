@@ -737,7 +737,7 @@ rule plotting_mapping_stats:
         
 ###
 # Rules to prep and then plot the peak stats:
-rule prepping_chip_peak_stats:
+rule prepping_peak_stats:
     input:
         sample_stat_files = lambda wildcards: [ f"results/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
     output:
@@ -745,11 +745,11 @@ rule prepping_chip_peak_stats:
         stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_peak_stats"))
-    threads: config["resources"]["prepping_chip_peak_stats"]["threads"]
+    threads: config["resources"]["prepping_peak_stats"]["threads"]
     resources:
-        mem_mb=config["resources"]["prepping_chip_peak_stats"]["mem_mb"],
-        tmp_mb=config["resources"]["prepping_chip_peak_stats"]["tmp_mb"],
-        qos=config["resources"]["prepping_chip_peak_stats"]["qos"]
+        mem_mb=config["resources"]["prepping_peak_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["prepping_peak_stats"]["tmp_mb"],
+        qos=config["resources"]["prepping_peak_stats"]["qos"]
     shell:
         """
         printf "Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > "{output.stat_file}"
@@ -760,7 +760,7 @@ rule prepping_chip_peak_stats:
         sort {output.temp_stat_file} -u >> "{output.stat_file}"
         """
     
-rule plotting_peaks_stats_chip_tf:
+rule plotting_peak_stats:
     input:
         summary_stats = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
     output:
@@ -772,11 +772,11 @@ rule plotting_peaks_stats_chip_tf:
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "plot_peak_stats"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_peaks_stats_chip_tf"]["threads"]
+    threads: config["resources"]["plotting_peak_stats"]["threads"]
     resources:
-        mem_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["tmp_mb"],
-        qos=config["resources"]["plotting_peaks_stats_chip_tf"]["qos"]
+        mem_mb=config["resources"]["plotting_peak_stats"]["mem_mb"],
+        tmp_mb=config["resources"]["plotting_peak_stats"]["tmp_mb"],
+        qos=config["resources"]["plotting_peak_stats"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}" "{params.env}"

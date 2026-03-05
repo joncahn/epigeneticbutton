@@ -2,7 +2,7 @@
 Targeted rule tests that execute real samtools commands on synthetic SAM data.
 
 These tests validate the actual shell logic extracted from Snakemake rules
-(filter_chip_pe, filter_chip_se, filter_rna_se) using minimal synthetic
+(filter_bam_pe, filter_bam_se, filter_rna_se) using minimal synthetic
 inputs. bamCoverage tests are skipped by default (not in epicc env).
 
 Run with: pytest tests/unit/test_rule_commands.py -v
@@ -108,8 +108,8 @@ def _generate_se_sam(path, n_reads=100, n_dups=10, seed=42):
 # Helper functions: extracted shell logic from Snakemake rules
 # ---------------------------------------------------------------------------
 
-def run_filter_chip_pe(sam_path, out_bam, metrics_dup, metrics_flag, tmpdir, threads=1):
-    """Execute the filter_chip_pe pipeline: view → fixmate → sort → markdup → flagstat."""
+def run_filter_bam_pe(sam_path, out_bam, metrics_dup, metrics_flag, tmpdir, threads=1):
+    """Execute the filter_bam_pe pipeline: view → fixmate → sort → markdup → flagstat."""
     temp1 = tmpdir / "temp1.bam"
     temp2 = tmpdir / "temp2.bam"
     temp3 = tmpdir / "temp3.bam"
@@ -126,8 +126,8 @@ def run_filter_chip_pe(sam_path, out_bam, metrics_dup, metrics_flag, tmpdir, thr
         assert result.returncode == 0, f"Command failed: {cmd}\nstderr: {result.stderr}"
 
 
-def run_filter_chip_se(sam_path, out_bam, metrics_dup, metrics_flag, tmpdir, threads=1):
-    """Execute the filter_chip_se pipeline: view → sort → markdup → flagstat."""
+def run_filter_bam_se(sam_path, out_bam, metrics_dup, metrics_flag, tmpdir, threads=1):
+    """Execute the filter_bam_se pipeline: view → sort → markdup → flagstat."""
     temp1 = tmpdir / "temp1.bam"
     temp2 = tmpdir / "temp2.bam"
 
@@ -160,7 +160,7 @@ def run_filter_rna_se(sam_path, out_bam, metrics_flag, threads=1):
 
 @pytest.fixture(scope="class")
 def pe_chip_outputs():
-    """Run filter_chip_pe on synthetic PE SAM and return output paths."""
+    """Run filter_bam_pe on synthetic PE SAM and return output paths."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
         sam = tmpdir / "pe_input.sam"
@@ -169,7 +169,7 @@ def pe_chip_outputs():
         metrics_flag = tmpdir / "flagstat.txt"
 
         _generate_pe_sam(sam)
-        run_filter_chip_pe(sam, out_bam, metrics_dup, metrics_flag, tmpdir)
+        run_filter_bam_pe(sam, out_bam, metrics_dup, metrics_flag, tmpdir)
 
         yield {
             "bam": out_bam,
@@ -181,7 +181,7 @@ def pe_chip_outputs():
 
 @pytest.fixture(scope="class")
 def se_chip_outputs():
-    """Run filter_chip_se on synthetic SE SAM and return output paths."""
+    """Run filter_bam_se on synthetic SE SAM and return output paths."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
         sam = tmpdir / "se_input.sam"
@@ -190,7 +190,7 @@ def se_chip_outputs():
         metrics_flag = tmpdir / "flagstat.txt"
 
         _generate_se_sam(sam)
-        run_filter_chip_se(sam, out_bam, metrics_dup, metrics_flag, tmpdir)
+        run_filter_bam_se(sam, out_bam, metrics_dup, metrics_flag, tmpdir)
 
         yield {
             "bam": out_bam,
@@ -226,7 +226,7 @@ def se_rna_outputs():
 
 @pytest.mark.unit
 class TestFilterChipPE:
-    """Tests for the filter_chip_pe rule logic."""
+    """Tests for the filter_bam_pe rule logic."""
 
     def test_output_bam_exists(self, pe_chip_outputs):
         """Output BAM file exists and is non-empty."""
@@ -261,7 +261,7 @@ class TestFilterChipPE:
 
 @pytest.mark.unit
 class TestFilterChipSE:
-    """Tests for the filter_chip_se rule logic."""
+    """Tests for the filter_bam_se rule logic."""
 
     def test_output_bam_exists(self, se_chip_outputs):
         """Output BAM file exists and is non-empty."""

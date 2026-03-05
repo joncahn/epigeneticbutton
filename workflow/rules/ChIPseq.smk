@@ -91,7 +91,7 @@ def assign_bam_file(wildcards):
     sname = wildcards.sample_name
     env = get_sample_info_from_name(sname, samples, 'env')
     aligned_bams = config['aligned_bams']
-    new_bam = assign_mapping_paired(wildcards, "filter_chip", "bamfile")
+    new_bam = assign_mapping_paired(wildcards, "filter_bam", "bamfile")
     if aligned_bams:
         return f"results/{env}/mapped/copied__{sname}.bam"
     else:
@@ -485,7 +485,7 @@ rule make_chromap_index:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule filter_chip_pe:
+rule filter_bam_pe:
     input:
         fastq1 = "results/{env}/fastq/trim__{sample_name}__R1.fastq.gz",
         fastq2 = "results/{env}/fastq/trim__{sample_name}__R2.fastq.gz",
@@ -505,21 +505,23 @@ rule filter_chip_pe:
         aligner = lambda wildcards: get_effective_aligner(wildcards.env),
         map_option = lambda wildcards: get_mapping_strategy(wildcards.env),
         mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_mapping_strategy(wildcards.env)]['map_pe'],
-        mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env)
+        mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env),
+        sort_mem = lambda wildcards, resources, threads: f"{max(768, int(resources.mem_mb * 0.75 / threads))}M"
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "PE"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["filter_chip_pe"]["threads"]
+    threads: config["resources"]["filter_bam_pe"]["threads"]
     resources:
-        mem_mb=config["resources"]["filter_chip_pe"]["mem_mb"],
-        tmp_mb=config["resources"]["filter_chip_pe"]["tmp_mb"],
-        qos=config["resources"]["filter_chip_pe"]["qos"]
+        mem_mb=config["resources"]["filter_bam_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["filter_bam_pe"]["tmp_mb"],
+        qos=config["resources"]["filter_bam_pe"]["qos"]
     shell:
         """
         {{
         set -o pipefail
         aligner="{params.aligner}"
         printf "\nMapping {params.sample_name} to {params.ref_genome} with $aligner ({params.map_option}) and filtering with samtools\n"
+        printf "samtools sort memory: {params.sort_mem} per thread\n"
         samtools --version | head -1
 
         if [[ "$aligner" == "chromap" ]]; then
@@ -531,7 +533,7 @@ rule filter_chip_pe:
                 -o /dev/stdout 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
             | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ {threads} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ {threads} -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -540,7 +542,7 @@ rule filter_chip_pe:
                 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
             | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ 2 -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
@@ -551,7 +553,7 @@ rule filter_chip_pe:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule filter_chip_se:
+rule filter_bam_se:
     input:
         fastq = "results/{env}/fastq/trim__{sample_name}__R0.fastq.gz",
         index = get_mapping_index,
@@ -570,21 +572,23 @@ rule filter_chip_se:
         aligner = lambda wildcards: get_effective_aligner(wildcards.env),
         map_option = lambda wildcards: get_mapping_strategy(wildcards.env),
         mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_mapping_strategy(wildcards.env)]['map_se'],
-        mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env)
+        mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env),
+        sort_mem = lambda wildcards, resources, threads: f"{max(768, int(resources.mem_mb * 0.75 / threads))}M"
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "SE"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["filter_chip_se"]["threads"]
+    threads: config["resources"]["filter_bam_se"]["threads"]
     resources:
-        mem_mb=config["resources"]["filter_chip_se"]["mem_mb"],
-        tmp_mb=config["resources"]["filter_chip_se"]["tmp_mb"],
-        qos=config["resources"]["filter_chip_se"]["qos"]
+        mem_mb=config["resources"]["filter_bam_se"]["mem_mb"],
+        tmp_mb=config["resources"]["filter_bam_se"]["tmp_mb"],
+        qos=config["resources"]["filter_bam_se"]["qos"]
     shell:
         """
         {{
         set -o pipefail
         aligner="{params.aligner}"
         printf "\nMapping {params.sample_name} to {params.ref_genome} with $aligner ({params.map_option}) and filtering with samtools\n"
+        printf "samtools sort memory: {params.sort_mem} per thread\n"
         samtools --version | head -1
 
         if [[ "$aligner" == "chromap" ]]; then
@@ -596,7 +600,7 @@ rule filter_chip_se:
                 -o /dev/stdout 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
             | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ {threads} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ {threads} -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -604,7 +608,7 @@ rule filter_chip_se:
                 -U "{input.fastq}" \
                 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools sort -@ 2 -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ 2 -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
@@ -615,7 +619,7 @@ rule filter_chip_se:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule make_chip_stats_pe:
+rule make_mapping_stats_pe:
     input:
         metrics_trim = "results/{env}/reports/trim_pe__{sample_name}.json",
         metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
@@ -632,11 +636,11 @@ rule make_chip_stats_pe:
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
         trimmed_fastq = config['trimmed_fastqs']
-    threads: config["resources"]["make_chip_stats_pe"]["threads"]
+    threads: config["resources"]["make_mapping_stats_pe"]["threads"]
     resources:
-        mem_mb=config["resources"]["make_chip_stats_pe"]["mem_mb"],
-        tmp_mb=config["resources"]["make_chip_stats_pe"]["tmp_mb"],
-        qos=config["resources"]["make_chip_stats_pe"]["qos"]
+        mem_mb=config["resources"]["make_mapping_stats_pe"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mapping_stats_pe"]["tmp_mb"],
+        qos=config["resources"]["make_mapping_stats_pe"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -670,7 +674,7 @@ rule make_chip_stats_pe:
         rm -f {input.logs}
         """
 
-rule make_chip_stats_se:
+rule make_mapping_stats_se:
     input:
         metrics_trim = "results/{env}/reports/trim_se__{sample_name}.json",
         metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
@@ -687,11 +691,11 @@ rule make_chip_stats_se:
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
         trimmed_fastq = config['trimmed_fastqs']
-    threads: config["resources"]["make_chip_stats_se"]["threads"]
+    threads: config["resources"]["make_mapping_stats_se"]["threads"]
     resources:
-        mem_mb=config["resources"]["make_chip_stats_se"]["mem_mb"],
-        tmp_mb=config["resources"]["make_chip_stats_se"]["tmp_mb"],
-        qos=config["resources"]["make_chip_stats_se"]["qos"]
+        mem_mb=config["resources"]["make_mapping_stats_se"]["mem_mb"],
+        tmp_mb=config["resources"]["make_mapping_stats_se"]["tmp_mb"],
+        qos=config["resources"]["make_mapping_stats_se"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -720,7 +724,7 @@ rule make_chip_stats_se:
         cat {input.logs} > "{output.log}"
         """
 
-rule pe_or_se_chip_dispatch:
+rule dispatch_final_bam:
     input:
         assign_bam_file
     output:
@@ -730,11 +734,11 @@ rule pe_or_se_chip_dispatch:
     wildcard_constraints:
         env = "ChIP|ATAC"
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["pe_or_se_chip_dispatch"]["threads"]
+    threads: config["resources"]["dispatch_final_bam"]["threads"]
     resources:
-        mem_mb=config["resources"]["pe_or_se_chip_dispatch"]["mem_mb"],
-        tmp_mb=config["resources"]["pe_or_se_chip_dispatch"]["tmp_mb"],
-        qos=config["resources"]["pe_or_se_chip_dispatch"]["qos"]
+        mem_mb=config["resources"]["dispatch_final_bam"]["mem_mb"],
+        tmp_mb=config["resources"]["dispatch_final_bam"]["tmp_mb"],
+        qos=config["resources"]["dispatch_final_bam"]["qos"]
     shell:
         """
         cp {input} {output.bam}
@@ -1020,7 +1024,7 @@ rule idr_analysis_replicates:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule merging_chip_replicates:
+rule merging_bam_replicates:
     input:
         bamfiles = lambda wildcards: [
             f"results/{wildcards.env}/mapped/final__{sid}.bam"
@@ -1037,11 +1041,11 @@ rule merging_chip_replicates:
     log:
         temp(return_log_chip("{env}","{sample_name}", "merging_reps", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["merging_chip_replicates"]["threads"]
+    threads: config["resources"]["merging_bam_replicates"]["threads"]
     resources:
-        mem_mb=config["resources"]["merging_chip_replicates"]["mem_mb"],
-        tmp_mb=config["resources"]["merging_chip_replicates"]["tmp_mb"],
-        qos=config["resources"]["merging_chip_replicates"]["qos"]
+        mem_mb=config["resources"]["merging_bam_replicates"]["mem_mb"],
+        tmp_mb=config["resources"]["merging_bam_replicates"]["tmp_mb"],
+        qos=config["resources"]["merging_bam_replicates"]["qos"]
     shell:
         """
         {{
