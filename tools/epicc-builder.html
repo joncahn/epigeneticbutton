@@ -2081,6 +2081,8 @@ var configState = {
   trim_front_ChIP: 0,
   adapter1_ChIP: "auto",
   adapter2_ChIP: "auto",
+  chip_fingerprint_plots: true,
+  fingerprint_samples: "auto",
   chip_aligner: "chromap",
   chip_mapping_strategy: "default",
   chip_tracks_binsize: 1,
@@ -2390,6 +2392,9 @@ function buildConfigForm() {
   chipBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_ChIP", 0, 100));
   chipBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_ChIP", "auto"));
   chipBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_ChIP", "auto"));
+  chipBody.appendChild(buildToggleRow("Fingerprint plots:", "chip_fingerprint_plots",
+    "Fingerprint QC plots will be generated", "Fingerprint plots skipped (saves time)"));
+  chipBody.appendChild(buildTextRow("Fingerprint samples (auto or integer):", "fingerprint_samples", "auto"));
   chipBody.appendChild(buildSelectRow("Aligner:", "chip_aligner",
     ["chromap", "bowtie2"]));
   chipBody.appendChild(buildSelectRow("Mapping strategy:", "chip_mapping_strategy",
@@ -2623,6 +2628,8 @@ function configStateToYAML() {
     ATAC: configState.adapter2_ATAC
   };
 
+  cfg.chip_fingerprint_plots = configState.chip_fingerprint_plots;
+  cfg.fingerprint_samples = configState.fingerprint_samples;
   cfg.chip_aligner = configState.chip_aligner;
   cfg.atac_aligner = configState.atac_aligner;
   cfg.chip_mapping_strategy = configState.chip_mapping_strategy;
@@ -2720,6 +2727,8 @@ function handleYAMLImport(text) {
   if (cfg.motifs != null) configState.motifs = !!cfg.motifs;
   if (cfg.jaspar_db != null) configState.jaspar_db = cfg.jaspar_db;
   if (cfg.motifs_allreps != null) configState.motifs_allreps = !!cfg.motifs_allreps;
+  if (cfg.chip_fingerprint_plots != null) configState.chip_fingerprint_plots = !!cfg.chip_fingerprint_plots;
+  if (cfg.fingerprint_samples != null) configState.fingerprint_samples = String(cfg.fingerprint_samples);
   if (cfg.chip_aligner != null) configState.chip_aligner = cfg.chip_aligner;
   if (cfg.atac_aligner != null) configState.atac_aligner = cfg.atac_aligner;
   if (cfg.chip_mapping_strategy != null) configState.chip_mapping_strategy = cfg.chip_mapping_strategy;
@@ -2834,6 +2843,7 @@ function handleYAMLImport(text) {
       "keep_intermediates","keep_trimmed_fastqs","keep_final_bams","keep_merged_bams",
       "keep_shifted_bams","keep_cx_reports","keep_dmc_intermediates","motifs","jaspar_db","motifs_allreps",
       "quality_threshold","min_read_length","trim_front","adapter1","adapter2",
+      "chip_fingerprint_plots","fingerprint_samples",
       "chip_aligner","atac_aligner","chip_mapping_strategy","atac_mapping_strategy",
       "chip_mapping_option","atac_mapping_option",
       "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",

@@ -391,7 +391,8 @@ def define_final_chip_output(ref_genome):
         paired = row['paired']
         env = row['env']
         bigwig_files.append(f"results/{env}/tracks/FC__final__{sname}.bw")
-        stat_files.append(f"results/{env}/plots/Fingerprint__final__{sname}.png")
+        if config.get("chip_fingerprint_plots", True):
+            stat_files.append(f"results/{env}/plots/Fingerprint__final__{sname}.png")
         if paired == "PE":
             peak_files.append(f"results/{env}/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak")
         else:
@@ -797,20 +798,21 @@ rule make_bigwig_chip:
 
 rule make_fingerprint_plot:
     input:
-        ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        ipbai = "results/{env}/mapped/{file_type}__{sample_name}.bam.bai",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
-        inputbai = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam.bai"
+        ipfile = "results/{env}/mapped/final__{sample_name}.bam",
+        ipbai = "results/{env}/mapped/final__{sample_name}.bam.bai",
+        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/final__{assign_chip_input(wildcards)}.bam",
+        inputbai = lambda wildcards: f"results/{wildcards.env}/mapped/final__{assign_chip_input(wildcards)}.bam.bai",
+        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
-        pngplot = "results/{env}/plots/Fingerprint__{file_type}__{sample_name}.png"
+        pngplot = "results/{env}/plots/Fingerprint__final__{sample_name}.png"
     wildcard_constraints:
-        env = "ChIP",
-        file_type = "final|merged"
+        env = "ChIP|ATAC"
     params:
-        ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.sample_name}",
-        inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}"
+        ipname = lambda wildcards: f"final__{wildcards.sample_name}",
+        inputname = lambda wildcards: f"final__{assign_chip_input(wildcards)}",
+        n_samples = config.get("fingerprint_samples", "auto")
     log:
-        temp(return_log_chip("{env}","{sample_name}", "making_fingerprint_{file_type}", ""))
+        temp(return_log_chip("{env}","{sample_name}", "making_fingerprint_final", ""))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_fingerprint_plot"]["threads"]
     resources:
@@ -822,7 +824,20 @@ rule make_fingerprint_plot:
         {{
         printf "\nPlotting fingerprint for {params.ipname} (vs {params.inputname}) with deeptools version:\n"
         deeptools --version
-        plotFingerprint -b {input.ipfile} {input.inputfile} -o {output.pngplot} -p {threads} -l {params.ipname} {params.inputname}
+
+        # Auto-scale numberOfSamples to genome size (cap at 100K, floor at 10K)
+        n_samples="{params.n_samples}"
+        if [[ "$n_samples" == "auto" ]]; then
+            genome_size=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
+            bin_size=500
+            n_samples=$(python3 -c "print(max(10000, min(100000, int($genome_size / $bin_size))))")
+            printf "Auto-scaled --numberOfSamples to %s (genome: %s bp, bin: %s bp)\n" "$n_samples" "$genome_size" "$bin_size"
+        fi
+
+        plotFingerprint -b {input.ipfile} {input.inputfile} \
+            -o {output.pngplot} -p {threads} \
+            -n "$n_samples" --skipZeros \
+            -l {params.ipname} {params.inputname}
         }} 2>&1 | tee -a "{log}"
         """
 

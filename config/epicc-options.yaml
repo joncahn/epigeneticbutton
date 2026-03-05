@@ -120,6 +120,13 @@ adapter2:
   sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # NextFlex
   ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG" # Nextera
 
+# Fingerprint plots (deeptools plotFingerprint): QC diagnostic for ChIP enrichment.
+# Set to false to skip entirely (saves ~15 min per-sample on large genomes).
+# fingerprint_samples controls the number of genomic bins sampled (default: "auto"
+# scales to genome size, capped at 100000; deeptools default is 500000).
+chip_fingerprint_plots: true
+fingerprint_samples: "auto" # "auto" or integer (e.g. 100000)
+
 # Aligner for ChIP/ATAC: "chromap" (default, ~10x faster) or "bowtie2"
 # When chromap is selected but mapping_strategy is repeat/repeatall,
 # bowtie2 is used automatically (chromap lacks multi-mapping support).

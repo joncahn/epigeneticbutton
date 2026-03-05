@@ -85,11 +85,13 @@ sorting after merge.
 
 ### High impact
 
-- **plotFingerprint**: Consider making it optional via an options flag
-  (`chip_fingerprint_plots: true/false`), or reducing its `--numberOfSamples`
-  parameter (default 500,000) to speed up computation at the cost of minor
-  precision loss. Could also lower its thread allocation to allow more
-  concurrent jobs.
+- **plotFingerprint**: ✅ **Addressed.** Three changes combined:
+  1. `chip_fingerprint_plots: true/false` option to skip entirely
+  2. `fingerprint_samples: "auto"` auto-scales `--numberOfSamples` to genome
+     size (cap 100K, floor 10K). For pombe: 25K vs default 500K (20x reduction).
+  3. Restricted to per-rep (`final`) BAMs only — merged fingerprints were
+     vestigial (never requested by the output function).
+  Also added `--skipZeros` flag to avoid sampling empty bins.
 
 - **Duplicate SRA downloads**: `WT_WCE_rep1` and `dcr1_WCE_rep1` share the
   same accession (SRR5445712). The pipeline downloads it twice independently.
@@ -97,10 +99,9 @@ sorting after merge.
 
 ### Medium impact
 
-- **IDR minimum peak threshold**: The S. pombe test case consistently fails IDR
-  with <20 peaks post-merge. The IDR rule could catch this gracefully (warn +
-  create empty output) instead of erroring, avoiding cascading diff_peaks
-  failures.
+- **IDR minimum peak threshold**: ✅ **Addressed.** IDR now checks exit code
+  and emits a warning banner with empty output on failure. MAnorm also
+  gracefully skips when either sample has <2 peaks.
 
 - **samtools sort memory**: The sort step in filter_chip_pe/se uses default
   memory. Adding `-m` (memory per thread) could reduce I/O pressure on large
