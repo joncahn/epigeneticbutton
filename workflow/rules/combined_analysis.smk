@@ -1640,7 +1640,7 @@ rule summarize_tracks_pca:
         bs = config['pca_bs'],
         step = config['pca_step']
     log:
-        temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_tracks_pca", "{env}"))
+        temp(return_log_combined("{analysis_name}", "{ref_genome}", "summarize_tracks_pca_{env}"))
     conda: CONDA_ENV
     threads: config["resources"]["summarize_tracks_pca"]["threads"]
     resources:
@@ -1669,7 +1669,7 @@ rule plot_PCA_correlation:
         colors = lambda wildcards: define_input_for_pca(wildcards, "colors"),
         bs = config['pca_bs']
     log:
-        temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{env}"))
+        temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_PCA_correlation_{env}"))
     conda: CONDA_ENV
     threads: config["resources"]["plot_PCA_correlation"]["threads"]
     resources:
