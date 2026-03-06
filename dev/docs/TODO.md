@@ -194,7 +194,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Snakemake issue - currently conda envs are created with cryptic names. Can we incorporate semantic naming for these so they reflect epibutton_chip, etc.?
 
-* [ ] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates
+* [x] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates. **Done**: 8 chip-specific rule names renamed to generic names across all rule files, resource config, tests, and profiling scripts (filter_chip_pe → filter_bam_pe, make_chip_stats_pe → make_mapping_stats_pe, pe_or_se_chip_dispatch → dispatch_final_bam, merging_chip_replicates → merging_bam_replicates, prepping_chip_peak_stats → prepping_peak_stats, plotting_peaks_stats_chip_tf → plotting_peak_stats, plus SE variants).
 
 * [ ] Improve logging system (naming, concatenating, and cleaning if chosen)
 
@@ -240,7 +240,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Local
 
-* [x] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG. **Done**: Use `dev/profile_snakemake_log.py` to profile runs. Top bottleneck was `plotFingerprint` (45% CPU); addressed via auto-scaled `--numberOfSamples`, optional `chip_fingerprint_plots` toggle, and per-rep-only restriction. Also added `samtools sort -m` to `filter_bam_pe`/`se`. Full pipeline completes in ~42 min on 56 cores.
+* [x] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG. **Done**: Use `dev/profile_snakemake_log.py` to profile runs. Top bottleneck was `plotFingerprint` (45% CPU); addressed via auto-scaled `--numberOfSamples`, optional `chip_fingerprint_plots` toggle, and per-rep-only restriction. Also added `samtools sort -m` to `filter_bam_pe`/`se`. Full pipeline completes in ~25 min on 56 cores (down from ~42 min pre-optimization).
 
 ### Cluster
 
