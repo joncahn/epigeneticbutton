@@ -1,0 +1,6 @@
+# Full hg38 genome (~3 GB) — used for alignment during data prep only
+hg38_full.fa
+hg38_full.fa.fai
+
+# GENCODE full annotation (downloaded then subsetted)
+gencode.*.annotation.gff3.gz
