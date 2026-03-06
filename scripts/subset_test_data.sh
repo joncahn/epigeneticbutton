@@ -483,20 +483,40 @@ fi
 # -------------------------------------------------------------------
 IFS='+' read -ra SRR_ARRAY <<< "$SRR_ACCESSIONS"
 
-# Build ENA HTTPS URL for a given accession
-# ENA pattern: .../vol1/fastq/SRRnnn/[0xx/]SRRxxxxxxx/
-#   9-char accessions (SRR123456):    no subdir
-#   10+ char accessions (SRR1234567): subdir = last digits after pos 9, zero-padded to 3
+# Build ENA HTTPS base URL for a given accession
+# Matches logic in workflow/scripts/ena_download.sh
 ena_base_url() {
-    local srr="$1"
-    local prefix="${srr:0:6}"
-    local len=${#srr}
-    if [[ $len -ge 10 ]]; then
-        local subdir
-        subdir="$(printf '%03d' "${srr:9}")"
-        echo "https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${srr}"
+    local acc="$1"
+    local letters="${acc%%[0-9]*}"
+    local digits="${acc#"$letters"}"
+    local ndigits="${#digits}"
+    local first6="${acc:0:6}"
+    local intermediate=""
+
+    case "$ndigits" in
+        6) intermediate="" ;;
+        7) intermediate="00${digits: -1}" ;;
+        8) intermediate="0${digits: -2}" ;;
+        9) intermediate="${digits: -3}" ;;
+        *) log "WARNING: unexpected accession format '$acc' ($ndigits digits)"; return 1 ;;
+    esac
+
+    if [[ -n "$intermediate" ]]; then
+        echo "https://ftp.sra.ebi.ac.uk/vol1/fastq/${first6}/${intermediate}/${acc}"
     else
-        echo "https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${srr}"
+        echo "https://ftp.sra.ebi.ac.uk/vol1/fastq/${first6}/${acc}"
+    fi
+}
+
+# Download and verify a single gzipped file; returns 0 on success
+ena_fetch() {
+    local url="$1" dest="$2"
+    if ! wget -q -O "$dest" "$url" 2>/dev/null; then
+        rm -f "$dest"; return 1
+    fi
+    if ! gzip -t "$dest" 2>/dev/null; then
+        log "  gzip integrity check failed: $(basename "$dest")"
+        rm -f "$dest"; return 1
     fi
 }
 
@@ -504,22 +524,20 @@ ena_base_url() {
 download_ena() {
     local srr="$1" layout="$2" dl_dir="$3"
     local base
-    base=$(ena_base_url "$srr")
+    base=$(ena_base_url "$srr") || return 1
 
     if [[ "$layout" == "PE" ]]; then
         log "  Trying ENA (PE): $srr ..."
-        wget -q -O "${dl_dir}/${srr}_1.fastq.gz" "${base}/${srr}_1.fastq.gz" 2>/dev/null \
-            && wget -q -O "${dl_dir}/${srr}_2.fastq.gz" "${base}/${srr}_2.fastq.gz" 2>/dev/null
-        if [[ $? -ne 0 ]]; then
+        if ! ena_fetch "${base}/${srr}_1.fastq.gz" "${dl_dir}/${srr}_1.fastq.gz" \
+            || ! ena_fetch "${base}/${srr}_2.fastq.gz" "${dl_dir}/${srr}_2.fastq.gz"; then
             rm -f "${dl_dir}/${srr}_1.fastq.gz" "${dl_dir}/${srr}_2.fastq.gz"
             return 1
         fi
     else
         log "  Trying ENA (SE): $srr ..."
-        # ENA SE files may be named .fastq.gz or _1.fastq.gz
-        if ! wget -q -O "${dl_dir}/${srr}.fastq.gz" "${base}/${srr}.fastq.gz" 2>/dev/null; then
-            if ! wget -q -O "${dl_dir}/${srr}.fastq.gz" "${base}/${srr}_1.fastq.gz" 2>/dev/null; then
-                rm -f "${dl_dir}/${srr}.fastq.gz"
+        if ! ena_fetch "${base}/${srr}.fastq.gz" "${dl_dir}/${srr}.fastq.gz"; then
+            # Some SE datasets use _1.fastq.gz naming on ENA
+            if ! ena_fetch "${base}/${srr}_1.fastq.gz" "${dl_dir}/${srr}.fastq.gz"; then
                 return 1
             fi
         fi
