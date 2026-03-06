@@ -240,7 +240,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Local
 
-* [x] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG. **Done**: See `dev/docs/profiling-pombe.md`. Top bottleneck is `plotFingerprint` (45% of CPU time, ~14 min/job). Full pipeline completes in ~42 min on 56 cores (267/282 steps; remaining 15 are data/network failures, not code bugs).
+* [x] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG. **Done**: Use `dev/profile_snakemake_log.py` to profile runs. Top bottleneck was `plotFingerprint` (45% CPU); addressed via auto-scaled `--numberOfSamples`, optional `chip_fingerprint_plots` toggle, and per-rep-only restriction. Also added `samtools sort -m` to `filter_bam_pe`/`se`. Full pipeline completes in ~42 min on 56 cores.
 
 ### Cluster
 
