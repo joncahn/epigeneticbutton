@@ -19,11 +19,12 @@ snakemake --profile profiles/slurm                            # SLURM cluster
   - `environment_setup.smk` - Reference genome preparation (indexing, annotation processing)
   - `sample_download.smk` - SRA download and FASTQ processing
   - `ChIPseq.smk` - Histone/TF ChIP mapping, peak calling (MACS2), IDR analysis
+  - `ATACseq.smk` - ATAC-seq mapping and peak calling (shares ChIP conda env)
   - `RNAseq.smk` - STAR alignment, differential expression (edgeR)
   - `mC.smk` - Bismark alignment, methylation calling, DMR analysis (DMRcaller)
   - `smallRNA.smk` - ShortStack analysis, structural RNA filtering
   - `combined_analysis.smk` - Cross-datatype heatmaps, metaplots, browsers (deeptools)
-- `workflow/scripts/` - R scripts for statistical analysis and plotting
+- `workflow/scripts/` - R and Python scripts for statistical analysis, plotting, and sample-sheet utilities
 - `workflow/envs/` - Conda environment YAML files per analysis type
 
 ### Sample Sheet and Naming
@@ -57,6 +58,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
   python dev/profile_snakemake_log.py --latest --html r.html # HTML report
   python dev/profile_snakemake_log.py path/to/log.snakemake.log
   ```
+- `scripts/subset_test_data.sh` - SLURM-based test data preparation. Downloads SRA data, aligns to a full reference, and subsets reads mapping to a target region (e.g. chr21) for use as integration test fixtures. Self-resubmitting controller with three phases (index, per-sample, gather).
 
 ### Configuration
 
@@ -72,7 +74,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 ## Testing
 
 ```bash
-# Unit tests (sample_sheet.py logic, samtools rule commands)
+# Unit tests (sample_sheet.py logic, samtools/mC helpers, dmC input validation)
 pytest tests/unit/ -v
 
 # Integration tests — S. pombe dry-run (no cluster needed)
@@ -84,9 +86,13 @@ scripts/validate_pombe.sh --all
 
 - `tests/unit/test_sample_sheet.py` - Tests for `sample_sheet.py` functions
 - `tests/unit/test_rule_commands.py` - Tests samtools pipelines on synthetic SAM data (requires samtools)
+- `tests/unit/test_mC_helpers.py` - Tests mC rule helper functions (`is_dmc_sample`, `parameters_for_mc`)
+- `tests/unit/test_validate_dmc_input.py` - Tests dmC input validation (modBAM MM/ML tags, bedMethyl format)
 - `tests/integration/test_pombe_dryrun.py` - Snakemake dry-run validation with S. pombe test data
+- `tests/integration/test_dmc_dryrun.py` - Snakemake dry-run validation for the dmC workflow
 - `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
-- `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (18 samples, 4 assays)
+- `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (17 samples, 4 assays)
+- `tests/integration/data/test_samples_chr21.tsv` - Human chr21 test sample sheet (33 samples, all 6 assay types)
 
 ## Key Details
 

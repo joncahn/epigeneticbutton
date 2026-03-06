@@ -38,7 +38,28 @@ conda create -n epicc -y -c conda-forge -c bioconda \
     pytest samtools gh
 ```
 
-### 3. Optional tools
+### 3. Test data preparation (for subsetting new test datasets)
+
+The `scripts/subset_test_data.sh` script downloads SRA data, aligns to a full reference, subsets reads to a target region, and regenerates FASTQs. It requires aligners and SRA tools in the `epicc` env:
+
+```bash
+conda install -n epicc -y -c bioconda -c conda-forge \
+    bowtie2 star bismark samtools pigz sra-tools awscli
+```
+
+| Package | Purpose |
+|---------|---------|
+| `bowtie2` | Alignment for ChIP-seq and sRNA-seq samples |
+| `star` | Alignment for RNA-seq and RAMPAGE samples |
+| `bismark` | Alignment for WGBS/EMseq samples |
+| `samtools` | BAM subsetting, sorting, indexing, FASTQ extraction |
+| `pigz` | Parallel gzip compression of downloaded FASTQs |
+| `sra-tools` | `fasterq-dump` for downloading from SRA |
+| `awscli` | S3 downloads for ONT Open Data (dmC modBAM) |
+
+See `tests/integration/data/hg38_chr21/prep_manifest.tsv` for the data prep manifest.
+
+### 4. Optional tools
 
 These are not needed for routine development but are useful for specific tasks:
 
@@ -99,6 +120,7 @@ tests/
     integration/              # Snakemake dry-run and post-run tests
 scripts/
     validate_pombe.sh         # S. pombe integration test orchestrator
+    subset_test_data.sh       # SLURM-based chromosome subsetting for test data prep
     migrate_sample_sheet.py   # Old → new sample sheet format migration
 tools/
     epicc-builder.html        # Sample sheet and config builder app

@@ -132,11 +132,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
   * [x] Keep all of the jokey prompts in the options file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
-##### [ ] Deployment
+##### [x] Deployment
 
 * [x] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally. **Done**: GitHub Actions workflow `.github/workflows/deploy-builder.yml` deploys `tools/epicc-builder.html` as `index.html` on push to main. Requires enabling GitHub Pages (Source: GitHub Actions) in repo Settings > Pages.
 
-##### [ ] Tweaks
+##### [x] Tweaks
 
 * [x] Show help text for column headers on mouse over of headers specifically, instead of just on click. Retain current show-on-click behavior for header row and value cells. **Done**: Added `headerMouseEnter` callbacks alongside existing `headerClick` and `cellClick` in `descHooks()` and factor column inline hooks.
 
@@ -144,7 +144,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file. **Done**: New Reference Genomes tab with genome name management UI (add/remove tiles), per-genome config forms, Genome column in Samples tab constrained to dropdown (freetext still allowed). Genome data flows into YAML export via `configState.genomes`. EPICC brand links to genomes tab.
 
-##### [ ] Bugs
+##### [x] Bugs
 
 * [x] Sample sheet example should validate, be exportable. **Done**: Fixed PE example rows to include R1,R2 comma-separated paths. Removed `_example` skip guards from validation and export. Example rows now validate normally and are included in TSV export.
 

@@ -63,7 +63,7 @@ raw signal only (no modBAM), and insufficient Chr21 coverage.
 | WGBS | D1, D3 | D2, D3 | PE 151bp | 2 |
 | dmC (ONT) | — | — | SE (long reads) | 1 (cell_line) |
 
-**Total**: ~37 samples across 7 assay types (+ controls).
+**Total**: 33 samples across 7 assay types (+ controls).
 
 ## ENCODE Experiment Accessions
 
@@ -212,4 +212,4 @@ colon_WGBS_D3	WGBS	hg38_chr21	tissue:colon	D3	...	PE
 cell_line_dmC_HG002	dmC	hg38_chr21	tissue:cell_line	HG002	...	SE
 ```
 
-37 samples total.
+33 samples total.
