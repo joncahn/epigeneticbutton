@@ -1,0 +1,34 @@
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
+stomach_H3K27ac_D1	ChIP_broad	hg38_chr21	tissue:stomach	D1	SRR10838362+SRR10838363+SRR10838364+SRR10838365	SE	H3K27ac	stomach_Input_D1
+stomach_H3K27ac_D2	ChIP_broad	hg38_chr21	tissue:stomach	D2	SRR5832694+SRR5832695	SE	H3K27ac	stomach_Input_D2
+colon_H3K27ac_D1	ChIP_broad	hg38_chr21	tissue:colon	D1	SRR10838452+SRR10838453+SRR10838454+SRR10838455	SE	H3K27ac	colon_Input_D1
+colon_H3K27ac_D2	ChIP_broad	hg38_chr21	tissue:colon	D2	SRR5832686+SRR5832687	SE	H3K27ac	colon_Input_D2
+stomach_CTCF_D1	ChIP_narrow	hg38_chr21	tissue:stomach	D1	SRR6212897+SRR6212898	PE	CTCF	stomach_CTCFctrl_D1
+stomach_CTCF_D2	ChIP_narrow	hg38_chr21	tissue:stomach	D2	SRR10837564+SRR10837565+SRR10837566+SRR10837567	SE	CTCF	stomach_Input_D2
+colon_CTCF_D1	ChIP_narrow	hg38_chr21	tissue:colon	D1	SRR6213835	PE	CTCF	colon_CTCFctrl_D1
+colon_CTCF_D2	ChIP_narrow	hg38_chr21	tissue:colon	D2	SRR10837644+SRR10837645+SRR10837646+SRR10837647	SE	CTCF	colon_Input_D2
+stomach_Input_D1	ChIP_broad	hg38_chr21	tissue:stomach	D1	SRR10838592+SRR10838593+SRR10838594+SRR10838595	SE	Input
+stomach_Input_D2	ChIP_broad	hg38_chr21	tissue:stomach	D2	SRR5832845+SRR5832846+SRR5832847+SRR5832848	SE	Input
+colon_Input_D1	ChIP_broad	hg38_chr21	tissue:colon	D1	SRR10837838+SRR10837839+SRR10837840+SRR10837841	SE	Input
+colon_Input_D2	ChIP_broad	hg38_chr21	tissue:colon	D2	SRR5833123+SRR5833124+SRR5833125+SRR5833126	SE	Input
+stomach_CTCFctrl_D1	ChIP_narrow	hg38_chr21	tissue:stomach	D1	SRR6214083	PE	Input
+colon_CTCFctrl_D1	ChIP_narrow	hg38_chr21	tissue:colon	D1	SRR6213596	PE	Input
+stomach_RNA_D1	RNAseq	hg38_chr21	tissue:stomach	D1	SRR4422373	PE
+stomach_RNA_D2	RNAseq	hg38_chr21	tissue:stomach	D2	SRR4422210	PE
+stomach_RNA_D3	RNAseq	hg38_chr21	tissue:stomach	D3	SRR4421597	PE
+colon_RNA_D1	RNAseq	hg38_chr21	tissue:colon	D1	SRR4421756	PE
+colon_RNA_D2	RNAseq	hg38_chr21	tissue:colon	D2	SRR4422293	PE
+colon_RNA_D3	RNAseq	hg38_chr21	tissue:colon	D3	SRR4422057	PE
+stomach_RAMPAGE_D1	RAMPAGE	hg38_chr21	tissue:stomach	D1	SRR4421872	PE		stomach_RNA_D1
+stomach_RAMPAGE_D2	RAMPAGE	hg38_chr21	tissue:stomach	D2	SRR5111956	PE		stomach_RNA_D2
+colon_RAMPAGE_D1	RAMPAGE	hg38_chr21	tissue:colon	D1	SRR5111381	PE		colon_RNA_D1
+colon_RAMPAGE_D2	RAMPAGE	hg38_chr21	tissue:colon	D2	SRR4422374	PE		colon_RNA_D2
+stomach_sRNA_D1	sRNA	hg38_chr21	tissue:stomach	D1	SRR4421975	SE
+stomach_sRNA_D2	sRNA	hg38_chr21	tissue:stomach	D2	SRR4422000	SE
+colon_sRNA_D1	sRNA	hg38_chr21	tissue:colon	D1	SRR4421452	SE
+colon_sRNA_D2	sRNA	hg38_chr21	tissue:colon	D2	SRR4421636	SE
+stomach_WGBS_D1	WGBS	hg38_chr21	tissue:stomach	D1	SRR8659907	PE
+stomach_WGBS_D3	WGBS	hg38_chr21	tissue:stomach	D3	SRR8659894	PE
+colon_WGBS_D2	WGBS	hg38_chr21	tissue:colon	D2	SRR8659912	PE
+colon_WGBS_D3	WGBS	hg38_chr21	tissue:colon	D3	SRR8659891	PE
+cell_line_dmC_HG002	dmC	hg38_chr21	tissue:cell_line	HG002	tests/integration/data/hg38_chr21/fastqs/cell_line_dmC_HG002.bedmethyl.gz	SE

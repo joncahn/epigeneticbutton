@@ -15,7 +15,7 @@
 #   sample_id:        Unique name for the output files
 #   assay:            One of: ChIP, RNA, RAMPAGE, sRNA, WGBS, dmC
 #   srr_accessions:   SRA run(s), +-separated for merging (e.g. SRR123+SRR456)
-#                     OR a local path / s3:// URI to BAM/modBAM (for dmC)
+#                     OR a local path / s3:// URI to BAM/modBAM/bedmethyl (for dmC)
 #   read_layout:      SE or PE
 #   reference_fasta:  Path to full reference genome FASTA (indexed)
 #
@@ -32,6 +32,7 @@
 #   {outdir}/{sample_id}_R0.fastq.gz              (SE)
 #   {outdir}/{sample_id}_R1.fastq.gz + _R2.fastq.gz  (PE)
 #   {outdir}/{sample_id}.bam                      (dmC modBAM)
+#   {outdir}/{sample_id}.bedmethyl.gz             (dmC bedmethyl)
 #
 # Requirements: samtools, bowtie2, STAR, bismark, fasterq-dump (sra-tools),
 #               pigz, awscli (for s3:// dmC sources)
@@ -46,7 +47,7 @@ PARTITION="cpuq"
 QOS="cpuq_base"
 ALIGN_THREADS=16           # alignment + samtools sort threads
 ALIGN_MEM="32G"            # per alignment job
-ALIGN_TMP="64G"
+ALIGN_TMP="200G"
 ALIGN_TIME="24:00:00"
 INDEX_THREADS=16
 INDEX_MEM="48G"            # STAR index needs ~32G for human
@@ -364,7 +365,7 @@ spawn_sample_jobs() {
 sample_complete() {
     local sid="$1" assay="$2" layout="$3"
     if [[ "$assay" == "dmC" ]]; then
-        [[ -f "${OUTDIR}/${sid}.bam" ]]
+        [[ -f "${OUTDIR}/${sid}.bam" || -f "${OUTDIR}/${sid}.bedmethyl.gz" ]]
     elif [[ "$layout" == "PE" ]]; then
         [[ -f "${OUTDIR}/${sid}_R1.fastq.gz" && -f "${OUTDIR}/${sid}_R2.fastq.gz" ]]
     else
@@ -398,7 +399,7 @@ MERGE_DIR="${MERGE_DIR}"
 STATUS_DIR="${STATUS_DIR}"
 THREADS=${ALIGN_THREADS}
 KEEP_ALIGNED=${KEEP_ALIGNED}
-TMPDIR="\${TMPDIR:-/tmp}"
+TMPDIR="\${SLURM_TMPDIR:-\${TMPDIR:-/tmp}}"
 VARSEOF
 
     cat >> "$script" << 'BODYEOF'
@@ -408,40 +409,71 @@ log() { printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1"; }
 log "=== Processing ${SAMPLE_ID} (${ASSAY}, ${LAYOUT}) ==="
 
 # -------------------------------------------------------------------
-# dmC: download (if s3://) and subset modBAM
+# dmC: download and subset modBAM or bedmethyl
 # -------------------------------------------------------------------
 if [[ "$ASSAY" == "dmC" ]]; then
-    if [[ -f "${OUTDIR}/${SAMPLE_ID}.bam" ]]; then
-        log "Output already exists, skipping."
-        touch "${STATUS_DIR}/${SAMPLE_ID}.done"
-        exit 0
-    fi
+    input_src="$SRR_ACCESSIONS"
 
-    input_bam="$SRR_ACCESSIONS"
-
-    # Download from S3 if needed
-    if [[ "$input_bam" == s3://* ]]; then
-        local_bam="${DL_DIR}/${SAMPLE_ID}_source.bam"
-        if [[ ! -f "$local_bam" ]]; then
-            log "Downloading modBAM from S3 ..."
-            aws s3 --no-sign-request cp "$input_bam" "$local_bam"
-            aws s3 --no-sign-request cp "${input_bam}.bai" "${local_bam}.bai" 2>/dev/null || true
+    # Detect input type by extension
+    if [[ "$input_src" == *.bedmethyl.gz || "$input_src" == *.bedmethyl ]]; then
+        # --- bedmethyl path ---
+        out_file="${OUTDIR}/${SAMPLE_ID}.bedmethyl.gz"
+        if [[ -f "$out_file" ]]; then
+            log "Output already exists, skipping."
+            touch "${STATUS_DIR}/${SAMPLE_ID}.done"
+            exit 0
         fi
-        input_bam="$local_bam"
+
+        local_bed="$input_src"
+        if [[ "$input_src" == s3://* ]]; then
+            local_bed="${DL_DIR}/${SAMPLE_ID}_source.bedmethyl.gz"
+            if [[ ! -f "$local_bed" ]]; then
+                log "Downloading bedmethyl from S3 ..."
+                aws s3 --no-sign-request cp "$input_src" "$local_bed"
+            fi
+        fi
+
+        # Extract target chromosome from region (e.g. chr21 from chr21:1-1000000)
+        target_chrom="${TARGET_REGION%%:*}"
+        log "Subsetting bedmethyl to ${target_chrom} ..."
+        zcat "$local_bed" | awk -v chr="$target_chrom" '$1 == chr' \
+            | gzip > "$out_file"
+
+        n_lines=$(zcat "$out_file" | wc -l)
+        log "Subset lines: $n_lines"
+        log "Done: $out_file"
+    else
+        # --- modBAM path ---
+        out_file="${OUTDIR}/${SAMPLE_ID}.bam"
+        if [[ -f "$out_file" ]]; then
+            log "Output already exists, skipping."
+            touch "${STATUS_DIR}/${SAMPLE_ID}.done"
+            exit 0
+        fi
+
+        input_bam="$input_src"
+        if [[ "$input_bam" == s3://* ]]; then
+            local_bam="${DL_DIR}/${SAMPLE_ID}_source.bam"
+            if [[ ! -f "$local_bam" ]]; then
+                log "Downloading modBAM from S3 ..."
+                aws s3 --no-sign-request cp "$input_bam" "$local_bam"
+                aws s3 --no-sign-request cp "${input_bam}.bai" "${local_bam}.bai" 2>/dev/null || true
+            fi
+            input_bam="$local_bam"
+        fi
+
+        if [[ ! -f "${input_bam}.bai" && ! -f "${input_bam%.bam}.bai" ]]; then
+            log "Indexing source BAM ..."
+            samtools index -@ 4 "$input_bam"
+        fi
+
+        log "Subsetting modBAM to ${TARGET_REGION} ..."
+        samtools view -b -h -@ 4 "$input_bam" "$TARGET_REGION" \
+            | samtools sort -@ 4 -o "$out_file"
+        samtools index "$out_file"
+        log "Done: $out_file"
     fi
 
-    # Index if needed
-    if [[ ! -f "${input_bam}.bai" && ! -f "${input_bam%.bam}.bai" ]]; then
-        log "Indexing source BAM ..."
-        samtools index -@ 4 "$input_bam"
-    fi
-
-    log "Subsetting modBAM to ${TARGET_REGION} ..."
-    samtools view -b -h -@ 4 "$input_bam" "$TARGET_REGION" \
-        | samtools sort -@ 4 -o "${OUTDIR}/${SAMPLE_ID}.bam"
-    samtools index "${OUTDIR}/${SAMPLE_ID}.bam"
-
-    log "Done: ${OUTDIR}/${SAMPLE_ID}.bam"
     touch "${STATUS_DIR}/${SAMPLE_ID}.done"
     exit 0
 fi
@@ -673,7 +705,7 @@ gather() {
     # Summary of output sizes
     log ""
     log "Output files:"
-    du -sh "${OUTDIR}"/*.fastq.gz "${OUTDIR}"/*.bam 2>/dev/null | while read -r sz fn; do
+    du -sh "${OUTDIR}"/*.fastq.gz "${OUTDIR}"/*.bam "${OUTDIR}"/*.bedmethyl.gz 2>/dev/null | while read -r sz fn; do
         log "  $sz  $(basename "$fn")"
     done
 
