@@ -4,77 +4,45 @@ Setup and conventions for developing and testing EPICC.
 
 ## Environment setup
 
-### 1. Base environment (required)
-
-The base `epicc` env provides Snakemake and its executor plugins. This is sufficient to run the pipeline (analysis tools are installed automatically by Snakemake into per-rule conda environments).
-
-```bash
-conda create -n epicc -y --file config/epicc-env.txt
-conda activate epicc
-```
-
-### 2. Developer extras
-
-For development and testing, install these additional packages into the same environment:
-
-```bash
-conda install -n epicc -y -c conda-forge -c bioconda \
-    pytest \
-    samtools \
-    gh
-```
-
-| Package | Purpose |
-|---------|---------|
-| `pytest` | Test framework. Required for all `pytest tests/` commands. |
-| `samtools` | Required by `tests/unit/test_rule_commands.py` (executes real samtools pipelines on synthetic SAM data). Tests are skipped if samtools is not found. |
-| `gh` | GitHub CLI. Useful for creating PRs, viewing issues, and CI interaction from the command line. Not required for tests. |
-
-Or as a single create command that sets up a ready-to-go dev environment:
+One command sets up a complete dev environment — Snakemake, testing tools, aligners for test data preparation, and the GitHub CLI:
 
 ```bash
 conda create -n epicc -y -c conda-forge -c bioconda \
     --file config/epicc-env.txt \
-    pytest samtools gh
-```
-
-### 3. Test data preparation (for subsetting new test datasets)
-
-The `scripts/subset_test_data.sh` script downloads SRA data, aligns to a full reference, subsets reads to a target region, and regenerates FASTQs. It requires aligners and SRA tools in the `epicc` env:
-
-```bash
-conda install -n epicc -y -c bioconda -c conda-forge \
-    bowtie2 star bismark samtools pigz sra-tools awscli
+    pytest samtools gh \
+    bowtie2 star bismark pigz sra-tools awscli
+conda activate epicc
 ```
 
 | Package | Purpose |
 |---------|---------|
-| `bowtie2` | Alignment for ChIP-seq and sRNA-seq samples |
-| `star` | Alignment for RNA-seq and RAMPAGE samples |
-| `bismark` | Alignment for WGBS/EMseq samples |
-| `samtools` | BAM subsetting, sorting, indexing, FASTQ extraction |
-| `pigz` | Parallel gzip compression of downloaded FASTQs |
-| `sra-tools` | `fasterq-dump` for downloading from SRA |
+| `config/epicc-env.txt` | Snakemake + executor plugins (base pipeline requirement) |
+| `pytest` | Test framework (`pytest tests/` commands) |
+| `samtools` | Unit tests on synthetic SAM data + BAM subsetting for test data prep |
+| `gh` | GitHub CLI for PRs, issues, CI interaction |
+| `bowtie2` | Alignment for ChIP-seq / sRNA-seq test data subsetting |
+| `star` | Alignment for RNA-seq / RAMPAGE test data subsetting |
+| `bismark` | Alignment for WGBS/EMseq test data subsetting |
+| `pigz` | Parallel gzip for downloaded FASTQs |
+| `sra-tools` | `fasterq-dump` for SRA downloads |
 | `awscli` | S3 downloads for ONT Open Data (dmC modBAM) |
 
-See `tests/integration/data/hg38_chr21/prep_manifest.tsv` for the data prep manifest.
+The aligner and SRA packages are only needed for preparing new test datasets with `scripts/subset_test_data.sh`. For routine development (editing code and running existing tests), just Snakemake + pytest + samtools is sufficient.
 
-### 4. Optional tools
+### Optional tools
 
-These are not needed for routine development but are useful for specific tasks:
-
-| Package | Purpose |
-|---------|---------|
-| `gffread` | GFF/GTF format conversion. Needed when preparing new test genome annotations (e.g. deriving GTF from GFF3). |
-| `infernal` | RNA homology search. Used to build structural RNA depletion databases for new reference genomes (see `Help/Structural_RNAs_Rfam.md`). |
-| `seqkit` | Sequence toolkit. Handy for inspecting/subsetting FASTA/FASTQ during test data preparation. |
-| `bedtools` | Genome arithmetic. Available in the base `epicc` env's conda environments at runtime, but useful to have in the dev env for ad-hoc inspection. |
-
-Install any of these as needed:
+Not needed for routine development but useful for specific tasks. Install as needed:
 
 ```bash
 conda install -n epicc -y -c conda-forge -c bioconda gffread infernal seqkit bedtools
 ```
+
+| Package | Purpose |
+|---------|---------|
+| `gffread` | GFF/GTF conversion for preparing new test genome annotations |
+| `infernal` | Structural RNA depletion databases for new reference genomes (see `Help/Structural_RNAs_Rfam.md`) |
+| `seqkit` | FASTA/FASTQ inspection during test data preparation |
+| `bedtools` | Ad-hoc genome arithmetic (available at runtime in conda sub-envs) |
 
 ## Running tests
 

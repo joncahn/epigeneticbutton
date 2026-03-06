@@ -7,9 +7,6 @@ import re
 from snakemake.utils import min_version
 from itertools import combinations
 from collections import defaultdict
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import colorsys
 import time
 import atexit
 import traceback
