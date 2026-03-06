@@ -34,7 +34,7 @@
 #   {outdir}/{sample_id}.bam                      (dmC modBAM)
 #   {outdir}/{sample_id}.bedmethyl.gz             (dmC bedmethyl)
 #
-# Requirements: samtools, bowtie2, STAR, bismark, fasterq-dump (sra-tools),
+# Requirements: samtools, bowtie2, STAR, bismark, wget, fasterq-dump (sra-tools),
 #               pigz, awscli (for s3:// dmC sources)
 # Only the tools needed for the assay types in the manifest must be installed.
 
@@ -479,9 +479,71 @@ if [[ "$ASSAY" == "dmC" ]]; then
 fi
 
 # -------------------------------------------------------------------
-# Download SRA runs
+# Download SRA runs (ENA first, fasterq-dump fallback)
 # -------------------------------------------------------------------
 IFS='+' read -ra SRR_ARRAY <<< "$SRR_ACCESSIONS"
+
+# Build ENA HTTPS URL for a given accession
+# ENA pattern: .../vol1/fastq/SRRnnn/[0xx/]SRRxxxxxxx/
+#   9-char accessions (SRR123456):    no subdir
+#   10+ char accessions (SRR1234567): subdir = last digits after pos 9, zero-padded to 3
+ena_base_url() {
+    local srr="$1"
+    local prefix="${srr:0:6}"
+    local len=${#srr}
+    if [[ $len -ge 10 ]]; then
+        local subdir
+        subdir="$(printf '%03d' "${srr:9}")"
+        echo "https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${srr}"
+    else
+        echo "https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${srr}"
+    fi
+}
+
+# Try downloading from ENA; returns 0 on success
+download_ena() {
+    local srr="$1" layout="$2" dl_dir="$3"
+    local base
+    base=$(ena_base_url "$srr")
+
+    if [[ "$layout" == "PE" ]]; then
+        log "  Trying ENA (PE): $srr ..."
+        wget -q -O "${dl_dir}/${srr}_1.fastq.gz" "${base}/${srr}_1.fastq.gz" 2>/dev/null \
+            && wget -q -O "${dl_dir}/${srr}_2.fastq.gz" "${base}/${srr}_2.fastq.gz" 2>/dev/null
+        if [[ $? -ne 0 ]]; then
+            rm -f "${dl_dir}/${srr}_1.fastq.gz" "${dl_dir}/${srr}_2.fastq.gz"
+            return 1
+        fi
+    else
+        log "  Trying ENA (SE): $srr ..."
+        # ENA SE files may be named .fastq.gz or _1.fastq.gz
+        if ! wget -q -O "${dl_dir}/${srr}.fastq.gz" "${base}/${srr}.fastq.gz" 2>/dev/null; then
+            if ! wget -q -O "${dl_dir}/${srr}.fastq.gz" "${base}/${srr}_1.fastq.gz" 2>/dev/null; then
+                rm -f "${dl_dir}/${srr}.fastq.gz"
+                return 1
+            fi
+        fi
+    fi
+}
+
+# Fallback: fasterq-dump from SRA
+download_sra() {
+    local srr="$1" layout="$2" dl_dir="$3" threads="$4" tmpdir="$5"
+    log "  Trying SRA (fasterq-dump): $srr ..."
+    fasterq-dump --threads "$threads" --temp "$tmpdir" \
+        --outdir "$dl_dir" --split-files --prefer-sra-lite false "$srr"
+    # Compress
+    if [[ "$layout" == "PE" ]]; then
+        pigz -p "$threads" "${dl_dir}/${srr}_1.fastq" &
+        pigz -p "$threads" "${dl_dir}/${srr}_2.fastq" &
+        wait
+    else
+        if [[ -f "${dl_dir}/${srr}_1.fastq" && ! -f "${dl_dir}/${srr}_2.fastq" ]]; then
+            mv "${dl_dir}/${srr}_1.fastq" "${dl_dir}/${srr}.fastq"
+        fi
+        pigz -p "$threads" "${dl_dir}/${srr}.fastq"
+    fi
+}
 
 for srr in "${SRR_ARRAY[@]}"; do
     if [[ -f "${DL_DIR}/${srr}_1.fastq.gz" ]] || [[ -f "${DL_DIR}/${srr}.fastq.gz" ]]; then
@@ -489,19 +551,9 @@ for srr in "${SRR_ARRAY[@]}"; do
         continue
     fi
     log "Downloading $srr ..."
-    fasterq-dump --threads "$THREADS" --temp "$TMPDIR" \
-        --outdir "$DL_DIR" --split-files "$srr"
-    # Compress
-    if [[ "$LAYOUT" == "PE" ]]; then
-        pigz -p "$THREADS" "${DL_DIR}/${srr}_1.fastq" &
-        pigz -p "$THREADS" "${DL_DIR}/${srr}_2.fastq" &
-        wait
-    else
-        # fasterq-dump --split-files produces _1.fastq for SE too
-        if [[ -f "${DL_DIR}/${srr}_1.fastq" && ! -f "${DL_DIR}/${srr}_2.fastq" ]]; then
-            mv "${DL_DIR}/${srr}_1.fastq" "${DL_DIR}/${srr}.fastq"
-        fi
-        pigz -p "$THREADS" "${DL_DIR}/${srr}.fastq"
+    if ! download_ena "$srr" "$LAYOUT" "$DL_DIR"; then
+        log "  ENA failed, falling back to SRA"
+        download_sra "$srr" "$LAYOUT" "$DL_DIR" "$THREADS" "$TMPDIR"
     fi
 done
 
