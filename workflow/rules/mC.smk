@@ -10,6 +10,9 @@ else:
     _DMC_WC = "(?!x)x"  # matches nothing
     _NON_DMC_WC = ".*"
 
+# dmC-specific rules take priority over bisulfite rules when both match
+ruleorder: make_mc_stats_dmc > make_mc_stats_se
+
 def return_log_mc(sample_name, step, paired):
     return os.path.join(REPO_FOLDER,"results","mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 

@@ -750,7 +750,8 @@ rule call_rampage_TSS:
     output:
         peakfile = "results/RNA/TSS/TSS__{file_type}__{sample_name}_peaks.narrowPeak"
     wildcard_constraints:
-        env = "RNA"
+        env = "RNA",
+        file_type = "final|merged"
     params:
         ipname = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_rna_input(wildcards),

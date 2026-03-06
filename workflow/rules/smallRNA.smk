@@ -22,7 +22,7 @@ def get_bt1_indices(wildcards):
 def define_input_file_for_shortstack(sample_name):
     paired = get_sample_info_from_name(sample_name, samples, 'paired')
     rna_depletion = config['structural_rna_depletion']
-    netflex_v3 = config['nextflex_v3_deduplication']
+    nextflex_v3 = config['nextflex_v3_deduplication']
     if paired == "SE":
         if rna_depletion:
             return "filtered__{sample_name}__R0" 
