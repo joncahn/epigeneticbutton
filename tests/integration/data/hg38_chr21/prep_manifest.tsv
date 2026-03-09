@@ -27,8 +27,8 @@ stomach_sRNA_D1	sRNA	SRR4421975	SE	tests/integration/data/hg38_chr21/hg38_full.f
 stomach_sRNA_D2	sRNA	SRR4422000	SE	tests/integration/data/hg38_chr21/hg38_full.fa
 colon_sRNA_D1	sRNA	SRR4421452	SE	tests/integration/data/hg38_chr21/hg38_full.fa
 colon_sRNA_D2	sRNA	SRR4421636	SE	tests/integration/data/hg38_chr21/hg38_full.fa
-stomach_WGBS_D1	WGBS	SRR8659907	PE	tests/integration/data/hg38_chr21/hg38_full.fa
-stomach_WGBS_D3	WGBS	SRR8659894	PE	tests/integration/data/hg38_chr21/hg38_full.fa
-colon_WGBS_D2	WGBS	SRR8659912	PE	tests/integration/data/hg38_chr21/hg38_full.fa
-colon_WGBS_D3	WGBS	SRR8659891	PE	tests/integration/data/hg38_chr21/hg38_full.fa
+stomach_WGBS_D1	WGBS	s3://encode-public/2018/01/21/502e973f-5aa6-48aa-a85c-bf673a525ef2/ENCFF422NYP.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
+stomach_WGBS_D3	WGBS	s3://encode-public/2018/01/12/9e89056c-9b82-460e-adab-5eb063256c0d/ENCFF786GJA.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
+colon_WGBS_D2	WGBS	s3://encode-public/2021/03/03/3c8bdf1a-8668-4ad7-8f83-3887d3bc4a52/ENCFF548GME.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
+colon_WGBS_D3	WGBS	s3://encode-public/2019/10/25/7f531950-3331-4e9a-8ebc-47cfa1b84b24/ENCFF215OBA.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
 cell_line_dmC_HG002	dmC	s3://ont-open-data/giab_2025.01/analysis/wf-human-variation/sup/HG002/PAW70337/output/SAMPLE.wf_mods.ungrouped.bedmethyl.gz	SE	tests/integration/data/hg38_chr21/hg38_full.fa

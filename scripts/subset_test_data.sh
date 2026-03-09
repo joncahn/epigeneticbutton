@@ -15,7 +15,11 @@
 #   sample_id:        Unique name for the output files
 #   assay:            One of: ChIP, RNA, RAMPAGE, sRNA, WGBS, dmC
 #   srr_accessions:   SRA run(s), +-separated for merging (e.g. SRR123+SRR456)
+#                     OR a URL/path to a pre-aligned BAM/CRAM (s3://, https://, local)
 #                     OR a local path / s3:// URI to BAM/modBAM/bedmethyl (for dmC)
+#                     When a .bam/.cram URL is given for any assay, the script
+#                     streams the file and extracts reads in the target region
+#                     directly — no local alignment needed.
 #   read_layout:      SE or PE
 #   reference_fasta:  Path to full reference genome FASTA (indexed)
 #
@@ -45,9 +49,9 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 PARTITION="cpuq"
 QOS="cpuq_base"
-ALIGN_THREADS=16           # alignment + samtools sort threads
-ALIGN_MEM="32G"            # per alignment job
-ALIGN_TMP="200G"
+ALIGN_THREADS=24           # alignment + samtools sort threads
+ALIGN_MEM="80G"            # per alignment job (~12GB per bismark --parallel instance)
+ALIGN_TMP="500G"
 ALIGN_TIME="24:00:00"
 INDEX_THREADS=16
 INDEX_MEM="48G"            # STAR index needs ~32G for human
@@ -122,14 +126,30 @@ mkdir -p "$OUTDIR" "$DL_DIR" "$MERGE_DIR" "$LOGS_DIR" "$JOBS_DIR" "$STATUS_DIR"
 log() { printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >&2; }
 
 # ---------------------------------------------------------------------------
+# Helper: detect pre-aligned BAM/CRAM input
+# ---------------------------------------------------------------------------
+is_bam_or_cram() { [[ "$1" == *.bam || "$1" == *.cram ]]; }
+
+# ---------------------------------------------------------------------------
 # Conda activation preamble for generated job scripts
 # ---------------------------------------------------------------------------
+SLURM_TMPDIR_PREAMBLE='# Set up per-job TMPDIR (profile.d scripts do not run in non-login shells)
+if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+    export SLURM_TMPDIR="/tmp/slurm_tmp/$SLURM_JOB_ID"
+    export TMPDIR="$SLURM_TMPDIR"
+    mkdir -p "$TMPDIR"
+fi'
+
 CONDA_PREAMBLE="$(cat << 'CONDAEOF'
 # Activate conda environment
 eval "$(conda shell.bash hook)"
 CONDAEOF
 )
 conda activate ${CONDA_ENV}"
+
+# Combined preamble for all generated job scripts
+JOB_PREAMBLE="${SLURM_TMPDIR_PREAMBLE}
+${CONDA_PREAMBLE}"
 
 # ---------------------------------------------------------------------------
 # Utility: submit or run
@@ -217,7 +237,11 @@ for i in $(seq 0 $((N_SAMPLES - 1))); do
     case "${ASSAYS[$i]}" in
         ChIP|sRNA)   needs_bt2=true;     BT2_REF="$ref" ;;
         RNA|RAMPAGE)  needs_star=true;    STAR_REF="$ref" ;;
-        WGBS|EMseq)   needs_bismark=true; BISMARK_REF="$ref" ;;
+        WGBS|EMseq)
+            if ! is_bam_or_cram "${SRR_COLS[$i]}"; then
+                needs_bismark=true; BISMARK_REF="$ref"
+            fi
+            ;;
     esac
 done
 
@@ -236,7 +260,7 @@ build_indexes() {
             cat > "$script" << IDXEOF
 #!/usr/bin/env bash
 set -euo pipefail
-${CONDA_PREAMBLE}
+${JOB_PREAMBLE}
 echo "Building bowtie2 index: ${BT2_REF}"
 bowtie2-build --threads ${INDEX_THREADS} "${BT2_REF}" "${ref_base}"
 touch "${STATUS_DIR}/index_bt2.done"
@@ -259,7 +283,7 @@ IDXEOF
             cat > "$script" << IDXEOF
 #!/usr/bin/env bash
 set -euo pipefail
-${CONDA_PREAMBLE}
+${JOB_PREAMBLE}
 echo "Building STAR index: ${STAR_REF}"
 mkdir -p "${genome_dir}"
 STAR --runMode genomeGenerate --runThreadN ${INDEX_THREADS} \
@@ -285,7 +309,7 @@ IDXEOF
             cat > "$script" << IDXEOF
 #!/usr/bin/env bash
 set -euo pipefail
-${CONDA_PREAMBLE}
+${JOB_PREAMBLE}
 echo "Building bismark index: ${genome_dir}"
 bismark_genome_preparation --parallel ${INDEX_THREADS} "${genome_dir}"
 touch "${STATUS_DIR}/index_bismark.done"
@@ -337,18 +361,23 @@ spawn_sample_jobs() {
             dep="$index_dep"
         fi
 
-        # Choose resources based on assay
+        # Choose resources based on assay and input type
         local threads mem tmp time
-        case "$assay" in
-            dmC)
-                # dmC just subsets a BAM — lightweight but may need to download
-                threads=4; mem="$DOWNLOAD_MEM"; tmp="$DOWNLOAD_TMP"; time="$DOWNLOAD_TIME"
-                dep=""  # no index dependency for dmC
-                ;;
-            *)
-                threads="$ALIGN_THREADS"; mem="$ALIGN_MEM"; tmp="$ALIGN_TMP"; time="$ALIGN_TIME"
-                ;;
-        esac
+        if is_bam_or_cram "$srrs" && [[ "$assay" != "dmC" ]]; then
+            # Pre-aligned BAM/CRAM: stream + subset — no local alignment
+            threads="$DOWNLOAD_THREADS"; mem="$DOWNLOAD_MEM"; tmp="$DOWNLOAD_TMP"; time="$DOWNLOAD_TIME"
+            dep=""  # no index dependency
+        else
+            case "$assay" in
+                dmC)
+                    threads=4; mem="$DOWNLOAD_MEM"; tmp="$DOWNLOAD_TMP"; time="$DOWNLOAD_TIME"
+                    dep=""  # no index dependency for dmC
+                    ;;
+                *)
+                    threads="$ALIGN_THREADS"; mem="$ALIGN_MEM"; tmp="$ALIGN_TMP"; time="$ALIGN_TIME"
+                    ;;
+            esac
+        fi
 
         local jid
         jid=$(submit_job "$sid" "$threads" "$mem" "$tmp" "$time" "$script" "$dep")
@@ -382,7 +411,7 @@ write_sample_script() {
     cat > "$script" << SAMPLEEOF
 #!/usr/bin/env bash
 set -euo pipefail
-${CONDA_PREAMBLE}
+${JOB_PREAMBLE}
 SAMPLEEOF
 
     # Inject variables
@@ -399,7 +428,6 @@ MERGE_DIR="${MERGE_DIR}"
 STATUS_DIR="${STATUS_DIR}"
 THREADS=${ALIGN_THREADS}
 KEEP_ALIGNED=${KEEP_ALIGNED}
-TMPDIR="\${SLURM_TMPDIR:-\${TMPDIR:-/tmp}}"
 VARSEOF
 
     cat >> "$script" << 'BODYEOF'
@@ -474,6 +502,53 @@ if [[ "$ASSAY" == "dmC" ]]; then
         log "Done: $out_file"
     fi
 
+    touch "${STATUS_DIR}/${SAMPLE_ID}.done"
+    exit 0
+fi
+
+# -------------------------------------------------------------------
+# Pre-aligned BAM/CRAM: stream, filter target region, extract FASTQs
+# -------------------------------------------------------------------
+if [[ "$SRR_ACCESSIONS" == *.bam || "$SRR_ACCESSIONS" == *.cram ]]; then
+    log "Pre-aligned BAM/CRAM detected: $SRR_ACCESSIONS"
+
+    # Stream a BAM/CRAM from s3://, https://, or local path
+    stream_bam() {
+        local src="$1"
+        if [[ "$src" == s3://* ]]; then
+            aws s3 cp "$src" - --no-sign-request 2>/dev/null
+        elif [[ "$src" == http://* || "$src" == https://* ]]; then
+            curl -fsSL "$src"
+        else
+            cat "$src"
+        fi
+    }
+
+    target_chrom="${TARGET_REGION%%:*}"
+    view_threads=$(( THREADS / 2 > 0 ? THREADS / 2 - 1 : 0 ))
+    sort_threads=$(( THREADS / 2 > 0 ? THREADS / 2 - 1 : 0 ))
+
+    if [[ "$LAYOUT" == "PE" ]]; then
+        log "Streaming and subsetting to ${target_chrom} → PE FASTQs ..."
+        stream_bam "$SRR_ACCESSIONS" \
+            | samtools view -@ "$view_threads" -h -b \
+                --expr "rname == \"${target_chrom}\"" - \
+            | samtools sort -@ "$sort_threads" -n -m 2G - \
+            | samtools fastq -@ 1 \
+                -1 "${OUTDIR}/${SAMPLE_ID}_R1.fastq.gz" \
+                -2 "${OUTDIR}/${SAMPLE_ID}_R2.fastq.gz" \
+                -0 /dev/null -s /dev/null -
+    else
+        log "Streaming and subsetting to ${target_chrom} → SE FASTQ ..."
+        stream_bam "$SRR_ACCESSIONS" \
+            | samtools view -@ "$view_threads" -h -b \
+                --expr "rname == \"${target_chrom}\"" - \
+            | samtools sort -@ "$sort_threads" -n -m 2G - \
+            | samtools fastq -@ 1 \
+                -0 "${OUTDIR}/${SAMPLE_ID}_R0.fastq.gz" -
+    fi
+
+    log "Done: ${SAMPLE_ID}"
     touch "${STATUS_DIR}/${SAMPLE_ID}.done"
     exit 0
 fi
@@ -661,26 +736,33 @@ case "$ASSAY" in
 
     WGBS|EMseq)
         genome_dir="$(dirname "$REF_FASTA")"
-        # bismark uses --parallel for multicore; each instance uses 2 threads
-        bm_parallel=$(( THREADS / 2 ))
+        # bismark --parallel (--multicore) is incompatible with --basename,
+        # so we use default output naming: {input}_bismark_bt2[_pe].bam
+        # Each --parallel instance uses ~4 cores (bowtie2 -p 1 default + bismark
+        # overhead) and ~10-12GB RAM for human genome. See:
+        # https://github.com/FelixKrueger/Bismark/issues/96
+        bm_parallel=$(( THREADS / 4 ))
         [[ $bm_parallel -lt 1 ]] && bm_parallel=1
+        [[ $bm_parallel -gt 8 ]] && bm_parallel=8
         if [[ "$LAYOUT" == "PE" ]]; then
-            log "Aligning (PE, bismark) ..."
+            log "Aligning (PE, bismark, --parallel $bm_parallel) ..."
             bismark --parallel "$bm_parallel" --genome "$genome_dir" --temp_dir "$TMPDIR" \
                 -1 "${MERGE_DIR}/${SAMPLE_ID}_R1.fastq.gz" \
                 -2 "${MERGE_DIR}/${SAMPLE_ID}_R2.fastq.gz" \
-                --output_dir "${OUTDIR}" --basename "tmp_${SAMPLE_ID}" 2>/dev/null
-            samtools sort -@ "$THREADS" -m "$sort_mem" \
-                -o "$bam_full" "${OUTDIR}/tmp_${SAMPLE_ID}_pe.bam"
-            rm -f "${OUTDIR}/tmp_${SAMPLE_ID}_pe.bam" "${OUTDIR}/tmp_${SAMPLE_ID}"*report*
+                --output_dir "${OUTDIR}"
+            # Default PE output: {SAMPLE_ID}_R1_bismark_bt2_pe.bam
+            bm_bam="${OUTDIR}/${SAMPLE_ID}_R1_bismark_bt2_pe.bam"
+            samtools sort -@ "$THREADS" -m "$sort_mem" -o "$bam_full" "$bm_bam"
+            rm -f "$bm_bam" "${OUTDIR}/${SAMPLE_ID}_R1_bismark_bt2"*report* "${OUTDIR}/${SAMPLE_ID}_R1_bismark_bt2"*nucleotide*
         else
-            log "Aligning (SE, bismark) ..."
+            log "Aligning (SE, bismark, --parallel $bm_parallel) ..."
             bismark --parallel "$bm_parallel" --genome "$genome_dir" --temp_dir "$TMPDIR" \
                 "${MERGE_DIR}/${SAMPLE_ID}_R0.fastq.gz" \
-                --output_dir "${OUTDIR}" --basename "tmp_${SAMPLE_ID}" 2>/dev/null
-            samtools sort -@ "$THREADS" -m "$sort_mem" \
-                -o "$bam_full" "${OUTDIR}/tmp_${SAMPLE_ID}.bam"
-            rm -f "${OUTDIR}/tmp_${SAMPLE_ID}.bam" "${OUTDIR}/tmp_${SAMPLE_ID}"*report*
+                --output_dir "${OUTDIR}"
+            # Default SE output: {SAMPLE_ID}_R0_bismark_bt2.bam
+            bm_bam="${OUTDIR}/${SAMPLE_ID}_R0_bismark_bt2.bam"
+            samtools sort -@ "$THREADS" -m "$sort_mem" -o "$bam_full" "$bm_bam"
+            rm -f "$bm_bam" "${OUTDIR}/${SAMPLE_ID}_R0_bismark_bt2"*report* "${OUTDIR}/${SAMPLE_ID}_R0_bismark_bt2"*nucleotide*
         fi
         ;;
 
