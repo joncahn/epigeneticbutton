@@ -829,20 +829,14 @@ rule make_fingerprint_plot:
         printf "\nPlotting fingerprint for {params.ipname} (vs {params.inputname}) with deeptools version:\n"
         deeptools --version
 
-        # Auto-scale numberOfSamples to genome size
-        # Cap at 100K, floor at 10K, but never exceed 80% of total genome bins
-        # (deeptools 3.5.x has off-by-one bugs near full-genome bin counts)
+        # Auto-scale numberOfSamples to 50% of genomic bins
         n_samples="{params.n_samples}"
         if [[ "$n_samples" == "auto" ]]; then
             genome_size=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
             bin_size=500
             n_samples=$(python3 -c "
 total_bins = int($genome_size / $bin_size)
-n = min(100000, max(10000, total_bins))
-# Cap at 80% of total bins to avoid deeptools off-by-one bugs
-n = min(n, int(total_bins * 0.8))
-n = max(n, 10000)
-print(n)
+print(int(total_bins * 0.5))
 ")
             printf "Auto-scaled --numberOfSamples to %s (genome: %s bp, bin: %s bp)\n" "$n_samples" "$genome_size" "$bin_size"
         fi
