@@ -39,7 +39,7 @@ tests/
 │       ├── test_options_pombe.yaml
 │       ├── Spombe/                    #   S. pombe reference genome
 │       ├── test_samples_hg38_chr21.tsv #   33-sample human chr21 (7 assays)
-│       ├── test_options_chr21.yaml
+│       ├── test_options_hg38_chr21.yaml
 │       ├── human_chr21_design.md      #   Dataset design rationale
 │       └── hg38_chr21/               #   Human chr21 reference and data prep
 │           ├── prepare_reference.sh   #     Download hg38 + extract chr21
@@ -97,7 +97,7 @@ bash scripts/subset_test_data.sh \
     --outdir tests/integration/data/hg38_chr21/reads
 
 # 3. Dry-run validation (works without data prep)
-snakemake --configfile tests/integration/data/test_options_chr21.yaml --dry-run
+snakemake --configfile tests/integration/data/test_options_hg38_chr21.yaml --dry-run
 ```
 
 ## Running Tests
