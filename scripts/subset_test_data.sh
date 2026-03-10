@@ -31,6 +31,9 @@
 #   --keep-aligned    Keep intermediate full-genome BAMs (default: delete)
 #   --dry-run         Print sbatch commands without submitting
 #   --local           Run everything locally (no SLURM), serial execution
+#   --clean           Remove intermediate files (downloads/, merged/, jobs/,
+#                     status/) after verifying all samples completed. Keeps
+#                     final output FASTQs/BAMs and logs.
 #
 # Output per sample:
 #   {outdir}/{sample_id}_R0.fastq.gz              (SE)
@@ -72,6 +75,7 @@ OUTDIR="test-data-prep/subset"
 KEEP_ALIGNED=false
 DRY_RUN=false
 LOCAL_MODE=false
+CLEAN_MODE=false
 
 # Internal: phase tracking (set by self-resubmission)
 _PHASE="${_SUBSET_PHASE:-auto}"
@@ -91,6 +95,7 @@ while [[ $# -gt 0 ]]; do
         --keep-aligned) KEEP_ALIGNED=true; shift ;;
         --dry-run)      DRY_RUN=true; shift ;;
         --local)        LOCAL_MODE=true; shift ;;
+        --clean)        CLEAN_MODE=true; shift ;;
         -h|--help)      usage ;;
         *)              POSITIONAL+=("$1"); shift ;;
     esac
@@ -866,10 +871,53 @@ gather() {
 }
 
 # ===========================================================================
+# Clean intermediate files
+# ===========================================================================
+clean_intermediates() {
+    log "=== Cleaning intermediate files ==="
+
+    # Verify all samples completed before deleting anything
+    local total=0 failed=0
+    for i in $(seq 0 $((N_SAMPLES - 1))); do
+        local sid="${SAMPLE_IDS[$i]}"
+        local assay="${ASSAYS[$i]}"
+        local layout="${LAYOUTS[$i]}"
+        total=$((total + 1))
+        if ! sample_complete "$sid" "$assay" "$layout"; then
+            failed=$((failed + 1))
+            log "  INCOMPLETE: $sid"
+        fi
+    done
+
+    if [[ $failed -gt 0 ]]; then
+        log "ERROR: $failed/$total samples incomplete — refusing to clean."
+        log "Re-run without --clean to finish, then retry."
+        exit 1
+    fi
+
+    local freed=0
+    for dir in "$DL_DIR" "$MERGE_DIR" "$JOBS_DIR" "$STATUS_DIR"; do
+        if [[ -d "$dir" ]]; then
+            local sz
+            sz=$(du -sh "$dir" 2>/dev/null | cut -f1)
+            log "  Removing $dir ($sz)"
+            rm -rf "$dir"
+        fi
+    done
+
+    log "Done. Kept: output files + logs ($LOGS_DIR)"
+}
+
+# ===========================================================================
 # Main controller logic
 # ===========================================================================
 main() {
-    # Determine phase
+    # Standalone modes
+    if $CLEAN_MODE; then
+        clean_intermediates
+        exit $?
+    fi
+
     if [[ "$_PHASE" == "gather" ]]; then
         gather
         exit $?
