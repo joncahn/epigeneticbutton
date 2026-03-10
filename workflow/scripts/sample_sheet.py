@@ -106,6 +106,9 @@ def parse_read_files(read_files_str, read_layout):
     return parts, is_sra
 
 
+_FASTQ_EXTENSIONS = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
+
+
 def get_seq_id_and_path(read_files_str, read_layout):
     """Bridge function: derive old-style seq_id and fastq_path from Read_files.
 
@@ -116,7 +119,7 @@ def get_seq_id_and_path(read_files_str, read_layout):
     - SRA accession(s): "SRR111" or "SRR111+SRR222" → seq_id="SRR111,SRR222", path="SRA"
     - BAM file: "/path/to/file.bam" → seq_id="file", path="/path/to/file.bam"
     - bedMethyl: "/path/to/file.bed.gz" → seq_id="file", path="/path/to/file.bed.gz"
-    - Local FASTQ dir/id: "/path/to/fastqs/sample_id" → seq_id="sample_id", path="/path/to/fastqs"
+    - Explicit FASTQ paths: "r1.fq.gz,r2.fq.gz" → seq_id="EXPLICIT", path="r1.fq.gz,r2.fq.gz"
     """
     parts, is_sra = parse_read_files(read_files_str, read_layout)
     if is_sra:
@@ -129,15 +132,23 @@ def get_seq_id_and_path(read_files_str, read_layout):
             # BAM input: path IS the file
             seq_id = os.path.splitext(os.path.basename(first_file))[0]
             return seq_id, first_file
-        elif first_file.endswith(".bed.gz"):
+        elif first_file.endswith(".bed.gz") or first_file.endswith(".bedmethyl.gz"):
             # bedMethyl input: path IS the file
-            seq_id = os.path.basename(first_file).replace(".bed.gz", "")
+            base = os.path.basename(first_file)
+            for suffix in (".bedmethyl.gz", ".bed.gz"):
+                if base.endswith(suffix):
+                    seq_id = base[:-len(suffix)]
+                    break
             return seq_id, first_file
+        elif any(first_file.endswith(ext) for ext in _FASTQ_EXTENSIONS):
+            # Explicit FASTQ path(s): pass through the full Read_files string
+            return "EXPLICIT", parts[0]
         else:
-            # Local FASTQ: "directory/seq_id" encoded by migration script
-            directory = os.path.dirname(first_file)
-            seq_id = os.path.basename(first_file)
-            return seq_id, directory
+            raise ValueError(
+                f"Unrecognized Read_files format: '{read_files_str}'. "
+                f"Expected SRA accession, .bam, .bed.gz, or explicit FASTQ "
+                f"path ending in .fastq.gz/.fq.gz/.fastq/.fq"
+            )
 
 
 # ---------------------------------------------------------------------------

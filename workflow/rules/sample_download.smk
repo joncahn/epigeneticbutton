@@ -79,6 +79,21 @@ rule get_fastq_pe:
                 wait "${{pid_r1}}" "${{pid_r2}}"
                 rm -f "${{fastq_files_r1[@]}}" "${{fastq_files_r2[@]}}"
             fi
+        elif [[ "{params.seq_id}" == "EXPLICIT" ]]; then
+            # Explicit comma-separated FASTQ paths from Read_files
+            r1="${{"{params.fastq_path}"%,*}}"
+            r2="${{"{params.fastq_path}"#*,}}"
+            printf "Copying explicit PE fastqs for {params.sample_name}\n  R1: ${{r1}}\n  R2: ${{r2}}\n"
+            if [[ "${{r1}}" == *.gz ]]; then
+                cp "${{r1}}" "{output.fastq1}"
+            else
+                pigz -p {threads} -c "${{r1}}" > "{output.fastq1}"
+            fi
+            if [[ "${{r2}}" == *.gz ]]; then
+                cp "${{r2}}" "{output.fastq2}"
+            else
+                pigz -p {threads} -c "${{r2}}" > "{output.fastq2}"
+            fi
         elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q.gz 2>/dev/null | wc -l) -eq 1 ]] && [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*R2*f*q.gz 2>/dev/null | wc -l) -eq 1 ]]; then
             printf "Copying PE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
             cp "{params.fastq_path}"/*"{params.seq_id}"*R1*f*q.gz "{output.fastq1}"
@@ -166,6 +181,13 @@ rule get_fastq_se:
                 printf "\n{params.sample_name} ({params.seq_id}) downloaded via fasterq-dump\nCompressing files\n"
                 cat "${{fastq_files[@]}}" | pigz -p {threads} > {output.fastq0}
                 rm -f "${{fastq_files[@]}}"
+            fi
+        elif [[ "{params.seq_id}" == "EXPLICIT" ]]; then
+            printf "Copying explicit SE fastq for {params.sample_name}\n  {params.fastq_path}\n"
+            if [[ "{params.fastq_path}" == *.gz ]]; then
+                cp "{params.fastq_path}" "{output.fastq0}"
+            else
+                pigz -p {threads} -c "{params.fastq_path}" > "{output.fastq0}"
             fi
         elif ls "{params.fastq_path}"/*"{params.seq_id}"*q.gz 1> /dev/null 2>&1; then
             printf "\nCopying SE gzipped fastq for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"

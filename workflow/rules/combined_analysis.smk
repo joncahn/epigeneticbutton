@@ -154,20 +154,37 @@ def define_upset_script(wildcards):
 
     return script
 
+import colorsys
+
+# Matplotlib tab20 and Set2 palettes as hex — avoids runtime matplotlib dependency
+_PALETTES = {
+    "tab20": [
+        "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c",
+        "#98df8a", "#d62728", "#ff9896", "#9467bd", "#c5b0d5",
+        "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f",
+        "#c7c7c7", "#bcbd22", "#dbdb8d", "#17becf", "#9edae5",
+    ],
+    "Set2": [
+        "#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854",
+        "#ffd92f", "#e5c494", "#b3b3b3",
+    ],
+}
+
 def assign_colors(keys, cmap_name="tab20"):
-    cmap = plt.get_cmap(cmap_name)
+    pal = _PALETTES[cmap_name]
     colors = {}
-    for i,key in enumerate(sorted(set(keys))):
-        colors[key] = mcolors.to_hex(cmap(i % cmap.N))
+    for i, key in enumerate(sorted(set(keys))):
+        colors[key] = pal[i % len(pal)]
     return colors
-    
+
 def make_it_lighter(palette, factor):
     new_palette = {}
     for k, c in palette.items():
-        rgb = mcolors.hex2color(c)
-        h, l, s = colorsys.rgb_to_hls(*rgb)
-        n = min(0.9, l*factor)
-        new_palette[k] = mcolors.to_hex(colorsys.hls_to_rgb(h, n, s))
+        r, g, b = int(c[1:3], 16) / 255, int(c[3:5], 16) / 255, int(c[5:7], 16) / 255
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        l = min(0.9, l * factor)
+        rr, gg, bb = colorsys.hls_to_rgb(h, l, s)
+        new_palette[k] = f"#{int(rr*255+.5):02x}{int(gg*255+.5):02x}{int(bb*255+.5):02x}"
     return new_palette
 
 def define_key_for_plots(wildcards, string):
