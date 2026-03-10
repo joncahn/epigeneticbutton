@@ -2,8 +2,8 @@
 hg38_full.fa
 hg38_full.fa.fai
 
-# Subsetted test FASTQs/BAMs (downloaded via download_test_data.sh or built via subset_test_data.sh)
-fastqs/
+# Subsetted test reads (downloaded via download_test_data.sh or built via subset_test_data.sh)
+reads/
 
 # GENCODE full annotation (downloaded then subsetted)
 gencode.*.annotation.gff3.gz

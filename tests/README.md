@@ -94,7 +94,7 @@ bash tests/integration/data/hg38_chr21/prepare_reference.sh
 # 2. Subset SRA data to chr21 (submits ~36 SLURM jobs)
 bash scripts/subset_test_data.sh \
     tests/integration/data/hg38_chr21/prep_manifest.tsv chr21 \
-    --outdir tests/integration/data/hg38_chr21/fastqs
+    --outdir tests/integration/data/hg38_chr21/reads
 
 # 3. Dry-run validation (works without data prep)
 snakemake --configfile tests/integration/data/test_options_chr21.yaml --dry-run
