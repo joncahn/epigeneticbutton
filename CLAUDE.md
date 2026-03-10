@@ -92,7 +92,7 @@ scripts/validate_pombe.sh --all
 - `tests/integration/test_dmc_dryrun.py` - Snakemake dry-run validation for the dmC workflow
 - `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
 - `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (17 samples, 4 assays)
-- `tests/integration/data/test_samples_chr21.tsv` - Human chr21 test sample sheet (33 samples, all 6 assay types)
+- `tests/integration/data/test_samples_hg38_chr21.tsv` - Human chr21 test sample sheet (33 samples, all 6 assay types)
 
 ## Key Details
 

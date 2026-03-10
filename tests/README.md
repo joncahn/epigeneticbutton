@@ -38,7 +38,7 @@ tests/
 │       ├── test_samples_pombe.tsv     #   17-sample S. pombe (4 assays)
 │       ├── test_options_pombe.yaml
 │       ├── Spombe/                    #   S. pombe reference genome
-│       ├── test_samples_chr21.tsv     #   33-sample human chr21 (7 assays)
+│       ├── test_samples_hg38_chr21.tsv #   33-sample human chr21 (7 assays)
 │       ├── test_options_chr21.yaml
 │       ├── human_chr21_design.md      #   Dataset design rationale
 │       └── hg38_chr21/               #   Human chr21 reference and data prep
