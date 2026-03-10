@@ -81,8 +81,9 @@ rule get_fastq_pe:
             fi
         elif [[ "{params.seq_id}" == "EXPLICIT" ]]; then
             # Explicit comma-separated FASTQ paths from Read_files
-            r1="${{"{params.fastq_path}"%,*}}"
-            r2="${{"{params.fastq_path}"#*,}}"
+            fq_pair="{params.fastq_path}"
+            r1="${{fq_pair%%,*}}"
+            r2="${{fq_pair#*,}}"
             printf "Copying explicit PE fastqs for {params.sample_name}\n  R1: ${{r1}}\n  R2: ${{r2}}\n"
             if [[ "${{r1}}" == *.gz ]]; then
                 cp "${{r1}}" "{output.fastq1}"

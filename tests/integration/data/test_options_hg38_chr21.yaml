@@ -9,7 +9,7 @@ sample_file: "tests/integration/data/test_samples_hg38_chr21.tsv"
 # Analysis options
 full_analysis: true
 te_analysis: false
-QC_option: "none"
+QC_option: true
 GO: false
 trimmed_fastqs: false
 aligned_bams: false
@@ -23,7 +23,6 @@ genomes:
     species: "sapiens"
     fasta_file: "tests/integration/data/hg38_chr21/hg38_chr21.fa.gz"
     gff_file: "tests/integration/data/hg38_chr21/hg38_chr21.gff3.gz"
-    ncbi_taxid: "9606"
-    star_index: "--genomeSAindexNbases 11"
+    # ncbi_taxid and star_index omitted to exercise auto-computation
 
 # Resource allocation (use defaults from main config)
