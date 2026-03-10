@@ -296,6 +296,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Add H. sapiens Chr21 test case.
 
+### Add test dataset documentation
+
+* [ ] Add a test design doc similar to human_chr21_design.md for S. pombe and A. thaliana chr5 test cases.
+
 ## Known Unknowns
 
 * [ ] For now, ChIPseq replicates are only properly merged if same paired information (all PE or all SE). Not sure what happens if both PE and SE reps are available with the same line+tissue name. Corner case to check.

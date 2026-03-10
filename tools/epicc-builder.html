@@ -2122,7 +2122,8 @@ var configState = {
   nextflex_v3_deduplication: false,
   structural_rna_depletion: true,
   infernal_threshold: "ga",
-  srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --dn_mirna",
+  srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24",
+  shortstack_dn_mirna: true,
   srna_min_size: 21,
   srna_max_size: 24,
   srna_heatmap_sizes: "21, 22, 24",
@@ -2473,7 +2474,10 @@ function buildConfigForm() {
   srnaBody.appendChild(buildTextRow("Infernal threshold:", "infernal_threshold",
     "ga", 'Rfam gathering threshold ("ga", recommended) or numeric E-value (e.g. 1e-5)'));
   srnaBody.appendChild(buildTextRow("Mapping parameters:", "srna_mapping_params",
-    "--mmap u --dicermin 21 --dicermax 24 --dn_mirna"));
+    "--mmap u --dicermin 21 --dicermax 24"));
+  srnaBody.appendChild(buildToggleRow("De novo miRNA discovery", "shortstack_dn_mirna",
+    "ShortStack will search for novel miRNAs \uD83D\uDD2C",
+    "De novo miRNA discovery disabled"));
   srnaBody.appendChild(buildNumberRow("Min sRNA size:", "srna_min_size", 15, 100));
   srnaBody.appendChild(buildNumberRow("Max sRNA size:", "srna_max_size", 15, 100));
   srnaBody.appendChild(buildTextRow("Heatmap sizes (comma-separated):", "srna_heatmap_sizes", "21, 22, 24"));
@@ -2661,6 +2665,7 @@ function configStateToYAML() {
   cfg.structural_rna_depletion = configState.structural_rna_depletion;
   cfg.infernal_threshold = configState.infernal_threshold;
   cfg.srna_mapping_params = configState.srna_mapping_params;
+  cfg.shortstack_dn_mirna = configState.shortstack_dn_mirna;
   cfg.srna_min_size = configState.srna_min_size;
   cfg.srna_max_size = configState.srna_max_size;
   // Parse heatmap sizes string to array
@@ -2740,6 +2745,7 @@ function handleYAMLImport(text) {
   if (cfg.structural_rna_depletion != null) configState.structural_rna_depletion = !!cfg.structural_rna_depletion;
   if (cfg.infernal_threshold != null) configState.infernal_threshold = String(cfg.infernal_threshold);
   if (cfg.srna_mapping_params != null) configState.srna_mapping_params = cfg.srna_mapping_params;
+  if (cfg.shortstack_dn_mirna != null) configState.shortstack_dn_mirna = !!cfg.shortstack_dn_mirna;
   if (cfg.srna_min_size != null) configState.srna_min_size = cfg.srna_min_size;
   if (cfg.srna_max_size != null) configState.srna_max_size = cfg.srna_max_size;
   if (cfg.srna_heatmap_sizes != null) {
@@ -2849,7 +2855,7 @@ function handleYAMLImport(text) {
       "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",
       "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","mC_context","pca_bs",
       "pca_step","mC_mapping","custom_script_dmrs","dmc_methylation","dmc_dmr_method",
-      "nextflex_v3_deduplication","structural_rna_depletion","infernal_threshold","srna_mapping_params",
+      "nextflex_v3_deduplication","structural_rna_depletion","infernal_threshold","srna_mapping_params","shortstack_dn_mirna",
       "srna_min_size","srna_max_size","srna_heatmap_sizes","plot_allreps","heatmaps_scales",
       "stranded_heatmaps","heatmaps_sort_options","heatmap_sort_mc_after_others",
       "profiles_scale","profiles_plot_params","heatmaps_plot_params","heatmaps",

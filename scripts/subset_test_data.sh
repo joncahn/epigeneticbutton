@@ -146,11 +146,14 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
 fi'
 
 CONDA_PREAMBLE="$(cat << 'CONDAEOF'
-# Activate conda environment
+# Activate conda environment (set +u to work around conda activate scripts
+# that reference unset variables, e.g. activate-binutils_linux-64.sh ADDR2LINE)
+set +u
 eval "$(conda shell.bash hook)"
 CONDAEOF
 )
-conda activate ${CONDA_ENV}"
+conda activate ${CONDA_ENV}
+set -u"
 
 # Combined preamble for all generated job scripts
 JOB_PREAMBLE="${SLURM_TMPDIR_PREAMBLE}
