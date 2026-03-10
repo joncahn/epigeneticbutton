@@ -59,7 +59,7 @@ raw signal only (no modBAM), and insufficient Chr21 coverage.
 | Control ChIP (CTCF) | D1 (PE) | D1 (PE) | PE 100bp | 1 |
 | RNAseq | D1, D2, D3 | D1, D2, D3 | PE 101bp | 3 |
 | RAMPAGE | D1, D2 | D1, D2 | PE 101bp | 2 |
-| sRNA | D1, D2 | D1, D2 | SE 76/101bp | 2 |
+| sRNA | D1, D2 | D1, D2 | SE ~50bp | 2 (external*) |
 | WGBS | D1, D3 | D2, D3 | PE 151bp | 2 |
 | dmC (ONT) | — | — | SE (long reads) | 1 (cell_line) |
 
@@ -83,8 +83,8 @@ raw signal only (no modBAM), and insufficient Chr21 coverage.
 | RNA-seq | colon | ENCSR403SZN | — | SRR4421756 (PE) |
 | RAMPAGE | stomach | ENCSR497BYB | ENCSR853WOM | SRR4421872 (PE) |
 | RAMPAGE | colon | ENCSR297QGC | ENCSR403SZN | SRR5111381 (PE) |
-| sRNA | stomach | ENCSR573RGL | — | SRR4421975 (SE 76bp) |
-| sRNA | colon | ENCSR183YQY | — | SRR4421452 (SE 101bp) |
+| sRNA | stomach | GSE87785 / GSM2340235 | — | SRR4409201 (SE, TruSeq Small RNA) |
+| sRNA | colon | GSE43550 / GSM1065163 | — | SRR649562 (SE, Illumina small RNA) |
 | WGBS | stomach | ENCSR598OBF | — | SRR8659907 (PE 151bp) |
 
 ### Donor 2 (D2): ENCDO793LXB (53F)
@@ -101,8 +101,8 @@ raw signal only (no modBAM), and insufficient Chr21 coverage.
 | RNA-seq | colon | ENCSR800WIY | — | SRR4422293 (PE) |
 | RAMPAGE | stomach | ENCSR686VRS | ENCSR752UNJ | SRR5111956 (PE) |
 | RAMPAGE | colon | ENCSR855GRG | ENCSR800WIY | SRR4422374 (PE) |
-| sRNA | stomach | ENCSR003SZJ | — | SRR4422000 (SE 76bp) |
-| sRNA | colon | ENCSR316SXP | — | SRR4421636 (SE 101bp) |
+| sRNA | stomach | GSE87785 / GSM2340237 | — | SRR4409203 (SE, TruSeq Small RNA) |
+| sRNA | colon | GSE115114 / GSM3165506 | — | SRR7236521+22+23+24 (SE, TruSeq SmallRNA) |
 | WGBS | colon | ENCSR668FTZ | — | SRR8659912 (PE 151bp) |
 
 ### Donor 3 (D3): ENCDO451RUA (54M) — RNA-seq + WGBS only
@@ -146,10 +146,31 @@ ENCODE practice — a single input control serves all ChIP experiments from the
 same biosample. D1 has separate controls for the SE (H3K27ac) and PE (CTCF)
 experiments due to different library preparation protocols.
 
-### sRNA read lengths differ between donors
+### sRNA libraries sourced from external studies
 
-D1 sRNA is 76bp, D2 sRNA is 101bp. Both are SE. The pipeline handles variable
-read lengths; fastp will trim accordingly.
+The EN-TEx "small RNA-seq" libraries (ENCSR573RGL, ENCSR003SZJ, ENCSR183YQY,
+ENCSR316SXP) are rRNA-depleted total RNA size-selected to <200 nt — NOT true
+miRNA/sRNA-seq with adapter ligation. After trimming, reads remain 76-101 bp
+with zero signal in the 18-30 nt small RNA range. ShortStack finds no miRNA
+candidates and crashes.
+
+Replacement sRNA samples use proper small RNA library prep (TruSeq Small RNA
+Kit) from GEO:
+
+- **Stomach**: GSE87785 (2016, TruSeq Small RNA, HiSeq 2000/NextSeq 500)
+  - D1: SRR4409201 (GSM2340235, normal gastric tissue, patient 2, ~45M reads)
+  - D2: SRR4409203 (GSM2340237, normal gastric tissue, patient 3, ~35M reads)
+- **Colon**: Mixed sources
+  - D1: SRR649562 (GSM1065163, GSE43550, 2013, HiSeq 2000, normal adjacent
+    colon, ~37M reads, Illumina small RNA protocol)
+  - D2: SRR7236521+SRR7236522+SRR7236523+SRR7236524 (GSM3165506, GSE115114,
+    2018, NextSeq 500, TruSeq SmallRNA, normal adjacent colon, ~4.3M reads
+    across 4 runs)
+
+These are not from the same experiment or donors as the EN-TEx samples and
+differ in library prep methods. This is acceptable for a pipeline integration
+test but the sRNA results should not be interpreted as a matched comparison
+with the other assays.
 
 ### dmC does not participate in tissue comparison
 

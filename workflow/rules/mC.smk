@@ -190,7 +190,7 @@ rule bismark_map_pe:
         """
         {{
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
+        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
@@ -232,7 +232,7 @@ rule bismark_map_se:
         """
         {{
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
+        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix} -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"

@@ -23,10 +23,10 @@ stomach_RAMPAGE_D1	RAMPAGE	SRR4421872	PE	tests/integration/data/hg38_chr21/hg38_
 stomach_RAMPAGE_D2	RAMPAGE	SRR5111956	PE	tests/integration/data/hg38_chr21/hg38_full.fa
 colon_RAMPAGE_D1	RAMPAGE	SRR5111381	PE	tests/integration/data/hg38_chr21/hg38_full.fa
 colon_RAMPAGE_D2	RAMPAGE	SRR4422374	PE	tests/integration/data/hg38_chr21/hg38_full.fa
-stomach_sRNA_D1	sRNA	SRR4421975	SE	tests/integration/data/hg38_chr21/hg38_full.fa
-stomach_sRNA_D2	sRNA	SRR4422000	SE	tests/integration/data/hg38_chr21/hg38_full.fa
-colon_sRNA_D1	sRNA	SRR4421452	SE	tests/integration/data/hg38_chr21/hg38_full.fa
-colon_sRNA_D2	sRNA	SRR4421636	SE	tests/integration/data/hg38_chr21/hg38_full.fa
+stomach_sRNA_D1	sRNA	SRR4409201	SE	tests/integration/data/hg38_chr21/hg38_full.fa
+stomach_sRNA_D2	sRNA	SRR4409203	SE	tests/integration/data/hg38_chr21/hg38_full.fa
+colon_sRNA_D1	sRNA	SRR649562	SE	tests/integration/data/hg38_chr21/hg38_full.fa
+colon_sRNA_D2	sRNA	SRR7236521+SRR7236522+SRR7236523+SRR7236524	SE	tests/integration/data/hg38_chr21/hg38_full.fa
 stomach_WGBS_D1	WGBS	s3://encode-public/2018/01/21/502e973f-5aa6-48aa-a85c-bf673a525ef2/ENCFF422NYP.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
 stomach_WGBS_D3	WGBS	s3://encode-public/2018/01/12/9e89056c-9b82-460e-adab-5eb063256c0d/ENCFF786GJA.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
 colon_WGBS_D2	WGBS	s3://encode-public/2021/03/03/3c8bdf1a-8668-4ad7-8f83-3887d3bc4a52/ENCFF548GME.bam	PE	tests/integration/data/hg38_chr21/hg38_full.fa
