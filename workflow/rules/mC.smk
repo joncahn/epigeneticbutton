@@ -797,7 +797,7 @@ rule prepare_modbam_for_pileup:
         fi
 
         if [[ "$needs_realign" == "true" ]]; then
-            ref_genome=$(echo {input.fasta} | sed 's|.*/||; s|\.fa$||')
+            ref_genome=$(echo {input.fasta} | sed 's|.*/||; s|\\.fa$||')
             printf "Aligning modBAM to $ref_genome with mm2plus\n"
             samtools fastq -T MM,ML {input.validated} | \
                 mm2plus -ax {params.preset} -t {threads} -y {input.fasta} - | \
