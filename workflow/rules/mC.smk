@@ -436,23 +436,48 @@ rule make_mc_bigwig_files:
         """
         {{
         if [[ "{params.context}" == "all" ]]; then
-            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CG.bedGraph"}}'
+            # Pre-create empty bedGraph files so awk output redirection
+            # doesn't leave missing files when a context/strand has no data
+            # (e.g. combined-strand dmC input has no minus-strand calls)
+            for context in CG CHG CHH; do
+                > "results/mC/tracks/{params.sample_name}__${{context}}.bedGraph"
+                for strand in plus minus; do
+                    > "results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph"
+                done
+            done
+            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CG.bedGraph"}}'
             for strand in plus minus; do
                 case "${{strand}}" in
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 > "results/mC/tracks/"s"__CG__"d".bedGraph"}}'
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CG__"d".bedGraph"}}'
             done
             for context in CG CHG CHH; do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
-                bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}.bw
+                if [[ -s "results/mC/tracks/{params.sample_name}__${{context}}.bedGraph" ]]; then
+                    LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
+                    bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}.bw
+                else
+                    printf "No data for ${{context}} context — creating empty bigwig\n"
+                    chrom=$(head -1 {input.chrom_sizes} | cut -f1)
+                    printf "%s\t0\t1\t0\n" "$chrom" > results/mC/tracks/empty__{params.sample_name}__${{context}}.bg
+                    bedGraphToBigWig results/mC/tracks/empty__{params.sample_name}__${{context}}.bg {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}.bw
+                    rm -f results/mC/tracks/empty__{params.sample_name}__${{context}}.bg
+                fi
                 for strand in plus minus
                 do
                     printf "\nMaking ${{strand}} strand bigwig files of ${{context}} context for {params.sample_name}\n"
-                    LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
-                    bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
+                    if [[ -s "results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph" ]]; then
+                        LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
+                        bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
+                    else
+                        printf "No data for ${{context}} ${{strand}} strand — creating empty bigwig\n"
+                        chrom=$(head -1 {input.chrom_sizes} | cut -f1)
+                        printf "%s\t0\t1\t0\n" "$chrom" > results/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
+                        bedGraphToBigWig results/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
+                        rm -f results/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
+                    fi
                 done
             done
             rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
@@ -471,8 +496,16 @@ rule make_mc_bigwig_files:
             for strand in plus minus
             do
                 printf "\nMaking ${{strand}} strand bigwig files of CG context for {params.sample_name}\n"
-                LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph
-                bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
+                if [[ -s "results/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph" ]]; then
+                    LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph
+                    bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
+                else
+                    printf "No data for CG ${{strand}} strand — creating empty bigwig\n"
+                    chrom=$(head -1 {input.chrom_sizes} | cut -f1)
+                    printf "%s\t0\t1\t0\n" "$chrom" > results/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
+                    bedGraphToBigWig results/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
+                    rm -f results/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
+                fi
             done
             touch {output.bigwigchg} # they are required for downstream rules
             touch {output.bigwigchh} # they are required for downstream rules
@@ -879,7 +912,9 @@ rule copy_bedmethyl_input:
         printf "\nCopying bedMethyl input for {params.sample_name}\n"
 
         # Copy/compress the validated file
-        if [[ "{input.validated}" == *.gz ]]; then
+        # Check actual file content, not path extension (validated input path
+        # is always .input but may be a symlink to a .gz file)
+        if file -bL {input.validated} | grep -q gzip; then
             cp {input.validated} {output.bedmethyl}
         else
             pigz -p {threads} -c {input.validated} > {output.bedmethyl}
@@ -900,7 +935,7 @@ rule merge_pileup_sources:
     localrule: True
     shell:
         """
-        ln -sf $(basename {input.pileup}) {output.bedmethyl}
+        mv {input.pileup} {output.bedmethyl}
         """
 
 rule modkit_summary_dmc:

@@ -27,7 +27,15 @@ plot.mapping.stats<-function(stattable, name) {
   table$filt<-as.numeric(table$filt)
   table$all<-as.numeric(table$all)
   table$unique<-as.numeric(table$unique)
-  
+
+  # Drop samples with no alignment stats (e.g. dmC from pre-computed bedMethyl)
+  table<-table %>% filter(!is.na(Total_reads))
+  if (nrow(table) == 0) {
+    plot.new()
+    text(0.5, 0.5, "No mapping statistics available", cex=1.5, col="grey50")
+    return(invisible(NULL))
+  }
+
   table<-table %>% mutate(Filtered=Total_reads-filt, unmapped=Total_reads-all, multi=all-unique) %>%
     select(-filt, -all) %>%
     gather(key="Read_type",value="Count", Filtered, unmapped, multi, unique) %>%

@@ -29,5 +29,6 @@ genomes:
 # total RNA (<200 nt), not true miRNA-seq, so ShortStack finds zero candidates
 # and crashes on the empty de novo list (ShortStack 4.1.2 bug)
 shortstack_dn_mirna: false
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --known_miRNAs tests/integration/data/hg38_chr21/known-mirnas-mirbase-high-confidence.fasta" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
 
 # Resource allocation (use defaults from main config)

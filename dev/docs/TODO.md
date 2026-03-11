@@ -296,6 +296,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Add H. sapiens Chr21 test case.
 
+* [ ] Re-examine hg38 chr21 test data quality. The current dataset has limitations:
+  * **sRNA**: EN-TEx sRNA libraries are rRNA-depleted total RNA, not true miRNA-seq. No miRNAs detected in the chr21 subset (zero reads in 21-24 nt range). Consider sourcing dedicated miRNA-seq libraries (e.g. TCGA miRNA-seq) or adding a second organism's sRNA test that exercises the miRNA discovery path.
+  * **dmC**: Only a pre-computed bedMethyl sample (HG002). Adding a modBAM sample would exercise the `modkit pileup` path (alignment, pileup, `--combine-mods` handling) which is currently untested in integration.
+  * **mC coverage**: WGBS samples have very low chr21 mapping rates (~0.001%), resulting in sparse methylation data that causes PCA failures and uninformative DMR calls. May be inherent to the chr21 subset approach with whole-genome libraries.
+
 ### Add test dataset documentation
 
 * [ ] Add a test design doc similar to human_chr21_design.md for S. pombe and A. thaliana chr5 test cases.
@@ -306,4 +311,4 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ## Known Issues/Bugs
 
-* [ ] PlotPCA can fail if no dimensions found. check npz results before starting PCA?
+* [x] PlotPCA can fail if no dimensions found. check npz results before starting PCA? **Done**: `plot_PCA_correlation` rule now catches `plotPCA` failures (insufficient data for PCA) and creates a placeholder output instead of failing the pipeline.

@@ -19,15 +19,25 @@ maxsize<-max(summary_stats$Size)
 tot<-length(unique(summary_stats$Sample))
 
 plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
-	
+
 	count<-filter(stattable, Size>=sizemin & Size<=sizemax)
+	if (nrow(count) == 0) {
+		plot.new()
+		text(0.5, 0.5, paste0("No reads in size range ", sizemin, "-", sizemax, " nt"),
+		     cex=1.5, col="grey50")
+		return(invisible(NULL))
+	}
 	count$Count<-as.numeric(count$Count)
-	count<-pivot_wider(count, names_from = Type, values_from = Count) 
+	count<-pivot_wider(count, names_from = Type, values_from = Count)
+
+	if (! "trimmed" %in% colnames(count)) {
+		count<-mutate(count, trimmed=mapped)
+	}
 
 	if (! "deduplicated" %in% colnames(count)) {
 		count<-mutate(count, deduplicated=trimmed)
 	}
-	
+
 	if (! "filtered" %in% colnames(count)) {
 		count<-mutate(count, filtered=deduplicated)
 	}
