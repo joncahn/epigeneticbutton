@@ -302,8 +302,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ## Known Unknowns
 
-* [ ] For now, ChIPseq replicates are only properly merged if same paired information (all PE or all SE). Not sure what happens if both PE and SE reps are available with the same line+tissue name. Corner case to check.
+* [x] ~~For now, ChIPseq replicates are only properly merged if same paired information (all PE or all SE). Not sure what happens if both PE and SE reps are available with the same line+tissue name.~~ Mixed PE/SE analysis groups force SE treatment for merged peak calling with a startup warning. Per-replicate peaks use each sample's own layout. See `dev/docs/design-decisions.md`.
 
 ## Known Issues/Bugs
 
-* [ ] PlotPCA can fail if no dimensions found. check npz results before starting PCA? (how in bash?)
+* [ ] PlotPCA can fail if no dimensions found. check npz results before starting PCA?

@@ -1467,6 +1467,37 @@ function runValidation() {
     }
   }
 
+  // Mixed PE/SE within analysis groups
+  var analysisGroups = {};  // key -> [{sid, layout, rowKey, rowNum}]
+  for (var i = 0; i < data.length; i++) {
+    var sid = (data[i].Sample_ID || "").trim();
+    var assay = (data[i].Assay || "").trim();
+    var genome = (data[i].Genome || "").trim();
+    var layout = (data[i].Read_layout || "").trim();
+    var ipTarget = (data[i].IP_target || "").trim();
+    var levels = (data[i].Levels || "").trim();
+    if (!sid || !assay || !genome) continue;
+    // Skip control samples
+    var ctrl = (data[i].Control || "").trim();
+    if (CHIP_ASSAYS.has(assay) && (!ipTarget || /^(WCE|Input)$/i.test(ipTarget))) continue;
+    var groupKey = [assay, levels, ipTarget, genome].join("||");
+    if (!analysisGroups[groupKey]) analysisGroups[groupKey] = [];
+    analysisGroups[groupKey].push({sid: sid, layout: layout, rowKey: rows[i] ? rows[i].getIndex() : i, rowNum: i + 1});
+  }
+  for (var gk in analysisGroups) {
+    var members = analysisGroups[gk];
+    var layouts = {};
+    for (var m = 0; m < members.length; m++) layouts[members[m].layout] = true;
+    if (Object.keys(layouts).length > 1) {
+      var sids = members.map(function(m) { return m.sid; }).join(", ");
+      for (var m = 0; m < members.length; m++) {
+        addIssue(cellIssues, warnings, members[m].rowKey, "Read_layout",
+          "[!] Mixed PE/SE replicates in analysis group (" + sids + "): merged peak calling will treat all reads as SE",
+          "warnings");
+      }
+    }
+  }
+
   // --- Update UI ---
   updateCellStyles();
   renderDiagnostics(errors, warnings);

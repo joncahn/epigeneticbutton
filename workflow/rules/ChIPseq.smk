@@ -124,21 +124,22 @@ def assign_chip_input(wildcards):
             raise ValueError(f"No control found for sample '{sname}'")
         return ctrl
 
+def _peak_prefix_for_sample(sid, env):
+    """Return the peak file prefix for a per-replicate sample."""
+    if env == "ATAC":
+        return "peaks_atac"
+    paired = get_sample_field(sid, samples, 'paired')
+    return "peaks_pe" if paired == "PE" else "peaks_se"
+
+
 def assign_peak_files_for_idr(wildcards):
     """Return list of per-replicate peak files for IDR analysis."""
     sname = wildcards.sample_name  # analysis_name
-    paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     env = get_sample_info_from_name(sname, analysis_samples, 'env')
     assay = _resolve_assay(sname)
     peaktype = get_peaktype_for_env(assay, env)
     rep_sids = get_replicate_sample_ids(sname, samples)
-    if env == "ATAC":
-        prefix = "peaks_atac"
-    elif paired == "PE":
-        prefix = "peaks_pe"
-    else:
-        prefix = "peaks_se"
-    return [f"results/{env}/peaks/{prefix}__final__{sid}_peaks.{peaktype}Peak"
+    return [f"results/{env}/peaks/{_peak_prefix_for_sample(sid, env)}__final__{sid}_peaks.{peaktype}Peak"
             for sid in rep_sids]
 
 def input_peak_files_for_best_peaks(wildcards):
@@ -149,6 +150,7 @@ def input_peak_files_for_best_peaks(wildcards):
     assay = _resolve_assay(sname)
     peaktype = get_peaktype_for_env(assay, env)
 
+    # Analysis-level prefix for merged/pseudo peaks (uses analysis-level paired)
     if env == "ATAC":
         prefix = "peaks_atac"
     elif paired == "PE":
@@ -165,9 +167,10 @@ def input_peak_files_for_best_peaks(wildcards):
                   f"results/{env}/peaks/idr_peaks__{sname}.bed"]
     else:
         one_sid = rep_sids[0]
-        result = [f"results/{env}/peaks/{prefix}__final__{one_sid}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/{prefix}__pseudo1__{one_sid}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/{prefix}__pseudo2__{one_sid}_peaks.{peaktype}Peak",
+        rep_prefix = _peak_prefix_for_sample(one_sid, env)
+        result = [f"results/{env}/peaks/{rep_prefix}__final__{one_sid}_peaks.{peaktype}Peak",
+                  f"results/{env}/peaks/{rep_prefix}__pseudo1__{one_sid}_peaks.{peaktype}Peak",
+                  f"results/{env}/peaks/{rep_prefix}__pseudo2__{one_sid}_peaks.{peaktype}Peak",
                   "results/empty.txt"]
 
     return result
@@ -175,14 +178,7 @@ def input_peak_files_for_best_peaks(wildcards):
 def get_replicate_name(wildcards, pos):
     """Return the peak file path for replicate at position `pos`."""
     sname = wildcards.sample_name  # analysis_name
-    paired = get_sample_info_from_name(sname, analysis_samples, 'paired')
     env = get_sample_info_from_name(sname, analysis_samples, 'env')
-    if env == "ATAC":
-        prefix = "peaks_atac"
-    elif paired == "PE":
-        prefix = "peaks_pe"
-    else:
-        prefix = "peaks_se"
     assay = _resolve_assay(sname)
     peaktype = get_peaktype_for_env(assay, env)
     rep_sids = get_replicate_sample_ids(sname, samples)
@@ -190,7 +186,8 @@ def get_replicate_name(wildcards, pos):
     if pos >= len(rep_sids):
         return "missingrep"
     else:
-        return f"results/{env}/peaks/{prefix}__final__{rep_sids[pos]}_peaks.{peaktype}Peak"
+        sid = rep_sids[pos]
+        return f"results/{env}/peaks/{_peak_prefix_for_sample(sid, env)}__final__{sid}_peaks.{peaktype}Peak"
 
 def get_replicate_pairs(wildcards):
     """Return colon-separated pairs of replicate Sample_IDs for IDR."""
@@ -325,7 +322,8 @@ def define_logs_final_input(wildcards):
     rep_sids = get_replicate_sample_ids(sname, samples)
 
     for sid in rep_sids:
-        log_files.append(return_log_chip(env, sid, f"final__{peaktype}peak_calling", paired))
+        rep_paired = get_sample_field(sid, samples, 'paired')
+        log_files.append(return_log_chip(env, sid, f"final__{peaktype}peak_calling", rep_paired))
         log_files.append(return_log_chip(env, sid, "making_bigwig_final", ""))
         if env != "ATAC":
             log_files.append(return_log_chip(env, sid, "making_fingerprint_final", ""))
@@ -953,7 +951,11 @@ rule idr_analysis_replicates:
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'),
         env = lambda wildcards: wildcards.env,
         replicate_pairs = lambda wildcards: get_replicate_pairs(wildcards),
-        rep_sids = lambda wildcards: get_replicate_sample_ids(wildcards.sample_name, samples)
+        rep_sids = lambda wildcards: get_replicate_sample_ids(wildcards.sample_name, samples),
+        sid_prefixes = lambda wildcards: " ".join(
+            f"{sid}={_peak_prefix_for_sample(sid, wildcards.env)}"
+            for sid in get_replicate_sample_ids(wildcards.sample_name, samples)
+        )
     log:
         temp(return_log_chip("{env}","{sample_name}", "IDR", ""))
     conda: CONDA_ENV_IDR
@@ -967,12 +969,18 @@ rule idr_analysis_replicates:
         {{
         printf "\nLooping over each unique pair of biological replicates for {params.sname} to perform IDR with:\n"
         idr --version
+        # Build associative array mapping sample_id → peak prefix (pe/se/atac)
+        declare -A sid_pre
+        for entry in {params.sid_prefixes}; do
+            sid_pre[${{entry%%=*}}]=${{entry#*=}}
+        done
+        # Analysis-level prefix for merged/pseudo files
         if [[ "{params.env}" == "ATAC" ]]; then
-            pre="atac"
+            analysis_pre="peaks_atac"
         elif [[ "{params.paired}" == "PE" ]]; then
-            pre="pe"
+            analysis_pre="peaks_pe"
         else
-            pre="se"
+            analysis_pre="peaks_se"
         fi
         temp="results/{params.env}/peaks/temp_idr_peaks__{params.sname}.bed"
         while read chr max; do
@@ -983,9 +991,11 @@ rule idr_analysis_replicates:
         for pair in {params.replicate_pairs}; do
             rep1_sid=$(echo ${{pair}} | cut -d":" -f1)
             rep2_sid=$(echo ${{pair}} | cut -d":" -f2)
-            file1="results/{params.env}/peaks/peaks_${{pre}}__final__${{rep1_sid}}_peaks.{params.peaktype}Peak"
-            file2="results/{params.env}/peaks/peaks_${{pre}}__final__${{rep2_sid}}_peaks.{params.peaktype}Peak"
-            outfile="results/{params.env}/peaks/idr_${{pre}}__{params.sname}__${{rep1_sid}}_vs_${{rep2_sid}}_peaks.{params.peaktype}Peak"
+            pre1=${{sid_pre[$rep1_sid]}}
+            pre2=${{sid_pre[$rep2_sid]}}
+            file1="results/{params.env}/peaks/${{pre1}}__final__${{rep1_sid}}_peaks.{params.peaktype}Peak"
+            file2="results/{params.env}/peaks/${{pre2}}__final__${{rep2_sid}}_peaks.{params.peaktype}Peak"
+            outfile="results/{params.env}/peaks/idr_${{analysis_pre}}__{params.sname}__${{rep1_sid}}_vs_${{rep2_sid}}_peaks.{params.peaktype}Peak"
 
             n1=$(wc -l < "${{file1}}")
             n2=$(wc -l < "${{file2}}")

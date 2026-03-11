@@ -290,7 +290,12 @@ def get_analysis_samples(df):
     """Return a DataFrame of analysis-level samples (controls filtered out).
 
     Deduplicated by analysis key (one row per unique analysis group).
+    When an analysis group has mixed PE/SE replicates, the analysis-level
+    Read_layout is forced to SE and a warning is printed (PE reads are
+    treated as SE for merged peak calling to avoid MACS2 errors).
     """
+    import sys
+
     controls = identify_control_samples(df)
     non_control = df[~df["Sample_ID"].isin(controls)].copy()
 
@@ -298,7 +303,32 @@ def get_analysis_samples(df):
     non_control["_analysis_key"] = non_control.apply(
         lambda row: build_analysis_key(row), axis=1
     )
+
+    # Detect mixed PE/SE within analysis groups before deduplication
+    mixed_groups = []
+    for key, group in non_control.groupby("_analysis_key"):
+        layouts = group["Read_layout"].unique()
+        if len(layouts) > 1:
+            name = build_analysis_name(group.iloc[0])
+            sids = group["Sample_ID"].tolist()
+            mixed_groups.append((key, name, sids))
+
     deduped = non_control.drop_duplicates(subset=["_analysis_key"]).copy()
+
+    # Force SE for mixed groups (PE reads treated as SE for merged analysis)
+    if mixed_groups:
+        for key, name, sids in mixed_groups:
+            mask = deduped["_analysis_key"] == key
+            deduped.loc[mask, "Read_layout"] = "SE"
+            sid_list = ", ".join(sids)
+            print(
+                f"WARNING: Analysis group '{name}' has mixed PE/SE "
+                f"replicates ({sid_list}). Merged peak calling will treat "
+                f"all reads as SE. Per-replicate peak calls use each "
+                f"sample's own layout.",
+                file=sys.stderr,
+            )
+
     deduped = deduped.drop(columns=["_analysis_key"])
     return deduped
 

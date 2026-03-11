@@ -92,6 +92,18 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 ---
 
+## Mixed PE/SE Replicates in ChIP-seq
+
+### PE reads treated as SE when an analysis group has mixed layouts
+
+**Decision**: When an analysis group (same Assay + Levels + IP_target + Genome) contains both PE and SE replicates, the merged/pseudoreplicate peak calling forces SE treatment (`-f BAM` instead of `-f BAMPE`). Per-replicate peak calls still use each sample's own layout. A warning is printed at startup.
+
+**Rationale**: Merging PE and SE BAMs produces a mixed BAM. MACS2 with `-f BAMPE` on such a BAM crashes (`fragment size = 0.0`, `ZeroDivisionError`) because SE reads have no mate pair information. The SE format (`-f BAM`) treats each read as an independent tag extended from its 5' end by the estimated fragment size `d` -- for PE reads this means both mates are treated as separate SE reads rather than using the actual insert size as fragment boundaries. This is slightly suboptimal for PE data but perfectly functional for peak detection. Per-replicate calls retain full PE information where available, so IDR comparison still benefits from PE fragment resolution on PE replicates.
+
+**Alternatives considered**: (1) Rejecting mixed PE/SE at validation time. Rejected because it's a legitimate, if uncommon, scenario (e.g. ENCODE experiments from different eras). (2) Stripping pairing flags before merging. Rejected as unnecessary -- MACS2 `-f BAM` already handles both read types correctly. (3) Separate merged peak calling per layout. Rejected as over-complex for a rare edge case.
+
+---
+
 ## Performance and Disk Usage
 
 ### Configurable intermediate file retention with tiered presets

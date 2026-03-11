@@ -465,12 +465,27 @@ rule make_srna_stranded_bigwigs:
         input_bamfile="{input.bamfile}"
         basename=${{input_bamfile%.bam}}
         ShortTracks --mode simple --stranded --bamfile {input.bamfile}
-        mv ${{basename}}_p.bw {output.bw_plus}
-        printf "Inverting minus strand (back to positive values)\n"
-        bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
-        awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
-        bedSort {output.temp_minus_rev} {output.temp_minus_sort}
-        bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
+
+        # Handle empty wig files (zero reads at this size) — create empty bigwigs
+        if [[ ! -f "${{basename}}_p.bw" ]]; then
+            printf "No plus-strand reads at {params.size}nt — creating empty bigwig\n"
+            touch {output.temp_minus}
+            touch {output.temp_minus_rev}
+            touch {output.temp_minus_sort}
+            # Minimal bedGraph with a single zero-value entry to produce a valid bigwig
+            chrom=$(head -1 {input.chrom_sizes} | cut -f1)
+            printf "%s\t0\t1\t0\n" "$chrom" > "${{basename}}_empty.bg"
+            bedGraphToBigWig "${{basename}}_empty.bg" {input.chrom_sizes} {output.bw_plus}
+            cp {output.bw_plus} {output.bw_minus}
+            rm -f "${{basename}}_empty.bg"
+        else
+            mv ${{basename}}_p.bw {output.bw_plus}
+            printf "Inverting minus strand (back to positive values)\n"
+            bigWigToBedGraph ${{basename}}_m.bw {output.temp_minus}
+            awk -v OFS="\t" '{{print $1,$2,$3,-$4}}' {output.temp_minus} > {output.temp_minus_rev}
+            bedSort {output.temp_minus_rev} {output.temp_minus_sort}
+            bedGraphToBigWig {output.temp_minus_sort} {input.chrom_sizes} {output.bw_minus}
+        fi
         rm -f ${{basename}}_m*
         rm -f ${{basename}}_p*
         }} 2>&1 | tee -a "{log}"
