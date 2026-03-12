@@ -450,8 +450,8 @@ resources:
   make_coverage_atac: *heavier
   # mC
   make_bismark_indices: *heavy
-  bismark_map_pe: *heavier
-  bismark_map_se: *heavier
+  bismark_map_pe: *max
+  bismark_map_se: *max
   make_mc_stats_pe: *low
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy

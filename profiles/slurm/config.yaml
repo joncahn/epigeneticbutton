@@ -9,6 +9,8 @@ keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
 
+precommand: 'if [[ -n "${{SLURM_JOB_ID:-}}" && -z "${{SLURM_TMPDIR:-}}" ]]; then export SLURM_TMPDIR="/tmp/slurm_tmp/$SLURM_JOB_ID"; export TMPDIR="$SLURM_TMPDIR"; mkdir -p "$TMPDIR"; fi'
+
 sbatch:
   job-name: "smk-{rule}-{jobid}"
   cpus-per-task: "{threads}"

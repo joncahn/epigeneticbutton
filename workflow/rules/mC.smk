@@ -177,18 +177,25 @@ rule bismark_map_pe:
         mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_pe'],
         process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_pe'],
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
-        limthreads = lambda wildcards, threads: max(1, threads // 3)
+        limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["bismark_map_pe"]["mem_mb"],
-        tmp_mb=config["resources"]["bismark_map_pe"]["tmp_mb"],
+        # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
+        # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
+        # plus 10 GB headroom, with a 20 GB floor.
+        tmp_mb=lambda wildcards, input: max(20000, int(sum(os.path.getsize(f) for f in [input.fastq1, input.fastq2]) / 1024**2 * 7) + 10000),
         qos=config["resources"]["bismark_map_pe"]["qos"]
     shell:
         """
         {{
+        # Unset OMP_NUM_THREADS: Snakemake sets this to the thread count, but
+        # bowtie2 uses it for internal parallelism which conflicts with bismark's
+        # own --multicore process management, causing near-zero mapping rates.
+        unset OMP_NUM_THREADS
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
         bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --gzip --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
         printf "\nDeduplicating with bismark\n"
@@ -219,18 +226,25 @@ rule bismark_map_se:
         mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_se'],
         process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_se'],
         prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
-        limthreads = lambda wildcards, threads: max(1, threads // 3)
+        limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV_MC
     threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
         mem_mb=config["resources"]["bismark_map_se"]["mem_mb"],
-        tmp_mb=config["resources"]["bismark_map_se"]["tmp_mb"],
+        # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
+        # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
+        # plus 10 GB headroom, with a 20 GB floor.
+        tmp_mb=lambda wildcards, input: max(20000, int(os.path.getsize(input.fastq0) / 1024**2 * 7) + 10000),
         qos=config["resources"]["bismark_map_se"]["qos"]
     shell:
         """
         {{
+        # Unset OMP_NUM_THREADS: Snakemake sets this to the thread count, but
+        # bowtie2 uses it for internal parallelism which conflicts with bismark's
+        # own --multicore process management, causing near-zero mapping rates.
+        unset OMP_NUM_THREADS
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
         bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --gzip --nucleotide_coverage {input.fastq0}
         printf "\nDeduplicating with bismark\n"
