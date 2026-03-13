@@ -653,7 +653,7 @@ const VALID_ASSAYS = [
   "ChIP_broad", "ChIP_narrow", "ATAC",
   "RNAseq", "RAMPAGE",
   "sRNA",
-  "WGBS", "EMseq", "dmC"
+  "WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC"
 ];
 
 const ASSAY_TO_ENV = {
@@ -661,7 +661,7 @@ const ASSAY_TO_ENV = {
   ATAC: "ATAC",
   RNAseq: "RNA", RAMPAGE: "RNA",
   sRNA: "sRNA",
-  WGBS: "mC", EMseq: "mC", dmC: "mC"
+  WGBS: "mC", WGBS_nd: "mC", PBAT: "mC", EMseq: "mC", dmC: "mC"
 };
 
 const VALID_ASSAYS_SET = new Set(VALID_ASSAYS);
@@ -700,7 +700,7 @@ function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
 
 const COLUMN_DESCRIPTIONS = {
   Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
-  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), ATAC, RNAseq, RAMPAGE, sRNA, WGBS, EMseq, dmC.",
+  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads).",
   Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
@@ -713,7 +713,7 @@ const COLUMN_DESCRIPTIONS = {
 // Assay short names for Sample_ID suggestion (non-ChIP assays)
 const ASSAY_SHORT = {
   ATAC: "ATAC", RNAseq: "RNA", RAMPAGE: "RAMPAGE",
-  sRNA: "sRNA", WGBS: "WGBS", EMseq: "EMseq", dmC: "dmC"
+  sRNA: "sRNA", WGBS: "WGBS", WGBS_nd: "WGBS_nd", PBAT: "PBAT", EMseq: "EMseq", dmC: "dmC"
 };
 
 // ===========================================================================
@@ -2479,7 +2479,7 @@ function buildConfigForm() {
   mcBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_mC", "auto"));
   mcBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_mC", "auto"));
   mcBody.appendChild(buildSelectRow("Library prep method:", "mC_method",
-    ["default", "WGBS", "Pico", "EMseq"]));
+    ["default", "WGBS", "WGBS_nd", "PBAT", "EMseq"]));
   mcBody.appendChild(buildNumberRow("Max insert length (PE):", "mC_max_insert", 100, 50000));
   mcBody.appendChild(buildToggleRow("Custom DMR calling script", "custom_script_dmrs",
     "Using custom call_DMRs_custom.R script (more thorough, slower).",

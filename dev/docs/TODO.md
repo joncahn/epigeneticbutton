@@ -51,7 +51,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
   | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
   |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
-  | [freetext] | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, dmC, EMseq] | [freetext] | [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [freetext name of IP target or control, e.g. H3K9me2, or Input, WCE, etc.] required for ChIP_broad/ChIP_narrow | [valid sample ID] |
+  | [freetext] | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, WGBS_nd, PBAT, EMseq, dmC] | [freetext] | [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [freetext name of IP target or control, e.g. H3K9me2, or Input, WCE, etc.] required for ChIP_broad/ChIP_narrow | [valid sample ID] |
   
   Sample_ID: a name that uniquely identifies this sample. Will be used to track the sample internally, and can be used to assign controls to ChIP_broad, ChIP_narrow, and RAMPAGE Assays. We will not enforce any format, other than uniqueness, but the epicc-builder app should suggest a concise ID (see epicc-builder specification).
   Assay: controlled vocabulary, replaces data_type/sample_type and provides the menu of accepted assay   types for analysis.
@@ -271,7 +271,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Pico and EMseq
 
-* [ ] Validate pico methyl-seq with this [GEO dataset](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4392248/). Add to the Hg38 chr21 test case.
+* [ ] Validate pico methyl-seq with this [GEO dataset](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4392248/). Add to the Hg38 chr21 test case. The Zymo pico library prep produces non-directional libraries, which is the essential difference we want to test. We should consider how to integrate the necessary parameterization of Bismark for this, whether by a separate Assay type, or by introducing a new field to sample sheet (which is less desirable as it will be empty for most samples).
 
 * [ ] For EMseq, let's look to adding data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the future A. thaliana Chr5 test case.
 

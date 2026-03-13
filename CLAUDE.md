@@ -34,7 +34,7 @@ Sample metadata is defined in a TSV file with 9 columns:
 `Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control`
 
 - **Sample_ID**: Unique identifier, used as filesystem name. Must be unique and filesystem-safe (no `__`, `/`, whitespace).
-- **Assay**: Controlled vocabulary: `ChIP_broad`, `ChIP_narrow`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `EMseq`, `dmC`
+- **Assay**: Controlled vocabulary: `ChIP_broad`, `ChIP_narrow`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, `dmC`
 - **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`)
 - **Levels**: Comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:root`). All samples must have the same factors.
 - **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
@@ -98,5 +98,5 @@ scripts/validate_pombe.sh --all
 
 - Snakemake 9.0+. Results go to `{output_dir}/{env}/` (`ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`); genomes to `{genome_dir}/{ref_genome}/`. Both directories default to `results` and `genomes` respectively, configurable via `output_dir`/`genome_dir` config keys or `epicc --output-dir`/`--genome-dir` CLI flags.
 - In Python context (input/output/params), paths use `RESULTS_DIR`/`GENOMES_DIR` variables. In shell blocks, paths use `{config[output_dir]}`/`{config[genome_dir]}` Snakemake substitution.
-- Env mapping: `ChIP_broad`/`ChIP_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`EMseq`/`dmC` → `mC`
+- Env mapping: `ChIP_broad`/`ChIP_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`WGBS_nd`/`PBAT`/`EMseq`/`dmC` → `mC`
 - Checkpoint files in `{output_dir}/*/chkpts/` control re-running analyses; delete to force rerun.

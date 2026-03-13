@@ -41,7 +41,7 @@ def is_dmc_sample(sample_name, df):
 def parameters_for_mc(sample_name, df):
     """Determine methylation calling parameters based on Assay."""
     assay = _get_sample_info(sample_name, df, "Assay")
-    options = {"WGBS", "Pico", "EMseq", "dmC"}
+    options = {"WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC"}
     return assay if assay in options else "default"
 
 
@@ -62,9 +62,12 @@ def mc_samples():
         {"Sample_ID": "WT_root_WGBS_rep1", "Assay": "WGBS", "Genome": "ColCEN",
          "Levels": "genotype:Col0,tissue:root", "Replicate_ID": "rep1",
          "Read_files": "SRR12345", "Read_layout": "SE", "IP_target": "", "Control": ""},
-        {"Sample_ID": "WT_leaf_Pico_rep1", "Assay": "Pico", "Genome": "ColCEN",
+        {"Sample_ID": "WT_leaf_WGBSnd_rep1", "Assay": "WGBS_nd", "Genome": "ColCEN",
          "Levels": "genotype:Col0,tissue:leaf", "Replicate_ID": "rep1",
          "Read_files": "SRR12346", "Read_layout": "SE", "IP_target": "", "Control": ""},
+        {"Sample_ID": "WT_leaf_PBAT_rep1", "Assay": "PBAT", "Genome": "ColCEN",
+         "Levels": "genotype:Col0,tissue:leaf", "Replicate_ID": "rep1",
+         "Read_files": "SRR12349", "Read_layout": "PE", "IP_target": "", "Control": ""},
         {"Sample_ID": "WT_leaf_EMseq_rep1", "Assay": "EMseq", "Genome": "ColCEN",
          "Levels": "genotype:Col0,tissue:leaf", "Replicate_ID": "rep1",
          "Read_files": "SRR12347", "Read_layout": "PE", "IP_target": "", "Control": ""},
@@ -91,8 +94,11 @@ class TestIsDmcSample:
     def test_wgbs_sample_is_not_dmc(self, mc_samples):
         assert is_dmc_sample("WT_root_WGBS_rep1", mc_samples) is False
 
-    def test_pico_sample_is_not_dmc(self, mc_samples):
-        assert is_dmc_sample("WT_leaf_Pico_rep1", mc_samples) is False
+    def test_wgbs_nd_sample_is_not_dmc(self, mc_samples):
+        assert is_dmc_sample("WT_leaf_WGBSnd_rep1", mc_samples) is False
+
+    def test_pbat_sample_is_not_dmc(self, mc_samples):
+        assert is_dmc_sample("WT_leaf_PBAT_rep1", mc_samples) is False
 
     def test_emseq_sample_is_not_dmc(self, mc_samples):
         assert is_dmc_sample("WT_leaf_EMseq_rep1", mc_samples) is False
@@ -110,8 +116,11 @@ class TestParametersForMc:
     def test_wgbs_returns_wgbs(self, mc_samples):
         assert parameters_for_mc("WT_root_WGBS_rep1", mc_samples) == "WGBS"
 
-    def test_pico_returns_pico(self, mc_samples):
-        assert parameters_for_mc("WT_leaf_Pico_rep1", mc_samples) == "Pico"
+    def test_wgbs_nd_returns_wgbs_nd(self, mc_samples):
+        assert parameters_for_mc("WT_leaf_WGBSnd_rep1", mc_samples) == "WGBS_nd"
+
+    def test_pbat_returns_pbat(self, mc_samples):
+        assert parameters_for_mc("WT_leaf_PBAT_rep1", mc_samples) == "PBAT"
 
     def test_emseq_returns_emseq(self, mc_samples):
         assert parameters_for_mc("WT_leaf_EMseq_rep1", mc_samples) == "EMseq"
@@ -146,7 +155,8 @@ class TestIntegrationScenarios:
         expected = {
             "WT_leaf_dmC_rep1": ("dmC", True),
             "WT_root_WGBS_rep1": ("WGBS", False),
-            "WT_leaf_Pico_rep1": ("Pico", False),
+            "WT_leaf_WGBSnd_rep1": ("WGBS_nd", False),
+            "WT_leaf_PBAT_rep1": ("PBAT", False),
             "WT_leaf_EMseq_rep1": ("EMseq", False),
             "WT_leaf_mC_rep1": ("default", False),
         }

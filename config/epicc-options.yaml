@@ -227,9 +227,14 @@ mC_mapping:
     map_se: ""
     process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
-  Pico:
+  WGBS_nd: # non-directional WGBS (Zymo Pico Methyl-Seq, Swift Accel-NGS, etc.)
     map_pe: "--maxins 1000 --non_directional"
     map_se: "--non_directional"
+    process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+  PBAT: # post-bisulfite adapter tagging
+    map_pe: "--maxins 1000 --pbat"
+    map_se: "--pbat"
     process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
 

@@ -18,7 +18,7 @@ def return_log_mc(sample_name, step, paired):
 
 def parameters_for_mc(sample_name):
     assay = get_sample_info_from_name(sample_name, samples, 'Assay')
-    options = {"WGBS", "Pico", "EMseq", "dmC"}
+    options = {"WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC"}
     return assay if assay in options else "default"
 
 def is_dmc_sample(sample_name):

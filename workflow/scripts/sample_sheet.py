@@ -22,7 +22,7 @@ VALID_ASSAYS = [
     "ChIP_broad", "ChIP_narrow", "ATAC",
     "RNAseq", "RAMPAGE",
     "sRNA",
-    "WGBS", "EMseq", "dmC",
+    "WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC",
 ]
 
 ASSAY_TO_ENV = {
@@ -33,6 +33,8 @@ ASSAY_TO_ENV = {
     "RAMPAGE": "RNA",
     "sRNA": "sRNA",
     "WGBS": "mC",
+    "WGBS_nd": "mC",
+    "PBAT": "mC",
     "EMseq": "mC",
     "dmC": "mC",
 }
