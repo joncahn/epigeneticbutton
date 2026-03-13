@@ -188,7 +188,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Provide a front-end CLI executable script
 
-* [ ] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. It will have user-friendly help text, and could provide more flexibility for reporting, logging, intermediate file cleanup, and output/working folder designation (to run in a directory other than the one in which it is invoked). We should be able to pass through arbitrary arguments to snakemake as well (maybe through a --smk argument to the wrapper).
+* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. See `dev/docs/cli-wrapper-plan.md` for full design and `dev/docs/design-decisions.md` for rationale. Output directory support (`--output-dir`) deferred to the output_dir refactoring (see Configurable output directory item).
 
 ## Plotting
 
@@ -212,7 +212,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Full code review of snakemake rules
 
-* [ ] Do a full code review of the full workflow in parallel with --simplify, and improve performance and resource usage where possible for all sample type analysis rules and the combined analysis.
+* [ ] Do a full code review of the full workflow in parallel with --simplify, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis.
 
 ### Speeding up bigwig conversion
 

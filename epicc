@@ -1,0 +1,532 @@
+#!/usr/bin/env python3
+"""EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization.
+
+User-friendly CLI wrapper around the EPICC Snakemake pipeline.
+
+Usage:
+    epicc run [options] [-- SNAKEMAKE_ARGS...]
+    epicc dry-run [options] [-- SNAKEMAKE_ARGS...]
+    epicc validate [options]
+    epicc profile [--latest | LOGFILE] [--html FILE]
+    epicc clean [--intermediates] [--conda-envs] [--logs] [--all]
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+DESCRIPTION = """\
+EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization.
+
+Snakemake pipeline for ChIP-seq, RNA-seq, small RNA-seq, bisulfite
+methylC-seq, and direct methylation from long-read sequencing.
+"""
+
+DEFAULT_OPTIONS = "config/epicc-options.yaml"
+DEFAULT_PROFILE = "profiles/slurm"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def find_repo_root():
+    """Find the repository root (directory containing workflow/Snakefile)."""
+    # Start from the script's own location
+    script_dir = Path(__file__).resolve().parent
+    if (script_dir / "workflow" / "Snakefile").exists():
+        return script_dir
+    # Fall back to cwd
+    cwd = Path.cwd()
+    if (cwd / "workflow" / "Snakefile").exists():
+        return cwd
+    sys.exit(
+        "Error: Cannot find EPICC pipeline (workflow/Snakefile).\n"
+        "Run this command from the pipeline directory, or ensure the epicc "
+        "script is located at the repository root."
+    )
+
+
+def fmt_duration(seconds):
+    """Format seconds as human-readable duration."""
+    if seconds < 60:
+        return f"{seconds:.0f}s"
+    elif seconds < 3600:
+        m, s = divmod(seconds, 60)
+        return f"{int(m)}m {int(s)}s"
+    else:
+        h, rem = divmod(seconds, 3600)
+        m, _ = divmod(rem, 60)
+        return f"{int(h)}h {int(m)}m"
+
+
+def detect_execution_mode(args):
+    """Determine whether to use a SLURM profile or local cores.
+
+    Returns (profile_path, cores) — one will be None.
+    """
+    if args.profile:
+        return args.profile, None
+    if args.cores:
+        return None, args.cores
+
+    # Auto-detect: SLURM if sbatch is available
+    if shutil.which("sbatch"):
+        profile = DEFAULT_PROFILE
+        repo = find_repo_root()
+        if not (repo / profile / "config.yaml").exists():
+            print(f"Warning: sbatch found but {profile}/config.yaml missing; "
+                  f"falling back to local execution.", file=sys.stderr)
+            cores = max(1, os.cpu_count() // 2)
+            return None, cores
+        return profile, None
+
+    cores = max(1, os.cpu_count() // 2)
+    return None, cores
+
+
+def build_snakemake_cmd(args, extra_args, *, dry_run=False):
+    """Construct the snakemake command line from parsed arguments."""
+    repo = find_repo_root()
+
+    cmd = ["snakemake"]
+
+    # Options file
+    options_file = args.options
+    if not Path(options_file).exists():
+        sys.exit(f"Error: Options file not found: {options_file}")
+    cmd += ["--configfile", options_file]
+
+    # Execution mode
+    profile, cores = detect_execution_mode(args)
+    if profile:
+        cmd += ["--profile", profile]
+    else:
+        cmd += ["--use-conda", "--conda-frontend", "conda", "--cores", str(cores)]
+
+    # Config overrides via --config key=value
+    config_overrides = []
+    if args.samples:
+        if not Path(args.samples).exists():
+            sys.exit(f"Error: Sample file not found: {args.samples}")
+        config_overrides.append(f"sample_file={args.samples}")
+    if hasattr(args, 'keep_intermediates') and args.keep_intermediates:
+        config_overrides.append(f"keep_intermediates={args.keep_intermediates}")
+    if config_overrides:
+        cmd += ["--config"] + config_overrides
+
+    # Dry-run
+    if dry_run:
+        cmd.append("--dry-run")
+
+    # Verbosity
+    if args.verbose:
+        cmd.append("--printshellcmds")
+    if args.quiet:
+        cmd.append("--quiet")
+
+    # Subcommand-specific options
+    if hasattr(args, 'target') and args.target:
+        cmd.append(args.target)
+    if hasattr(args, 'until') and args.until:
+        cmd += ["--until", args.until]
+    if hasattr(args, 'forcerun') and args.forcerun:
+        cmd += ["--forcerun"] + args.forcerun
+
+    # Passthrough arguments (everything after --)
+    if extra_args:
+        cmd += extra_args
+
+    return cmd
+
+
+# ---------------------------------------------------------------------------
+# Subcommands
+# ---------------------------------------------------------------------------
+
+def cmd_run(args, extra_args):
+    """Execute the pipeline."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    cmd = build_snakemake_cmd(args, extra_args)
+    profile, cores = detect_execution_mode(args)
+
+    mode_desc = f"profile {profile}" if profile else f"{cores} local cores"
+    print(f"EPICC: Starting pipeline ({mode_desc})", file=sys.stderr)
+    if args.verbose:
+        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+
+    t0 = time.time()
+    result = subprocess.run(cmd)
+    elapsed = time.time() - t0
+
+    print(file=sys.stderr)
+    if result.returncode == 0:
+        print(f"EPICC: Pipeline completed in {fmt_duration(elapsed)}.",
+              file=sys.stderr)
+        print("  Tip: Run 'epicc profile --latest' to see the execution profile.",
+              file=sys.stderr)
+    else:
+        print(f"EPICC: Pipeline failed after {fmt_duration(elapsed)} "
+              f"(exit code {result.returncode}).", file=sys.stderr)
+
+    return result.returncode
+
+
+def cmd_dry_run(args, extra_args):
+    """Dry-run the pipeline (no execution)."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    cmd = build_snakemake_cmd(args, extra_args, dry_run=True)
+
+    print("EPICC: Dry-run (no jobs will be executed)", file=sys.stderr)
+    if args.verbose:
+        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+
+    result = subprocess.run(cmd)
+
+    if result.returncode == 0:
+        print("\nEPICC: Dry-run passed.", file=sys.stderr)
+    else:
+        print(f"\nEPICC: Dry-run failed (exit code {result.returncode}).",
+              file=sys.stderr)
+
+    return result.returncode
+
+
+def cmd_validate(args, extra_args):
+    """Validate configuration without running the pipeline."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    options_file = Path(args.options)
+    if not options_file.exists():
+        sys.exit(f"Error: Options file not found: {options_file}")
+
+    print("EPICC: Validating configuration...\n", file=sys.stderr)
+
+    # Load and display config summary
+    try:
+        import yaml
+    except ImportError:
+        sys.exit("Error: PyYAML not available. Activate the epicc conda environment.")
+
+    with open(options_file) as f:
+        config = yaml.safe_load(f)
+
+    # Basic config checks
+    sample_file = args.samples or config.get("sample_file", "config/all_samples.tsv")
+    print(f"  Options file:  {options_file}", file=sys.stderr)
+    print(f"  Sample file:   {sample_file}", file=sys.stderr)
+    print(f"  Repo folder:   {config.get('repo_folder', '(not set)')}",
+          file=sys.stderr)
+    print(f"  Analysis name: {config.get('analysis_name', '(not set)')}",
+          file=sys.stderr)
+    print(f"  Full analysis: {config.get('full_analysis', '(not set)')}",
+          file=sys.stderr)
+
+    # Genomes
+    genomes = config.get("genomes", {})
+    if genomes:
+        print(f"  Genomes:       {', '.join(genomes.keys())}",
+              file=sys.stderr)
+    else:
+        print("  Genomes:       (none configured)", file=sys.stderr)
+
+    # Check files exist
+    errors = []
+    if not Path(sample_file).exists():
+        errors.append(f"Sample file not found: {sample_file}")
+    repo_folder = config.get("repo_folder", ".")
+    if not Path(repo_folder).is_dir():
+        errors.append(f"Repo folder not found: {repo_folder}")
+    for gname, gconf in genomes.items():
+        fasta = gconf.get("fasta_file", "")
+        if fasta and not Path(fasta).exists():
+            errors.append(f"Genome {gname}: FASTA not found: {fasta}")
+        gff = gconf.get("gff_file", "")
+        if gff and not Path(gff).exists():
+            errors.append(f"Genome {gname}: GFF not found: {gff}")
+
+    if errors:
+        print(f"\n  Found {len(errors)} error(s):", file=sys.stderr)
+        for e in errors:
+            print(f"    - {e}", file=sys.stderr)
+    else:
+        print("\n  Configuration looks good.", file=sys.stderr)
+
+    # Optionally run snakemake dry-run for full DAG validation
+    if not errors:
+        print("\n  Running snakemake dry-run for DAG validation...\n",
+              file=sys.stderr)
+        cmd = build_snakemake_cmd(args, extra_args, dry_run=True)
+        result = subprocess.run(cmd)
+        if result.returncode == 0:
+            print("\nEPICC: Validation passed.", file=sys.stderr)
+        else:
+            print(f"\nEPICC: Dry-run validation failed (exit code "
+                  f"{result.returncode}).", file=sys.stderr)
+        return result.returncode
+
+    return 1 if errors else 0
+
+
+def cmd_profile(args, extra_args):
+    """Run the pipeline profiler."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    profiler = repo / "dev" / "profile_snakemake_log.py"
+    if not profiler.exists():
+        sys.exit(f"Error: Profiler script not found: {profiler}")
+
+    cmd = [sys.executable, str(profiler)]
+
+    if args.latest:
+        cmd.append("--latest")
+    elif args.logfile:
+        cmd.append(args.logfile)
+    else:
+        cmd.append("--latest")
+
+    if args.html:
+        cmd += ["--html", args.html]
+
+    if args.multi:
+        cmd += ["--multi"] + args.multi
+
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
+def cmd_clean(args, extra_args):
+    """Selective cleanup of pipeline artifacts."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    if not any([args.intermediates, args.conda_envs, args.logs, args.all]):
+        print("Nothing to clean. Specify --intermediates, --conda-envs, "
+              "--logs, or --all.", file=sys.stderr)
+        return 1
+
+    if args.logs or args.all:
+        log_dir = repo / ".snakemake" / "log"
+        if log_dir.exists():
+            logs = list(log_dir.glob("*.snakemake.log"))
+            if len(logs) > 1:
+                # Keep the most recent, remove the rest
+                logs.sort(key=lambda p: p.stat().st_mtime)
+                old_logs = logs[:-1]
+                print(f"Removing {len(old_logs)} old log file(s) "
+                      f"(keeping most recent)...", file=sys.stderr)
+                for log in old_logs:
+                    log.unlink()
+            else:
+                print("No old logs to clean.", file=sys.stderr)
+
+    if args.conda_envs or args.all:
+        print("Cleaning unused conda environments...", file=sys.stderr)
+        result = subprocess.run(
+            ["snakemake", "--sdm", "conda", "--conda-cleanup-envs"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            print("  Done.", file=sys.stderr)
+        else:
+            print(f"  Failed: {result.stderr.strip()}", file=sys.stderr)
+
+    if args.intermediates or args.all:
+        # Delete checkpoint files to force reanalysis
+        chkpt_dirs = list(repo.glob("results/*/chkpts"))
+        if chkpt_dirs:
+            print(f"Removing checkpoint files from {len(chkpt_dirs)} "
+                  f"environment(s)...", file=sys.stderr)
+            for d in chkpt_dirs:
+                for f in d.iterdir():
+                    f.unlink()
+            print("  Done. Re-run the pipeline to regenerate analysis.",
+                  file=sys.stderr)
+        else:
+            print("No checkpoint files found.", file=sys.stderr)
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+
+def add_common_options(parser):
+    """Add options shared by run/dry-run/validate."""
+    parser.add_argument(
+        "--options", default=DEFAULT_OPTIONS, metavar="FILE",
+        help=f"Path to options YAML file (default: {DEFAULT_OPTIONS})",
+    )
+    parser.add_argument(
+        "--samples", metavar="FILE",
+        help="Path to sample sheet TSV (overrides options file value)",
+    )
+    parser.add_argument(
+        "--cores", type=int, metavar="N",
+        help="Cores for local execution (default: auto, half of nproc)",
+    )
+    parser.add_argument(
+        "--profile", metavar="DIR",
+        help=f"Snakemake profile directory (default: auto-detect; "
+             f"uses {DEFAULT_PROFILE} if sbatch is available)",
+    )
+    parser.add_argument(
+        "--keep-intermediates", metavar="TIER",
+        choices=["none", "standard", "custom", "all"],
+        help="Intermediate file retention tier (none/standard/custom/all)",
+    )
+    verbosity = parser.add_mutually_exclusive_group()
+    verbosity.add_argument(
+        "--verbose", "-v", action="store_true",
+        help="Verbose output (print shell commands)",
+    )
+    verbosity.add_argument(
+        "--quiet", "-q", action="store_true",
+        help="Minimal output",
+    )
+
+
+def add_run_options(parser):
+    """Add options specific to run/dry-run."""
+    parser.add_argument(
+        "--target", metavar="TARGET",
+        help="Named target (default: all)",
+    )
+    parser.add_argument(
+        "--until", metavar="RULE",
+        help="Stop after this rule completes",
+    )
+    parser.add_argument(
+        "--forcerun", nargs="+", metavar="RULE",
+        help="Force re-execution of specific rules",
+    )
+
+
+def build_parser():
+    """Build the argument parser with subcommands."""
+    parser = argparse.ArgumentParser(
+        prog="epicc",
+        description=DESCRIPTION,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # --- run ---
+    p_run = subparsers.add_parser(
+        "run", help="Execute the pipeline",
+        description="Run the EPICC pipeline. Arguments after -- are passed "
+                    "directly to snakemake.",
+    )
+    add_common_options(p_run)
+    add_run_options(p_run)
+
+    # --- dry-run ---
+    p_dry = subparsers.add_parser(
+        "dry-run", help="Dry-run the pipeline (no execution)",
+        description="Perform a dry-run to verify the DAG without executing "
+                    "any jobs. Arguments after -- are passed to snakemake.",
+    )
+    add_common_options(p_dry)
+    add_run_options(p_dry)
+
+    # --- validate ---
+    p_val = subparsers.add_parser(
+        "validate", help="Validate configuration",
+        description="Check the options file and sample sheet for errors, "
+                    "then run a snakemake dry-run for full DAG validation.",
+    )
+    add_common_options(p_val)
+
+    # --- profile ---
+    p_prof = subparsers.add_parser(
+        "profile", help="Profile a pipeline run",
+        description="Generate an execution profile report from a snakemake "
+                    "log file. Wraps dev/profile_snakemake_log.py.",
+    )
+    p_prof.add_argument(
+        "logfile", nargs="?",
+        help="Path to .snakemake.log file (default: latest)",
+    )
+    p_prof.add_argument(
+        "--latest", action="store_true",
+        help="Auto-select the most recent log file",
+    )
+    p_prof.add_argument(
+        "--html", metavar="FILE",
+        help="Write HTML report to FILE",
+    )
+    p_prof.add_argument(
+        "--multi", nargs="+", metavar="LABEL=LOG",
+        help="Generate multi-section HTML: 'Label=path/to/log' ...",
+    )
+
+    # --- clean ---
+    p_clean = subparsers.add_parser(
+        "clean", help="Clean pipeline artifacts",
+        description="Selectively remove pipeline artifacts like old logs, "
+                    "unused conda environments, and checkpoint files.",
+    )
+    p_clean.add_argument(
+        "--intermediates", action="store_true",
+        help="Remove checkpoint files (forces reanalysis on next run)",
+    )
+    p_clean.add_argument(
+        "--conda-envs", action="store_true",
+        help="Remove unused conda environments",
+    )
+    p_clean.add_argument(
+        "--logs", action="store_true",
+        help="Remove old snakemake log files (keeps most recent)",
+    )
+    p_clean.add_argument(
+        "--all", action="store_true",
+        help="All of the above",
+    )
+
+    return parser
+
+
+def main():
+    parser = build_parser()
+
+    # Split args at -- to separate epicc args from snakemake passthrough
+    argv = sys.argv[1:]
+    if "--" in argv:
+        split_idx = argv.index("--")
+        epicc_args = argv[:split_idx]
+        extra_args = argv[split_idx + 1:]
+    else:
+        epicc_args = argv
+        extra_args = []
+
+    args = parser.parse_args(epicc_args)
+
+    dispatch = {
+        "run": cmd_run,
+        "dry-run": cmd_dry_run,
+        "validate": cmd_validate,
+        "profile": cmd_profile,
+        "clean": cmd_clean,
+    }
+
+    handler = dispatch.get(args.command)
+    if handler is None:
+        parser.print_help()
+        return 1
+
+    return handler(args, extra_args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

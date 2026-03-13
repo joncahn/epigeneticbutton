@@ -284,3 +284,21 @@ A reference for architectural choices in the pipeline. Intended for contributors
 **Design**: Two new rules in `environment_setup.smk`. `download_rfam` fetches `Rfam.cm.gz` and `Rfam.clanin` from EBI FTP and runs `cmpress`. `build_structural_rna_db` splits the genome into per-chromosome FASTAs (contigs < 1 Mbp are binned together to avoid excessive parallelism with fragmented assemblies), runs `cmscan` in parallel via `xargs -P`, merges results, filters clan overlaps (lines marked ` = ` in cmscan `--fmt 2` output), and extracts sequences with `bedtools getfasta`. The `-Z` flag is set to the total genome size (both strands, in Mb) for proper E-value calibration across per-chromosome runs. Default threshold is `--cut_ga` (Rfam per-family gathering thresholds); configurable via `infernal_threshold` option (`"ga"` or a numeric E-value). `get_structural_rna_fasta()` in `smallRNA.smk` routes to the auto-derived or user-provided FASTA.
 
 **Alternatives considered**: (1) Snakemake checkpoint scatter/gather for per-chromosome parallelization. Rejected as over-complex — checkpoint rules require DAG reconstruction and the number of chromosomes isn't known until runtime; internal `xargs -P` parallelization within a single rule is simpler and equally effective. (2) Per-sequence E-value threshold instead of `--cut_ga`. Rejected as default because gathering thresholds are per-family calibrated by Rfam curators and avoid both over- and under-filtering; E-value is available as an advanced override for divergent organisms.
+
+---
+
+## CLI Wrapper (`epicc`)
+
+### Python script with subcommands, not a bash wrapper
+
+**Decision**: The `epicc` CLI wrapper is a Python script using `argparse` subcommands (`run`, `dry-run`, `validate`, `profile`, `clean`). It constructs and invokes snakemake as a subprocess, mapping user-friendly flags to snakemake's `--config`, `--configfile`, `--profile`, and other arguments. Arbitrary snakemake arguments can be passed through via `--` separator.
+
+**Rationale**: Python is consistent with the rest of the codebase (Snakefile, sample_sheet.py, profiler). `argparse` provides structured subcommands with auto-generated help text and type validation — all cumbersome in bash. The wrapper needs to read YAML config files (PyYAML already in the conda env) and may integrate more tightly with pipeline internals over time. Using `subprocess.run()` (not `os.exec`) allows the wrapper to capture exit codes and print post-run summaries.
+
+**Alternatives considered**: (1) Bash wrapper script. Rejected due to poor YAML support, verbose argument parsing, and divergence from the Python codebase. (2) Click instead of argparse. Rejected as an unnecessary dependency — argparse is in the standard library and sufficient for this use case. (3) `--smk` flag for snakemake passthrough. Rejected in favor of the standard POSIX `--` separator, which is more intuitive and doesn't require a custom flag.
+
+### Execution mode auto-detection
+
+**Decision**: When neither `--profile` nor `--cores` is specified, the wrapper auto-detects SLURM by checking for `sbatch` in PATH. If found, it uses `profiles/slurm`; otherwise it runs locally with half of `nproc` cores.
+
+**Rationale**: Users shouldn't need to remember different invocations for different environments. The explicit `--profile` and `--cores` flags serve as overrides for non-standard setups. This pattern matches the existing `validate_pombe.sh` script.
