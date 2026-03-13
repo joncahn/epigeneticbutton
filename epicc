@@ -305,6 +305,21 @@ def cmd_profile(args, extra_args):
     return result.returncode
 
 
+def cmd_unlock(args, extra_args):
+    """Unlock the working directory after a failed or interrupted run."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    print("EPICC: Unlocking working directory...", file=sys.stderr)
+    result = subprocess.run(["snakemake", "--unlock"])
+    if result.returncode == 0:
+        print("EPICC: Unlock complete.", file=sys.stderr)
+    else:
+        print(f"EPICC: Unlock failed (exit code {result.returncode}).",
+              file=sys.stderr)
+    return result.returncode
+
+
 def cmd_clean(args, extra_args):
     """Selective cleanup of pipeline artifacts."""
     repo = find_repo_root()
@@ -471,6 +486,13 @@ def build_parser():
         help="Generate multi-section HTML: 'Label=path/to/log' ...",
     )
 
+    # --- unlock ---
+    subparsers.add_parser(
+        "unlock", help="Unlock the working directory",
+        description="Remove Snakemake's directory lock after a failed or "
+                    "interrupted run. Equivalent to 'snakemake --unlock'.",
+    )
+
     # --- clean ---
     p_clean = subparsers.add_parser(
         "clean", help="Clean pipeline artifacts",
@@ -516,6 +538,7 @@ def main():
         "run": cmd_run,
         "dry-run": cmd_dry_run,
         "validate": cmd_validate,
+        "unlock": cmd_unlock,
         "profile": cmd_profile,
         "clean": cmd_clean,
     }
