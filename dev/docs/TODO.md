@@ -275,12 +275,9 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Create comprehensive mC dry-run test covering all methylation code paths. **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) validates WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl workflows including parameter routing, replicate merging, DMR calling, and CX report conversion.
 
-* [ ] Add real WGBS_nd/PBAT/EMseq data to hg38_chr21 test case. Candidate datasets:
-  - WGBS_nd: SRR28330756 (Zymo Pico D5455, 74 Gb PE)
-  - PBAT: SRR28842743 (41.4 Gb PE)
-  - EMseq: SRR10532145 (NEB EM-seq 200ng NA12878, 64.2 Gb PE)
+* [ ] Find A. thaliana WGBS_nd (Pico Methyl-Seq) and/or PBAT datasets for the planned Chr5 test case. Need to identify publicly available non-directional bisulfite-seq data in Arabidopsis.
 
-* [ ] For EMseq, let's look to adding data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the future A. thaliana Chr5 test case.
+* [ ] Add A. thaliana EMseq data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the planned Chr5 test case.
 
 ### Schizosaccharomyces pombe test case
 
