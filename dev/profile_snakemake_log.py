@@ -26,6 +26,73 @@ THREADS_RE = re.compile(r"^\s+threads:\s*(\d+)")
 FINISHED_RE = re.compile(r"^Finished jobid:\s*(\d+)\s*\(Rule:\s*(\S+)\)")
 STEPS_RE = re.compile(r"^(\d+) of (\d+) steps")
 
+# Rule-name prefix → phase mapping (used for analysis and Gantt coloring)
+PHASE_MAP = {
+    "get_fastq": "Download", "process_fastq": "Download",
+    "get_available_bam": "Download", "get_modbam": "Download",
+    "get_bedmethyl": "Download",
+    "filter_bam": "Alignment", "filter_rna": "Alignment",
+    "STAR_map": "Alignment", "map_chromap": "Alignment",
+    "bowtie2_map": "Alignment", "bismark_map": "Alignment",
+    "align_modbam": "Alignment", "shortstack_map": "Alignment",
+    "filter_structural_rna": "Alignment", "dispatch_srna_fastq": "Alignment",
+    "merge_replicates": "Merge", "merging_": "Merge",
+    "making_pseudo_replicates": "Merge",
+    "calling_peaks": "Peak calling", "best_peaks": "Peak calling",
+    "idr_analysis": "Peak calling", "select_peaks": "Peak calling",
+    "perform_pairwise_diff": "Differential",
+    "call_all_DEGs": "Differential", "call_all_differential": "Differential",
+    "call_DMR": "Differential",
+    "make_bigwig": "Tracks", "make_rna_stranded": "Tracks",
+    "make_rna_unstranded": "Tracks", "make_srna_stranded": "Tracks",
+    "make_mc_bigwig": "Tracks", "make_coverage": "Tracks",
+    "computing_matrix": "Visualization", "making_stranded_matrix": "Visualization",
+    "merging_matrix": "Visualization", "computing_matrix_scales": "Visualization",
+    "sort_heatmap": "Visualization", "plot": "Visualization",
+    "prep_browser": "Visualization", "prep_chromosomes": "Visualization",
+    "make_single_loci": "Visualization", "merge_region_browser": "Visualization",
+    "summarize_tracks": "Visualization",
+    "make_fingerprint": "QC", "make_mapping_stats": "QC",
+    "make_rna_stats": "QC", "make_mc_stats": "QC",
+    "make_peak_stats": "QC", "make_srna_size": "QC",
+    "has_header": "QC", "is_stranded": "QC", "run_fastqc": "QC",
+    "modkit_summary": "QC",
+    "filter_size_srna": "sRNA", "analyze_all_srna": "sRNA",
+    "make_cluster": "sRNA", "combine_cluster": "sRNA",
+    "deduplicate_srna": "sRNA",
+    "check_fasta": "Setup", "check_gff": "Setup", "check_gtf": "Setup",
+    "check_chrom_sizes": "Setup", "compute_genome_stats": "Setup",
+    "resolve_taxid": "Setup", "prep_region_file": "Setup",
+    "download_rfam": "Setup", "build_structural_rna_db": "Setup",
+    "check_te_file": "Setup", "make_bt2_indices": "Setup",
+    "make_chromap_index": "Setup", "make_bismark_indices": "Setup",
+    "make_STAR_indices": "Setup", "make_bowtie1_indices": "Setup",
+    "create_GO_database": "Setup",
+}
+
+# Colorblind-friendly palette (Okabe-Ito derived)
+PHASE_PALETTE = {
+    "Download":      "#0072B2",  # blue
+    "Alignment":     "#D55E00",  # vermillion
+    "Merge":         "#009E73",  # bluish green
+    "Peak calling":  "#CC79A7",  # reddish purple
+    "Differential":  "#E69F00",  # orange
+    "Tracks":        "#56B4E9",  # sky blue
+    "Visualization": "#F0E442",  # yellow
+    "QC":            "#000000",  # black
+    "sRNA":          "#882255",  # wine (Paul Tol extension)
+    "Setup":         "#999999",  # gray
+    "Other":         "#AA4499",  # purple (Paul Tol extension)
+}
+
+
+def _rule_to_phase(rule_name):
+    """Map a rule name to its phase via prefix matching."""
+    for prefix, phase in PHASE_MAP.items():
+        if rule_name.startswith(prefix):
+            return phase
+    return "Other"
+
 
 def parse_log(path):
     """Parse Snakemake log, return list of completed job records."""
@@ -135,36 +202,9 @@ def analyze(jobs):
     top_jobs = sorted(jobs, key=lambda j: -j["duration"])[:15]
 
     # Phase analysis: group rules into logical phases
-    phase_map = {
-        "get_fastq": "Download", "process_fastq": "Download",
-        "filter_bam": "Alignment", "filter_rna": "Alignment",
-        "STAR_map": "Alignment", "map_chromap": "Alignment",
-        "bowtie2_map": "Alignment",
-        "filter_structural_rna": "Alignment", "dispatch_srna_fastq": "Alignment",
-        "merge_replicates": "Merge", "making_pseudo_replicates": "Merge",
-        "calling_peaks": "Peak calling", "best_peaks": "Peak calling",
-        "idr_analysis": "IDR", "select_peaks": "IDR",
-        "perform_pairwise_diff": "Differential",
-        "call_all_DEGs": "Differential", "call_all_differential": "Differential",
-        "make_bigwig": "Tracks", "make_rna_stranded": "Tracks",
-        "make_srna_stranded": "Tracks",
-        "computing_matrix": "Heatmaps", "plot_heatmap": "Heatmaps",
-        "combined_analysis": "Heatmaps",
-        "make_fingerprint": "QC", "make_mapping_stats": "QC",
-        "make_rna_stats": "QC", "make_peak_stats": "QC",
-        "make_srna_size": "QC", "has_header": "QC", "is_stranded": "QC",
-        "filter_size_srna": "sRNA analysis",
-        "analyze_all_srna": "sRNA analysis",
-        "make_cluster": "sRNA analysis", "combine_cluster": "sRNA analysis",
-    }
-
     phases = defaultdict(lambda: {"total_sec": 0.0, "count": 0})
     for j in jobs:
-        phase = "Other"
-        for prefix, p in phase_map.items():
-            if j["rule"].startswith(prefix):
-                phase = p
-                break
+        phase = _rule_to_phase(j["rule"])
         phases[phase]["total_sec"] += j["duration"]
         phases[phase]["count"] += j["count"] if "count" in j else 1
 
@@ -187,12 +227,15 @@ def analyze(jobs):
 def report_markdown(stats):
     lines = []
     lines.append("# Snakemake Execution Profile\n")
-    lines.append(f"**Run period:** {stats['total_start'].strftime('%Y-%m-%d %H:%M:%S')} — "
-                 f"{stats['total_end'].strftime('%H:%M:%S')}")
-    lines.append(f"**Wall time:** {fmt_duration(stats['wall_time'])}")
-    lines.append(f"**Total jobs:** {stats['total_jobs']}")
-    lines.append(f"**Total CPU time:** {fmt_duration(stats['cpu_time'])}")
-    lines.append(f"**Parallelism:** {stats['cpu_time'] / stats['wall_time']:.1f}x average\n")
+    period = (f"{stats['total_start'].strftime('%Y-%m-%d %H:%M:%S')} — "
+              f"{stats['total_end'].strftime('%H:%M:%S')}")
+    parallelism = f"{stats['cpu_time'] / stats['wall_time']:.1f}x"
+    lines.append("| Run period | Wall time | Total jobs | Total CPU time | Avg parallelism |")
+    lines.append("|------------|-----------|------------|----------------|-----------------|")
+    lines.append(f"| {period} | {fmt_duration(stats['wall_time'])} | "
+                 f"{stats['total_jobs']} | {fmt_duration(stats['cpu_time'])} | "
+                 f"{parallelism} |")
+    lines.append("")
 
     # Phase summary
     lines.append("## Phase Summary\n")
@@ -202,6 +245,14 @@ def report_markdown(stats):
         pct = data["total_sec"] / stats["wall_time"] * 100
         lines.append(f"| {phase} | {data['count']} | "
                      f"{fmt_duration(data['total_sec'])} | {pct:.1f}% |")
+
+    # Top individual jobs
+    lines.append("\n## Slowest Individual Jobs\n")
+    lines.append("| # | Rule | Duration | Wildcards |")
+    lines.append("|---|------|----------|-----------|")
+    for i, j in enumerate(stats["top_jobs"], 1):
+        wc = j["wildcards"][:60] if j["wildcards"] else ""
+        lines.append(f"| {i} | {j['rule']} | {fmt_duration(j['duration'])} | {wc} |")
 
     # Per-rule table
     lines.append("\n## Per-Rule Breakdown\n")
@@ -214,14 +265,6 @@ def report_markdown(stats):
                      f"{fmt_duration(mean)} | "
                      f"{fmt_duration(data['max_sec'])} |")
 
-    # Top individual jobs
-    lines.append("\n## Slowest Individual Jobs\n")
-    lines.append("| # | Rule | Duration | Wildcards |")
-    lines.append("|---|------|----------|-----------|")
-    for i, j in enumerate(stats["top_jobs"], 1):
-        wc = j["wildcards"][:60] if j["wildcards"] else ""
-        lines.append(f"| {i} | {j['rule']} | {fmt_duration(j['duration'])} | {wc} |")
-
     return "\n".join(lines)
 
 
@@ -229,50 +272,65 @@ def report_markdown(stats):
 # HTML report
 # ---------------------------------------------------------------------------
 
-def report_html(stats):
-    md = report_markdown(stats)
-    # Convert simple markdown tables and headers to HTML
-    rows = md.split("\n")
-    body_parts = []
+def _md_to_html(md_text):
+    """Convert markdown to HTML, returning (summary, details) tuple.
+
+    Summary = everything before the first ## heading (title + stats table).
+    Details = everything from the first ## heading onward.
+    """
+    rows = md_text.split("\n")
+    summary_parts = []
+    detail_parts = []
     in_table = False
+    seen_h2 = False
 
     for row in rows:
+        target = detail_parts if seen_h2 else summary_parts
+
         if row.startswith("# "):
             if in_table:
-                body_parts.append("</table>")
+                target.append("</table>")
                 in_table = False
-            body_parts.append(f"<h1>{row[2:]}</h1>")
+            target.append(f"<h1>{row[2:]}</h1>")
         elif row.startswith("## "):
             if in_table:
-                body_parts.append("</table>")
+                target.append("</table>")
                 in_table = False
-            body_parts.append(f"<h2>{row[3:]}</h2>")
+            if not seen_h2:
+                seen_h2 = True
+                target = detail_parts
+            target.append(f"<h2>{row[3:]}</h2>")
         elif row.startswith("**"):
-            body_parts.append(f"<p>{row}</p>")
+            target.append(f"<p>{row}</p>")
         elif row.startswith("|") and not row.startswith("|--"):
             cells = [c.strip() for c in row.split("|")[1:-1]]
             if not in_table:
-                body_parts.append('<table>')
+                target.append('<table>')
                 tag = "th"
                 in_table = True
             else:
                 tag = "td"
-            body_parts.append(
+            target.append(
                 "<tr>" + "".join(f"<{tag}>{c}</{tag}>" for c in cells) + "</tr>"
             )
         elif row.startswith("|--"):
-            continue  # skip markdown separator
+            continue
         elif row.strip() == "":
             if in_table:
-                body_parts.append("</table>")
+                target.append("</table>")
                 in_table = False
         else:
-            body_parts.append(f"<p>{row}</p>")
+            target.append(f"<p>{row}</p>")
 
     if in_table:
-        body_parts.append("</table>")
+        (detail_parts if seen_h2 else summary_parts).append("</table>")
 
-    # Gantt-style timeline chart (SVG)
+    return "".join(summary_parts), "".join(detail_parts)
+
+
+def report_html(stats):
+    md = report_markdown(stats)
+    summary_html, details_html = _md_to_html(md)
     gantt = _build_gantt_svg(stats)
 
     return f"""<!DOCTYPE html>
@@ -295,15 +353,40 @@ def report_html(stats):
 </style>
 </head>
 <body>
-{"".join(body_parts)}
+{summary_html}
 <h2>Execution Timeline</h2>
 <div class="gantt">{gantt}</div>
+{details_html}
 </body>
 </html>"""
 
 
+def _abbreviate_rule(rule):
+    """Shorten a rule name to fit inside a Gantt bar."""
+    # Drop common prefixes/suffixes to keep it compact
+    abbrev = rule
+    for prefix in ("make_", "calling_", "perform_", "compute_", "create_",
+                   "prep_", "check_", "build_", "download_", "resolve_"):
+        if abbrev.startswith(prefix):
+            abbrev = abbrev[len(prefix):]
+            break
+    # Truncate long names
+    if len(abbrev) > 20:
+        abbrev = abbrev[:18] + ".."
+    return abbrev
+
+
+def _text_color_for_bg(hex_color):
+    """Return white or black text depending on background luminance."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    # Relative luminance (sRGB approximation)
+    lum = 0.299 * r + 0.587 * g + 0.114 * b
+    return "#ffffff" if lum < 140 else "#000000"
+
+
 def _build_gantt_svg(stats):
-    """Build a simple SVG Gantt chart of job execution."""
+    """Build a simple SVG Gantt chart of job execution, colored by phase."""
     jobs = []
     for rule, data in stats["rules_ranked"]:
         for j in data["jobs"]:
@@ -317,23 +400,23 @@ def _build_gantt_svg(stats):
     if wall == 0:
         return "<p>Zero wall time.</p>"
 
-    # Assign colors by rule
-    rules = list(dict.fromkeys(j["rule"] for j in sorted(jobs, key=lambda x: x["start"])))
-    palette = [
-        "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c",
-        "#0891b2", "#c026d3", "#65a30d", "#d97706", "#475569",
-        "#e11d48", "#059669", "#7c3aed", "#db2777", "#0d9488",
-    ]
-    rule_color = {r: palette[i % len(palette)] for i, r in enumerate(rules)}
+    # Collect phases and rules-per-phase (in order of first appearance)
+    phase_rules = {}  # phase -> list of rule names (unique, ordered)
+    for j in sorted(jobs, key=lambda x: x["start"]):
+        phase = _rule_to_phase(j["rule"])
+        if phase not in phase_rules:
+            phase_rules[phase] = []
+        if j["rule"] not in phase_rules[phase]:
+            phase_rules[phase].append(j["rule"])
 
-    # Layout: rows for concurrent jobs
+    # Layout — SVG uses viewBox for responsive scaling to container width
     row_height = 18
-    label_width = 200
-    chart_width = 700
-    svg_width = label_width + chart_width + 20
+    left_margin = 10
+    chart_width = 1160
+    svg_width = chart_width + left_margin + 10
 
-    # Assign rows: greedy lane assignment
-    lanes = []  # each lane has an end_time
+    # Greedy lane assignment
+    lanes = []
     job_rows = []
     sorted_jobs = sorted(jobs, key=lambda j: j["start"])
     for j in sorted_jobs:
@@ -352,45 +435,83 @@ def _build_gantt_svg(stats):
     num_lanes = len(lanes)
     svg_height = max(num_lanes * row_height + 40, 80)
 
-    parts = [f'<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg">']
+    parts = [f'<svg width="100%" viewBox="0 0 {svg_width} {svg_height}" '
+             f'xmlns="http://www.w3.org/2000/svg">']
 
     # Time axis ticks
     for pct in range(0, 101, 25):
-        x = label_width + (pct / 100) * chart_width
+        x = left_margin + (pct / 100) * chart_width
         t_sec = pct / 100 * wall
         parts.append(f'<line x1="{x}" y1="0" x2="{x}" y2="{svg_height - 20}" '
                      f'stroke="#e5e7eb" stroke-width="1"/>')
         parts.append(f'<text x="{x}" y="{svg_height - 5}" text-anchor="middle" '
                      f'fill="#6b7280">{fmt_duration(t_sec)}</text>')
 
-    # Job bars
+    # Job bars — colored by phase, with rule abbreviation inside wider bars
+    char_width = 6.6  # approximate monospace character width at 11px
     for j, lane in job_rows:
         s = (j["start"] - t0).total_seconds()
         e = (j["end"] - t0).total_seconds()
-        x = label_width + (s / wall) * chart_width
+        x = left_margin + (s / wall) * chart_width
         w = max(((e - s) / wall) * chart_width, 2)
         y = lane * row_height + 2
         h = row_height - 4
-        color = rule_color.get(j["rule"], "#475569")
+        phase = _rule_to_phase(j["rule"])
+        color = PHASE_PALETTE.get(phase, PHASE_PALETTE["Other"])
         wc = j["wildcards"][:40] if j["wildcards"] else ""
-        title = f'{j["rule"]} ({fmt_duration(j["duration"])})\n{wc}'
+        title = f'{j["rule"]} [{phase}] ({fmt_duration(j["duration"])})\n{wc}'
         parts.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="{h}" '
                      f'fill="{color}" rx="2" opacity="0.85">'
                      f'<title>{title}</title></rect>')
 
-    # Legend (top rules)
-    legend_y = svg_height - 18
-    # Put legend below, extend SVG
-    legend_height = ((len(rules) - 1) // 5 + 1) * 18 + 10
-    parts[0] = parts[0].replace(f'height="{svg_height}"',
-                                f'height="{svg_height + legend_height}"')
+        # Add rule abbreviation inside bars wide enough to fit text
+        abbrev = _abbreviate_rule(j["rule"])
+        text_width = len(abbrev) * char_width
+        if w > text_width + 4:
+            txt_color = _text_color_for_bg(color)
+            tx = x + 3
+            ty = y + h - 3
+            parts.append(f'<text x="{tx:.1f}" y="{ty}" fill="{txt_color}" '
+                         f'font-size="10px" font-family="monospace">'
+                         f'<title>{title}</title>{abbrev}</text>')
 
-    for i, rule in enumerate(rules[:15]):
-        lx = (i % 5) * 230 + 10
-        ly = svg_height + (i // 5) * 18 + 12
-        color = rule_color[rule]
-        parts.append(f'<rect x="{lx}" y="{ly - 10}" width="12" height="12" fill="{color}" rx="2"/>')
-        parts.append(f'<text x="{lx + 16}" y="{ly}" fill="#1a1a1a">{rule}</text>')
+    # Legend: phase colors with constituent rules listed
+    legend_y_start = svg_height
+    legend_lines = []
+    line_height = 16
+    for phase, rules in phase_rules.items():
+        color = PHASE_PALETTE.get(phase, PHASE_PALETTE["Other"])
+        # Phase header
+        legend_lines.append(("phase", phase, color, None))
+        # Rules under this phase (compact, multiple per row)
+        rule_str = ", ".join(rules)
+        # Wrap at ~100 chars
+        while rule_str:
+            chunk = rule_str[:100]
+            if len(rule_str) > 100:
+                # Break at last comma before 100 chars
+                idx = chunk.rfind(",")
+                if idx > 0:
+                    chunk = chunk[:idx + 1]
+            legend_lines.append(("rules", chunk.strip(), None, None))
+            rule_str = rule_str[len(chunk):].lstrip(", ")
+
+    legend_height = len(legend_lines) * line_height + 20
+    total_height = svg_height + legend_height
+    parts[0] = parts[0].replace(f'0 0 {svg_width} {svg_height}',
+                                f'0 0 {svg_width} {total_height}')
+
+    ly = legend_y_start + 16
+    for kind, text, color, _ in legend_lines:
+        if kind == "phase":
+            parts.append(f'<rect x="10" y="{ly - 10}" width="12" height="12" '
+                         f'fill="{color}" rx="2"/>')
+            parts.append(f'<text x="28" y="{ly}" fill="#1a1a1a" '
+                         f'font-weight="bold" font-size="12px">{text}</text>')
+        else:
+            parts.append(f'<text x="34" y="{ly}" fill="#555" '
+                         f'font-size="10px" font-family="monospace">{text}</text>')
+        ly += line_height
 
     parts.append("</svg>")
     return "\n".join(parts)
@@ -410,52 +531,15 @@ def report_multi_html(sections):
         tab_buttons.append(f'<button class="tab-btn{active_cls}" '
                            f'onclick="showTab(\'{tab_id}\')">{label}</button>')
 
-        # Build body content for this section
         md = report_markdown(stats)
-        rows = md.split("\n")
-        body_parts = []
-        in_table = False
-        for row in rows:
-            if row.startswith("# "):
-                if in_table:
-                    body_parts.append("</table>")
-                    in_table = False
-                body_parts.append(f"<h1>{row[2:]}</h1>")
-            elif row.startswith("## "):
-                if in_table:
-                    body_parts.append("</table>")
-                    in_table = False
-                body_parts.append(f"<h2>{row[3:]}</h2>")
-            elif row.startswith("**"):
-                body_parts.append(f"<p>{row}</p>")
-            elif row.startswith("|") and not row.startswith("|--"):
-                cells = [c.strip() for c in row.split("|")[1:-1]]
-                if not in_table:
-                    body_parts.append('<table>')
-                    tag = "th"
-                    in_table = True
-                else:
-                    tag = "td"
-                body_parts.append(
-                    "<tr>" + "".join(f"<{tag}>{c}</{tag}>" for c in cells) + "</tr>"
-                )
-            elif row.startswith("|--"):
-                continue
-            elif row.strip() == "":
-                if in_table:
-                    body_parts.append("</table>")
-                    in_table = False
-            else:
-                body_parts.append(f"<p>{row}</p>")
-        if in_table:
-            body_parts.append("</table>")
-
+        summary_html, details_html = _md_to_html(md)
         gantt = _build_gantt_svg(stats)
         display = "block" if i == 0 else "none"
         tab_panels.append(
             f'<div id="{tab_id}" class="tab-panel" style="display:{display}">'
-            f'{"".join(body_parts)}'
+            f'{summary_html}'
             f'<h2>Execution Timeline</h2><div class="gantt">{gantt}</div>'
+            f'{details_html}'
             f'</div>'
         )
 
