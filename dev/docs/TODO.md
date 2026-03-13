@@ -269,9 +269,16 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ## Testing
 
-### Pico and EMseq
+### Methylation assay types and testing
 
-* [ ] Validate pico methyl-seq with this [GEO dataset](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4392248/). Add to the Hg38 chr21 test case. The Zymo pico library prep produces non-directional libraries, which is the essential difference we want to test. We should consider how to integrate the necessary parameterization of Bismark for this, whether by a separate Assay type, or by introducing a new field to sample sheet (which is less desirable as it will be empty for most samples).
+* [x] Add named assay types for non-directional WGBS (`WGBS_nd`) and PBAT (`PBAT`) with correct bismark flags (`--non_directional`, `--pbat`). **Done**: WGBS_nd and PBAT added throughout codebase (sample_sheet.py, mC.smk, config, builder, tests). See design-decisions.md for rationale.
+
+* [x] Create comprehensive mC dry-run test covering all methylation code paths. **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) validates WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl workflows including parameter routing, replicate merging, DMR calling, and CX report conversion.
+
+* [ ] Add real WGBS_nd/PBAT/EMseq data to hg38_chr21 test case. Candidate datasets:
+  - WGBS_nd: SRR28330756 (Zymo Pico D5455, 74 Gb PE)
+  - PBAT: SRR28842743 (41.4 Gb PE)
+  - EMseq: SRR10532145 (NEB EM-seq 200ng NA12878, 64.2 Gb PE)
 
 * [ ] For EMseq, let's look to adding data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the future A. thaliana Chr5 test case.
 
@@ -316,8 +323,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Expand rule-level dry-run tests
 
-* [ ] Expand `test_dmc_dryrun.py` to cover the full `mC.smk` rule (WGBS/EMseq bismark workflow, not just dmC).
-* [ ] Add similar lightweight dry-run test modules for other rule files (ChIP, RNA, sRNA, ATAC, combined_analysis) using mock inputs and a fake genome, following the dmC test pattern.
+* [x] Expand dmC dry-run tests to cover the full `mC.smk` rule (all bismark workflows + dmC). **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) covers WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl including parameter routing, replicate merging, DMR calling, and CX report conversion. The original `test_dmc_dryrun.py` is retained for focused dmC-only regression testing.
+* [ ] Add similar lightweight dry-run test modules for other rule files (ChIP, RNA, sRNA, ATAC, combined_analysis) using mock inputs and a fake genome, following the mC test pattern.
 
 ### Add test dataset documentation
 

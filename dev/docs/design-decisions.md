@@ -183,7 +183,7 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 ### Results directory organized by environment, not by assay
 
-**Decision**: Output files go to `results/{env}/` where `env` is a coarser grouping than assay: `ChIP` serves both `ChIP_broad` and `ChIP_narrow`; `RNA` serves both `RNAseq` and `RAMPAGE`; `mC` serves `WGBS`, `EMseq`, and `dmC`.
+**Decision**: Output files go to `results/{env}/` where `env` is a coarser grouping than assay: `ChIP` serves both `ChIP_broad` and `ChIP_narrow`; `RNA` serves both `RNAseq` and `RAMPAGE`; `mC` serves `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, and `dmC`.
 
 **Rationale**: Assays within the same environment share tools, conda environments, and downstream analysis steps (peak calling for both broad and narrow ChIP, differential expression for both RNAseq and RAMPAGE). Grouping their outputs together simplifies combined analysis rules that aggregate across replicates or marks, and reduces the number of top-level directories a user needs to navigate.
 
@@ -232,6 +232,21 @@ A reference for architectural choices in the pipeline. Intended for contributors
 **Rationale**: Chromap is a minimizer-based aligner specifically designed for ChIP-seq and ATAC-seq data. Benchmarks show ~99.8% peak concordance with bowtie2 at 10-40x the speed. For large-genome organisms (e.g. maize at 2.2 Gb), this translates to substantial wall-clock savings on both local and cluster runs. Chromap is available on bioconda and actively maintained. The automatic fallback mechanism means users get the speed benefit by default while retaining bowtie2's multi-mapping capability when needed.
 
 **Alternatives considered**: (1) Replacing bowtie2 entirely: rejected because chromap cannot replicate `-k 100` multi-mapping mode needed for repeat analysis. (2) Using chromap's BED output for ATAC (with `--preset atac` and Tn5 shift): rejected because downstream bigwig generation requires BAM input, and the existing `atac_shift_bam` rule (deeptools `alignmentSieve --ATACshift`) handles the shift correctly on BAM. (3) Adding chromap sensitivity tuning via `-e` (error threshold): deferred as a future enhancement since chromap has no preset sensitivity modes analogous to bowtie2's `--very-sensitive`.
+
+### Named assay types for bisulfite library prep methods
+
+**Decision**: Non-directional WGBS (Zymo Pico Methyl-Seq, Swift Accel-NGS, etc.) and PBAT libraries are represented as distinct Assay types (`WGBS_nd`, `PBAT`) rather than parameterized via a generic `directionality` field on the existing `WGBS` type. Each assay type maps to a named entry in the `mC_mapping` config block, which specifies the bismark alignment and extraction flags.
+
+| Assay type | Bismark alignment flag | `--ignore_r2 2` | Directionality |
+|---|---|---|---|
+| `WGBS` | (none) | Yes (end-repair artifact) | Directional (strands 1+2) |
+| `WGBS_nd` | `--non_directional` | No | All 4 strands |
+| `PBAT` | `--pbat` | No | Strands 3+4 only |
+| `EMseq` | (none) | No | Directional (strands 1+2) |
+
+**Rationale**: Users think in terms of library prep method, not bismark flags. The set of bisulfite library preps is bounded (directional WGBS, non-directional WGBS, PBAT, EMseq) and unlikely to grow. Named types make the sample sheet self-documenting, eliminate the need for users to understand bismark's `--non_directional` vs `--pbat` distinction, and allow the config to provide per-type defaults for all mapping and extraction parameters. The `mC_mapping` config block already supports per-type overrides, so adding new types requires no structural changes.
+
+**Alternatives considered**: (1) A `directionality` field in the sample sheet (values: `directional`, `non_directional`, `pbat`). Rejected because it would be empty for all non-mC samples, adding column noise; it conflates a pipeline parameter with sample metadata; and it requires users to know which directionality their library prep produces. (2) A generic `WGBS` type with a per-sample `library_prep` annotation. Rejected for similar reasons — it pushes pipeline routing decisions into a secondary field rather than the primary Assay type that already determines all other routing.
 
 ### Genome config namespaced under `genomes:` with inlined species parameters
 
