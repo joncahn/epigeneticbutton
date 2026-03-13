@@ -79,7 +79,7 @@ PHASE_PALETTE = {
     "Differential":  "#E69F00",  # orange
     "Tracks":        "#56B4E9",  # sky blue
     "Visualization": "#F0E442",  # yellow
-    "QC":            "#000000",  # black
+    "QC":            "#555555",  # dark gray
     "sRNA":          "#882255",  # wine (Paul Tol extension)
     "Setup":         "#999999",  # gray
     "Other":         "#AA4499",  # purple (Paul Tol extension)
