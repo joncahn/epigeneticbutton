@@ -16,4 +16,5 @@ sbatch:
   cpus-per-task: "{threads}"
   mem: "{resources.mem_mb}"
   tmp: "{resources.tmp_mb}"
+  time: "{resources.runtime}"
   qos: "{resources.qos}"

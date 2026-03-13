@@ -365,43 +365,49 @@ low_resources: &low
   threads: 1
   mem_mb: 1000
   tmp_mb: 1000
+  runtime: 60
   qos: "slow_nice"
 
 standard_resources: &standard
   threads: 4
   mem_mb: 2000
   tmp_mb: 2000
+  runtime: 120
   qos: "slow_nice"
 
 download_resources: &download
   threads: 8
   mem_mb: 16000
   tmp_mb: 48000
+  runtime: 720
   qos: "slow_nice"
 
 heavy_resources: &heavy
   threads: 4
   mem_mb: 16000
   tmp_mb: 48000
+  runtime: 480
   qos: "slow_nice"
 
 heavier_resources: &heavier
   threads: 8
   mem_mb: 32000
   tmp_mb: 64000
-  runtime: 1440
+  runtime: 480
   qos: "slow_nice"
-  
+
 max_resources: &max
   threads: 16
   mem_mb: 32000
   tmp_mb: 96000
+  runtime: 2880
   qos: "slow_nice"
 
 single_thread: &single
   threads: 1
   mem_mb: 32000
   tmp_mb: 48000
+  runtime: 480
   qos: "slow_nice"
   
 resources:

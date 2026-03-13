@@ -214,6 +214,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Do a full code review of the full workflow in parallel with --simplify, and improve performance and resource usage where possible for all sample type analysis rules and the combined analysis.
 
+### Speeding up bigwig conversion
+
+* [ ] Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others?
+
 ### Data acquisition and preparation
 
 * [x] Switch to direct fastq.gz downloads from ENA for download speed, better transitory disk space usage? Maybe add alternative fastq_path=ENA, or try ENA first and fall back to SRA. Look into storing SRA downloads as compressed FASTQs to avoid writing huge uncompressed data to disk, and the post-hoc wait for compression. **Done**: ENA-first downloads via `workflow/scripts/ena_download.sh` with automatic fallback to fasterq-dump. ENA provides pre-compressed `.fastq.gz`, eliminating uncompressed intermediates. `fasterq-dump --temp "$TMPDIR"` uses SLURM scratch instead of `/tmp`.
@@ -252,13 +256,13 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Reconsider the resource request delineations, and maybe add more fine-grained/task-specific options like proc-intensive/himem-lowproc/mapping, etc. **Partially done**: Bismark rules now compute `tmp_mb` dynamically from input FASTQ sizes instead of using a static tier. Bismark resource tier bumped to `*max` (16 threads). `--multicore` factor changed from `threads//3` to `threads//2` for better CPU utilization. Current tier system (`low`/`standard`/`download`/`heavy`/`heavier`/`max`/`single`) covers the main use cases; further per-rule tuning can be done as profiling data comes in.
 
-* [ ] Examine wall clock times on Elzar and estimate reasonable requests with slop - most steps should be O(n+k) for sequence inputs, e.g. trimming and mapping, but downstream analysis might differ. Add wall clock estimates or limits to resource definitions to eliminate the "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." warning.
+* [x] Examine wall clock times on Elzar and estimate reasonable requests with slop - most steps should be O(n+k) for sequence inputs, e.g. trimming and mapping, but downstream analysis might differ. **Done**: See runtime item below.
 
 * [x] Make better use of temporary storage on the cluster nodes to reduce NFS I/O bottlenecks and minimize temporary disk usage bloat. **Done**: Added `precommand` to SLURM profile that sets up per-job `$TMPDIR` → `/tmp/slurm_tmp/$SLURM_JOB_ID` when `$SLURM_TMPDIR` is not already set by the cluster prolog. `fasterq-dump` already uses `${TMPDIR:-/tmp}`. Bismark temp files stay on NFS intentionally (sequential I/O pattern, not worth consuming limited local scratch).
 
 * [x] ~~Small one: mem_mb and tmp_mb should be changed to mem_mib and tmp_mib to meet expectations of binary byte counting.~~ **Won't do**: `mem_mb` is a Snakemake built-in resource name used for scheduling decisions and SLURM `--mem` mapping. Renaming would break Snakemake integration. `tmp_mb` follows the same convention for consistency. SLURM interprets `--mem` and `--tmp` values as megabytes regardless of the resource name.
 
-* [ ] Add `runtime` to all resource tiers and the SLURM profile to eliminate the "No wall time information given" warning. Needs profiling data from hg38 chr21 and pombe test runs to set reasonable defaults with slop.
+* [x] Add `runtime` to all resource tiers and the SLURM profile to eliminate the "No wall time information given" warning. **Done**: Added `runtime` (minutes) to all 7 resource tiers in `epicc-options.yaml` and `time: "{resources.runtime}"` to SLURM profile sbatch section. Defaults: low=60m, standard=2h, download=12h, heavy=8h, heavier=8h, max=48h, single=8h. Based on hg38 chr21 profiling data with generous margins for full-genome production runs.
 
 * [x] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug). **Done**: switched back to qos=slow_nice for all jobs.
 

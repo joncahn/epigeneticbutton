@@ -157,14 +157,14 @@ python dev/profile_snakemake_log.py --html dev/docs/profile_test_cases.html --mu
 
 Current resource presets defined in `config/epicc-options.yaml`:
 
-| Tier | Threads | Memory | Tmp | QOS | Used by |
-|------|---------|--------|-----|-----|---------|
-| `low` | 1 | 1 GB | 1 GB | default | Stats, dispatchers |
-| `standard` | 4 | 2 GB | 2 GB | default | Index checks, light processing |
-| `download` | 8 | 16 GB | 48 GB | slow_nice | SRA downloads, fastp |
-| `heavy` | 4 | 16 GB | 48 GB | slow_nice | Peak calling, filtering, STAR index |
-| `heavier` | 8 | 32 GB | 64 GB | slow_nice | BAM filtering, STAR mapping |
-| `max` | 16 | 32 GB | 96 GB | slow_nice | Bismark, DMR calling, modBAM alignment |
-| `single` | 1 | 32 GB | 48 GB | slow_nice | High-memory single-thread (genome stats) |
+| Tier | Threads | Memory | Tmp | Runtime | Used by |
+|------|---------|--------|-----|---------|---------|
+| `low` | 1 | 1 GB | 1 GB | 1h | Stats, dispatchers |
+| `standard` | 4 | 2 GB | 2 GB | 2h | Index checks, light processing |
+| `download` | 8 | 16 GB | 48 GB | 12h | SRA downloads, fastp |
+| `heavy` | 4 | 16 GB | 48 GB | 8h | Peak calling, filtering, STAR index |
+| `heavier` | 8 | 32 GB | 64 GB | 8h | BAM filtering, STAR mapping |
+| `max` | 16 | 32 GB | 96 GB | 48h | Bismark, DMR calling, modBAM alignment |
+| `single` | 1 | 32 GB | 48 GB | 8h | High-memory single-thread (genome stats) |
 
 Note: Bismark rules compute `tmp_mb` dynamically from input FASTQ sizes (overriding the tier default).
