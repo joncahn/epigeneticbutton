@@ -6,7 +6,7 @@
 
 * [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
 
-* [ ] We should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark, and/or refer users to a discussion of this distinction elsewhere (perhaps in the MACS documentation). 
+* [ ] We should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark, and/or refer users to a discussion of this distinction elsewhere (perhaps in the MACS documentation).
 
 ## Analysis
 
@@ -152,7 +152,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### custom adapter handling
 
-* [ ] Sequencing adapters could vary on a per-library. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml. If we use skewer for trimming, auto-detection of most standard adapters is built-in if I’m not mistaken.
+* [ ] Sequencing adapters could vary on a per-library basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
 
 ### species-specific parameters
 
@@ -174,9 +174,17 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Current suggested approach is cumbersome and results in a FASTA database that isn't ref genome specific. If we instead just run Infernal (with lots of threads and paralellized by chromosome if on the cluster) and filter overlapping hits, determine an e-value threshold, we could incorporate this into the pipeline in the event that the user doesn't specify an override file. Research whether this approach will have significantly different outcomes than the currently prescribed approach. **Done**: `structural_rna_fafile` defaults to `<auto>`. New `download_rfam` rule fetches and presses Rfam CMs (shared across genomes). New `build_structural_rna_db` rule runs `cmscan` per chromosome/contig (parallelized via `xargs -P`; contigs < 1 Mbp binned together), filters clan overlaps, extracts FASTA via `bedtools getfasta`. Uses `--cut_ga` (Rfam gathering thresholds) by default; configurable via `infernal_threshold` option (`"ga"` or numeric E-value). `infernal` added to `epibutton.yaml`. Validation no longer requires `structural_rna_fafile`. epicc-builder updated with `<auto>` placeholder and `infernal_threshold` in sRNA options.
 
+### Skip mCHG/mCHH analysis for animal genomes
+
+* [ ] Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation.
+
 ### Explicitly handle repeats vs coding gene annotations?
 
 * [ ] Do we currently have a way to specify whether one or the other or both should be used in the analysis?
+
+### Configurable output directory
+
+* [ ] Allow specifying an output directory other than the hardcoded `results/`. Currently `results/` is a literal path in every rule file's inputs, outputs, params, and shell commands. A config key (e.g. `output_dir`) would need to replace all occurrences across all rule files (`ChIPseq.smk`, `ATACseq.smk`, `RNAseq.smk`, `smallRNA.smk`, `mC.smk`, `combined_analysis.smk`, `sample_download.smk`) and the Snakefile target definitions. This would enable running multiple test cases or configurations from the same checkout without clobbering results, and support the `--output` flag in the planned CLI wrapper.
 
 ### Provide a front-end CLI executable script
 
@@ -191,8 +199,6 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [ ] Consider adding correlation matrix of coverage or pairwise plots between selected samples for more QC output
 
 ## Codebase Hygiene
-
-* [ ] Snakemake issue - currently conda envs are created with cryptic names. Can we incorporate semantic naming for these so they reflect epibutton_chip, etc.?
 
 * [x] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates. **Done**: 8 chip-specific rule names renamed to generic names across all rule files, resource config, tests, and profiling scripts (filter_chip_pe → filter_bam_pe, make_chip_stats_pe → make_mapping_stats_pe, pe_or_se_chip_dispatch → dispatch_final_bam, merging_chip_replicates → merging_bam_replicates, prepping_chip_peak_stats → prepping_peak_stats, plotting_peaks_stats_chip_tf → plotting_peak_stats, plus SE variants).
 
@@ -244,23 +250,25 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Cluster
 
-* [ ] Reconsider the resource request delineations, and maybe add more fine-grained/task-specific options like proc-intensive/himem-lowproc/mapping, etc.
+* [x] Reconsider the resource request delineations, and maybe add more fine-grained/task-specific options like proc-intensive/himem-lowproc/mapping, etc. **Partially done**: Bismark rules now compute `tmp_mb` dynamically from input FASTQ sizes instead of using a static tier. Bismark resource tier bumped to `*max` (16 threads). `--multicore` factor changed from `threads//3` to `threads//2` for better CPU utilization. Current tier system (`low`/`standard`/`download`/`heavy`/`heavier`/`max`/`single`) covers the main use cases; further per-rule tuning can be done as profiling data comes in.
 
-* [ ] Examine wall clock times on Elzar and estimate reasonable requests with slop - most steps should be O(n+k) for sequence inputs, e.g. trimming and mapping, but downstream analysis might differ.
+* [ ] Examine wall clock times on Elzar and estimate reasonable requests with slop - most steps should be O(n+k) for sequence inputs, e.g. trimming and mapping, but downstream analysis might differ. Add wall clock estimates or limits to resource definitions to eliminate the "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." warning.
 
-* [ ] Make better use of temporary storage on the cluster nodes to reduce NFS I/O bottlenecks and minimize temporary disk usage bloat
+* [x] Make better use of temporary storage on the cluster nodes to reduce NFS I/O bottlenecks and minimize temporary disk usage bloat. **Done**: Added `precommand` to SLURM profile that sets up per-job `$TMPDIR` → `/tmp/slurm_tmp/$SLURM_JOB_ID` when `$SLURM_TMPDIR` is not already set by the cluster prolog. `fasterq-dump` already uses `${TMPDIR:-/tmp}`. Bismark temp files stay on NFS intentionally (sequential I/O pattern, not worth consuming limited local scratch).
 
-* [ ] Small one: mem_mb and tmp_mb should be changed to mem_mib and tmp_mib to meet expectations of binary byte counting.
+* [x] ~~Small one: mem_mb and tmp_mb should be changed to mem_mib and tmp_mib to meet expectations of binary byte counting.~~ **Won't do**: `mem_mb` is a Snakemake built-in resource name used for scheduling decisions and SLURM `--mem` mapping. Renaming would break Snakemake integration. `tmp_mb` follows the same convention for consistency. SLURM interprets `--mem` and `--tmp` values as megabytes regardless of the resource name.
 
-* [ ] Add time for all rules + in the profiles config
+* [ ] Add `runtime` to all resource tiers and the SLURM profile to eliminate the "No wall time information given" warning. Needs profiling data from hg38 chr21 and pombe test runs to set reasonable defaults with slop.
 
-* [ ] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug)
+* [x] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug). **Done**: switched back to qos=slow_nice for all jobs.
 
 ## Testing
 
 ### Pico and EMseq
 
-* [ ] Check that Pico and EMseq work (following adapter trimming improvement mentioned above)
+* [ ] Validate pico methyl-seq with this [GEO dataset](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM4392248/). Add to the Hg38 chr21 test case.
+
+* [ ] For EMseq, let's look to adding data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the future A. thaliana Chr5 test case.
 
 ### Schizosaccharomyces pombe test case
 
@@ -294,12 +302,12 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### H. sapiens test case
 
-* [ ] Add H. sapiens Chr21 test case.
+* [x] Add H. sapiens Chr21 test case.
 
 * [ ] Re-examine hg38 chr21 test data quality. The current dataset has limitations:
   * **sRNA**: EN-TEx sRNA libraries are rRNA-depleted total RNA, not true miRNA-seq. No miRNAs detected in the chr21 subset (zero reads in 21-24 nt range). Consider sourcing dedicated miRNA-seq libraries (e.g. TCGA miRNA-seq) or adding a second organism's sRNA test that exercises the miRNA discovery path.
   * **dmC**: Only a pre-computed bedMethyl sample (HG002). Adding a modBAM sample would exercise the `modkit pileup` path (alignment, pileup, `--combine-mods` handling) which is currently untested in integration.
-  * **mC coverage**: WGBS samples have very low chr21 mapping rates (~0.001%), resulting in sparse methylation data that causes PCA failures and uninformative DMR calls. May be inherent to the chr21 subset approach with whole-genome libraries.
+  * **mC coverage**: ~~WGBS samples have very low chr21 mapping rates (~0.001%), resulting in sparse methylation data that causes PCA failures and uninformative DMR calls. May be inherent to the chr21 subset approach with whole-genome libraries.~~ **Fixed**: Root cause was Snakemake's `OMP_NUM_THREADS` export breaking bowtie2 inside bismark (see commit caa0809). WGBS samples now map at 99.8-99.9%. mCHG/mCHH PCA plots are still empty/corrupt because animals lack asymmetric methylation — those contexts contain only background false-positive calls.
 
 ### Add test dataset documentation
 

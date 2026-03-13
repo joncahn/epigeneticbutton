@@ -397,6 +397,110 @@ def _build_gantt_svg(stats):
 
 
 # ---------------------------------------------------------------------------
+# Multi-section HTML report
+# ---------------------------------------------------------------------------
+
+def report_multi_html(sections):
+    """Generate a tabbed HTML report from multiple (label, stats) pairs."""
+    tab_buttons = []
+    tab_panels = []
+    for i, (label, stats) in enumerate(sections):
+        tab_id = f"tab{i}"
+        active_cls = " active" if i == 0 else ""
+        tab_buttons.append(f'<button class="tab-btn{active_cls}" '
+                           f'onclick="showTab(\'{tab_id}\')">{label}</button>')
+
+        # Build body content for this section
+        md = report_markdown(stats)
+        rows = md.split("\n")
+        body_parts = []
+        in_table = False
+        for row in rows:
+            if row.startswith("# "):
+                if in_table:
+                    body_parts.append("</table>")
+                    in_table = False
+                body_parts.append(f"<h1>{row[2:]}</h1>")
+            elif row.startswith("## "):
+                if in_table:
+                    body_parts.append("</table>")
+                    in_table = False
+                body_parts.append(f"<h2>{row[3:]}</h2>")
+            elif row.startswith("**"):
+                body_parts.append(f"<p>{row}</p>")
+            elif row.startswith("|") and not row.startswith("|--"):
+                cells = [c.strip() for c in row.split("|")[1:-1]]
+                if not in_table:
+                    body_parts.append('<table>')
+                    tag = "th"
+                    in_table = True
+                else:
+                    tag = "td"
+                body_parts.append(
+                    "<tr>" + "".join(f"<{tag}>{c}</{tag}>" for c in cells) + "</tr>"
+                )
+            elif row.startswith("|--"):
+                continue
+            elif row.strip() == "":
+                if in_table:
+                    body_parts.append("</table>")
+                    in_table = False
+            else:
+                body_parts.append(f"<p>{row}</p>")
+        if in_table:
+            body_parts.append("</table>")
+
+        gantt = _build_gantt_svg(stats)
+        display = "block" if i == 0 else "none"
+        tab_panels.append(
+            f'<div id="{tab_id}" class="tab-panel" style="display:{display}">'
+            f'{"".join(body_parts)}'
+            f'<h2>Execution Timeline</h2><div class="gantt">{gantt}</div>'
+            f'</div>'
+        )
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EPICC Pipeline Execution Profiles</title>
+<style>
+  body {{ font-family: -apple-system, system-ui, sans-serif; max-width: 1200px;
+         margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }}
+  h1 {{ border-bottom: 2px solid #2563eb; padding-bottom: 0.3rem; }}
+  h2 {{ color: #2563eb; margin-top: 2rem; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 0.5rem 0 1.5rem; }}
+  th {{ background: #2563eb; color: white; text-align: left; padding: 0.5rem 0.75rem; }}
+  td {{ padding: 0.4rem 0.75rem; border-bottom: 1px solid #e5e7eb; }}
+  tr:hover td {{ background: #f0f4ff; }}
+  p {{ line-height: 1.6; }}
+  .gantt {{ margin: 1rem 0; overflow-x: auto; }}
+  svg text {{ font-size: 11px; font-family: monospace; }}
+  .tab-bar {{ display: flex; gap: 0; border-bottom: 2px solid #2563eb; margin-bottom: 1.5rem; }}
+  .tab-btn {{ background: #f0f4ff; border: 1px solid #d1d5db; border-bottom: none;
+              padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.95rem;
+              border-radius: 6px 6px 0 0; margin-bottom: -2px; }}
+  .tab-btn.active {{ background: white; border-color: #2563eb; border-bottom: 2px solid white;
+                     font-weight: 600; color: #2563eb; }}
+  .tab-btn:hover:not(.active) {{ background: #e0e7ff; }}
+</style>
+<script>
+function showTab(id) {{
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).style.display = 'block';
+  event.target.classList.add('active');
+}}
+</script>
+</head>
+<body>
+<div class="tab-bar">{"".join(tab_buttons)}</div>
+{"".join(tab_panels)}
+</body>
+</html>"""
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -415,7 +519,31 @@ def main():
     parser.add_argument("logfile", nargs="?", help="Path to .snakemake.log file")
     parser.add_argument("--latest", action="store_true", help="Auto-select newest log")
     parser.add_argument("--html", metavar="FILE", help="Write HTML report to FILE")
+    parser.add_argument("--multi", nargs="+", metavar="LABEL=LOG",
+                        help="Generate multi-section HTML: 'Label=path/to/log' ...")
     args = parser.parse_args()
+
+    if args.multi:
+        if not args.html:
+            sys.exit("--multi requires --html <output>")
+        sections = []
+        for spec in args.multi:
+            if "=" not in spec:
+                sys.exit(f"--multi entries must be LABEL=LOGFILE, got: {spec}")
+            label, logpath = spec.split("=", 1)
+            logpath = Path(logpath)
+            if not logpath.exists():
+                sys.exit(f"Log file not found: {logpath}")
+            print(f"Parsing {logpath} ({label}) ...", file=sys.stderr)
+            jobs = parse_log(logpath)
+            if not jobs:
+                print(f"  Warning: no completed jobs in {logpath}", file=sys.stderr)
+                continue
+            sections.append((label, analyze(jobs)))
+        html = report_multi_html(sections)
+        Path(args.html).write_text(html)
+        print(f"Multi-section HTML report written to {args.html}", file=sys.stderr)
+        return
 
     if args.latest or not args.logfile:
         logpath = find_latest_log()
