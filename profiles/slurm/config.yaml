@@ -9,7 +9,7 @@ keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
 
-precommand: 'if [[ -n "${{SLURM_JOB_ID:-}}" && -z "${{SLURM_TMPDIR:-}}" ]]; then export SLURM_TMPDIR="/tmp/slurm_tmp/$SLURM_JOB_ID"; export TMPDIR="$SLURM_TMPDIR"; mkdir -p "$TMPDIR"; fi'
+precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
 
 sbatch:
   job-name: "smk-{rule}-{jobid}"
