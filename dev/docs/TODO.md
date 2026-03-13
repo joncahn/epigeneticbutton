@@ -184,13 +184,14 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Configurable output directory
 
-* [ ] Allow specifying an output directory other than the hardcoded `results/`. Currently `results/` is a literal path in every rule file's inputs, outputs, params, and shell commands. A config key (e.g. `output_dir`) would need to replace all occurrences across all rule files (`ChIPseq.smk`, `ATACseq.smk`, `RNAseq.smk`, `smallRNA.smk`, `mC.smk`, `combined_analysis.smk`, `sample_download.smk`) and the Snakefile target definitions. This would enable running multiple test cases or configurations from the same checkout without clobbering results, and support the `--output` flag in the planned CLI wrapper.
+* [x] Allow specifying an output directory other than the hardcoded `results/`. **Done**: Added `output_dir` and `genome_dir` config keys with defaults `"results"` and `"genomes"`. Python context uses `RESULTS_DIR`/`GENOMES_DIR` variables; shell blocks use `{config[output_dir]}`/`{config[genome_dir]}` Snakemake substitution. 827 path references updated across 9 files via `dev/refactor_paths.py`. CLI wrapper wired with `--output-dir` and `--genome-dir` flags. Validated with pombe dry-run using both default and custom directories.
 
 ### Provide a front-end CLI executable script
 
-* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. See `dev/docs/cli-wrapper-plan.md` for full design and `dev/docs/design-decisions.md` for rationale. Output directory support (`--output-dir`) deferred to the output_dir refactoring (see Configurable output directory item).
+* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/cli-wrapper-plan.md` for full design and `dev/docs/design-decisions.md` for rationale.
 
 ## Plotting
+**N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete**
 
 * [ ] See if we can improve browser plot sample label readability
 
@@ -212,11 +213,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Full code review of snakemake rules
 
-* [ ] Do a full code review of the full workflow in parallel with --simplify, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis.
+* [ ] Do a full code review of the complete workflow with parallel subagents, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis.
 
 ### Speeding up bigwig conversion
 
-* [ ] Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others?
+* [ ] Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others? Should be actively maintained.
 
 ### Data acquisition and preparation
 
@@ -313,9 +314,14 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * **dmC**: Only a pre-computed bedMethyl sample (HG002). Adding a modBAM sample would exercise the `modkit pileup` path (alignment, pileup, `--combine-mods` handling) which is currently untested in integration.
   * **mC coverage**: ~~WGBS samples have very low chr21 mapping rates (~0.001%), resulting in sparse methylation data that causes PCA failures and uninformative DMR calls. May be inherent to the chr21 subset approach with whole-genome libraries.~~ **Fixed**: Root cause was Snakemake's `OMP_NUM_THREADS` export breaking bowtie2 inside bismark (see commit caa0809). WGBS samples now map at 99.8-99.9%. mCHG/mCHH PCA plots are still empty/corrupt because animals lack asymmetric methylation — those contexts contain only background false-positive calls.
 
+### Expand rule-level dry-run tests
+
+* [ ] Expand `test_dmc_dryrun.py` to cover the full `mC.smk` rule (WGBS/EMseq bismark workflow, not just dmC).
+* [ ] Add similar lightweight dry-run test modules for other rule files (ChIP, RNA, sRNA, ATAC, combined_analysis) using mock inputs and a fake genome, following the dmC test pattern.
+
 ### Add test dataset documentation
 
-* [ ] Add a test design doc similar to human_chr21_design.md for S. pombe and A. thaliana chr5 test cases.
+* [ ] Add a test design doc similar to hg38_chr21_design.md for S. pombe and A. thaliana chr5 test cases.
 
 ## Known Unknowns
 

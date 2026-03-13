@@ -16,15 +16,18 @@ refgenome<-args[3]
 targetfile<-args[4]
 backgroundfile<-args[5]
 targetname<-args[6]
+output_dir<-args[7]
+genome_dir<-args[8]
 
-db<-paste0("./genomes/",refgenome,"/GO/")
+original_wd<-getwd()
+db<-paste0("./",genome_dir,"/",refgenome,"/GO/")
 setwd(db)
 if (!requireNamespace(dbname, quietly = TRUE)) {
 	install.packages(dbname, repos=NULL, type="source")
 }
 library(dbname, character.only = TRUE)
 info<-read.delim(paste0(dbname,"_",refgenome,"_gaf_file.tab"), header=FALSE)
-setwd("../../..")
+setwd(original_wd)
 
 fGO<-info[,c(1,6,10)]
 colnames(fGO)<-c("GID","GO","EVIDENCE")
@@ -62,10 +65,10 @@ getGO<-function(genelist, target, ont, name) {
 		arrange(GO) %>%
 		unique()
 	if (nrow(tab2) > 1) {
-		write.table(tab2,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(tab2,paste0(output_dir,"/RNA/GO/topGO_",name,"_",ont,"_GOs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}
 	if (nrow(tab3) > 0) {
-		write.table(tab3,paste0("results/RNA/GO/topGO_",name,"_",ont,"_GIDs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+		write.table(tab3,paste0(output_dir,"/RNA/GO/topGO_",name,"_",ont,"_GIDs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	}	
   
 	scores<-setNames(-log10(as.numeric(tab$classicFisher)), tab$GO.ID)
@@ -84,14 +87,14 @@ getGO<-function(genelist, target, ont, name) {
 										threshold = 0.7,
 										orgdb=dbname)
 										
-			pdf(paste0("results/RNA/plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
+			pdf(paste0(output_dir,"/RNA/plots/topGO_",name,"_",ont,"_treemap.pdf"), width=8, height=8)
 			treemapPlot(reducedTerms, size = "score")
 			dev.off()
 		}
 	}
 }
 
-if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
+if (startsWith(backgroundfile, paste0(output_dir,"/RNA/DEG/counts__"))) {
 	genecount<-read.delim(backgroundfile, header = TRUE, row.names = "GID")
 	target<-read.delim(targetfile, header = TRUE)
 
@@ -121,7 +124,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 		}
 	}
 
-} else if (startsWith(backgroundfile, "results/combined/tracks/")) {
+} else if (startsWith(backgroundfile, paste0(output_dir,"/combined/tracks/"))) {
 
 	ref_genes<-read.delim(backgroundfile, header = FALSE, col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 	ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%

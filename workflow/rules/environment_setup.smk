@@ -1,19 +1,19 @@
 def return_log_env(ref_genome, step):
-    return os.path.join(REPO_FOLDER,"results","logs",f"tmp_{step}_{ref_genome}.log")
+    return os.path.join(REPO_FOLDER, RESULTS_DIR,"logs",f"tmp_{step}_{ref_genome}.log")
 
 rule prepare_reference:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        gff = "genomes/{ref_genome}/{ref_genome}.gff",
-        gtf = "genomes/{ref_genome}/{ref_genome}.gtf",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        genome_stats = "genomes/{ref_genome}/genome_stats.json",
-        taxid = "genomes/{ref_genome}/taxid.json",
-        region_files = ["results/combined/bedfiles/{ref_genome}__protein_coding_genes.bed", "results/combined/bedfiles/{ref_genome}__all_genes.bed"],
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa",
+        gff = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.gff",
+        gtf = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.gtf",
+        chrom_sizes = f"{GENOMES_DIR}/{{ref_genome}}/chrom.sizes",
+        genome_stats = f"{GENOMES_DIR}/{{ref_genome}}/genome_stats.json",
+        taxid = f"{GENOMES_DIR}/{{ref_genome}}/taxid.json",
+        region_files = [f"{RESULTS_DIR}/combined/bedfiles/{{ref_genome}}__protein_coding_genes.bed", f"{RESULTS_DIR}/combined/bedfiles/{{ref_genome}}__all_genes.bed"],
         logs = lambda wildcards: [ return_log_env(wildcards.ref_genome, step) for step in ["fasta", "gff", "gtf", "chrom_sizes", "genome_stats", "taxid", "region_file"] ]
     output:
-        chkpt = "results/combined/chkpts/ref__{ref_genome}.done",
-        log = os.path.join(REPO_FOLDER,"results","logs","ref_prep__{ref_genome}.log")
+        chkpt = f"{RESULTS_DIR}/combined/chkpts/ref__{{ref_genome}}.done",
+        log = os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","ref_prep__{ref_genome}.log")
     localrule: True
     shell:
         """
@@ -24,7 +24,7 @@ rule prepare_reference:
 
 rule check_fasta:
     output:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa"
     params:
         fasta = lambda wildcards: config["genomes"][wildcards.ref_genome]['fasta_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome
@@ -57,7 +57,7 @@ rule check_fasta:
         
 rule check_gff:
     output:
-        gff = "genomes/{ref_genome}/{ref_genome}.gff"
+        gff = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.gff"
     params:
         gff = lambda wildcards: config["genomes"][wildcards.ref_genome]['gff_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome
@@ -90,9 +90,9 @@ rule check_gff:
 
 rule check_gtf:
     input:
-        gff = "genomes/{ref_genome}/{ref_genome}.gff"
+        gff = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.gff"
     output:
-        gtf = "genomes/{ref_genome}/{ref_genome}.gtf"
+        gtf = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.gtf"
     params:
         gtf = lambda wildcards: config["genomes"][wildcards.ref_genome].get('gtf_file', '<auto>'),
         ref_genome = lambda wildcards: wildcards.ref_genome
@@ -135,10 +135,10 @@ rule check_gtf:
         
 rule check_chrom_sizes:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa"
     output:
-        fasta_index = "genomes/{ref_genome}/{ref_genome}.fa.fai",
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes"
+        fasta_index = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa.fai",
+        chrom_sizes = f"{GENOMES_DIR}/{{ref_genome}}/chrom.sizes"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -160,10 +160,10 @@ rule check_chrom_sizes:
 
 rule compute_genome_stats:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        fai = "genomes/{ref_genome}/{ref_genome}.fa.fai"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa",
+        fai = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa.fai"
     output:
-        stats = "genomes/{ref_genome}/genome_stats.json"
+        stats = f"{GENOMES_DIR}/{{ref_genome}}/genome_stats.json"
     log:
         temp(return_log_env("{ref_genome}", "genome_stats"))
     conda: CONDA_ENV
@@ -189,7 +189,7 @@ rule compute_genome_stats:
 
 rule resolve_taxid:
     output:
-        taxid_file = "genomes/{ref_genome}/taxid.json"
+        taxid_file = f"{GENOMES_DIR}/{{ref_genome}}/taxid.json"
     params:
         genus = lambda wildcards: config["genomes"][wildcards.ref_genome].get("genus", ""),
         species = lambda wildcards: config["genomes"][wildcards.ref_genome].get("species", ""),
@@ -226,11 +226,11 @@ rule resolve_taxid:
 
 rule prep_region_file:
     input:
-        chrom_sizes = "genomes/{ref_genome}/chrom.sizes",
-        gff = "genomes/{ref_genome}/{ref_genome}.gff"
+        chrom_sizes = f"{GENOMES_DIR}/{{ref_genome}}/chrom.sizes",
+        gff = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.gff"
     output:
-        region_file1 = "results/combined/bedfiles/{ref_genome}__protein_coding_genes.bed",
-        region_file2 = "results/combined/bedfiles/{ref_genome}__all_genes.bed"
+        region_file1 = f"{RESULTS_DIR}/combined/bedfiles/{{ref_genome}}__protein_coding_genes.bed",
+        region_file2 = f"{RESULTS_DIR}/combined/bedfiles/{{ref_genome}}__all_genes.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome
     log:
@@ -252,11 +252,11 @@ rule prep_region_file:
         
 rule download_rfam:
     output:
-        cm = "genomes/rfam/Rfam.cm",
-        clanin = "genomes/rfam/Rfam.clanin",
-        pressed = touch("genomes/rfam/Rfam.cm.pressed")
+        cm = f"{GENOMES_DIR}/rfam/Rfam.cm",
+        clanin = f"{GENOMES_DIR}/rfam/Rfam.clanin",
+        pressed = touch(f"{GENOMES_DIR}/rfam/Rfam.cm.pressed")
     log:
-        os.path.join(REPO_FOLDER,"results","logs","download_rfam.log")
+        os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","download_rfam.log")
     conda: CONDA_ENV
     threads: config["resources"]["download_rfam"]["threads"]
     resources:
@@ -267,7 +267,7 @@ rule download_rfam:
         """
         {{
         printf "Downloading Rfam covariance models and clan file\\n"
-        mkdir -p genomes/rfam
+        mkdir -p {config[genome_dir]}/rfam
         curl -fSL https://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz \
             | pigz -dc > {output.cm}
         curl -fSL https://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.clanin \
@@ -280,14 +280,14 @@ rule download_rfam:
 
 rule build_structural_rna_db:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa",
-        fai = "genomes/{ref_genome}/{ref_genome}.fa.fai",
-        rfam_cm = "genomes/rfam/Rfam.cm",
-        rfam_clanin = "genomes/rfam/Rfam.clanin",
-        rfam_pressed = "genomes/rfam/Rfam.cm.pressed"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa",
+        fai = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa.fai",
+        rfam_cm = f"{GENOMES_DIR}/rfam/Rfam.cm",
+        rfam_clanin = f"{GENOMES_DIR}/rfam/Rfam.clanin",
+        rfam_pressed = f"{GENOMES_DIR}/rfam/Rfam.cm.pressed"
     output:
-        structural_fa = "genomes/structural_RNAs/{ref_genome}/structural_rnas.fa",
-        tblout = "genomes/structural_RNAs/{ref_genome}/infernal.tblout"
+        structural_fa = f"{GENOMES_DIR}/structural_RNAs/{{ref_genome}}/structural_rnas.fa",
+        tblout = f"{GENOMES_DIR}/structural_RNAs/{{ref_genome}}/infernal.tblout"
     params:
         threshold = config.get("infernal_threshold", "ga"),
         bin_size_bp = 1000000
@@ -406,7 +406,7 @@ rule build_structural_rna_db:
 
 rule check_te_file:
     output:
-        te_file = "genomes/{ref_genome}/{ref_genome}__TE_file.bed"
+        te_file = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}__TE_file.bed"
     params:
         te_file = lambda wildcards: config["genomes"][wildcards.ref_genome]['te_file'],
         ref_genome = lambda wildcards: wildcards.ref_genome

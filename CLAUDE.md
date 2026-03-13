@@ -96,6 +96,7 @@ scripts/validate_pombe.sh --all
 
 ## Key Details
 
-- Snakemake 9.0+. Results go to `results/{env}/` (`ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`); genomes to `genomes/{ref_genome}/`.
+- Snakemake 9.0+. Results go to `{output_dir}/{env}/` (`ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`); genomes to `{genome_dir}/{ref_genome}/`. Both directories default to `results` and `genomes` respectively, configurable via `output_dir`/`genome_dir` config keys or `epicc --output-dir`/`--genome-dir` CLI flags.
+- In Python context (input/output/params), paths use `RESULTS_DIR`/`GENOMES_DIR` variables. In shell blocks, paths use `{config[output_dir]}`/`{config[genome_dir]}` Snakemake substitution.
 - Env mapping: `ChIP_broad`/`ChIP_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`EMseq`/`dmC` → `mC`
-- Checkpoint files in `results/*/chkpts/` control re-running analyses; delete to force rerun.
+- Checkpoint files in `{output_dir}/*/chkpts/` control re-running analyses; delete to force rerun.

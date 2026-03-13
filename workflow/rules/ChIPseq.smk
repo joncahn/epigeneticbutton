@@ -2,7 +2,7 @@ CONDA_ENV_CHIP=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_chip.yaml")
 CONDA_ENV_IDR=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_idr.yaml")
 
 def return_log_chip(env, sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"results",env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
+    return os.path.join(REPO_FOLDER, RESULTS_DIR,env,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
 def get_mapping_strategy(env):
     """Select mapping strategy based on environment."""
@@ -31,13 +31,13 @@ def get_mapping_index(wildcards):
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
     aligner = get_effective_aligner(wildcards.env)
     if aligner == "chromap":
-        return f"genomes/{ref_genome}/chromap_index/{ref_genome}.index"
-    return f"genomes/{ref_genome}/bt2_index"
+        return f"{GENOMES_DIR}/{ref_genome}/chromap_index/{ref_genome}.index"
+    return f"{GENOMES_DIR}/{ref_genome}/bt2_index"
 
 def get_mapping_fasta(wildcards):
     """Return FASTA path (needed by chromap; always available from environment_setup)."""
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
-    return f"genomes/{ref_genome}/{ref_genome}.fa"
+    return f"{GENOMES_DIR}/{ref_genome}/{ref_genome}.fa"
 
 def get_mapq_filter(env):
     """Extract MAPQ threshold from mapping strategy filter string."""
@@ -93,7 +93,7 @@ def assign_bam_file(wildcards):
     aligned_bams = config['aligned_bams']
     new_bam = assign_mapping_paired(wildcards, "filter_bam", "bamfile")
     if aligned_bams:
-        return f"results/{env}/mapped/copied__{sname}.bam"
+        return f"{RESULTS_DIR}/{env}/mapped/copied__{sname}.bam"
     else:
         return new_bam
 
@@ -139,7 +139,7 @@ def assign_peak_files_for_idr(wildcards):
     assay = _resolve_assay(sname)
     peaktype = get_peaktype_for_env(assay, env)
     rep_sids = get_replicate_sample_ids(sname, samples)
-    return [f"results/{env}/peaks/{_peak_prefix_for_sample(sid, env)}__final__{sid}_peaks.{peaktype}Peak"
+    return [f"{RESULTS_DIR}/{env}/peaks/{_peak_prefix_for_sample(sid, env)}__final__{sid}_peaks.{peaktype}Peak"
             for sid in rep_sids]
 
 def input_peak_files_for_best_peaks(wildcards):
@@ -161,17 +161,17 @@ def input_peak_files_for_best_peaks(wildcards):
     rep_sids = get_replicate_sample_ids(sname, samples)
 
     if len(rep_sids) >= 2:
-        result = [f"results/{env}/peaks/{prefix}__merged__{sname}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/{prefix}__pseudo1__{sname}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/{prefix}__pseudo2__{sname}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/idr_peaks__{sname}.bed"]
+        result = [f"{RESULTS_DIR}/{env}/peaks/{prefix}__merged__{sname}_peaks.{peaktype}Peak",
+                  f"{RESULTS_DIR}/{env}/peaks/{prefix}__pseudo1__{sname}_peaks.{peaktype}Peak",
+                  f"{RESULTS_DIR}/{env}/peaks/{prefix}__pseudo2__{sname}_peaks.{peaktype}Peak",
+                  f"{RESULTS_DIR}/{env}/peaks/idr_peaks__{sname}.bed"]
     else:
         one_sid = rep_sids[0]
         rep_prefix = _peak_prefix_for_sample(one_sid, env)
-        result = [f"results/{env}/peaks/{rep_prefix}__final__{one_sid}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/{rep_prefix}__pseudo1__{one_sid}_peaks.{peaktype}Peak",
-                  f"results/{env}/peaks/{rep_prefix}__pseudo2__{one_sid}_peaks.{peaktype}Peak",
-                  "results/empty.txt"]
+        result = [f"{RESULTS_DIR}/{env}/peaks/{rep_prefix}__final__{one_sid}_peaks.{peaktype}Peak",
+                  f"{RESULTS_DIR}/{env}/peaks/{rep_prefix}__pseudo1__{one_sid}_peaks.{peaktype}Peak",
+                  f"{RESULTS_DIR}/{env}/peaks/{rep_prefix}__pseudo2__{one_sid}_peaks.{peaktype}Peak",
+                  f"{RESULTS_DIR}/empty.txt"]
 
     return result
 
@@ -187,7 +187,7 @@ def get_replicate_name(wildcards, pos):
         return "missingrep"
     else:
         sid = rep_sids[pos]
-        return f"results/{env}/peaks/{_peak_prefix_for_sample(sid, env)}__final__{sid}_peaks.{peaktype}Peak"
+        return f"{RESULTS_DIR}/{env}/peaks/{_peak_prefix_for_sample(sid, env)}__final__{sid}_peaks.{peaktype}Peak"
 
 def get_replicate_pairs(wildcards):
     """Return colon-separated pairs of replicate Sample_IDs for IDR."""
@@ -208,16 +208,16 @@ def define_chipseq_target_file(wildcards):
     if file_type == "selected_peaks":
         # analysis_name is everything after "selected_peaks__"
         spname = "__".join(parts[1:])
-        inputfile = f"results/{env}/peaks/{file_type}__{spname}.bedPeak"
+        inputfile = f"{RESULTS_DIR}/{env}/peaks/{file_type}__{spname}.bedPeak"
         ref_genome = get_sample_info_from_name(spname, analysis_samples, 'ref_genome')
-        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{ref_genome}/{ref_genome}.fa"
         if any(analysis_samples['sample_name'] == spname):
             return [inputfile, fasta]
     elif file_type == "idr_peaks":
         spname = "__".join(parts[1:])
-        inputfile = f"results/{env}/peaks/{file_type}__{spname}.bed"
+        inputfile = f"{RESULTS_DIR}/{env}/peaks/{file_type}__{spname}.bed"
         ref_genome = get_sample_info_from_name(spname, analysis_samples, 'ref_genome')
-        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{ref_genome}/{ref_genome}.fa"
         if any(analysis_samples['sample_name'] == spname):
             return [inputfile, fasta]
     elif file_type.startswith("peaks_"):
@@ -233,15 +233,15 @@ def define_chipseq_target_file(wildcards):
             sname = rest
         assay = _resolve_assay(sname)
         peaktype = get_peaktype_for_env(assay, env)
-        inputfile = f"results/{env}/peaks/{file_type}__{file_cat}__{sname}_peaks.{peaktype}Peak"
+        inputfile = f"{RESULTS_DIR}/{env}/peaks/{file_type}__{file_cat}__{sname}_peaks.{peaktype}Peak"
         parsed = parse_sample_name(sname)
         ref_genome = parsed['ref_genome']
-        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{ref_genome}/{ref_genome}.fa"
         if any(samples['sample_name'] == sname) or any(analysis_samples['sample_name'] == sname):
             return [inputfile, fasta]
     elif peak_file == tarname:
         ref_genome = config['motif_ref_genome']
-        fasta = f"genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{ref_genome}/{ref_genome}.fa"
         inputfile = config['motif_target_file']
         return [inputfile, fasta]
     else:
@@ -281,22 +281,22 @@ def define_input_manorm(wildcards, string):
     else:
         peaktype = peaktype1
 
-    peakfile1 = f"results/{env1}/peaks/selected_peaks__{sample1}.bedPeak"
-    peakfile2 = f"results/{env2}/peaks/selected_peaks__{sample2}.bedPeak"
+    peakfile1 = f"{RESULTS_DIR}/{env1}/peaks/selected_peaks__{sample1}.bedPeak"
+    peakfile2 = f"{RESULTS_DIR}/{env2}/peaks/selected_peaks__{sample2}.bedPeak"
 
     rep_sids1 = get_replicate_sample_ids(sample1, samples)
     add1 = "shifted_" if env1 == "ATAC" else ""
     if len(rep_sids1) >= 2:
-        bamfile1 = f"results/{env1}/mapped/{add1}merged__{sample1}.bam"
+        bamfile1 = f"{RESULTS_DIR}/{env1}/mapped/{add1}merged__{sample1}.bam"
     else:
-        bamfile1 = f"results/{env1}/mapped/{add1}final__{rep_sids1[0]}.bam"
+        bamfile1 = f"{RESULTS_DIR}/{env1}/mapped/{add1}final__{rep_sids1[0]}.bam"
 
     rep_sids2 = get_replicate_sample_ids(sample2, samples)
     add2 = "shifted_" if env2 == "ATAC" else ""
     if len(rep_sids2) >= 2:
-        bamfile2 = f"results/{env2}/mapped/{add2}merged__{sample2}.bam"
+        bamfile2 = f"{RESULTS_DIR}/{env2}/mapped/{add2}merged__{sample2}.bam"
     else:
-        bamfile2 = f"results/{env2}/mapped/{add2}final__{rep_sids2[0]}.bam"
+        bamfile2 = f"{RESULTS_DIR}/{env2}/mapped/{add2}final__{rep_sids2[0]}.bam"
 
     if string == "peaks1":
         return peakfile1
@@ -368,17 +368,17 @@ def define_final_chip_output(ref_genome):
         paired = row['paired']
         env = row['env']
         if paired == "PE" and not aligned_bams:
-            qc_files.append(f"results/{env}/reports/trim__{sname}__R1_fastqc.html")
-            qc_files.append(f"results/{env}/reports/trim__{sname}__R2_fastqc.html")
-            map_files.append(f"results/{env}/logs/process_chip_pe_sample__{sname}.log")
+            qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R1_fastqc.html")
+            qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R2_fastqc.html")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_pe_sample__{sname}.log")
             if not trimmed_fastqs:
-                qc_files.append(f"results/{env}/reports/raw__{sname}__R1_fastqc.html")
-                qc_files.append(f"results/{env}/reports/raw__{sname}__R2_fastqc.html")
+                qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R1_fastqc.html")
+                qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R2_fastqc.html")
         elif paired == "SE" and not aligned_bams:
-            qc_files.append(f"results/{env}/reports/trim__{sname}__R0_fastqc.html")
-            map_files.append(f"results/{env}/logs/process_chip_se_sample__{sname}.log")
+            qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R0_fastqc.html")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_se_sample__{sname}.log")
             if not trimmed_fastqs:
-                qc_files.append(f"results/{env}/reports/raw__{sname}__R0_fastqc.html")
+                qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R0_fastqc.html")
 
     # Non-control samples for peak calling and bigwigs
     filtered_rep_samples_no_input = filtered_rep_samples[~filtered_rep_samples['Sample_ID'].isin(controls)].copy()
@@ -388,24 +388,24 @@ def define_final_chip_output(ref_genome):
         sname = row['sample_name']
         paired = row['paired']
         env = row['env']
-        bigwig_files.append(f"results/{env}/tracks/FC__final__{sname}.bw")
+        bigwig_files.append(f"{RESULTS_DIR}/{env}/tracks/FC__final__{sname}.bw")
         if config.get("chip_fingerprint_plots", True):
-            stat_files.append(f"results/{env}/plots/Fingerprint__final__{sname}.png")
+            stat_files.append(f"{RESULTS_DIR}/{env}/plots/Fingerprint__final__{sname}.png")
         if paired == "PE":
-            peak_files.append(f"results/{env}/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak")
+            peak_files.append(f"{RESULTS_DIR}/{env}/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak")
         else:
-            peak_files.append(f"results/{env}/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak")
+            peak_files.append(f"{RESULTS_DIR}/{env}/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak")
 
     # Analysis-level outputs (merged, IDR, best peaks)
     filtered_analysis_samples = analysis_samples[(analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome)].copy()
     for _, row in filtered_analysis_samples.iterrows():
         aname = row['sample_name']  # analysis_name
         env = row['env']
-        peak_files.append(f"results/{env}/peaks/selected_peaks__{aname}.bedPeak")
+        peak_files.append(f"{RESULTS_DIR}/{env}/peaks/selected_peaks__{aname}.bedPeak")
         rep_sids = get_replicate_sample_ids(aname, samples)
         if len(rep_sids) >= 2:
-            bigwig_files.append(f"results/{env}/tracks/FC__merged__{aname}.bw")
-            stat_files.append(f"results/{env}/chkpts/idr__{aname}.done")
+            bigwig_files.append(f"{RESULTS_DIR}/{env}/tracks/FC__merged__{aname}.bw")
+            stat_files.append(f"{RESULTS_DIR}/{env}/chkpts/idr__{aname}.done")
 
     # Motif analysis for TF (now subsumed under ChIP env - only if data contains TF-like samples)
     # Note: TF env is eliminated; motif_files only apply if explicitly configured
@@ -421,7 +421,7 @@ def define_final_chip_output(ref_genome):
                 peaktype1 = ASSAY_TO_PEAKTYPE.get(assay1, "broad")
                 peaktype2 = ASSAY_TO_PEAKTYPE.get(assay2, "broad")
                 if peaktype1 == peaktype2:
-                    peak_files.append(f"results/ChIP/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
+                    peak_files.append(f"{RESULTS_DIR}/ChIP/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
 
     results = map_files + bigwig_files
 
@@ -441,11 +441,11 @@ def define_final_chip_output(ref_genome):
 
 rule make_bt2_indices:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa"
     output:
-        indices = directory("genomes/{ref_genome}/bt2_index")
+        indices = directory(f"{GENOMES_DIR}/{{ref_genome}}/bt2_index")
     log:
-        temp(os.path.join(REPO_FOLDER,"results","logs","bowtie_index_{ref_genome}.log"))
+        temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","bowtie_index_{ref_genome}.log"))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_bt2_indices"]["threads"]
     resources:
@@ -456,18 +456,18 @@ rule make_bt2_indices:
         """
         {{
         printf "\nBuilding Bowtie2 index for {wildcards.ref_genome}\n"
-        mkdir genomes/{wildcards.ref_genome}/bt2_index
+        mkdir {config[genome_dir]}/{wildcards.ref_genome}/bt2_index
         bowtie2-build --threads {threads} "{input.fasta}" "{output.indices}/{wildcards.ref_genome}"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_chromap_index:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa"
     output:
-        index = "genomes/{ref_genome}/chromap_index/{ref_genome}.index"
+        index = f"{GENOMES_DIR}/{{ref_genome}}/chromap_index/{{ref_genome}}.index"
     log:
-        temp(os.path.join(REPO_FOLDER,"results","logs","chromap_index_{ref_genome}.log"))
+        temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","chromap_index_{ref_genome}.log"))
     conda: CONDA_ENV_CHIP
     threads: config["resources"]["make_chromap_index"]["threads"]
     resources:
@@ -478,22 +478,22 @@ rule make_chromap_index:
         """
         {{
         printf "\nBuilding Chromap index for {wildcards.ref_genome}\n"
-        mkdir -p genomes/{wildcards.ref_genome}/chromap_index
+        mkdir -p {config[genome_dir]}/{wildcards.ref_genome}/chromap_index
         chromap -i -t {threads} -r "{input.fasta}" -o "{output.index}"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_bam_pe:
     input:
-        fastq1 = "results/{env}/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "results/{env}/fastq/trim__{sample_name}__R2.fastq.gz",
+        fastq1 = f"{RESULTS_DIR}/{{env}}/fastq/trim__{{sample_name}}__R1.fastq.gz",
+        fastq2 = f"{RESULTS_DIR}/{{env}}/fastq/trim__{{sample_name}}__R2.fastq.gz",
         index = get_mapping_index,
         fasta = get_mapping_fasta
     output:
-        bamfile = temp("results/{env}/mapped/mapped_pe__{sample_name}.bam"),
-        metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
-        metrics_dup = "results/{env}/reports/markdup_pe__{sample_name}.txt",
-        metrics_flag = "results/{env}/reports/flagstat_pe__{sample_name}.txt"
+        bamfile = temp(f"{RESULTS_DIR}/{{env}}/mapped/mapped_pe__{{sample_name}}.bam"),
+        metrics_map = f"{RESULTS_DIR}/{{env}}/reports/bt2_pe__{{sample_name}}.txt",
+        metrics_dup = f"{RESULTS_DIR}/{{env}}/reports/markdup_pe__{{sample_name}}.txt",
+        metrics_flag = f"{RESULTS_DIR}/{{env}}/reports/flagstat_pe__{{sample_name}}.txt"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -531,7 +531,7 @@ rule filter_bam_pe:
                 -o /dev/stdout 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
             | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ {threads} -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ {threads} -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -540,27 +540,27 @@ rule filter_bam_pe:
                 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
             | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ 2 -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ 2 -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
-            "results/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
+            "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        rm -f "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule filter_bam_se:
     input:
-        fastq = "results/{env}/fastq/trim__{sample_name}__R0.fastq.gz",
+        fastq = f"{RESULTS_DIR}/{{env}}/fastq/trim__{{sample_name}}__R0.fastq.gz",
         index = get_mapping_index,
         fasta = get_mapping_fasta
     output:
-        bamfile = temp("results/{env}/mapped/mapped_se__{sample_name}.bam"),
-        metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
-        metrics_dup = "results/{env}/reports/markdup_se__{sample_name}.txt",
-        metrics_flag = "results/{env}/reports/flagstat_se__{sample_name}.txt"
+        bamfile = temp(f"{RESULTS_DIR}/{{env}}/mapped/mapped_se__{{sample_name}}.bam"),
+        metrics_map = f"{RESULTS_DIR}/{{env}}/reports/bt2_se__{{sample_name}}.txt",
+        metrics_dup = f"{RESULTS_DIR}/{{env}}/reports/markdup_se__{{sample_name}}.txt",
+        metrics_flag = f"{RESULTS_DIR}/{{env}}/reports/flagstat_se__{{sample_name}}.txt"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -598,7 +598,7 @@ rule filter_bam_se:
                 -o /dev/stdout 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
             | samtools fixmate -@ 2 -m - - \
-            | samtools sort -@ {threads} -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ {threads} -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -606,25 +606,25 @@ rule filter_bam_se:
                 -U "{input.fastq}" \
                 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools sort -@ 2 -m {params.sort_mem} -o "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ 2 -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
-            "results/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
+            "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam" "{output.bamfile}"
         printf "\nGetting some stats\n"
         samtools flagstat -@ {threads} "{output.bamfile}" > "{output.metrics_flag}"
-        rm -f "results/{params.env}/mapped/sorted_{params.sample_name}.bam"
+        rm -f "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_mapping_stats_pe:
     input:
-        metrics_trim = "results/{env}/reports/trim_pe__{sample_name}.json",
-        metrics_map = "results/{env}/reports/bt2_pe__{sample_name}.txt",
+        metrics_trim = f"{RESULTS_DIR}/{{env}}/reports/trim_pe__{{sample_name}}.json",
+        metrics_map = f"{RESULTS_DIR}/{{env}}/reports/bt2_pe__{{sample_name}}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
-        stat_file = "results/{env}/reports/summary_{env}_PE_mapping_stats_{sample_name}.txt",
-        log = "results/{env}/logs/process_chip_pe_sample__{sample_name}.log"
+        stat_file = f"{RESULTS_DIR}/{{env}}/reports/summary_{{env}}_PE_mapping_stats_{{sample_name}}.txt",
+        log = f"{RESULTS_DIR}/{{env}}/logs/process_chip_pe_sample__{{sample_name}}.log"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -674,12 +674,12 @@ rule make_mapping_stats_pe:
 
 rule make_mapping_stats_se:
     input:
-        metrics_trim = "results/{env}/reports/trim_se__{sample_name}.json",
-        metrics_map = "results/{env}/reports/bt2_se__{sample_name}.txt",
+        metrics_trim = f"{RESULTS_DIR}/{{env}}/reports/trim_se__{{sample_name}}.json",
+        metrics_map = f"{RESULTS_DIR}/{{env}}/reports/bt2_se__{{sample_name}}.txt",
         logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
-        stat_file = "results/{env}/reports/summary_{env}_SE_mapping_stats_{sample_name}.txt",
-        log = "results/{env}/logs/process_chip_se_sample__{sample_name}.log"
+        stat_file = f"{RESULTS_DIR}/{{env}}/reports/summary_{{env}}_SE_mapping_stats_{{sample_name}}.txt",
+        log = f"{RESULTS_DIR}/{{env}}/logs/process_chip_se_sample__{{sample_name}}.log"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -726,9 +726,9 @@ rule dispatch_final_bam:
     input:
         assign_bam_file
     output:
-        bam = maybe_temp("results/{env}/mapped/final__{sample_name}.bam", config.get('keep_final_bams', True)),
-        bai = maybe_temp("results/{env}/mapped/final__{sample_name}.bam.bai", config.get('keep_final_bams', True)),
-        touch = "results/{env}/chkpts/map_{env}__{sample_name}.done"
+        bam = maybe_temp(f"{RESULTS_DIR}/{{env}}/mapped/final__{{sample_name}}.bam", config.get('keep_final_bams', True)),
+        bai = maybe_temp(f"{RESULTS_DIR}/{{env}}/mapped/final__{{sample_name}}.bam.bai", config.get('keep_final_bams', True)),
+        touch = f"{RESULTS_DIR}/{{env}}/chkpts/map_{{env}}__{{sample_name}}.done"
     wildcard_constraints:
         env = "ChIP|ATAC"
     conda: CONDA_ENV_CHIP
@@ -746,10 +746,10 @@ rule dispatch_final_bam:
 
 rule make_coverage_chip:
     input:
-        bamfile = "results/{env}/mapped/final__{sample_name}.bam",
-        bambai = "results/{env}/mapped/final__{sample_name}.bam.bai"
+        bamfile = f"{RESULTS_DIR}/{{env}}/mapped/final__{{sample_name}}.bam",
+        bambai = f"{RESULTS_DIR}/{{env}}/mapped/final__{{sample_name}}.bam.bai"
     output:
-        bigwigcov = "results/{env}/tracks/coverage__{sample_name}.bw"
+        bigwigcov = f"{RESULTS_DIR}/{{env}}/tracks/coverage__{{sample_name}}.bw"
     wildcard_constraints:
         env = "ChIP"
     params:
@@ -767,12 +767,12 @@ rule make_coverage_chip:
 
 rule make_bigwig_chip:
     input:
-        ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        ipbai = "results/{env}/mapped/{file_type}__{sample_name}.bam.bai",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
-        inputbai = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam.bai"
+        ipfile = f"{RESULTS_DIR}/{{env}}/mapped/{{file_type}}__{{sample_name}}.bam",
+        ipbai = f"{RESULTS_DIR}/{{env}}/mapped/{{file_type}}__{{sample_name}}.bam.bai",
+        inputfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        inputbai = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam.bai"
     output:
-        bigwigfile = "results/{env}/tracks/FC__{file_type}__{sample_name}.bw"
+        bigwigfile = f"{RESULTS_DIR}/{{env}}/tracks/FC__{{file_type}}__{{sample_name}}.bw"
     wildcard_constraints:
         env = "ChIP",
         file_type = "final|merged"
@@ -800,13 +800,13 @@ rule make_bigwig_chip:
 
 rule make_fingerprint_plot:
     input:
-        ipfile = "results/{env}/mapped/final__{sample_name}.bam",
-        ipbai = "results/{env}/mapped/final__{sample_name}.bam.bai",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/final__{assign_chip_input(wildcards)}.bam",
-        inputbai = lambda wildcards: f"results/{wildcards.env}/mapped/final__{assign_chip_input(wildcards)}.bam.bai",
-        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
+        ipfile = f"{RESULTS_DIR}/{{env}}/mapped/final__{{sample_name}}.bam",
+        ipbai = f"{RESULTS_DIR}/{{env}}/mapped/final__{{sample_name}}.bam.bai",
+        inputfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/final__{assign_chip_input(wildcards)}.bam",
+        inputbai = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/final__{assign_chip_input(wildcards)}.bam.bai",
+        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
-        pngplot = "results/{env}/plots/Fingerprint__final__{sample_name}.png"
+        pngplot = f"{RESULTS_DIR}/{{env}}/plots/Fingerprint__final__{{sample_name}}.png"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -848,11 +848,11 @@ print(int(total_bins * 0.5))
 
 rule calling_peaks_macs2_pe:
     input:
-        ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
-        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
+        ipfile = f"{RESULTS_DIR}/{{env}}/mapped/{{file_type}}__{{sample_name}}.bam",
+        inputfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
-        peakfile = "results/{env}/peaks/peaks_pe__{file_type}__{sample_name}_peaks.{peaktype}Peak"
+        peakfile = f"{RESULTS_DIR}/{{env}}/peaks/peaks_pe__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
         env = "ChIP",
         file_type = "final|merged|pseudo1|pseudo2"
@@ -887,17 +887,17 @@ rule calling_peaks_macs2_pe:
         fi
         printf "\nCalling {params.peaktype} peaks for paired-end {params.sample_name} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g $gsize {params.params} -n peaks_pe__{params.file_type}__{params.sample_name} --outdir results/{params.env}/peaks/ ${{add}}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g $gsize {params.params} -n peaks_pe__{params.file_type}__{params.sample_name} --outdir {config[output_dir]}/{params.env}/peaks/ ${{add}}
         }} 2>&1 | tee -a "{log}"
         """
 
 rule calling_peaks_macs2_se:
     input:
-        ipfile = "results/{env}/mapped/{file_type}__{sample_name}.bam",
-        inputfile = lambda wildcards: f"results/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
-        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
+        ipfile = f"{RESULTS_DIR}/{{env}}/mapped/{{file_type}}__{{sample_name}}.bam",
+        inputfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
+        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
-        peakfile = "results/{env}/peaks/peaks_se__{file_type}__{sample_name}_peaks.{peaktype}Peak"
+        peakfile = f"{RESULTS_DIR}/{{env}}/peaks/peaks_se__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
         env = "ChIP",
         file_type = "final|merged|pseudo1|pseudo2"
@@ -932,7 +932,7 @@ rule calling_peaks_macs2_se:
         fi
         printf "\nCalling {params.peaktype} peaks for single-end {params.sample_name} (vs {params.inputname}) using macs2 version:\n"
         macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g $gsize {params.params} -n peaks_se__{params.file_type}__{params.sample_name} --outdir results/{params.env}/peaks/ ${{add}}
+        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g $gsize {params.params} -n peaks_se__{params.file_type}__{params.sample_name} --outdir {config[output_dir]}/{params.env}/peaks/ ${{add}}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -940,8 +940,8 @@ rule idr_analysis_replicates:
     input:
         peak_file = lambda wildcards: assign_peak_files_for_idr(wildcards)
     output:
-        touch = "results/{env}/chkpts/idr__{sample_name}.done",
-        merged = "results/{env}/peaks/idr_peaks__{sample_name}.bed"
+        touch = f"{RESULTS_DIR}/{{env}}/chkpts/idr__{{sample_name}}.done",
+        merged = f"{RESULTS_DIR}/{{env}}/peaks/idr_peaks__{{sample_name}}.bed"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -982,20 +982,20 @@ rule idr_analysis_replicates:
         else
             analysis_pre="peaks_se"
         fi
-        temp="results/{params.env}/peaks/temp_idr_peaks__{params.sname}.bed"
+        temp="{config[output_dir]}/{params.env}/peaks/temp_idr_peaks__{params.sname}.bed"
         while read chr max; do
             printf "${{chr}}\t1\t${{max}}\n" >> "${{temp}}"
-        done < "genomes/{params.ref_genome}/chrom.sizes"
-        mkdir -p results/{params.env}/plots/
+        done < "{config[genome_dir]}/{params.ref_genome}/chrom.sizes"
+        mkdir -p {config[output_dir]}/{params.env}/plots/
         idr_failed=false
         for pair in {params.replicate_pairs}; do
             rep1_sid=$(echo ${{pair}} | cut -d":" -f1)
             rep2_sid=$(echo ${{pair}} | cut -d":" -f2)
             pre1=${{sid_pre[$rep1_sid]}}
             pre2=${{sid_pre[$rep2_sid]}}
-            file1="results/{params.env}/peaks/${{pre1}}__final__${{rep1_sid}}_peaks.{params.peaktype}Peak"
-            file2="results/{params.env}/peaks/${{pre2}}__final__${{rep2_sid}}_peaks.{params.peaktype}Peak"
-            outfile="results/{params.env}/peaks/idr_${{analysis_pre}}__{params.sname}__${{rep1_sid}}_vs_${{rep2_sid}}_peaks.{params.peaktype}Peak"
+            file1="{config[output_dir]}/{params.env}/peaks/${{pre1}}__final__${{rep1_sid}}_peaks.{params.peaktype}Peak"
+            file2="{config[output_dir]}/{params.env}/peaks/${{pre2}}__final__${{rep2_sid}}_peaks.{params.peaktype}Peak"
+            outfile="{config[output_dir]}/{params.env}/peaks/idr_${{analysis_pre}}__{params.sname}__${{rep1_sid}}_vs_${{rep2_sid}}_peaks.{params.peaktype}Peak"
 
             n1=$(wc -l < "${{file1}}")
             n2=$(wc -l < "${{file2}}")
@@ -1003,8 +1003,8 @@ rule idr_analysis_replicates:
 
             if idr --input-file-type {params.peaktype}Peak --output-file-type {params.peaktype}Peak \
                     --samples ${{file1}} ${{file2}} -o ${{outfile}} \
-                    -l results/{params.env}/reports/idr_{params.sname}.log --plot 2>&1; then
-                mv "${{outfile}}.png" results/{params.env}/plots/ 2>/dev/null || true
+                    -l {config[output_dir]}/{params.env}/reports/idr_{params.sname}.log --plot 2>&1; then
+                mv "${{outfile}}.png" {config[output_dir]}/{params.env}/plots/ 2>/dev/null || true
                 filtered="${{outfile}}.filtered"
                 awk -v OFS="\t" '$5>=540 {{print $1,$2,$3}}' ${{outfile}} | sort -k1,1 -k2,2n > "${{filtered}}"
                 new="${{temp}}.new"
@@ -1027,10 +1027,10 @@ rule idr_analysis_replicates:
         if [[ "${{idr_failed}}" == "true" ]]; then
             printf "\nIDR analysis incomplete for {params.sname} — creating empty IDR output\n"
             touch {output.merged}
-            touch "results/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
+            touch "{config[output_dir]}/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
         else
             cat ${{temp}} > {output.merged}
-            bedtools intersect -a ${{file2}} -b ${{temp}} -u > "results/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
+            bedtools intersect -a ${{file2}} -b ${{temp}} -u > "{config[output_dir]}/{params.env}/peaks/idr_peaks__{params.sname}.{params.peaktype}Peak"
         fi
         rm -f ${{temp}} "${{temp}}.new" "${{outfile}}.filtered"
         touch {output.touch}
@@ -1040,12 +1040,12 @@ rule idr_analysis_replicates:
 rule merging_bam_replicates:
     input:
         bamfiles = lambda wildcards: [
-            f"results/{wildcards.env}/mapped/final__{sid}.bam"
+            f"{RESULTS_DIR}/{wildcards.env}/mapped/final__{sid}.bam"
             for sid in get_replicate_sample_ids(wildcards.sample_name, samples)
         ]
     output:
-        mergefile = maybe_temp("results/{env}/mapped/merged__{sample_name}.bam", config.get('keep_merged_bams', False)),
-        mergebai = maybe_temp("results/{env}/mapped/merged__{sample_name}.bam.bai", config.get('keep_merged_bams', False))
+        mergefile = maybe_temp(f"{RESULTS_DIR}/{{env}}/mapped/merged__{{sample_name}}.bam", config.get('keep_merged_bams', False)),
+        mergebai = maybe_temp(f"{RESULTS_DIR}/{{env}}/mapped/merged__{{sample_name}}.bam.bai", config.get('keep_merged_bams', False))
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -1070,12 +1070,12 @@ rule merging_bam_replicates:
 
 rule making_pseudo_replicates:
     input:
-        bamfile = lambda wildcards: f"results/{wildcards.env}/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam"
+        bamfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{'merged' if parse_sample_name(wildcards.sample_name)['replicate'] == 'merged' else 'final'}__{wildcards.sample_name}.bam"
     output:
-        temp_pseudo1 = temp("results/{env}/mapped/temp_pseudo1__{sample_name}.bam"),
-        temp_pseudo2 = temp("results/{env}/mapped/temp_pseudo2__{sample_name}.bam"),
-        pseudo1 = temp("results/{env}/mapped/pseudo1__{sample_name}.bam"),
-        pseudo2 = temp("results/{env}/mapped/pseudo2__{sample_name}.bam")
+        temp_pseudo1 = temp(f"{RESULTS_DIR}/{{env}}/mapped/temp_pseudo1__{{sample_name}}.bam"),
+        temp_pseudo2 = temp(f"{RESULTS_DIR}/{{env}}/mapped/temp_pseudo2__{{sample_name}}.bam"),
+        pseudo1 = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo1__{{sample_name}}.bam"),
+        pseudo2 = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo2__{{sample_name}}.bam")
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -1101,18 +1101,18 @@ rule making_pseudo_replicates:
 
 rule create_empty_file:
     output:
-        "results/empty.txt"
+        f"{RESULTS_DIR}/empty.txt"
     localrule: True
     shell:
         "touch {output}"
 
 rule best_peaks_pseudoreps:
     input:
-        chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome')}/chrom.sizes",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome')}/chrom.sizes",
         peakfiles = input_peak_files_for_best_peaks
     output:
-        bestpeaks = "results/{env}/peaks/selected_peaks__{sample_name}.bedPeak",
-        stats_pseudoreps = temp("results/{env}/reports/stats_pseudoreps__{sample_name}.txt")
+        bestpeaks = f"{RESULTS_DIR}/{{env}}/peaks/selected_peaks__{{sample_name}}.bedPeak",
+        stats_pseudoreps = temp(f"{RESULTS_DIR}/{{env}}/reports/stats_pseudoreps__{{sample_name}}.txt")
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -1131,37 +1131,37 @@ rule best_peaks_pseudoreps:
         """
         {{
         printf "\nIntersecting merged peaks ({input.peakfiles[0]}), and both pseudo replicates to select the best peaks for {params.sname}\n"
-        awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[0]} | sort -k1,1 -k2,2n -u > "results/{params.env}/peaks/temp_{params.sname}_merged.bed"
-		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[1]} | sort -k1,1 -k2,2n -u > "results/{params.env}/peaks/temp_{params.sname}_pseudo1.bed"
-		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[2]} | sort -k1,1 -k2,2n -u > "results/{params.env}/peaks/temp_{params.sname}_pseudo2.bed"
-		bedtools intersect -a results/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -b results/{params.env}/peaks/temp_{params.sname}_pseudo2.bed > "results/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
-		bedtools intersect -a results/{params.env}/peaks/temp_{params.sname}_merged.bed -b results/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -u > "results/{params.env}/peaks/temp_{params.sname}_selected.bed"
-		bedtools intersect -a {input.peakfiles[0]} -b results/{params.env}/peaks/temp_{params.sname}_selected.bed -u > "results/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak"
+        awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[0]} | sort -k1,1 -k2,2n -u > "{config[output_dir]}/{params.env}/peaks/temp_{params.sname}_merged.bed"
+		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[1]} | sort -k1,1 -k2,2n -u > "{config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudo1.bed"
+		awk -v OFS="\t" '{{print $1,$2,$3}}' {input.peakfiles[2]} | sort -k1,1 -k2,2n -u > "{config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudo2.bed"
+		bedtools intersect -a {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -b {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudo2.bed > "{config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudos.bed"
+		bedtools intersect -a {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_merged.bed -b {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudo1.bed -u > "{config[output_dir]}/{params.env}/peaks/temp_{params.sname}_selected.bed"
+		bedtools intersect -a {input.peakfiles[0]} -b {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_selected.bed -u > "{config[output_dir]}/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak"
         printf "\nGetting best quality peaks peaks\n"
         ## Note: If broadpeak, an additional "summit" column will be added for potential downstream processes, which only represent the middle of the peak, not its actual summit.
-        sort -k1,1 -k2,2n -k5nr results/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" -v t={params.peaktype} '{{a=$1":"$2":"$3; if (a!=n) {{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}} n=$1":"$2":"$3}}' | bedtools sort -g {input.chrom_sizes} > "{output.bestpeaks}"
+        sort -k1,1 -k2,2n -k5nr {config[output_dir]}/{params.env}/peaks/selected_peaks__{params.sname}.{params.peaktype}Peak | awk -v OFS="\t" -v t={params.peaktype} '{{a=$1":"$2":"$3; if (a!=n) {{if (t=="broad") $10=int(($3-$2)/2); print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10}} n=$1":"$2":"$3}}' | bedtools sort -g {input.chrom_sizes} > "{output.bestpeaks}"
         printf "\nExtracting peak stats for {params.sname}\n"
-        merged=$(wc -l results/{params.env}/peaks/temp_{params.sname}_merged.bed | cut -d" " -f1)
-		pseudos=$(awk '{{print $1,$2,$3}}' results/{params.env}/peaks/temp_{params.sname}_pseudos.bed | sort -k1,1 -k2,2n -u | wc -l)
-		selected=$(cat results/{params.env}/peaks/temp_{params.sname}_selected.bed | sort -k1,1 -k2,2n -u | wc -l)
-        if [[ "{input.peakfiles[3]}" == "results/empty.txt" ]]; then
+        merged=$(wc -l {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_merged.bed | cut -d" " -f1)
+		pseudos=$(awk '{{print $1,$2,$3}}' {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_pseudos.bed | sort -k1,1 -k2,2n -u | wc -l)
+		selected=$(cat {config[output_dir]}/{params.env}/peaks/temp_{params.sname}_selected.bed | sort -k1,1 -k2,2n -u | wc -l)
+        if [[ "{input.peakfiles[3]}" == "{config[output_dir]}/empty.txt" ]]; then
             idr="0"
         else
             idr=$(wc -l {input.peakfiles[3]} | cut -d" " -f1)
         fi
 		printf "Merged=${{merged}}\nPseudos=${{pseudos}}\nIDR=${{idr}}\nSelected=${{selected}}\n" > "{output.stats_pseudoreps}"
-        rm -f "results/{params.env}/peaks/temp_{params.sname}"*
+        rm -f "{config[output_dir]}/{params.env}/peaks/temp_{params.sname}"*
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_peak_stats:
     input:
         logs = lambda wildcards: define_logs_final_input(wildcards),
-        stats_pseudoreps = lambda wildcards: f"results/{wildcards.env}/reports/stats_pseudoreps__{wildcards.sample_name}.txt"
+        stats_pseudoreps = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/reports/stats_pseudoreps__{wildcards.sample_name}.txt"
         ## maybe a better solution is to append a stat file with wc -l as they are generated, or to create a new stat file for each file, then accessible in bash by regex on the samplename
     output:
-        stat_file = "results/{env}/reports/summary_{env}_peak_stats_{sample_name}.txt",
-        log = "results/{env}/logs/called_peaks__{sample_name}.log"
+        stat_file = f"{RESULTS_DIR}/{{env}}/reports/summary_{{env}}_peak_stats_{{sample_name}}.txt",
+        log = f"{RESULTS_DIR}/{{env}}/logs/called_peaks__{{sample_name}}.log"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -1202,9 +1202,9 @@ rule find_motifs_in_file:
     input:
         define_chipseq_target_file
     output:
-        temp_bed = temp("results/{env}/motifs/temp_regions_{peak_file}.bed"),
-        temp_fa = temp("results/{env}/motifs/temp_regions_{peak_file}.fa"),
-        touch = "results/{env}/chkpts/motifs__{peak_file}.done"
+        temp_bed = temp(f"{RESULTS_DIR}/{{env}}/motifs/temp_regions_{{peak_file}}.bed"),
+        temp_fa = temp(f"{RESULTS_DIR}/{{env}}/motifs/temp_regions_{{peak_file}}.fa"),
+        touch = f"{RESULTS_DIR}/{{env}}/chkpts/motifs__{{peak_file}}.done"
     wildcard_constraints:
         env = "ChIP"
     params:
@@ -1242,10 +1242,10 @@ rule find_motifs_in_file:
         head {output.temp_fa}
         printf "\nGetting motifs for {params.peak_file} with meme version:\n"
         meme -version
-        meme-chip -oc results/{params.env}/motifs/{params.peak_file}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
-        if [[ -s results/{params.env}/{params.peak_file}/meme/combined.meme ]]; then
+        meme-chip -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
+        if [[ -s {config[output_dir]}/{params.env}/{params.peak_file}/meme/combined.meme ]]; then
             printf "\nLooking for similar motifs in JASPAR database with tomtom\n"
-            tomtom -oc results/{params.env}/motifs/{params.peak_file}/tomtom/ results/{params.env}/motifs/{params.peak_file}/meme/combined.meme {params.jaspar_db}
+            tomtom -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/tomtom/ {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme {params.jaspar_db}
         fi
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
@@ -1258,13 +1258,13 @@ rule perform_pairwise_diff_peaks:
         read_file1 = lambda wildcards: define_input_manorm(wildcards, "reads1"),
         read_file2 = lambda wildcards: define_input_manorm(wildcards, "reads2")
     output:
-        result = "results/{env}/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls"
+        result = f"{RESULTS_DIR}/{{env}}/peaks/{{sample1}}_vs_{{sample2}}/{{sample1}}_vs_{{sample2}}_all_MAvalues.xls"
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
         diffpeaks = lambda wildcards: define_input_manorm(wildcards, "params"),
         peakformat = lambda wildcards: define_input_manorm(wildcards, "format"),
-        output_folder = lambda wildcards: f"results/{wildcards.env}/peaks/{wildcards.sample1}_vs_{wildcards.sample2}"
+        output_folder = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/peaks/{wildcards.sample1}_vs_{wildcards.sample2}"
     log:
         temp(return_log_chip("{env}","{sample1}_vs_{sample2}", "diff_peaks", ""))
     conda: CONDA_ENV_CHIP
@@ -1306,7 +1306,7 @@ rule all_chip:
     input:
         final = lambda wildcards: define_final_chip_output(wildcards.ref_genome)
     output:
-        touch = "results/{env}/chkpts/{env}_analysis__{analysis_name}__{ref_genome}.done"
+        touch = f"{RESULTS_DIR}/{{env}}/chkpts/{{env}}_analysis__{{analysis_name}}__{{ref_genome}}.done"
     wildcard_constraints:
         env = "ChIP"
     localrule: True

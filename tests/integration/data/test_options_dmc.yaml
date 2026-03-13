@@ -5,6 +5,10 @@ repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_dmc"
 sample_file: "tests/integration/data/test_samples_dmc.tsv"
 
+# Output directories
+output_dir: "results_test_dmc"
+genome_dir: "genomes_test_dmc"
+
 # Minimal reference genome configuration for test_genome
 genomes:
   test_genome:

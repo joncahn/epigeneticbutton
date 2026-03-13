@@ -17,39 +17,39 @@ def define_final_atac_output(ref_genome):
         paired = get_sample_info_from_name(sname, samples, 'paired')
         env = "ATAC"
         if paired == "PE" and not aligned_bams:
-            qc_files.append(f"results/{env}/reports/trim__{sname}__R1_fastqc.html")
-            qc_files.append(f"results/{env}/reports/trim__{sname}__R2_fastqc.html")
-            map_files.append(f"results/{env}/logs/process_chip_pe_sample__{sname}.log")
+            qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R1_fastqc.html")
+            qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R2_fastqc.html")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_pe_sample__{sname}.log")
             if not trimmed_fastqs:
-                qc_files.append(f"results/{env}/reports/raw__{sname}__R1_fastqc.html")
-                qc_files.append(f"results/{env}/reports/raw__{sname}__R2_fastqc.html")
+                qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R1_fastqc.html")
+                qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R2_fastqc.html")
         elif paired == "SE" and not aligned_bams:
-            qc_files.append(f"results/{env}/reports/trim__{sname}__R0_fastqc.html")
-            map_files.append(f"results/{env}/logs/process_chip_se_sample__{sname}.log")
+            qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R0_fastqc.html")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_se_sample__{sname}.log")
             if not trimmed_fastqs:
-                qc_files.append(f"results/{env}/reports/raw__{sname}__R0_fastqc.html")
+                qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R0_fastqc.html")
 
     # ATAC has no Input samples to filter out
     peaktype = config["atac_callpeaks"]["peaktype"]
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
         paired = get_sample_info_from_name(sname, samples, 'paired')
-        bigwig_files.append(f"results/ATAC/tracks/coverage__final__{sname}.bw")
-        peak_files.append(f"results/ATAC/peaks/peaks_atac__final__{sname}_peaks.{peaktype}Peak")
+        bigwig_files.append(f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{sname}.bw")
+        peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/peaks_atac__final__{sname}_peaks.{peaktype}Peak")
 
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ATAC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         spname = row['sample_name']
-        peak_files.append(f"results/ATAC/peaks/selected_peaks__{spname}.bedPeak")
+        peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/selected_peaks__{spname}.bedPeak")
         reps = get_replicate_sample_ids(row['sample_name'], samples)
         if len(reps) >= 2:
-            bigwig_files.append(f"results/ATAC/tracks/coverage__merged__{row['sample_name']}.bw")
-            stat_files.append(f"results/ATAC/chkpts/idr__{spname}.done")
+            bigwig_files.append(f"{RESULTS_DIR}/ATAC/tracks/coverage__merged__{row['sample_name']}.bw")
+            stat_files.append(f"{RESULTS_DIR}/ATAC/chkpts/idr__{spname}.done")
             
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
         sample1 = a._asdict()['sample_name']
         sample2 = b._asdict()['sample_name']
-        peak_files.append(f"results/ATAC/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
+        peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
 
     results = map_files + bigwig_files
 
@@ -64,10 +64,10 @@ def define_final_atac_output(ref_genome):
 
 rule atac_shift_bam:
     input:
-        bamfile = "results/ATAC/mapped/{file_type}__{sample_name}.bam"
+        bamfile = f"{RESULTS_DIR}/ATAC/mapped/{{file_type}}__{{sample_name}}.bam"
     output:
-        shifted_bam = maybe_temp("results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam", config.get('keep_shifted_bams', False)),
-        shifted_bai = maybe_temp("results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam.bai", config.get('keep_shifted_bams', False))
+        shifted_bam = maybe_temp(f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bam", config.get('keep_shifted_bams', False)),
+        shifted_bai = maybe_temp(f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bam.bai", config.get('keep_shifted_bams', False))
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:
@@ -92,9 +92,9 @@ rule atac_shift_bam:
 
 rule atac_bam_to_bed:
     input:
-        bamfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam"
+        bamfile = f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bam"
     output:
-        bedfile = temp("results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz")
+        bedfile = temp(f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bed.gz")
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:
@@ -118,10 +118,10 @@ rule atac_bam_to_bed:
 
 rule calling_peaks_atac:
     input:
-        bedfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bed.gz",
-        genome_stats = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
+        bedfile = f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bed.gz",
+        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
-        peakfile = "results/ATAC/peaks/peaks_atac__{file_type}__{sample_name}_peaks.narrowPeak"
+        peakfile = f"{RESULTS_DIR}/ATAC/peaks/peaks_atac__{{file_type}}__{{sample_name}}_peaks.narrowPeak"
     wildcard_constraints:
         file_type = "final|merged|pseudo1|pseudo2"
     params:
@@ -150,16 +150,16 @@ rule calling_peaks_atac:
         macs2 callpeak -t {input.bedfile} -f BED \
             -g $gsize {params.params} \
             -n peaks_atac__{params.filetype}__{params.ipname} \
-            --outdir results/ATAC/peaks/
+            --outdir {config[output_dir]}/ATAC/peaks/
         }} 2>&1 | tee -a "{log}"
         """
 
 rule make_coverage_atac:
     input:
-        bamfile = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam",
-        bai = "results/ATAC/mapped/shifted_{file_type}__{sample_name}.bam.bai"
+        bamfile = f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bam",
+        bai = f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bam.bai"
     output:
-        bigwig = "results/ATAC/tracks/coverage__{file_type}__{sample_name}.bw"
+        bigwig = f"{RESULTS_DIR}/ATAC/tracks/coverage__{{file_type}}__{{sample_name}}.bw"
     wildcard_constraints:
         file_type = "final|merged"
     params:
@@ -185,7 +185,7 @@ rule all_atac:
     input:
         final = lambda wildcards: define_final_atac_output(wildcards.ref_genome)
     output:
-        touch = "results/ATAC/chkpts/ATAC_analysis__{analysis_name}__{ref_genome}.done"
+        touch = f"{RESULTS_DIR}/ATAC/chkpts/ATAC_analysis__{{analysis_name}}__{{ref_genome}}.done"
     localrule: True
     shell:
         """

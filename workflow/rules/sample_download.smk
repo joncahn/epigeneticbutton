@@ -1,18 +1,18 @@
 def return_log_sample(data_type, sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"results",data_type,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
+    return os.path.join(REPO_FOLDER, RESULTS_DIR,data_type,"logs",f"tmp__{sample_name}__{step}__{paired}.log")
     
 rule get_fastq_pe:
     output:
-        fastq1 = temp("results/{data_type}/fastq/raw__{sample_name}__R1.fastq.gz"),
-        fastq2 = temp("results/{data_type}/fastq/raw__{sample_name}__R2.fastq.gz")
+        fastq1 = temp(f"{RESULTS_DIR}/{{data_type}}/fastq/raw__{{sample_name}}__R1.fastq.gz"),
+        fastq2 = temp(f"{RESULTS_DIR}/{{data_type}}/fastq/raw__{{sample_name}}__R2.fastq.gz")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         trimmed_fastqs = config['trimmed_fastqs'],
-        exist_fastq1 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
-        exist_fastq2 = lambda wildcards: f"results/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz",
+        exist_fastq1 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R1.fastq.gz",
+        exist_fastq2 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R2.fastq.gz",
         ena_script = os.path.join(REPO_FOLDER, "workflow", "scripts", "ena_download.sh")
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "PE"))
@@ -32,7 +32,7 @@ rule get_fastq_pe:
             cp {params.exist_fastq2} {output.fastq2}
         elif [[ "{params.fastq_path}" == "SRA" ]]; then
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
-            outdir="results/{params.data_type}/fastq"
+            outdir="{config[output_dir]}/{params.data_type}/fastq"
             ena_ok=true
 
             # Try ENA first (pre-compressed .fastq.gz)
@@ -121,14 +121,14 @@ rule get_fastq_pe:
 
 rule get_fastq_se:
     output:
-        fastq0 = temp("results/{data_type}/fastq/raw__{sample_name}__R0.fastq.gz")
+        fastq0 = temp(f"{RESULTS_DIR}/{{data_type}}/fastq/raw__{{sample_name}}__R0.fastq.gz")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         fastq_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         trimmed_fastqs = config['trimmed_fastqs'],
-        exist_fastq0 = lambda wildcards: f"results/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz",
+        exist_fastq0 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz",
         ena_script = os.path.join(REPO_FOLDER, "workflow", "scripts", "ena_download.sh")
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
@@ -147,7 +147,7 @@ rule get_fastq_se:
             cp {params.exist_fastq0} {output.fastq0}
         elif [[ "{params.fastq_path}" == "SRA" ]]; then
             numbers=$(echo "{params.seq_id}" | sed 's/,/ /g')
-            outdir="results/{params.data_type}/fastq"
+            outdir="{config[output_dir]}/{params.data_type}/fastq"
             ena_ok=true
 
             # Try ENA first (pre-compressed .fastq.gz)
@@ -204,9 +204,9 @@ rule get_fastq_se:
 
 rule run_fastqc:
     input:
-        fastq = "results/{data_type}/fastq/{step}__{sample_name}__{read}.fastq.gz"
+        fastq = f"{RESULTS_DIR}/{{data_type}}/fastq/{{step}}__{{sample_name}}__{{read}}.fastq.gz"
     output:
-        fastqc = "results/{data_type}/reports/{step}__{sample_name}__{read}_fastqc.html"
+        fastqc = f"{RESULTS_DIR}/{{data_type}}/reports/{{step}}__{{sample_name}}__{{read}}_fastqc.html"
     params:
         data_type = lambda wildcards: wildcards.data_type,
         step = lambda wildcards: wildcards.step,
@@ -220,18 +220,18 @@ rule run_fastqc:
         qos=config["resources"]["run_fastqc"]["qos"]
     shell:
         """
-        fastqc -o "results/{params.data_type}/reports/" "{input.fastq}"
+        fastqc -o "{config[output_dir]}/{params.data_type}/reports/" "{input.fastq}"
         """
 
 rule process_fastq_pe:
     input:
-        raw_fastq1 = "results/{data_type}/fastq/raw__{sample_name}__R1.fastq.gz",
-        raw_fastq2 = "results/{data_type}/fastq/raw__{sample_name}__R2.fastq.gz"
+        raw_fastq1 = f"{RESULTS_DIR}/{{data_type}}/fastq/raw__{{sample_name}}__R1.fastq.gz",
+        raw_fastq2 = f"{RESULTS_DIR}/{{data_type}}/fastq/raw__{{sample_name}}__R2.fastq.gz"
     output:
-        fastq1 = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R1.fastq.gz", config.get('keep_trimmed_fastqs', False)),
-        fastq2 = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R2.fastq.gz", config.get('keep_trimmed_fastqs', False)),
-        metrics = "results/{data_type}/reports/trim_pe__{sample_name}.json",
-        html_report = "results/{data_type}/reports/trim_pe__{sample_name}.html"
+        fastq1 = maybe_temp(f"{RESULTS_DIR}/{{data_type}}/fastq/trim__{{sample_name}}__R1.fastq.gz", config.get('keep_trimmed_fastqs', False)),
+        fastq2 = maybe_temp(f"{RESULTS_DIR}/{{data_type}}/fastq/trim__{{sample_name}}__R2.fastq.gz", config.get('keep_trimmed_fastqs', False)),
+        metrics = f"{RESULTS_DIR}/{{data_type}}/reports/trim_pe__{{sample_name}}.json",
+        html_report = f"{RESULTS_DIR}/{{data_type}}/reports/trim_pe__{{sample_name}}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
@@ -281,11 +281,11 @@ rule process_fastq_pe:
         
 rule process_fastq_se:
     input:
-        raw_fastq = "results/{data_type}/fastq/raw__{sample_name}__R0.fastq.gz"
+        raw_fastq = f"{RESULTS_DIR}/{{data_type}}/fastq/raw__{{sample_name}}__R0.fastq.gz"
     output:
-        fastq = maybe_temp("results/{data_type}/fastq/trim__{sample_name}__R0.fastq.gz", config.get('keep_trimmed_fastqs', False)),
-        metrics = "results/{data_type}/reports/trim_se__{sample_name}.json",
-        html_report = "results/{data_type}/reports/trim_se__{sample_name}.html"
+        fastq = maybe_temp(f"{RESULTS_DIR}/{{data_type}}/fastq/trim__{{sample_name}}__R0.fastq.gz", config.get('keep_trimmed_fastqs', False)),
+        metrics = f"{RESULTS_DIR}/{{data_type}}/reports/trim_se__{{sample_name}}.json",
+        html_report = f"{RESULTS_DIR}/{{data_type}}/reports/trim_se__{{sample_name}}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
@@ -331,14 +331,14 @@ rule process_fastq_se:
 
 rule get_available_bam:
     output: 
-        bam = temp("results/{data_type}/mapped/copied__{sample_name}.bam")
+        bam = temp(f"{RESULTS_DIR}/{{data_type}}/mapped/copied__{{sample_name}}.bam")
     params:
         seq_id = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "seq_id"),
         bam_path = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, "fastq_path"),
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         aligned_bams = config['aligned_bams'],
-        exist_bam = lambda wildcards: f"results/{wildcards.data_type}/mapped/final__{wildcards.sample_name}.bam"
+        exist_bam = lambda wildcards: f"{RESULTS_DIR}/{wildcards.data_type}/mapped/final__{wildcards.sample_name}.bam"
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "copy_bam", "either"))
     conda: CONDA_ENV

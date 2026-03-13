@@ -69,6 +69,14 @@ configfile: "config/epicc-options.yaml"
 analysis = config['full_analysis']
 
 # ---------------------------------------------------------------------------
+# Configurable output directories
+# ---------------------------------------------------------------------------
+config.setdefault("output_dir", "results")
+config.setdefault("genome_dir", "genomes")
+RESULTS_DIR = config["output_dir"]
+GENOMES_DIR = config["genome_dir"]
+
+# ---------------------------------------------------------------------------
 # Genome config namespace migration
 # ---------------------------------------------------------------------------
 # New format: genomes are under config["genomes"]. Old format had bare top-level
@@ -222,15 +230,15 @@ def all_map_only_input(wildcards):
     map_files = []
     chkpt_files = []
     
-    map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA", "mC"]])
+    map_files += expand(f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA", "mC"]])
     if not config["aligned_bams"]:
-        map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP", "ATAC"]])
-    map_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
+        map_files += expand(f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP", "ATAC"]])
+    map_files += expand(f"{RESULTS_DIR}/combined/plots/srna_sizes_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
     
     for _, row in samples.iterrows():
         sname = row['sample_name']
         env = row['env']
-        chkpt_files.append(f"results/{env}/chkpts/map_{env}__{sname}.done")
+        chkpt_files.append(f"{RESULTS_DIR}/{env}/chkpts/map_{env}__{sname}.done")
     
     return map_files + chkpt_files
         
@@ -247,7 +255,7 @@ include: "rules/combined_analysis.smk"
 # Rule all to specify final target
 rule all:
     input:
-	    expand(f"results/combined/chkpts/final_analysis__{analysis_name}.done", analysis_name = analysis_name)
+	    expand(f"{RESULTS_DIR}/combined/chkpts/final_analysis__{analysis_name}.done", analysis_name = analysis_name)
     localrule: True
 
 ### Intermediate target rules
@@ -261,7 +269,7 @@ rule map_only:
 rule coverage_chip:
     input: 
         [
-            f"results/ChIP/tracks/coverage__{sample_name}.bw"
+            f"{RESULTS_DIR}/ChIP/tracks/coverage__{sample_name}.bw"
             for sample_name in get_sample_names_by_env("ChIP", samples)
         ]
     localrule: True
@@ -269,14 +277,14 @@ rule coverage_chip:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        expand("results/combined/chkpts/combined_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES),
-        expand("results/ChIP/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
-        expand("results/RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
-        expand("results/mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
-        expand("results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
-        expand("results/ATAC/chkpts/ATAC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ATAC" in UNIQUE_ENVS else [])
+        expand(f"{RESULTS_DIR}/combined/chkpts/combined_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES),
+        expand(f"{RESULTS_DIR}/ChIP/chkpts/ChIP_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/RNA/chkpts/RNA_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/mC/chkpts/mC_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/sRNA/chkpts/sRNA_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/ATAC/chkpts/ATAC_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ATAC" in UNIQUE_ENVS else [])
     output:
-        chkpt = f"results/combined/chkpts/final_analysis__{analysis_name}.done"
+        chkpt = f"{RESULTS_DIR}/combined/chkpts/final_analysis__{analysis_name}.done"
     localrule: True
     shell:
         """

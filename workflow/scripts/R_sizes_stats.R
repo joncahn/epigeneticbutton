@@ -10,6 +10,8 @@ statfile<-args[1]
 analysisname<-args[2]
 zoommin<-args[3]
 zoommax<-args[4]
+outfile_full<-args[5]
+outfile_zoom<-args[6]
 
 summary_stats<-read.delim(statfile, header = TRUE)
 summary_stats$Count<-as.numeric(summary_stats$Count)
@@ -74,10 +76,10 @@ plot.sRNA.sizes<-function(stattable, sizemin, sizemax) {
 	plot
 }  
 
-pdf(paste0("results/combined/plots/srna_sizes_stats_",analysisname,"_sRNA.pdf"), height=tot*2, width=12)
+pdf(outfile_full, height=tot*2, width=12)
 plot.sRNA.sizes(summary_stats, minsize, maxsize)
 dev.off()
 
-pdf(paste0("results/combined/plots/srna_sizes_stats_zoom_",analysisname,"_sRNA.pdf"), height=tot*2, width=12)
+pdf(outfile_zoom, height=tot*2, width=12)
 plot.sRNA.sizes(summary_stats, zoommin, zoommax)
 dev.off()

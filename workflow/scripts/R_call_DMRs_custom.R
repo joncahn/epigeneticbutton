@@ -12,8 +12,9 @@ sample1<-args[4]
 sample2<-args[5]
 nb_sample1<-as.numeric(args[6])
 nb_sample2<-as.numeric(args[7])
-list_sample1<-args[8:(7+nb_sample1)]
-list_sample2<-args[(8+nb_sample1):(7+nb_sample1+nb_sample2)]
+output_dir<-args[8]
+list_sample1<-args[9:(8+nb_sample1)]
+list_sample2<-args[(9+nb_sample1):(8+nb_sample1+nb_sample2)]
 
 chrs<-GRanges(seqnames = chromsizes$chr, ranges = IRanges(start = 1, end = chromsizes$length))
 
@@ -31,7 +32,7 @@ for ( meth in c("noise_filter", "bins")) {
 			CGpool<-data.frame(Chr=seqnames(DMRsCGpool),Start=start(DMRsCGpool)-1,End=end(DMRsCGpool),firstsample=mcols(DMRsCGpool)$proportion1,secondsample=mcols(DMRsCGpool)$proportion2, Pvalue=mcols(DMRsCGpool)$pValue) %>%
 				mutate(Delta=firstsample-secondsample)
 
-			write.table(CGpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CG_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+			write.table(CGpool,paste0(output_dir,"/mC/DMRs/",sample1,"__vs__",sample2,"__CG_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 			summary_file<-mutate(CGpool, Type=ifelse(Delta>0, "hyper", "hypo"), Method=meth, Binsize=bs) %>%
 					group_by(Type, Method, Binsize) %>%
@@ -46,7 +47,7 @@ for ( meth in c("noise_filter", "bins")) {
 			if ( length(DMRsCHGpool) > 0 ) {
 				CHGpool<-data.frame(Chr=seqnames(DMRsCHGpool),Start=start(DMRsCHGpool)-1,End=end(DMRsCHGpool),firstsample=mcols(DMRsCHGpool)$proportion1,secondsample=mcols(DMRsCHGpool)$proportion2, Pvalue=mcols(DMRsCHGpool)$pValue) %>%
 				mutate(Delta=firstsample-secondsample)
-				write.table(CHGpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHG_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+				write.table(CHGpool,paste0(output_dir,"/mC/DMRs/",sample1,"__vs__",sample2,"__CHG_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 		
 				summary_fileCHG<-mutate(CHGpool, Type=ifelse(Delta>0, "hyper", "hypo"), Method=meth, Binsize=bs) %>%
 					group_by(Type, Method, Binsize) %>%
@@ -59,7 +60,7 @@ for ( meth in c("noise_filter", "bins")) {
 			if ( length(DMRsCHHpool) > 0 ) {
 				CHHpool<-data.frame(Chr=seqnames(DMRsCHHpool),Start=start(DMRsCHHpool)-1,End=end(DMRsCHHpool),firstsample=mcols(DMRsCHHpool)$proportion1,secondsample=mcols(DMRsCHHpool)$proportion2, Pvalue=mcols(DMRsCHHpool)$pValue) %>%
 				mutate(Delta=firstsample-secondsample)
-				write.table(CHHpool,paste0("results/mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+				write.table(CHHpool,paste0(output_dir,"/mC/DMRs/",sample1,"__vs__",sample2,"__CHH_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	
 				summary_fileCHH<-mutate(CHHpool, Type=ifelse(Delta>0, "hyper", "hypo"), Method=meth, Binsize=bs) %>%
 					group_by(Type, Method, Binsize) %>%
@@ -76,4 +77,4 @@ for ( meth in c("noise_filter", "bins")) {
 }
 
 tot_file<-mutate(tot_file, Sample=paste0(sample1,"_vs_",sample2)) %>% select(Sample, everything())
-write.table(tot_file,paste0("results/mC/DMRs/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(tot_file,paste0(output_dir,"/mC/DMRs/summary__",sample1,"__vs__",sample2,"__DMRs.txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)

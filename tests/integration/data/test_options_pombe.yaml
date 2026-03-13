@@ -6,6 +6,10 @@ repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_pombe"
 sample_file: "tests/integration/data/test_samples_pombe.tsv"
 
+# Output directories
+output_dir: "results_test_pombe"
+genome_dir: "genomes_test_pombe"
+
 # Analysis options
 full_analysis: true
 te_analysis: false

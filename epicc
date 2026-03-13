@@ -114,7 +114,12 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
         if not Path(args.samples).exists():
             sys.exit(f"Error: Sample file not found: {args.samples}")
         config_overrides.append(f"sample_file={args.samples}")
-    if hasattr(args, 'keep_intermediates') and args.keep_intermediates:
+    # Common options (always present via add_common_options)
+    if args.output_dir:
+        config_overrides.append(f"output_dir={args.output_dir}")
+    if args.genome_dir:
+        config_overrides.append(f"genome_dir={args.genome_dir}")
+    if args.keep_intermediates:
         config_overrides.append(f"keep_intermediates={args.keep_intermediates}")
     if config_overrides:
         cmd += ["--config"] + config_overrides
@@ -153,10 +158,9 @@ def cmd_run(args, extra_args):
     repo = find_repo_root()
     os.chdir(repo)
 
-    cmd = build_snakemake_cmd(args, extra_args)
     profile, cores = detect_execution_mode(args)
-
     mode_desc = f"profile {profile}" if profile else f"{cores} local cores"
+    cmd = build_snakemake_cmd(args, extra_args)
     print(f"EPICC: Starting pipeline ({mode_desc})", file=sys.stderr)
     if args.verbose:
         print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
@@ -358,7 +362,8 @@ def cmd_clean(args, extra_args):
 
     if args.intermediates or args.all:
         # Delete checkpoint files to force reanalysis
-        chkpt_dirs = list(repo.glob("results/*/chkpts"))
+        output_dir = args.output_dir or "results"
+        chkpt_dirs = list(repo.glob(f"{output_dir}/*/chkpts"))
         if chkpt_dirs:
             print(f"Removing checkpoint files from {len(chkpt_dirs)} "
                   f"environment(s)...", file=sys.stderr)
@@ -395,6 +400,14 @@ def add_common_options(parser):
         "--profile", metavar="DIR",
         help=f"Snakemake profile directory (default: auto-detect; "
              f"uses {DEFAULT_PROFILE} if sbatch is available)",
+    )
+    parser.add_argument(
+        "--output-dir", metavar="DIR",
+        help="Output directory prefix (default: results)",
+    )
+    parser.add_argument(
+        "--genome-dir", metavar="DIR",
+        help="Genome directory prefix (default: genomes)",
     )
     parser.add_argument(
         "--keep-intermediates", metavar="TIER",
@@ -498,6 +511,10 @@ def build_parser():
         "clean", help="Clean pipeline artifacts",
         description="Selectively remove pipeline artifacts like old logs, "
                     "unused conda environments, and checkpoint files.",
+    )
+    p_clean.add_argument(
+        "--output-dir", metavar="DIR",
+        help="Output directory to clean (default: results)",
     )
     p_clean.add_argument(
         "--intermediates", action="store_true",

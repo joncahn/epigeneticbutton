@@ -297,6 +297,14 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 **Alternatives considered**: (1) Bash wrapper script. Rejected due to poor YAML support, verbose argument parsing, and divergence from the Python codebase. (2) Click instead of argparse. Rejected as an unnecessary dependency — argparse is in the standard library and sufficient for this use case. (3) `--smk` flag for snakemake passthrough. Rejected in favor of the standard POSIX `--` separator, which is more intuitive and doesn't require a custom flag.
 
+### Configurable output directories via dual-context path replacement
+
+**Decision**: Hardcoded `results/` and `genomes/` path prefixes were replaced across all 9 pipeline files (827 lines) using two different patterns depending on context. In Python context (input/output directives, expand calls, params lambdas), a `RESULTS_DIR`/`GENOMES_DIR` variable derived from `config["output_dir"]`/`config["genome_dir"]` is used with f-string wrapping. In shell blocks (triple-quoted `shell: """..."""`), Snakemake's native `{config[output_dir]}`/`{config[genome_dir]}` substitution is used. Defaults are `"results"` and `"genomes"` for full backward compatibility.
+
+**Rationale**: Shell blocks in Snakemake are not Python code — they are template strings where `{...}` patterns are substituted by Snakemake at runtime. Converting shell blocks to Python f-strings (prefixing with `f` and doubling all existing `{wildcards.x}`, `{params.x}`, `{input}`, `{output}`, etc.) would require hundreds of additional changes and make shell blocks harder to read. The `{config[key]}` syntax is natively supported in Snakemake shell blocks alongside other substitutions, providing a clean solution with no extra infrastructure (no `params:` injection needed).
+
+**Alternatives considered**: (1) Symlinks (`results/` → target directory). Rejected: fragile, breaks on move, doesn't support concurrent runs with different output directories. (2) `workdir:` directive. Rejected: changes CWD for all rules, breaks relative paths in config. (3) Passing directory via `params:` in each rule. Rejected: would require adding `results_dir=RESULTS_DIR` to params in every rule with a shell block — more invasive and error-prone than `{config[key]}`. (4) Converting shell blocks to f-strings. Rejected: requires doubling all existing `{...}` patterns in shell blocks, hurting readability for minimal benefit.
+
 ### Execution mode auto-detection
 
 **Decision**: When neither `--profile` nor `--cores` is specified, the wrapper auto-detects SLURM by checking for `sbatch` in PATH. If found, it uses `profiles/slurm`; otherwise it runs locally with half of `nproc` cores.

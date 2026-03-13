@@ -36,31 +36,33 @@ ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(ge
   select(-Name, -Value)
 ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.$")
 
+output_dir<-args[6]
+
 # EdgeR analysis
 
 y<-DGEList(counts=filtered, group = samples)
 y<-calcNormFactors(y)
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d12.pdf"),10,8)
+pdf(paste0(output_dir,"/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d12.pdf"),10,8)
 plotMDS(y, col=color_samples, pch=16)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d12_labs.pdf"),10,8)
+pdf(paste0(output_dir,"/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d12_labs.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=reps)
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d23.pdf"),10,8)
+pdf(paste0(output_dir,"/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d23.pdf"),10,8)
 plotMDS(y, col=color_samples, pch=16, dim.plot=c(2,3))
 dev.off()
 
-pdf(paste0("results/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d23_labs.pdf"),10,8)
+pdf(paste0(output_dir,"/combined/plots/MDS_RNAseq_",analysisname,"_",refgenome,"_d23_labs.pdf"),10,8)
 plotMDS(y, col=color_samples, labels=reps, dim.plot=c(2,3))
 dev.off()
 
 y<-estimateCommonDisp(y, verbose = TRUE)
 y<-estimateTagwiseDisp(y)
 
-pdf(paste0("results/combined/plots/BCV_RNAseq_",analysisname,"_",refgenome,".pdf"),10,8)
+pdf(paste0(output_dir,"/combined/plots/BCV_RNAseq_",analysisname,"_",refgenome,".pdf"),10,8)
 plotBCV(y)
 dev.off()
 
@@ -97,12 +99,12 @@ for (i in 1:(length(genotypes)-1)) {
 	FCtable<-merge(ref_genes,FCtable,by=c("GID")) %>%
 		select(Chr,Start,Stop,GID,logFC,Strand,logCPM,PValue,FDR,Sample) %>%
 		arrange(Chr,Start)
-	write.table(FCtable,paste0("results/RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(FCtable,paste0(output_dir,"/RNA/DEG/FC_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	DEGtable<-create.DEG.table(sample1,sample2,y)
 	DEGtable<-merge(ref_genes,DEGtable,by=c("GID")) %>%
 		select(Chr,Start,Stop,GID,logFC,Strand,logCPM,PValue,FDR,Sample,DEG) %>%
 		arrange(DEG,Chr,Start)
-	write.table(DEGtable,paste0("results/RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+	write.table(DEGtable,paste0(output_dir,"/RNA/DEG/DEG_",analysisname,"__",refgenome,"__",sample1,"_vs_",sample2,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 	temptable<-mutate(DEGtable, firstsample = sample1, secondsample = sample2) %>%
 				select(GID, DEG, firstsample, secondsample)
 	allDEG<-rbind(allDEG,temptable)
@@ -141,7 +143,7 @@ uniqueDOWN<-unique(uniqueDOWN) %>%
 uniqueDEGs<-rbind(uniqueUP, uniqueDOWN) %>%
 			arrange(Sample)
 
-write.table(uniqueDEGs,paste0("results/RNA/DEG/unique_DEGs__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(uniqueDEGs,paste0(output_dir,"/RNA/DEG/unique_DEGs__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 #### To create a summary table of number of DEGs
 
@@ -158,7 +160,7 @@ for (sample1 in genotypes) {
 	stat_table<-rbind(stat_table, nunique)
 }
 
-write.table(stat_table,paste0("results/RNA/DEG/summary_DEG_stats__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(stat_table,paste0(output_dir,"/RNA/DEG/summary_DEG_stats__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
 
 #### To create heatmaps over all DEGs (by count per million and z-score)
 
@@ -168,14 +170,14 @@ if (length(keepDEG) >= 2) {
 	logcounts<-cpm(y, log=TRUE)
 	lcpm<-logcounts[keepDEG,]
 
-	pdf(paste0("results/combined/plots/Heatmap_RNAseq_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
+	pdf(paste0(output_dir,"/combined/plots/Heatmap_RNAseq_cpm__",analysisname,"__",refgenome,".pdf"),10,15)
 	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
 			main=paste0("Differentially expressed genes in ",refgenome," from ",analysisname),
 			margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45,
 			lwid=c(1,5),lhei=c(0.5,5,0.1), key.title = "", key.xlab = "log(cpm)")
 	dev.off()
 
-	pdf(paste0("results/combined/plots/Heatmap_RNAseq_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
+	pdf(paste0(output_dir,"/combined/plots/Heatmap_RNAseq_zscore__",analysisname,"__",refgenome,".pdf"),10,15)
 	heatmap.2(lcpm,trace="none",ColSideColors = color_samples,
 			main=paste0("Differentially expressed genes in ",refgenome," from ",analysisname),
 			margins=c(12,2),cexCol=1, labRow = "", col="bluered", srtCol=45, scale="row",
@@ -225,5 +227,5 @@ plot.Expression <- function(gene, label) {
 	plot  
 }
 
-save(plot.Expression,genextable,targets,uniqueDEGs, file = paste0("results/RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))
+save(plot.Expression,genextable,targets,uniqueDEGs, file = paste0(output_dir,"/RNA/DEG/ReadyToPlot__",analysisname,"__",refgenome,".RData"))
 

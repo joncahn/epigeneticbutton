@@ -14,7 +14,7 @@ else:
 ruleorder: make_mc_stats_dmc > make_mc_stats_se
 
 def return_log_mc(sample_name, step, paired):
-    return os.path.join(REPO_FOLDER,"results","mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
+    return os.path.join(REPO_FOLDER, RESULTS_DIR,"mC","logs",f"tmp__{sample_name}__{step}__{paired}.log")
 
 def parameters_for_mc(sample_name):
     assay = get_sample_info_from_name(sample_name, samples, 'Assay')
@@ -29,20 +29,20 @@ def define_cx_report_input(wildcards):
     """Get CX_report path for a sample (used by bigwig generation and replicate merging).
 
     Routes to appropriate path based on sample_type:
-    - Bismark samples: results/mC/methylcall/...deduplicated.CX_report.txt.gz
-    - dmC (direct methylation): results/mC/dmc/cx_report__...CX_report.txt.gz
-    - Merged replicates: results/mC/methylcall/...merged.CX_report.txt.gz
+    - Bismark samples: {config[output_dir]}/mC/methylcall/...deduplicated.CX_report.txt.gz
+    - dmC (direct methylation): {config[output_dir]}/mC/dmc/cx_report__...CX_report.txt.gz
+    - Merged replicates: {config[output_dir]}/mC/methylcall/...merged.CX_report.txt.gz
     """
     sname = wildcards.sample_name
     parsed = parse_sample_name(sname)
     if parsed['replicate'] == "merged":
-        return f"results/mC/methylcall/{sname}.merged.CX_report.txt.gz"
+        return f"{RESULTS_DIR}/mC/methylcall/{sname}.merged.CX_report.txt.gz"
     elif is_dmc_sample(sname):
         # dmC samples: use converted CX_report from bedMethyl
-        return f"results/mC/dmc/cx_report__{sname}.CX_report.txt.gz"
+        return f"{RESULTS_DIR}/mC/dmc/cx_report__{sname}.CX_report.txt.gz"
     else:
         # Bismark samples: use deduplicated CX_report
-        return f"results/mC/methylcall/{sname}.deduplicated.CX_report.txt.gz"
+        return f"{RESULTS_DIR}/mC/methylcall/{sname}.deduplicated.CX_report.txt.gz"
 
 def define_DMR_samples(sample_name):
     """Get CX_report files for DMR analysis.
@@ -58,9 +58,9 @@ def define_DMR_samples(sample_name):
     result = []
     for sid in rep_sids:
         if is_dmc_sample(sid):
-            result.append(f"results/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
+            result.append(f"{RESULTS_DIR}/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
         else:
-            result.append(f"results/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
+            result.append(f"{RESULTS_DIR}/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
     return result
 
 def script_DMRs():
@@ -88,30 +88,30 @@ def define_final_mC_output(ref_genome):
 
         # dmC samples use direct methylation workflow
         if assay == "dmC":
-            bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
-            ont_files.append(f"results/mC/dmc/summary__{sname}.txt")  # modkit summary
+            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{sname}.done")
+            ont_files.append(f"{RESULTS_DIR}/mC/dmc/summary__{sname}.txt")  # modkit summary
         else:
             # Bismark workflow
-            bigwig_files.append(f"results/mC/chkpts/bigwig__{sname}.done")
+            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{sname}.done")
             if paired == "PE":
-                map_files.append(f"results/mC/reports/final_report_pe__{sname}.html")
-                qc_files.append(f"results/mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
-                qc_files.append(f"results/mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
+                map_files.append(f"{RESULTS_DIR}/mC/reports/final_report_pe__{sname}.html")
+                qc_files.append(f"{RESULTS_DIR}/mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
+                qc_files.append(f"{RESULTS_DIR}/mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
                 if not trimmed_fastqs:
-                    qc_files.append(f"results/mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
-                    qc_files.append(f"results/mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
+                    qc_files.append(f"{RESULTS_DIR}/mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
+                    qc_files.append(f"{RESULTS_DIR}/mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             else:
-                map_files.append(f"results/mC/reports/final_report_se__{sname}.html")
-                qc_files.append(f"results/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
+                map_files.append(f"{RESULTS_DIR}/mC/reports/final_report_se__{sname}.html")
+                qc_files.append(f"{RESULTS_DIR}/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
                 if not trimmed_fastqs:
-                    qc_files.append(f"results/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
+                    qc_files.append(f"{RESULTS_DIR}/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
 
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
         aname = row['sample_name']
         rep_sids = get_replicate_sample_ids(aname, samples)
         if len(rep_sids) >= 2:
-            bigwig_files.append(f"results/mC/chkpts/bigwig__{aname}.done") # merged bigwig files
+            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{aname}.done") # merged bigwig files
 
     # DMR analysis: all sample types use DMRcaller via unified CX_report format
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
@@ -119,7 +119,7 @@ def define_final_mC_output(ref_genome):
         b_dict = b._asdict()
         sample1 = a_dict['sample_name']
         sample2 = b_dict['sample_name']
-        dmr_files.append(f"results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
+        dmr_files.append(f"{RESULTS_DIR}/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt")
 
     results = map_files + bigwig_files + ont_files
 
@@ -133,13 +133,13 @@ def define_final_mC_output(ref_genome):
 
 rule make_bismark_indices:
     input:
-        fasta = "genomes/{ref_genome}/{ref_genome}.fa"
+        fasta = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}.fa"
     output:
-        indices = directory("genomes/{ref_genome}/Bisulfite_Genome")
+        indices = directory(f"{GENOMES_DIR}/{{ref_genome}}/Bisulfite_Genome")
     params:
         limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
-        temp(os.path.join(REPO_FOLDER,"results","logs","bismark_index_{ref_genome}.log"))
+        temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","bismark_index_{ref_genome}.log"))
     conda: CONDA_ENV_MC
     threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
@@ -151,32 +151,32 @@ rule make_bismark_indices:
         {{
         printf "\nBuilding bismark index directory for {wildcards.ref_genome}\n"
         if [[ {params.limthreads} -gt 1 ]]; then
-            bismark_genome_preparation --parallel {params.limthreads} --bowtie2 --genomic_composition genomes/{wildcards.ref_genome}
+            bismark_genome_preparation --parallel {params.limthreads} --bowtie2 --genomic_composition {config[genome_dir]}/{wildcards.ref_genome}
         else
-            bismark_genome_preparation --bowtie2 --genomic_composition genomes/{wildcards.ref_genome}
+            bismark_genome_preparation --bowtie2 --genomic_composition {config[genome_dir]}/{wildcards.ref_genome}
         fi
         }} 2>&1 | tee -a "{log}"
         """
 
 rule bismark_map_pe:
     input:
-        fastq1 = "results/mC/fastq/trim__{sample_name}__R1.fastq.gz",
-        fastq2 = "results/mC/fastq/trim__{sample_name}__R2.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
+        fastq1 = f"{RESULTS_DIR}/mC/fastq/trim__{{sample_name}}__R1.fastq.gz",
+        fastq2 = f"{RESULTS_DIR}/mC/fastq/trim__{{sample_name}}__R2.fastq.gz",
+        indices = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
-        temp_bamfile = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_pe.bam"),
-        bamfile = maybe_temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplicated.bam", config.get('keep_final_bams', True)),
-        cx_report = maybe_temp("results/mC/mapped/PE__{sample_name}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
-        metrics_alignement = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt"),
-        metrics_dedup = temp("results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt")
+        temp_bamfile = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_pe.bam"),
+        bamfile = maybe_temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplicated.bam", config.get('keep_final_bams', True)),
+        cx_report = maybe_temp(f"{RESULTS_DIR}/mC/mapped/PE__{{sample_name}}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
+        metrics_alignement = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_PE_report.txt"),
+        metrics_dedup = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplication_report.txt")
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
+        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER, GENOMES_DIR,parse_sample_name(wildcards.sample_name)['ref_genome']),
         mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_pe'],
         process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_pe'],
-        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
+        prefix = lambda wildcards: f"{RESULTS_DIR}/mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
@@ -201,31 +201,31 @@ rule bismark_map_pe:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -p --comprehensive -o results/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f results/mC/mapped/C*context_PE__{params.sample_name}*
-        rm -f results/mC/mapped/PE__{params.sample_name}*bismark.cov*
-        rm -f results/mC/mapped/PE__{params.sample_name}*bedGraph*
+        bismark_methylation_extractor -p --comprehensive -o {config[output_dir]}/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
+        rm -f {config[output_dir]}/mC/mapped/C*context_PE__{params.sample_name}*
+        rm -f {config[output_dir]}/mC/mapped/PE__{params.sample_name}*bismark.cov*
+        rm -f {config[output_dir]}/mC/mapped/PE__{params.sample_name}*bedGraph*
         }} 2>&1 | tee -a "{log}"
         """
 
 rule bismark_map_se:
     input:
-        fastq0 = "results/mC/fastq/trim__{sample_name}__R0.fastq.gz",
-        indices = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
+        fastq0 = f"{RESULTS_DIR}/mC/fastq/trim__{{sample_name}}__R0.fastq.gz",
+        indices = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
-        temp_bamfile = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2.bam"),
-        bamfile = maybe_temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplicated.bam", config.get('keep_final_bams', True)),
-        cx_report = maybe_temp("results/mC/mapped/SE__{sample_name}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
-        metrics_map = temp("results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt"),
-        metrics_dedup = temp("results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt")
+        temp_bamfile = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2.bam"),
+        bamfile = maybe_temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplicated.bam", config.get('keep_final_bams', True)),
+        cx_report = maybe_temp(f"{RESULTS_DIR}/mC/mapped/SE__{{sample_name}}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
+        metrics_map = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2_SE_report.txt"),
+        metrics_dedup = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplication_report.txt")
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER,"genomes",parse_sample_name(wildcards.sample_name)['ref_genome']),
+        ref_genome_path = lambda wildcards: os.path.join(REPO_FOLDER, GENOMES_DIR,parse_sample_name(wildcards.sample_name)['ref_genome']),
         mapping = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['map_se'],
         process = lambda wildcards: config["mC_mapping"][parameters_for_mc(wildcards.sample_name)]['process_se'],
-        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
+        prefix = lambda wildcards: f"{RESULTS_DIR}/mC/mapped/{wildcards.sample_name}",
         limthreads = lambda wildcards, threads: max(1, threads // 2)
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
@@ -250,10 +250,10 @@ rule bismark_map_se:
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix} -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
         printf "\nCalling mC for {params.sample_name}"
-        bismark_methylation_extractor -s --comprehensive -o results/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
-        rm -f results/mC/mapped/C*context_SE__{params.sample_name}*
-        rm -f results/mC/mapped/SE__{params.sample_name}*bismark.cov*
-        rm -f results/mC/mapped/SE__{params.sample_name}*bedGraph*
+        bismark_methylation_extractor -s --comprehensive -o {config[output_dir]}/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
+        rm -f {config[output_dir]}/mC/mapped/C*context_SE__{params.sample_name}*
+        rm -f {config[output_dir]}/mC/mapped/SE__{params.sample_name}*bismark.cov*
+        rm -f {config[output_dir]}/mC/mapped/SE__{params.sample_name}*bedGraph*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -261,8 +261,8 @@ rule pe_or_se_mc_dispatch:
     input:
         lambda wildcards: assign_mapping_paired(wildcards, "bismark_map", "cx_report")
     output:
-        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        touch = "results/mC/chkpts/map_mC__{sample_name}.done"
+        cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",
+        touch = f"{RESULTS_DIR}/mC/chkpts/map_mC__{{sample_name}}.done"
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     localrule: True
@@ -274,16 +274,16 @@ rule pe_or_se_mc_dispatch:
 
 rule make_mc_stats_pe:
     input:
-        metrics_trim = "results/mC/reports/trim_pe__{sample_name}.json",
-        metrics_map = "results/mC/mapped/{sample_name}/trim__{sample_name}__R1_bismark_bt2_PE_report.txt",
-        metrics_dedup = "results/mC/mapped/{sample_name}/PE__{sample_name}.deduplication_report.txt",
-        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        metrics_trim = f"{RESULTS_DIR}/mC/reports/trim_pe__{{sample_name}}.json",
+        metrics_map = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_PE_report.txt",
+        metrics_dedup = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplication_report.txt",
+        cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     output:
-        stat_file = "results/mC/reports/summary_mC_PE_mapping_stats_{sample_name}.txt",
-        reportfile = "results/mC/reports/final_report_pe__{sample_name}.html"
+        stat_file = f"{RESULTS_DIR}/mC/reports/summary_mC_PE_mapping_stats_{{sample_name}}.txt",
+        reportfile = f"{RESULTS_DIR}/mC/reports/final_report_pe__{{sample_name}}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -291,7 +291,7 @@ rule make_mc_stats_pe:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
+        prefix = lambda wildcards: f"{RESULTS_DIR}/mC/mapped/{wildcards.sample_name}",
         trimmed_fastq = config['trimmed_fastqs']
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "PE"))
@@ -319,23 +319,23 @@ rule make_mc_stats_pe:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir results/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report results/mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report results/mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
-        cp results/mC/mapped/PE__"{params.sample_name}"*.txt results/mC/reports/
-        cp {params.prefix}/trim__"{params.sample_name}"*.txt results/mC/reports/
+        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {config[output_dir]}/mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report {config[output_dir]}/mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
+        cp {config[output_dir]}/mC/mapped/PE__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
+        cp {params.prefix}/trim__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
         """
 
 rule make_mc_stats_se:
     input:
-        metrics_trim = "results/mC/reports/trim_se__{sample_name}.json",
-        metrics_map = "results/mC/mapped/{sample_name}/trim__{sample_name}__R0_bismark_bt2_SE_report.txt",
-        metrics_dedup = "results/mC/mapped/{sample_name}/SE__{sample_name}.deduplication_report.txt",
-        cx_report = "results/mC/methylcall/{sample_name}.deduplicated.CX_report.txt.gz",
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        metrics_trim = f"{RESULTS_DIR}/mC/reports/trim_se__{{sample_name}}.json",
+        metrics_map = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2_SE_report.txt",
+        metrics_dedup = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplication_report.txt",
+        cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     output:
-        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt",
-        reportfile = "results/mC/reports/final_report_se__{sample_name}.html"
+        stat_file = f"{RESULTS_DIR}/mC/reports/summary_mC_SE_mapping_stats_{{sample_name}}.txt",
+        reportfile = f"{RESULTS_DIR}/mC/reports/final_report_se__{{sample_name}}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
@@ -343,7 +343,7 @@ rule make_mc_stats_se:
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"results/mC/mapped/{wildcards.sample_name}",
+        prefix = lambda wildcards: f"{RESULTS_DIR}/mC/mapped/{wildcards.sample_name}",
         trimmed_fastq = config['trimmed_fastqs']
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "SE"))
@@ -371,17 +371,17 @@ rule make_mc_stats_se:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_se__{params.sample_name}.html" --dir results/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report results/mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report results/mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
-        mv results/mC/mapped/SE__"{params.sample_name}"*.txt results/mC/reports/
-        mv {params.prefix}/trim__"{params.sample_name}"*.txt results/mC/reports/
+        bismark2report -o "final_report_se__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {config[output_dir]}/mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report {config[output_dir]}/mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
+        mv {config[output_dir]}/mC/mapped/SE__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
+        mv {params.prefix}/trim__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
         """
 
 def get_cx_reports_for_merging(wildcards):
     """Get CX_report paths for all replicates of a sample, for merging.
 
     Routes to appropriate paths based on sample_type:
-    - Bismark samples: results/mC/methylcall/...deduplicated.CX_report.txt.gz
-    - dmC (direct methylation): results/mC/dmc/cx_report__...CX_report.txt.gz
+    - Bismark samples: {config[output_dir]}/mC/methylcall/...deduplicated.CX_report.txt.gz
+    - dmC (direct methylation): {config[output_dir]}/mC/dmc/cx_report__...CX_report.txt.gz
     """
     aname = wildcards.sample_name
     rep_sids = get_replicate_sample_ids(aname, samples)
@@ -389,18 +389,18 @@ def get_cx_reports_for_merging(wildcards):
     result = []
     for sid in rep_sids:
         if is_dmc_sample(sid):
-            result.append(f"results/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
+            result.append(f"{RESULTS_DIR}/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
         else:
-            result.append(f"results/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
+            result.append(f"{RESULTS_DIR}/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
     return result
 
 rule merging_mc_replicates:
     input:
         report_files = get_cx_reports_for_merging
     output:
-        bedfile = temp("results/mC/methylcall/{sample_name}.bed"),
-        tempmergefile = temp("results/mC/methylcall/{sample_name}.merged.CX_report.txt"),
-        mergefile = temp("results/mC/methylcall/{sample_name}.merged.CX_report.txt.gz")
+        bedfile = temp(f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.bed"),
+        tempmergefile = temp(f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.merged.CX_report.txt"),
+        mergefile = temp(f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.merged.CX_report.txt.gz")
     params:
         sname = lambda wildcards: wildcards.sample_name
     log:
@@ -428,12 +428,12 @@ rule make_mc_bigwig_files:
     """
     input:
         cx_report = define_cx_report_input,
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        bigwigcg = "results/mC/tracks/{sample_name}__CG.bw",
-        bigwigchg = "results/mC/tracks/{sample_name}__CHG.bw",
-        bigwigchh = "results/mC/tracks/{sample_name}__CHH.bw",
-        touch = "results/mC/chkpts/bigwig__{sample_name}.done"
+        bigwigcg = f"{RESULTS_DIR}/mC/tracks/{{sample_name}}__CG.bw",
+        bigwigchg = f"{RESULTS_DIR}/mC/tracks/{{sample_name}}__CHG.bw",
+        bigwigchh = f"{RESULTS_DIR}/mC/tracks/{{sample_name}}__CHH.bw",
+        touch = f"{RESULTS_DIR}/mC/chkpts/bigwig__{{sample_name}}.done"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -454,76 +454,76 @@ rule make_mc_bigwig_files:
             # doesn't leave missing files when a context/strand has no data
             # (e.g. combined-strand dmC input has no minus-strand calls)
             for context in CG CHG CHH; do
-                > "results/mC/tracks/{params.sample_name}__${{context}}.bedGraph"
+                > "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bedGraph"
                 for strand in plus minus; do
-                    > "results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph"
+                    > "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph"
                 done
             done
-            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CG.bedGraph"}}'
+            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CG.bedGraph"}}'
             for strand in plus minus; do
                 case "${{strand}}" in
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 >> "results/mC/tracks/"s"__CG__"d".bedGraph"}}'
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CG__"d".bedGraph"}}'
             done
             for context in CG CHG CHH; do
                 printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                if [[ -s "results/mC/tracks/{params.sample_name}__${{context}}.bedGraph" ]]; then
-                    LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
-                    bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}.bw
+                if [[ -s "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bedGraph" ]]; then
+                    LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
+                    bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bw
                 else
                     printf "No data for ${{context}} context — creating empty bigwig\n"
                     chrom=$(head -1 {input.chrom_sizes} | cut -f1)
-                    printf "%s\t0\t1\t0\n" "$chrom" > results/mC/tracks/empty__{params.sample_name}__${{context}}.bg
-                    bedGraphToBigWig results/mC/tracks/empty__{params.sample_name}__${{context}}.bg {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}.bw
-                    rm -f results/mC/tracks/empty__{params.sample_name}__${{context}}.bg
+                    printf "%s\t0\t1\t0\n" "$chrom" > {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}.bg
+                    bedGraphToBigWig {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}.bg {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bw
+                    rm -f {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}.bg
                 fi
                 for strand in plus minus
                 do
                     printf "\nMaking ${{strand}} strand bigwig files of ${{context}} context for {params.sample_name}\n"
-                    if [[ -s "results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph" ]]; then
-                        LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
-                        bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
+                    if [[ -s "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph" ]]; then
+                        LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
+                        bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
                     else
                         printf "No data for ${{context}} ${{strand}} strand — creating empty bigwig\n"
                         chrom=$(head -1 {input.chrom_sizes} | cut -f1)
-                        printf "%s\t0\t1\t0\n" "$chrom" > results/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
-                        bedGraphToBigWig results/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg {input.chrom_sizes} results/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
-                        rm -f results/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
+                        printf "%s\t0\t1\t0\n" "$chrom" > {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
+                        bedGraphToBigWig {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
+                        rm -f {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
                     fi
                 done
             done
-            rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
+            rm -f {config[output_dir]}/mC/tracks/*"{params.sample_name}"*bedGraph*
         elif [[ "{params.context}" == "CG-only" ]]; then
-            zcat {input.cx_report} | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "results/mC/tracks/"{params.sample_name}"__CG.bedGraph"
+            zcat {input.cx_report} | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "{config[output_dir]}/mC/tracks/"{params.sample_name}"__CG.bedGraph"
             for strand in plus minus; do
                 case "${{strand}}" in
                     plus)	sign="+";;
                     minus)	sign="-";;
                 esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "results/mC/tracks/"{params.sample_name}"__CG__"${{strand}}".bedGraph"
+                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "{config[output_dir]}/mC/tracks/"{params.sample_name}"__CG__"${{strand}}".bedGraph"
             done
             printf "\nMaking bigwig files of CG context for {params.sample_name}\n"
-            LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__CG.bedGraph > results/mC/tracks/sorted__{params.sample_name}__CG.bedGraph
-            bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__CG.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG.bw
+            LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__CG.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG.bedGraph
+            bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__CG.bw
             for strand in plus minus
             do
                 printf "\nMaking ${{strand}} strand bigwig files of CG context for {params.sample_name}\n"
-                if [[ -s "results/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph" ]]; then
-                    LC_COLLATE=C sort -k1,1 -k2,2n results/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph > results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph
-                    bedGraphToBigWig results/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
+                if [[ -s "{config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph" ]]; then
+                    LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph
+                    bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
                 else
                     printf "No data for CG ${{strand}} strand — creating empty bigwig\n"
                     chrom=$(head -1 {input.chrom_sizes} | cut -f1)
-                    printf "%s\t0\t1\t0\n" "$chrom" > results/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
-                    bedGraphToBigWig results/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg {input.chrom_sizes} results/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
-                    rm -f results/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
+                    printf "%s\t0\t1\t0\n" "$chrom" > {config[output_dir]}/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
+                    bedGraphToBigWig {config[output_dir]}/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
+                    rm -f {config[output_dir]}/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
                 fi
             done
             touch {output.bigwigchg} # they are required for downstream rules
             touch {output.bigwigchh} # they are required for downstream rules
-            rm -f results/mC/tracks/*"{params.sample_name}"*bedGraph*
+            rm -f {config[output_dir]}/mC/tracks/*"{params.sample_name}"*bedGraph*
         else
             printf "Unknown sequence context selection! Check the options file and set 'mC_context' to either 'all' or 'CG-only'\n"
             exit 1
@@ -542,9 +542,9 @@ rule call_DMRs_pairwise:
     input:
         sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
         sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
-        chrom_sizes = lambda wildcards: f"genomes/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
     output:
-        dmr_summary = "results/mC/DMRs/summary__{sample1}__vs__{sample2}__DMRs.txt"
+        dmr_summary = f"{RESULTS_DIR}/mC/DMRs/summary__{{sample1}}__vs__{{sample2}}__DMRs.txt"
     params:
         script = script_DMRs(),
         context = config['mC_context'],
@@ -564,7 +564,7 @@ rule call_DMRs_pairwise:
         """
         {{
         printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
-        Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" {input.sample1} {input.sample2}
+        Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" {input.sample1} {input.sample2}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -572,7 +572,7 @@ rule all_mc:
     input:
         final = lambda wildcards: define_final_mC_output(wildcards.ref_genome)
     output:
-        touch = "results/mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done"
+        touch = f"{RESULTS_DIR}/mC/chkpts/mC_analysis__{{analysis_name}}__{{ref_genome}}.done"
     localrule: True
     shell:
         """
@@ -595,7 +595,7 @@ rule download_modkit:
         version = MODKIT_VERSION,
         bin_dir = os.path.join(REPO_FOLDER, "workflow", "bin")
     log:
-        temp(os.path.join(REPO_FOLDER, "results", "logs", "download_modkit.log"))
+        temp(os.path.join(REPO_FOLDER, RESULTS_DIR, "logs", "download_modkit.log"))
     shell:
         """
         {{
@@ -646,10 +646,10 @@ rule get_dmc_input:
     Creates a marker file indicating the detected type for downstream rules.
     """
     input:
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
-        validated = "results/mC/dmc/validated__{sample_name}.input"
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt",
+        validated = f"{RESULTS_DIR}/mC/dmc/validated__{{sample_name}}.input"
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -755,7 +755,7 @@ rule get_dmc_input:
 def get_dmc_input_type(wildcards):
     """Get the input type (modBAM or bedMethyl) for a dmC sample by reading the marker file."""
     sname = wildcards.sample_name
-    marker_file = f"results/mC/dmc/input_type__{sname}.txt"
+    marker_file = f"{RESULTS_DIR}/mC/dmc/input_type__{sname}.txt"
     # This function is called during DAG building, marker file may not exist yet
     # Return a checkpoint-compatible path
     return marker_file
@@ -763,9 +763,9 @@ def get_dmc_input_type(wildcards):
 checkpoint dmc_input_checkpoint:
     """Checkpoint to determine dmC input type for branching workflow."""
     input:
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt"
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt"
     output:
-        touch = touch("results/mC/dmc/checkpoint__{sample_name}.done")
+        touch = touch(f"{RESULTS_DIR}/mC/dmc/checkpoint__{{sample_name}}.done")
     wildcard_constraints:
         sample_name = _DMC_WC
     localrule: True
@@ -774,24 +774,24 @@ def get_pileup_input_for_dmc(wildcards):
     """Determine pileup input based on detected input type."""
     checkpoint_output = checkpoints.dmc_input_checkpoint.get(**wildcards).output[0]
     sname = wildcards.sample_name
-    type_marker = f"results/mC/dmc/input_type__{sname}.txt"
+    type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{sname}.txt"
     with open(type_marker) as f:
         input_type = f.read().strip()
     if input_type == "modBAM":
-        return f"results/mC/dmc/pileup_modbam__{sname}.bedmethyl.gz"
+        return f"{RESULTS_DIR}/mC/dmc/pileup_modbam__{sname}.bedmethyl.gz"
     else:
-        return f"results/mC/dmc/pileup_bedmethyl__{sname}.bedmethyl.gz"
+        return f"{RESULTS_DIR}/mC/dmc/pileup_bedmethyl__{sname}.bedmethyl.gz"
 
 rule prepare_modbam_for_pileup:
     """Prepare modBAM input: index and optionally realign."""
     input:
-        validated = "results/mC/dmc/validated__{sample_name}.input",
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
-        fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        validated = f"{RESULTS_DIR}/mC/dmc/validated__{{sample_name}}.input",
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt",
+        fasta = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        aligned_bam = maybe_temp("results/mC/dmc/aligned__{sample_name}.bam", config.get('keep_dmc_intermediates', False)),
-        aligned_bai = maybe_temp("results/mC/dmc/aligned__{sample_name}.bam.bai", config.get('keep_dmc_intermediates', False))
+        aligned_bam = maybe_temp(f"{RESULTS_DIR}/mC/dmc/aligned__{{sample_name}}.bam", config.get('keep_dmc_intermediates', False)),
+        aligned_bai = maybe_temp(f"{RESULTS_DIR}/mC/dmc/aligned__{{sample_name}}.bam.bai", config.get('keep_dmc_intermediates', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -863,13 +863,13 @@ rule prepare_modbam_for_pileup:
 rule modkit_pileup_dmc:
     """Generate bedMethyl file from aligned modBAM using modkit pileup."""
     input:
-        bam = "results/mC/dmc/aligned__{sample_name}.bam",
-        bai = "results/mC/dmc/aligned__{sample_name}.bam.bai",
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
-        fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
+        bam = f"{RESULTS_DIR}/mC/dmc/aligned__{{sample_name}}.bam",
+        bai = f"{RESULTS_DIR}/mC/dmc/aligned__{{sample_name}}.bam.bai",
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt",
+        fasta = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         modkit = MODKIT_BIN
     output:
-        bedmethyl = maybe_temp("results/mC/dmc/pileup_modbam__{sample_name}.bedmethyl.gz", config.get('keep_dmc_intermediates', False))
+        bedmethyl = maybe_temp(f"{RESULTS_DIR}/mC/dmc/pileup_modbam__{{sample_name}}.bedmethyl.gz", config.get('keep_dmc_intermediates', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -904,10 +904,10 @@ rule modkit_pileup_dmc:
 rule copy_bedmethyl_input:
     """Copy pre-computed bedMethyl to pileup location for consistent downstream processing."""
     input:
-        validated = "results/mC/dmc/validated__{sample_name}.input",
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt"
+        validated = f"{RESULTS_DIR}/mC/dmc/validated__{{sample_name}}.input",
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt"
     output:
-        bedmethyl = maybe_temp("results/mC/dmc/pileup_bedmethyl__{sample_name}.bedmethyl.gz", config.get('keep_dmc_intermediates', False))
+        bedmethyl = maybe_temp(f"{RESULTS_DIR}/mC/dmc/pileup_bedmethyl__{{sample_name}}.bedmethyl.gz", config.get('keep_dmc_intermediates', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -943,7 +943,7 @@ rule merge_pileup_sources:
     input:
         pileup = get_pileup_input_for_dmc
     output:
-        bedmethyl = "results/mC/dmc/pileup__{sample_name}.bedmethyl.gz"
+        bedmethyl = f"{RESULTS_DIR}/mC/dmc/pileup__{{sample_name}}.bedmethyl.gz"
     wildcard_constraints:
         sample_name = _DMC_WC
     localrule: True
@@ -955,11 +955,11 @@ rule merge_pileup_sources:
 rule modkit_summary_dmc:
     """Generate QC statistics from modBAM using modkit summary."""
     input:
-        bam = "results/mC/dmc/aligned__{sample_name}.bam",
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
+        bam = f"{RESULTS_DIR}/mC/dmc/aligned__{{sample_name}}.bam",
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt",
         modkit = MODKIT_BIN
     output:
-        summary = "results/mC/dmc/summary__{sample_name}.txt"
+        summary = f"{RESULTS_DIR}/mC/dmc/summary__{{sample_name}}.txt"
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -998,11 +998,11 @@ rule make_mc_stats_dmc:
     Uses CX_report file (unified format) for coverage statistics.
     """
     input:
-        cx_report = "results/mC/dmc/cx_report__{sample_name}.CX_report.txt.gz",
-        type_marker = "results/mC/dmc/input_type__{sample_name}.txt",
-        chrom_sizes = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        cx_report = f"{RESULTS_DIR}/mC/dmc/cx_report__{{sample_name}}.CX_report.txt.gz",
+        type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
-        stat_file = "results/mC/reports/summary_mC_SE_mapping_stats_{sample_name}.txt"
+        stat_file = f"{RESULTS_DIR}/mC/reports/summary_mC_SE_mapping_stats_{{sample_name}}.txt"
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -1060,7 +1060,7 @@ rule make_mc_stats_dmc:
 
         # For modBAM input, we can get read counts from the aligned BAM
         if [[ "$input_type" == "modBAM" ]]; then
-            bam_file="results/mC/dmc/aligned__{params.sample_name}.bam"
+            bam_file="{config[output_dir]}/mC/dmc/aligned__{params.sample_name}.bam"
             if [[ -f "$bam_file" ]]; then
                 flagstat=$(samtools flagstat "$bam_file")
                 tot=$(echo "$flagstat" | grep "in total" | awk '{{print $1}}')
@@ -1097,11 +1097,11 @@ rule convert_bedmethyl_to_cx_report:
     When mC_context is 'CG-only', filters output to only include CG context.
     """
     input:
-        bedmethyl = "results/mC/dmc/pileup__{sample_name}.bedmethyl.gz",
-        fasta = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
-        fai = lambda wildcards: f"genomes/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.fai"
+        bedmethyl = f"{RESULTS_DIR}/mC/dmc/pileup__{{sample_name}}.bedmethyl.gz",
+        fasta = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
+        fai = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa.fai"
     output:
-        cx_report = maybe_temp("results/mC/dmc/cx_report__{sample_name}.CX_report.txt.gz", config.get('keep_cx_reports', False))
+        cx_report = maybe_temp(f"{RESULTS_DIR}/mC/dmc/cx_report__{{sample_name}}.CX_report.txt.gz", config.get('keep_cx_reports', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -1123,19 +1123,19 @@ rule convert_bedmethyl_to_cx_report:
         printf "Context mode: {params.context}\n"
 
         # Convert bedMethyl to CX_report (context determined from reference)
-        python {params.script} {input.bedmethyl} {input.fasta} /dev/stdout > results/mC/dmc/tmp__{params.sample_name}.cx
+        python {params.script} {input.bedmethyl} {input.fasta} /dev/stdout > {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx
 
         # Filter by context if CG-only mode
         if [[ "{params.context}" == "CG-only" ]]; then
             printf "Filtering to CG context only...\n"
-            awk -F'\\t' '$6 == "CG"' results/mC/dmc/tmp__{params.sample_name}.cx > results/mC/dmc/tmp__{params.sample_name}_filtered.cx
-            mv results/mC/dmc/tmp__{params.sample_name}_filtered.cx results/mC/dmc/tmp__{params.sample_name}.cx
+            awk -F'\\t' '$6 == "CG"' {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx > {config[output_dir]}/mC/dmc/tmp__{params.sample_name}_filtered.cx
+            mv {config[output_dir]}/mC/dmc/tmp__{params.sample_name}_filtered.cx {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx
         fi
 
         # Sort by chromosome and position, then compress
         printf "Sorting and compressing...\n"
-        sort -k1,1 -k2,2n results/mC/dmc/tmp__{params.sample_name}.cx | pigz -p {threads} > {output.cx_report}
-        rm -f results/mC/dmc/tmp__{params.sample_name}.cx
+        sort -k1,1 -k2,2n {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx | pigz -p {threads} > {output.cx_report}
+        rm -f {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx
 
         printf "Conversion complete\n"
         }} 2>&1 | tee -a "{log}"

@@ -22,12 +22,17 @@ Analysis-level names (for DMRs) use build_analysis_name():
 """
 
 import pytest
-import subprocess
 from pathlib import Path
+
+from tests.integration.conftest import (
+    load_output_dir, run_snakemake_dryrun, run_snakemake_dag,
+)
 
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
+
+_OUTPUT_DIR = load_output_dir("test_options_dmc.yaml")
 
 
 # ---------------------------------------------------------------------------
@@ -35,23 +40,17 @@ pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 
 # Per-replicate bigwig targets
-DMC_MODBAM_TARGET = "results/mC/tracks/WT_leaf_dmC_rep1__CG.bw"
-DMC_MODBAM_REP2_TARGET = "results/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
-BEDMETHYL_TARGET = "results/mC/tracks/WT_root_bedMethyl_rep1__CG.bw"
-MUTANT_TARGET = "results/mC/tracks/mutant_leaf_dmC_rep1__CG.bw"
+DMC_MODBAM_TARGET = f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep1__CG.bw"
+DMC_MODBAM_REP2_TARGET = f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
+BEDMETHYL_TARGET = f"{_OUTPUT_DIR}/mC/tracks/WT_root_bedMethyl_rep1__CG.bw"
+MUTANT_TARGET = f"{_OUTPUT_DIR}/mC/tracks/mutant_leaf_dmC_rep1__CG.bw"
 
 # Analysis-level names (empty parts omitted)
 WT_LEAF_ANALYSIS = "dmC__WT_leaf__test_genome"
 MUTANT_LEAF_ANALYSIS = "dmC__mutant_leaf__test_genome"
 
 # DMR target
-DMR_TARGET = f"results/mC/DMRs/summary__{WT_LEAF_ANALYSIS}__vs__{MUTANT_LEAF_ANALYSIS}__DMRs.txt"
-
-
-@pytest.fixture(scope="module")
-def repo_root():
-    """Get the repository root directory."""
-    return Path(__file__).parent.parent.parent
+DMR_TARGET = f"{_OUTPUT_DIR}/mC/DMRs/summary__{WT_LEAF_ANALYSIS}__vs__{MUTANT_LEAF_ANALYSIS}__DMRs.txt"
 
 
 @pytest.fixture(scope="module")
@@ -60,96 +59,6 @@ def test_options(repo_root):
     config_path = repo_root / "tests" / "integration" / "data" / "test_options_dmc.yaml"
     assert config_path.exists(), f"Test options file not found at {config_path}"
     return str(config_path)
-
-
-@pytest.fixture(scope="module")
-def snakemake_available():
-    """Check if snakemake is available."""
-    try:
-        result = subprocess.run(
-            ["snakemake", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        return result.returncode == 0
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return False
-
-
-def run_snakemake_dryrun(repo_root, options_file, target=None, extra_args=None):
-    """
-    Run snakemake in dry-run mode with the given config.
-
-    Args:
-        repo_root: Path to repository root
-        options_file: Path to options file
-        target: Optional target file/rule to request
-        extra_args: Optional list of additional arguments
-
-    Returns:
-        subprocess.CompletedProcess object
-    """
-    cmd = [
-        "snakemake",
-        "--dry-run",
-        "--configfile", options_file,
-        "--cores", "1",
-        "--quiet", "progress",
-    ]
-
-    if extra_args:
-        cmd.extend(extra_args)
-
-    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
-    if target:
-        cmd.append("--")
-        cmd.append(target)
-
-    result = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=60
-    )
-
-    return result
-
-
-def run_snakemake_dag(repo_root, options_file, target=None):
-    """
-    Generate the Snakemake DAG.
-
-    Args:
-        repo_root: Path to repository root
-        options_file: Path to options file
-        target: Optional target file/rule to request
-
-    Returns:
-        subprocess.CompletedProcess object
-    """
-    cmd = [
-        "snakemake",
-        "--dag",
-        "--configfile", options_file,
-        "--cores", "1",
-    ]
-
-    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
-    if target:
-        cmd.append("--")
-        cmd.append(target)
-
-    result = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=60
-    )
-
-    return result
 
 
 class TestDmcDryRunBasic:
@@ -240,7 +149,7 @@ class TestDmcModBAMWorkflow:
         contexts = ["CG", "CHG", "CHH"]
 
         for context in contexts:
-            target = f"results/mC/tracks/WT_leaf_dmC_rep1__{context}.bw"
+            target = f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep1__{context}.bw"
             result = run_snakemake_dryrun(repo_root, test_options, target)
 
             assert result.returncode == 0, f"Dry-run failed for {context} context: {result.stderr}"
@@ -412,9 +321,9 @@ class TestWildcardResolution:
 
         # Test various wildcard combinations
         targets = [
-            "results/mC/tracks/WT_leaf_dmC_rep1__CG.bw",
-            "results/mC/tracks/WT_leaf_dmC_rep2__CHG.bw",
-            "results/mC/tracks/mutant_leaf_dmC_rep1__CHH.bw",
+            f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep1__CG.bw",
+            f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep2__CHG.bw",
+            f"{_OUTPUT_DIR}/mC/tracks/mutant_leaf_dmC_rep1__CHH.bw",
         ]
 
         for target in targets:
@@ -440,7 +349,7 @@ class TestErrorHandling:
             pytest.skip("Snakemake not installed")
 
         # Request target with a sample name not in the sample sheet
-        target = "results/mC/tracks/nonexistent_sample__CG.bw"
+        target = f"{_OUTPUT_DIR}/mC/tracks/nonexistent_sample__CG.bw"
         result = run_snakemake_dryrun(repo_root, test_options, target)
 
         # Should fail because sample is not in the sample sheet
@@ -452,7 +361,7 @@ class TestErrorHandling:
             pytest.skip("Snakemake not installed")
 
         # Request target with invalid context
-        target = "results/mC/tracks/WT_leaf_dmC_rep1__INVALID.bw"
+        target = f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep1__INVALID.bw"
         result = run_snakemake_dryrun(repo_root, test_options, target)
 
         # Should fail because INVALID is not a valid context
@@ -473,7 +382,7 @@ class TestAllMCTarget:
             pytest.skip("Snakemake not installed")
 
         # Test the all_mc checkpoint rule
-        target = "results/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
+        target = f"{_OUTPUT_DIR}/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
         result = run_snakemake_dryrun(repo_root, test_options, target)
 
         assert result.returncode == 0, f"all_mc rule failed with dmC samples: {result.stderr}"
@@ -484,7 +393,7 @@ class TestAllMCTarget:
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
 
-        target = "results/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
+        target = f"{_OUTPUT_DIR}/mC/chkpts/mC_analysis__test_dmc__test_genome.done"
         result = run_snakemake_dryrun(repo_root, test_options, target, ["--printshellcmds"])
 
         assert result.returncode == 0, f"all_mc rule failed: {result.stderr}"
@@ -536,8 +445,8 @@ class TestMultipleReplicates:
 
         # Request both replicates
         targets = [
-            "results/mC/tracks/WT_leaf_dmC_rep1__CG.bw",
-            "results/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
+            f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep1__CG.bw",
+            f"{_OUTPUT_DIR}/mC/tracks/WT_leaf_dmC_rep2__CG.bw"
         ]
 
         for target in targets:

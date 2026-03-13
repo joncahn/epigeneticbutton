@@ -16,12 +16,17 @@ Analysis-level names use build_analysis_name():
 """
 
 import pytest
-import subprocess
 from pathlib import Path
+
+from tests.integration.conftest import (
+    load_output_dir, run_snakemake_dryrun, run_snakemake_dag,
+)
 
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
+
+_OUTPUT_DIR = load_output_dir("test_options_pombe.yaml")
 
 
 # ---------------------------------------------------------------------------
@@ -29,15 +34,15 @@ pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 
 # Per-replicate targets
-CHIP_BROAD_TARGET = "results/ChIP/tracks/coverage__WT_H3K9me2_rep1.bw"
-CHIP_BROAD_TARGET_REP2 = "results/ChIP/tracks/coverage__WT_H3K9me2_rep2.bw"
-CHIP_NARROW_TARGET = "results/ChIP/tracks/coverage__WT_H3K4me3_rep1.bw"
-RNA_TARGET = "results/RNA/mapped/final__WT_RNA_rep1.bam"
-SRNA_TARGET = "results/sRNA/mapped/WT_sRNA_rep1/Results.txt"
+CHIP_BROAD_TARGET = f"{_OUTPUT_DIR}/ChIP/tracks/coverage__WT_H3K9me2_rep1.bw"
+CHIP_BROAD_TARGET_REP2 = f"{_OUTPUT_DIR}/ChIP/tracks/coverage__WT_H3K9me2_rep2.bw"
+CHIP_NARROW_TARGET = f"{_OUTPUT_DIR}/ChIP/tracks/coverage__WT_H3K4me3_rep1.bw"
+RNA_TARGET = f"{_OUTPUT_DIR}/RNA/mapped/final__WT_RNA_rep1.bam"
+SRNA_TARGET = f"{_OUTPUT_DIR}/sRNA/mapped/WT_sRNA_rep1/Results.txt"
 
 # Control sample targets
-INPUT_BROAD_TARGET = "results/ChIP/tracks/coverage__WT_WCE_rep1.bw"
-INPUT_NARROW_TARGET = "results/ChIP/tracks/coverage__WT_Input_rep1.bw"
+INPUT_BROAD_TARGET = f"{_OUTPUT_DIR}/ChIP/tracks/coverage__WT_WCE_rep1.bw"
+INPUT_NARROW_TARGET = f"{_OUTPUT_DIR}/ChIP/tracks/coverage__WT_Input_rep1.bw"
 
 # Analysis-level names (Assay__levels_label__IP_target__Genome)
 CHIP_BROAD_ANALYSIS = "ChIP_broad__WT__H3K9me2__Spombe"
@@ -46,16 +51,10 @@ RNA_ANALYSIS_WT = "RNAseq__WT__Spombe"
 SRNA_ANALYSIS_WT = "sRNA__WT__Spombe"
 
 # Env checkpoint targets
-CHIP_CHECKPOINT = "results/ChIP/chkpts/ChIP_analysis__test_pombe__Spombe.done"
-RNA_CHECKPOINT = "results/RNA/chkpts/RNA_analysis__test_pombe__Spombe.done"
-SRNA_CHECKPOINT = "results/sRNA/chkpts/sRNA_analysis__test_pombe__Spombe.done"
-FINAL_CHECKPOINT = "results/combined/chkpts/final_analysis__test_pombe.done"
-
-
-@pytest.fixture(scope="module")
-def repo_root():
-    """Get the repository root directory."""
-    return Path(__file__).parent.parent.parent
+CHIP_CHECKPOINT = f"{_OUTPUT_DIR}/ChIP/chkpts/ChIP_analysis__test_pombe__Spombe.done"
+RNA_CHECKPOINT = f"{_OUTPUT_DIR}/RNA/chkpts/RNA_analysis__test_pombe__Spombe.done"
+SRNA_CHECKPOINT = f"{_OUTPUT_DIR}/sRNA/chkpts/sRNA_analysis__test_pombe__Spombe.done"
+FINAL_CHECKPOINT = f"{_OUTPUT_DIR}/combined/chkpts/final_analysis__test_pombe.done"
 
 
 @pytest.fixture(scope="module")
@@ -64,96 +63,6 @@ def test_options(repo_root):
     config_path = repo_root / "tests" / "integration" / "data" / "test_options_pombe.yaml"
     assert config_path.exists(), f"Test options file not found at {config_path}"
     return str(config_path)
-
-
-@pytest.fixture(scope="module")
-def snakemake_available():
-    """Check if snakemake is available."""
-    try:
-        result = subprocess.run(
-            ["snakemake", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        return result.returncode == 0
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return False
-
-
-def run_snakemake_dryrun(repo_root, options_file, target=None, extra_args=None):
-    """
-    Run snakemake in dry-run mode with the given config.
-
-    Args:
-        repo_root: Path to repository root
-        options_file: Path to options file
-        target: Optional target file/rule to request
-        extra_args: Optional list of additional arguments
-
-    Returns:
-        subprocess.CompletedProcess object
-    """
-    cmd = [
-        "snakemake",
-        "--dry-run",
-        "--configfile", options_file,
-        "--cores", "1",
-        "--quiet", "progress",
-    ]
-
-    if extra_args:
-        cmd.extend(extra_args)
-
-    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
-    if target:
-        cmd.append("--")
-        cmd.append(target)
-
-    result = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=120
-    )
-
-    return result
-
-
-def run_snakemake_dag(repo_root, options_file, target=None):
-    """
-    Generate the Snakemake DAG.
-
-    Args:
-        repo_root: Path to repository root
-        options_file: Path to options file
-        target: Optional target file/rule to request
-
-    Returns:
-        subprocess.CompletedProcess object
-    """
-    cmd = [
-        "snakemake",
-        "--dag",
-        "--configfile", options_file,
-        "--cores", "1",
-    ]
-
-    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
-    if target:
-        cmd.append("--")
-        cmd.append(target)
-
-    result = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=120
-    )
-
-    return result
 
 
 class TestPombeDryRunBasic:
@@ -493,8 +402,8 @@ class TestReplicateHandling:
             pytest.skip("Snakemake not installed")
 
         targets = [
-            "results/RNA/mapped/final__WT_RNA_rep1.bam",
-            "results/RNA/mapped/final__WT_RNA_rep2.bam",
+            f"{_OUTPUT_DIR}/RNA/mapped/final__WT_RNA_rep1.bam",
+            f"{_OUTPUT_DIR}/RNA/mapped/final__WT_RNA_rep2.bam",
         ]
 
         for target in targets:

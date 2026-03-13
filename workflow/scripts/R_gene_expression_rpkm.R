@@ -18,6 +18,8 @@ analysisname<-args[3]
 
 refgenome<-args[4]
 
+output_dir<-args[6]
+
 ref_genes<-read.delim(args[5], header = FALSE, 
                       col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
@@ -35,4 +37,4 @@ for (sample1 in genotypes) {
 	all_rpkm<-rbind(all_rpkm,tmp2)
 }
 
-write.table(all_rpkm,paste0("results/RNA/DEG/genes_rpkm__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
+write.table(all_rpkm,paste0(output_dir,"/RNA/DEG/genes_rpkm__",analysisname,"__",refgenome,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)

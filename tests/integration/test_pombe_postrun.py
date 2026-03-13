@@ -12,11 +12,12 @@ import struct
 import pytest
 from pathlib import Path
 
+from tests.integration.conftest import REPO_ROOT, load_output_dir
+
 # ---------------------------------------------------------------------------
 # Constants: repo root and results directory
 # ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[2]
-RESULTS = REPO_ROOT / "results"
+RESULTS = REPO_ROOT / load_output_dir("test_options_pombe.yaml")
 
 # ---------------------------------------------------------------------------
 # Expected file lists (verified against actual pombe run 2026-02-26)

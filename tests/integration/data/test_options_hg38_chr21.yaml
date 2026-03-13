@@ -3,8 +3,12 @@
 # EN-TEx (ENCODE) stomach vs colon comparison + ONT Open Data HG002 dmC
 
 repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
-analysis_name: "test_chr21"
+analysis_name: "test_hg38_chr21"
 sample_file: "tests/integration/data/test_samples_hg38_chr21.tsv"
+
+# Output directories
+output_dir: "results_test_hg38_chr21"
+genome_dir: "genomes_test_hg38_chr21"
 
 # Analysis options
 full_analysis: true

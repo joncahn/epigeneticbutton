@@ -40,7 +40,7 @@ tests/
 │       ├── Spombe/                    #   S. pombe reference genome
 │       ├── test_samples_hg38_chr21.tsv #   33-sample human chr21 (7 assays)
 │       ├── test_options_hg38_chr21.yaml
-│       ├── human_chr21_design.md      #   Dataset design rationale
+│       ├── hg38_chr21_design.md      #   Dataset design rationale
 │       └── hg38_chr21/               #   Human chr21 reference and data prep
 │           ├── prepare_reference.sh   #     Download hg38 + extract chr21
 │           └── prep_manifest.tsv      #     Manifest for subset_test_data.sh
@@ -83,7 +83,7 @@ scripts/validate_pombe.sh --all    # dry-run → full run → output checks
 
 33 samples covering all 7 assay types: ChIP_broad, ChIP_narrow, RNAseq, RAMPAGE, sRNA, WGBS, and dmC. EN-TEx stomach vs colon comparison with donors as biological replicates, plus ONT Open Data HG002 for dmC. All data subsetted to chromosome 21.
 
-See `tests/integration/data/human_chr21_design.md` for the complete design rationale, ENCODE accessions, and known considerations.
+See `tests/integration/data/hg38_chr21_design.md` for the complete design rationale, ENCODE accessions, and known considerations.
 
 **Data preparation** (one-time, requires SLURM and data prep tools — see `dev/docs/README.md` Section 3):
 
