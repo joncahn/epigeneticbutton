@@ -1,6 +1,7 @@
 # Test configuration for A. thaliana ColCEN integration test
-# Tests ChIP-seq (CenH3, H3K9me2), ATAC-seq, and direct methylation (dmC)
-# Shimada et al. 2024 Nat Plants (GSE132005), Crisp et al. 2020 (ATAC, GSE155023)
+# Tests ChIP-seq (CenH3, H3K9me2), ATAC-seq, EMseq, and direct methylation (dmC)
+# Shimada et al. 2024 Nat Plants (GSE132005), Crisp et al. 2020 (ATAC, GSE155023),
+# Trasser et al. 2024 EMBO Reports (PRJNA1111825, EMseq)
 
 repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_colcen"
@@ -85,6 +86,11 @@ mC_mapping:
     map_pe: "--maxins 1000"
     map_se: ""
     process_pe: "--ignore_r2 2 --buffer_size 16G"
+    process_se: "--buffer_size 16G"
+  EMseq:
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--buffer_size 16G"
     process_se: "--buffer_size 16G"
   dmC:
     map_pe: ""
