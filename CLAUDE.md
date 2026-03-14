@@ -38,7 +38,7 @@ Sample metadata is defined in a TSV file with 9 columns:
 - **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`)
 - **Levels**: Comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:root`). All samples must have the same factors.
 - **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
-- **Read_files**: SRA accession (`SRR12345`), local path, or `+`-separated for merging multiple inputs
+- **Read_files**: SRA accession (`SRR12345`), local path, HTTP(S) URL, or `+`-separated for merging multiple inputs
 - **Read_layout**: `SE` or `PE`
 - **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
 - **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). No chaining.
@@ -93,6 +93,8 @@ scripts/validate_pombe.sh --all
 - `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
 - `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (17 samples, 4 assays)
 - `tests/integration/data/test_samples_hg38_chr21.tsv` - Human chr21 test sample sheet (33 samples, all 6 assay types)
+- `tests/integration/data/test_samples_colcen.tsv` - A. thaliana ColCEN test sample sheet (30 samples: ChIP, ATAC, dmC)
+- `tests/integration/data/test_options_colcen.yaml` - ColCEN test options (GitHub URLs for genome, SRA/URL inputs)
 
 ## Key Details
 
@@ -100,3 +102,5 @@ scripts/validate_pombe.sh --all
 - In Python context (input/output/params), paths use `RESULTS_DIR`/`GENOMES_DIR` variables. In shell blocks, paths use `{config[output_dir]}`/`{config[genome_dir]}` Snakemake substitution.
 - Env mapping: `ChIP_broad`/`ChIP_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`WGBS_nd`/`PBAT`/`EMseq`/`dmC` → `mC`
 - Checkpoint files in `{output_dir}/*/chkpts/` control re-running analyses; delete to force rerun.
+- Read_files supports HTTP(S) URLs for FASTQ, BAM, and bedMethyl inputs. Genome config fields (`fasta_file`, `gff_file`, `te_file`) also accept URLs — downloaded automatically via curl at rule execution time.
+- `te_file` accepts `.bed(.gz)` (pass-through) or `.gff3(.gz)` (auto-converted to BED6 using the GFF3 `ID=` attribute as the name column).

@@ -704,7 +704,7 @@ const COLUMN_DESCRIPTIONS = {
   Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
-  Read_files: "SRA accession (SRR12345678), local path, or '+'-separated for merging. PE local: comma-separated R1,R2 pair.",
+  Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated for merging. PE: comma-separated R1,R2 pair.",
   Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
   IP_target: "What was immunoprecipitated. Required for ChIP assays (e.g. H3K9me2, Input). Must be blank for non-ChIP assays.",
   Control: "Sample_ID of the control sample (e.g. Input for ChIP). Only for ChIP_broad, ChIP_narrow, RAMPAGE. No chaining allowed."
@@ -1347,7 +1347,9 @@ function runValidation() {
               addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': mixed SRA/path in Read_files component");
           }
         } else {
-          if (readLayout === "PE" && files.length === 1 && !first.endsWith(".bam"))
+          var isUrl = /^https?:\/\//.test(first);
+          var isBam = first.replace(/\?.*$/, "").endsWith(".bam");
+          if (readLayout === "PE" && files.length === 1 && !isBam)
             addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)");
           if (readLayout === "SE" && files.length > 1)
             addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths");

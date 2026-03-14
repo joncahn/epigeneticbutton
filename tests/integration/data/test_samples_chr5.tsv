@@ -1,5 +1,0 @@
-Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
-rdr126ddm1_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453434.Chr5.bam	SE		
-rdr126ddm1het_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1het,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453435.Chr5.bam	SE		
-rdr126ddm1hp5_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1hp5,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453436.Chr5.bam	SE		
-rdr126ddm1hethp5_leaf_dmC_rep1	dmC	ColCEN_Chr5	genotype:rdr126ddm1hethp5,tissue:leaf	rep1	/home/eernst/src/epigeneticbutton/test-data-prep/SRR28453437.Chr5.bam	SE		

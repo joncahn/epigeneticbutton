@@ -144,11 +144,15 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file. **Done**: New Reference Genomes tab with genome name management UI (add/remove tiles), per-genome config forms, Genome column in Samples tab constrained to dropdown (freetext still allowed). Genome data flows into YAML export via `configState.genomes`. EPICC brand links to genomes tab.
 
+* [ ] Change the EPICC branding home button in the upper left corner to EPICCbuilder (with builder italicized and in a complementary color).
+
 ##### [x] Bugs
 
 * [x] Sample sheet example should validate, be exportable. **Done**: Fixed PE example rows to include R1,R2 comma-separated paths. Removed `_example` skip guards from validation and export. Example rows now validate normally and are included in TSV export.
 
 * [x] Help text for the factor levels columns should be better. Maybe should say: Levels   of factor {factor}. Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) in the sample sheet TSV 'Levels' column. All rows must have the same factors. Level values form the 'levels_label' in analysis names. **Done**: Factor columns now show factor-specific description via `showFactorDescription()` instead of generic "Levels" text.
+
+* [ ] Fix rows selected on click in any column - should only be selected when clicking on the leftmost column selection box
 
 ### custom adapter handling
 
@@ -275,10 +279,6 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Create comprehensive mC dry-run test covering all methylation code paths. **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) validates WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl workflows including parameter routing, replicate merging, DMR calling, and CX report conversion.
 
-* [ ] Find A. thaliana WGBS_nd (Pico Methyl-Seq) and/or PBAT datasets for the planned Chr5 test case. Need to identify publicly available non-directional bisulfite-seq data in Arabidopsis.
-
-* [ ] Add A. thaliana EMseq data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the planned Chr5 test case.
-
 ### Schizosaccharomyces pombe test case
 
 * [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 18 samples (11 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_options_pombe.yaml`.
@@ -305,9 +305,19 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Fix pombe test sample metadata: rename Ekwall `veg` → `WT` (HU3112 is WT), fix Kim/Chang WCE controls from `IP_target: Input` → `WCE` (SRR5445712 is whole-cell extract, not Input). **Done**: Updated test_samples_pombe.tsv, test_pombe_dryrun.py, test_pombe_postrun.py, test_sample_sheet.py.
 
-### Complete A. thaliana ColCEN Chr5 test case
+### Complete A. thaliana ColCEN test case
 
-* [ ] Add a more complete A. thaliana ColCEN Chr5 test case, using tests/integration/test_samples_chr5.tsv, tests/integration/test_samples_colcen.tsv, and the test data we have already prepared at test-data-prep/ as sources. The idea is to create a Chr5 test subset of all of the samples currently used in test_samples_colcen.tsv. Make sure we subset any input fastqs and BAMs to contain only reads mapped to Chr5. This may require alignment to the full ColCEN genome first, and then a samtools view to subset.
+* [x] Remove files associated with the Chr5 subset. Let's just target the full ColCEN genome. **Done**: `git rm -r tests/integration/data/ColCEN_Chr5/`, `test_options_chr5.yaml`, `test_samples_chr5.tsv`.
+
+* [x] Complete the A. thaliana ColCEN test case: **Done**: 30-sample test sheet with SRA accessions for ChIP (CenH3, H3K9me2) and ATAC, lemna.org URLs for dmC modBAMs. Self-contained `test_options_colcen.yaml` with GitHub URLs for genome reference (Col-CEN v1.2 FASTA, GFF3, EDTA TE GFF3). Required pipeline enhancements: URL support for Read_files and genome config fields, GFF3→BED auto-conversion for TE file.
+
+  * [x] Find the corresponding SRA entries for the [Shimada Nat Plants 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11410651/) ChIP samples (CENH3, Input in genotypes WT, rdr126ddm1, rdr126ddm1hp5), GEO series: [GSE132005](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132005) and replace local file paths with these. The ONT methylation samples from the same GEO series are also in SRA (mislabeled as bisulfite). They should've been deposited as modBAMs, need to verify this. **Done**: ChIP CenH3 SRR28453410-21 (12 samples), H3K9me2 SRR28453402-09 (8 samples), dmC modBAMs via lemna.org URLs.
+
+  * [ ] Find A. thaliana WGBS_nd (Pico Methyl-Seq) and/or PBAT datasets for the planned Chr5 test case. Need to identify publicly available non-directional bisulfite-seq data in Arabidopsis.
+
+  * [ ] Add A. thaliana EMseq data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the planned Chr5 test case.
+
+  * [ ] Document the provenance of all datasets as previously done with S. pombe and H. sapiens test cases.
 
 ### H. sapiens test case
 

@@ -39,17 +39,35 @@ rule check_fasta:
     shell:
         """
         {{
-        if [[ ! -s {params.fasta} ]]; then
-            printf "\nFasta file for {params.ref_genome} does not exist:\n{params.fasta}\n"
+        fasta_src="{params.fasta}"
+        if [[ "$fasta_src" == http://* || "$fasta_src" == https://* ]]; then
+            printf "\nDownloading fasta from URL: $fasta_src\n"
+            tmpfile=$(mktemp --suffix=.fasta.dl)
+            trap 'rm -f "$tmpfile"' EXIT
+            curl --fail --silent --show-error --location --max-redirs 5 \
+                 --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 1800 \
+                 --proto '=https,http' -o "$tmpfile" "$fasta_src"
+            url_path="${{fasta_src%%\\?*}}"
+            if [[ "$url_path" == *.fa.gz || "$url_path" == *.fasta.gz ]]; then
+                pigz -p {threads} -dc "$tmpfile" > {output.fasta}
+            elif [[ "$url_path" == *.fa || "$url_path" == *.fasta ]]; then
+                mv "$tmpfile" {output.fasta}
+            else
+                printf "\nExtension of downloaded fasta unknown: $fasta_src\n"
+                exit 1
+            fi
+            rm -f "$tmpfile"
+        elif [[ ! -s "$fasta_src" ]]; then
+            printf "\nFasta file for {params.ref_genome} does not exist:\n$fasta_src\n"
             exit 1
-        elif [[ {params.fasta} == *.fa.gz || {params.fasta} == *.fasta.gz ]]; then
-            printf "\nGzipped fasta file found: {params.fasta}\n"
-            pigz -p {threads} -dc {params.fasta} > {output.fasta}
-        elif [[ {params.fasta} == *.fa || {params.fasta} == *.fasta ]]; then
-            printf "\nUnzipped fasta file found: {params.fasta}\n"
-            cp {params.fasta} {output.fasta}
+        elif [[ "$fasta_src" == *.fa.gz || "$fasta_src" == *.fasta.gz ]]; then
+            printf "\nGzipped fasta file found: $fasta_src\n"
+            pigz -p {threads} -dc "$fasta_src" > {output.fasta}
+        elif [[ "$fasta_src" == *.fa || "$fasta_src" == *.fasta ]]; then
+            printf "\nUnzipped fasta file found: $fasta_src\n"
+            cp "$fasta_src" {output.fasta}
         else
-            printf "\nExtension of fasta file unknown, should be .fasta(.gz) or .fa(.gz):\n {params.fasta}\n"
+            printf "\nExtension of fasta file unknown, should be .fasta(.gz) or .fa(.gz):\n $fasta_src\n"
             exit 1
         fi
         }} 2>&1 | tee -a "{log}"
@@ -72,17 +90,35 @@ rule check_gff:
     shell:
         """
         {{
-        if [[ ! -s {params.gff} ]]; then
-            printf "\nGFF file for {params.ref_genome} does not exist:\n{params.gff}\n"
+        gff_src="{params.gff}"
+        if [[ "$gff_src" == http://* || "$gff_src" == https://* ]]; then
+            printf "\nDownloading GFF from URL: $gff_src\n"
+            tmpfile=$(mktemp --suffix=.gff.dl)
+            trap 'rm -f "$tmpfile"' EXIT
+            curl --fail --silent --show-error --location --max-redirs 5 \
+                 --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 1800 \
+                 --proto '=https,http' -o "$tmpfile" "$gff_src"
+            url_path="${{gff_src%%\\?*}}"
+            if [[ "$url_path" == *.gff*.gz ]]; then
+                pigz -p {threads} -dc "$tmpfile" > {output.gff}
+            elif [[ "$url_path" == *.gff* ]]; then
+                mv "$tmpfile" {output.gff}
+            else
+                printf "\nExtension of downloaded GFF unknown: $gff_src\n"
+                exit 1
+            fi
+            rm -f "$tmpfile"
+        elif [[ ! -s "$gff_src" ]]; then
+            printf "\nGFF file for {params.ref_genome} does not exist:\n$gff_src\n"
             exit 1
-        elif [[ {params.gff} == *.gff*.gz ]]; then
-            printf "\nGzipped gff file found: {params.gff}\n"
-            pigz -p {threads} -dc {params.gff} > {output.gff}
-        elif [[ {params.gff} == *.gff* ]]; then
-            printf "\nUnzipped gff file found: {params.gff}\n"
-            cp {params.gff} {output.gff}
+        elif [[ "$gff_src" == *.gff*.gz ]]; then
+            printf "\nGzipped gff file found: $gff_src\n"
+            pigz -p {threads} -dc "$gff_src" > {output.gff}
+        elif [[ "$gff_src" == *.gff* ]]; then
+            printf "\nUnzipped gff file found: $gff_src\n"
+            cp "$gff_src" {output.gff}
         else
-            printf "\nExtension of gff file unknown, should be .gff*(.gz):\n {params.gff}\n"
+            printf "\nExtension of gff file unknown, should be .gff*(.gz):\n $gff_src\n"
             exit 1
         fi
         }} 2>&1 | tee -a "{log}"
@@ -421,19 +457,61 @@ rule check_te_file:
     shell:
         """
         {{
-        if [[ ! -s {params.te_file} ]]; then
-            printf "\nThe bed file of TEs for {wildcards.ref_genome} does not exist:\n {params.te_file}\n"
+        te_src="{params.te_file}"
+
+        # If URL, download first to a temp file, then treat as local
+        if [[ "$te_src" == http://* || "$te_src" == https://* ]]; then
+            printf "\nDownloading TE file from URL: $te_src\n"
+            url_path="${{te_src%%\\?*}}"
+            dl_ext="${{url_path##*/}}"
+            tmpfile=$(mktemp --suffix=".$dl_ext")
+            trap 'rm -f "$tmpfile"' EXIT
+            curl --fail --silent --show-error --location --max-redirs 5 \
+                 --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 1800 \
+                 --proto '=https,http' -o "$tmpfile" "$te_src"
+            te_src="$tmpfile"
+        fi
+
+        # Determine format and convert to BED6
+        if [[ "$te_src" == *.gff3.gz || "$te_src" == *.gff.gz ]]; then
+            printf "\nGFF3 TE annotation found, converting to BED6: $te_src\n"
+            pigz -p {threads} -dc "$te_src" | awk -F'\t' 'BEGIN{{OFS="\t"}} /^[^#]/ && NF>=9 {{
+                id = ""
+                n = split($9, attrs, ";")
+                for (i=1; i<=n; i++) {{
+                    if (attrs[i] ~ /^ID=/) {{ sub(/^ID=/, "", attrs[i]); id = attrs[i] }}
+                }}
+                if (id == "") id = "TE_" NR
+                score = ($6 == "." ? "0" : $6)
+                print $1, $4-1, $5, id, score, $7
+            }}' > {output.te_file}
+        elif [[ "$te_src" == *.gff3 || "$te_src" == *.gff ]]; then
+            printf "\nUncompressed GFF3 TE annotation found, converting to BED6: $te_src\n"
+            awk -F'\t' 'BEGIN{{OFS="\t"}} /^[^#]/ && NF>=9 {{
+                id = ""
+                n = split($9, attrs, ";")
+                for (i=1; i<=n; i++) {{
+                    if (attrs[i] ~ /^ID=/) {{ sub(/^ID=/, "", attrs[i]); id = attrs[i] }}
+                }}
+                if (id == "") id = "TE_" NR
+                score = ($6 == "." ? "0" : $6)
+                print $1, $4-1, $5, id, score, $7
+            }}' "$te_src" > {output.te_file}
+        elif [[ ! -s "$te_src" ]]; then
+            printf "\nThe TE file for {wildcards.ref_genome} does not exist:\n $te_src\n"
             exit 1
-        elif [[ {params.te_file} == *.bed.gz ]]; then
-            printf "\nGzipped TE file found: {params.te_file}\n"
-            pigz -p {threads} -dc {params.te_file} > {output.te_file}
-        elif [[ {params.te_file} == *.bed ]]; then
-            printf "\nUnzipped TE file found: {params.te_file}\n"
-            cp {params.te_file} {output.te_file}
+        elif [[ "$te_src" == *.bed.gz ]]; then
+            printf "\nGzipped TE file found: $te_src\n"
+            pigz -p {threads} -dc "$te_src" > {output.te_file}
+        elif [[ "$te_src" == *.bed ]]; then
+            printf "\nUnzipped TE file found: $te_src\n"
+            cp "$te_src" {output.te_file}
         else
-            printf "\nExtension of bed file of TEs unknown, should be .bed(.gz):\n {params.te_file}\n"
+            printf "\nExtension of TE file unknown, should be .bed(.gz) or .gff3(.gz):\n $te_src\n"
             exit 1
         fi
+
+        # Validate uniqueness of TE names (column 4)
         tot=$(cat {output.te_file} | wc -l)
         unique=$(cat {output.te_file} | cut -f4 | sort -u | wc -l)
         if [[ ${{unique}} -ne ${{tot}} ]]; then

@@ -180,6 +180,37 @@ class TestGetSeqIdAndPath:
         assert seq_id == "sample"
         assert fq_path == "/path/to/sample.bam"
 
+    def test_bam_url(self):
+        url = "https://lemna.org/data/shimada2024/SRR28453434.bam"
+        seq_id, fq_path = get_seq_id_and_path(url, "SE")
+        assert seq_id == "SRR28453434"
+        assert fq_path == url
+
+    def test_bedmethyl_url(self):
+        url = "https://example.com/data/sample.bed.gz"
+        seq_id, fq_path = get_seq_id_and_path(url, "SE")
+        assert seq_id == "sample"
+        assert fq_path == url
+
+    def test_bedmethyl_url_with_query_params(self):
+        url = "https://example.com/data/sample.bed.gz?token=abc123"
+        seq_id, fq_path = get_seq_id_and_path(url, "SE")
+        assert seq_id == "sample"
+        assert fq_path == url
+
+    def test_fastq_url_se(self):
+        url = "https://example.com/reads.fastq.gz"
+        seq_id, fq_path = get_seq_id_and_path(url, "SE")
+        assert seq_id == "URL"
+        assert fq_path == url
+
+    def test_fastq_url_pe(self):
+        r1 = "https://example.com/r1.fq.gz"
+        r2 = "https://example.com/r2.fq.gz"
+        seq_id, fq_path = get_seq_id_and_path(f"{r1},{r2}", "PE")
+        assert seq_id == "URL"
+        assert fq_path == f"{r1},{r2}"
+
 
 # ---------------------------------------------------------------------------
 # Analysis key / name

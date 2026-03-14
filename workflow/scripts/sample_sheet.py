@@ -111,6 +111,18 @@ def parse_read_files(read_files_str, read_layout):
 _FASTQ_EXTENSIONS = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
 
 
+def _is_url(path):
+    """Return True if the path looks like an HTTP(S) URL."""
+    return path.startswith("http://") or path.startswith("https://")
+
+
+def _url_basename(url):
+    """Extract the filename from a URL, stripping query parameters."""
+    import os
+    path_part = url.split("?")[0].split("#")[0]
+    return os.path.basename(path_part)
+
+
 def get_seq_id_and_path(read_files_str, read_layout):
     """Bridge function: derive old-style seq_id and fastq_path from Read_files.
 
@@ -120,8 +132,11 @@ def get_seq_id_and_path(read_files_str, read_layout):
     Read_files formats handled:
     - SRA accession(s): "SRR111" or "SRR111+SRR222" → seq_id="SRR111,SRR222", path="SRA"
     - BAM file: "/path/to/file.bam" → seq_id="file", path="/path/to/file.bam"
+    - BAM URL: "https://host/file.bam" → seq_id="file", path="https://host/file.bam"
     - bedMethyl: "/path/to/file.bed.gz" → seq_id="file", path="/path/to/file.bed.gz"
+    - bedMethyl URL: "https://host/file.bed.gz" → seq_id="file", path="https://..."
     - Explicit FASTQ paths: "r1.fq.gz,r2.fq.gz" → seq_id="EXPLICIT", path="r1.fq.gz,r2.fq.gz"
+    - FASTQ URL(s): "https://host/r.fq.gz" → seq_id="URL", path="https://host/r.fq.gz"
     """
     parts, is_sra = parse_read_files(read_files_str, read_layout)
     if is_sra:
@@ -130,21 +145,27 @@ def get_seq_id_and_path(read_files_str, read_layout):
     else:
         import os
         first_file = parts[0].split(",")[0]  # first mate for PE
-        if first_file.endswith(".bam"):
-            # BAM input: path IS the file
-            seq_id = os.path.splitext(os.path.basename(first_file))[0]
+        # Strip query params for extension checks on URLs
+        check_name = _url_basename(first_file) if _is_url(first_file) else first_file
+        if check_name.endswith(".bam"):
+            # BAM input (local path or URL): path IS the file/URL
+            seq_id = os.path.splitext(os.path.basename(check_name))[0]
             return seq_id, first_file
-        elif first_file.endswith(".bed.gz") or first_file.endswith(".bedmethyl.gz"):
-            # bedMethyl input: path IS the file
-            base = os.path.basename(first_file)
+        elif check_name.endswith(".bed.gz") or check_name.endswith(".bedmethyl.gz"):
+            # bedMethyl input (local path or URL): path IS the file/URL
+            base = os.path.basename(check_name)
             for suffix in (".bedmethyl.gz", ".bed.gz"):
                 if base.endswith(suffix):
                     seq_id = base[:-len(suffix)]
                     break
             return seq_id, first_file
-        elif any(first_file.endswith(ext) for ext in _FASTQ_EXTENSIONS):
-            # Explicit FASTQ path(s): pass through the full Read_files string
-            return "EXPLICIT", parts[0]
+        elif any(check_name.endswith(ext) for ext in _FASTQ_EXTENSIONS):
+            if _is_url(first_file):
+                # FASTQ URL(s): use "URL" sentinel so download rules can dispatch
+                return "URL", parts[0]
+            else:
+                # Explicit FASTQ path(s): pass through the full Read_files string
+                return "EXPLICIT", parts[0]
         else:
             raise ValueError(
                 f"Unrecognized Read_files format: '{read_files_str}'. "

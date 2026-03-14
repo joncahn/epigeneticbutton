@@ -79,6 +79,22 @@ rule get_fastq_pe:
                 wait "${{pid_r1}}" "${{pid_r2}}"
                 rm -f "${{fastq_files_r1[@]}}" "${{fastq_files_r2[@]}}"
             fi
+        elif [[ "{params.seq_id}" == "URL" ]]; then
+            # URL(s) to PE FASTQ files (comma-separated R1,R2)
+            fq_pair="{params.fastq_path}"
+            r1="${{fq_pair%%,*}}"
+            r2="${{fq_pair#*,}}"
+            printf "Downloading PE fastqs from URLs for {params.sample_name}\n  R1: ${{r1}}\n  R2: ${{r2}}\n"
+            curl --fail --show-error --location --max-redirs 5 \
+                 --retry 3 --connect-timeout 30 --max-time 7200 \
+                 --proto '=https,http' -o "{output.fastq1}" "${{r1}}" &
+            pid_r1=$!
+            curl --fail --show-error --location --max-redirs 5 \
+                 --retry 3 --connect-timeout 30 --max-time 7200 \
+                 --proto '=https,http' -o "{output.fastq2}" "${{r2}}" &
+            pid_r2=$!
+            wait "${{pid_r1}}" "${{pid_r2}}"
+            printf "URL download complete for PE {params.sample_name}\n"
         elif [[ "{params.seq_id}" == "EXPLICIT" ]]; then
             # Explicit comma-separated FASTQ paths from Read_files
             fq_pair="{params.fastq_path}"
@@ -183,6 +199,12 @@ rule get_fastq_se:
                 cat "${{fastq_files[@]}}" | pigz -p {threads} > {output.fastq0}
                 rm -f "${{fastq_files[@]}}"
             fi
+        elif [[ "{params.seq_id}" == "URL" ]]; then
+            printf "Downloading SE fastq from URL for {params.sample_name}\n  {params.fastq_path}\n"
+            curl --fail --show-error --location --max-redirs 5 \
+                 --retry 3 --connect-timeout 30 --max-time 7200 \
+                 --proto '=https,http' -o "{output.fastq0}" "{params.fastq_path}"
+            printf "URL download complete for SE {params.sample_name}\n"
         elif [[ "{params.seq_id}" == "EXPLICIT" ]]; then
             printf "Copying explicit SE fastq for {params.sample_name}\n  {params.fastq_path}\n"
             if [[ "{params.fastq_path}" == *.gz ]]; then

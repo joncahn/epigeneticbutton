@@ -320,6 +320,30 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 **Alternatives considered**: (1) Symlinks (`results/` → target directory). Rejected: fragile, breaks on move, doesn't support concurrent runs with different output directories. (2) `workdir:` directive. Rejected: changes CWD for all rules, breaks relative paths in config. (3) Passing directory via `params:` in each rule. Rejected: would require adding `results_dir=RESULTS_DIR` to params in every rule with a shell block — more invasive and error-prone than `{config[key]}`. (4) Converting shell blocks to f-strings. Rejected: requires doubling all existing `{...}` patterns in shell blocks, hurting readability for minimal benefit.
 
+---
+
+## Data Acquisition
+
+### URL support for Read_files and genome config fields
+
+**Decision**: Read_files in the sample sheet and genome config fields (`fasta_file`, `gff_file`, `te_file`) accept HTTP(S) URLs in addition to local paths and SRA accessions. URLs are downloaded via curl at rule execution time with retry logic, redirect following, and scheme restriction (`--proto '=https,http'`).
+
+**Rationale**: Making integration test cases self-contained and reproducible requires that all inputs can be fetched from public sources without pre-staging data on local filesystems. The ColCEN test case uses GitHub-hosted genome files and lemna.org-hosted modBAMs, which cannot be addressed as SRA accessions. URL support also benefits users who store data on institutional web servers or cloud storage rather than SRA.
+
+**Design**: URL detection occurs at two levels:
+1. **Sample sheet parsing** (`sample_sheet.py`): `get_seq_id_and_path()` detects `http://`/`https://` prefixes. BAM/bedMethyl URLs behave like local paths (URL string IS the path). FASTQ URLs use `seq_id="URL"` as a dispatch sentinel, analogous to `"EXPLICIT"` for local paths.
+2. **Rule shell blocks**: Reference file rules (`check_fasta`, `check_gff`, `check_te_file`) and sample input rules (`get_fastq_pe/se`, `get_dmc_input`) check for URL prefixes before local file checks. Downloads use `curl --fail --location --max-redirs 5 --retry 3 --proto '=https,http'` for security and reliability.
+
+**Alternatives considered**: (1) A pre-download step that resolves all URLs before DAG execution. Rejected because it would require network access during DAG resolution and would not integrate with Snakemake's retry mechanism. (2) Using `urllib`/`requests` in Python. Rejected because shell-level curl is consistent with the existing download patterns (ENA downloads) and available in all conda environments.
+
+### GFF3-to-BED conversion for TE annotations
+
+**Decision**: The `check_te_file` rule accepts `.gff3(.gz)` and `.gff(.gz)` files in addition to `.bed(.gz)`. GFF3 input is automatically converted to BED6 format using awk, extracting the `ID=` attribute from column 9 as the name (column 4). The existing BED uniqueness validation runs on the output regardless of input format.
+
+**Rationale**: The Col-CEN reference genome distributes TE annotations in EDTA GFF3 format (`t2t-col.20201227.fasta.mod.EDTA.TEanno.gff3.gz`). Requiring users to pre-convert GFF3 to BED is an unnecessary manual step. Since EDTA GFF3 uses `ID=TE_homo_NNN` (already unique), the conversion is deterministic and lossless for the fields the pipeline uses (coordinates, name, strand).
+
+**Alternatives considered**: (1) Requiring BED format only and documenting the conversion command. Rejected because it creates a manual step that blocks self-contained test cases. (2) Using `bedtools` or `gffread` for conversion. Rejected because awk is simpler, has no additional dependencies, and handles the specific GFF3→BED6 mapping needed here.
+
 ### Execution mode auto-detection
 
 **Decision**: When neither `--profile` nor `--cores` is specified, the wrapper auto-detects SLURM by checking for `sbatch` in PATH. If found, it uses `profiles/slurm`; otherwise it runs locally with half of `nproc` cores.

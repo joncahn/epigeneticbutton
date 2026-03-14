@@ -674,7 +674,18 @@ rule get_dmc_input:
         dmc_path="{params.dmc_path}"
         seq_id="{params.seq_id}"
 
-        if [[ -f "$dmc_path" ]]; then
+        if [[ "$dmc_path" == http://* || "$dmc_path" == https://* ]]; then
+            # URL provided — download to temp location
+            printf "Downloading dmC input from URL: $dmc_path\n"
+            url_path="${{dmc_path%%\\?*}}"
+            dl_suffix="${{url_path##*.}}"
+            tmpfile=$(mktemp --suffix=".$dl_suffix")
+            curl --fail --show-error --location --max-redirs 5 \
+                 --retry 3 --connect-timeout 30 --max-time 7200 \
+                 --proto '=https,http' -o "$tmpfile" "$dmc_path"
+            input_file="$tmpfile"
+            printf "Downloaded to: $input_file\n"
+        elif [[ -f "$dmc_path" ]]; then
             # Direct file path provided
             input_file="$dmc_path"
             printf "Using direct file path: $input_file\n"
