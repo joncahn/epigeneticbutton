@@ -1,0 +1,132 @@
+# Test configuration for RNA-seq (RNAseq + RAMPAGE) integration tests
+# This config is designed for dry-run testing only and does not require actual files
+
+repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
+analysis_name: "test_RNA"
+sample_file: "tests/integration/data/test_samples_RNA.tsv"
+
+# Output directories
+output_dir: "results_test_RNA"
+genome_dir: "genomes_test_RNA"
+
+# Minimal reference genome configuration for test_genome
+genomes:
+  test_genome:
+    species: "test_species"
+    genus: "Test"
+    fasta_file: "tests/integration/data/mock_inputs/test_genome.fa"
+    gff_file: "tests/integration/data/mock_inputs/test_genome.gff3"
+    gtf_file: "tests/integration/data/mock_inputs/test_genome.gtf"
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+
+# Trimming parameters (fastp)
+quality_threshold:
+  RNA: 10
+
+min_read_length:
+  RNA: 20
+
+trim_front:
+  RNA: 0
+
+adapter1:
+  RNA: "auto"
+
+adapter2:
+  RNA: "auto"
+
+# RNA parameters
+rna_tracks:
+  RNAseq:
+    file_order: "rnaseq"
+    param_bg: "--outWigType bedGraph"
+    strandedness: "reverse"
+    multimap: "multiple"
+  RAMPAGE:
+    file_order: "rampage"
+    param_bg: "--outWigType bedGraph read1_5p"
+    strandedness: "forward"
+    multimap: "multiple"
+
+rampage_calltss:
+  peaktype: "narrow"
+  params: "--keep-dup 'all' --nomodel --extsize 100"
+
+# Gene expression targets
+rnaseq_target_file_label: "target_genes"
+rnaseq_target_file: "default"
+rnaseq_background_file: "default"
+
+# Resource allocation (minimal for dry-run)
+low_resources: &low
+  threads: 1
+  mem_mb: 1000
+  tmp_mb: 1000
+  qos: "default"
+
+standard_resources: &standard
+  threads: 2
+  mem_mb: 2000
+  tmp_mb: 2000
+  qos: "default"
+
+heavy_resources: &heavy
+  threads: 4
+  mem_mb: 8000
+  tmp_mb: 16000
+  qos: "default"
+
+max_resources: &max
+  threads: 8
+  mem_mb: 16000
+  tmp_mb: 32000
+  qos: "default"
+
+resources:
+  # Environment setup
+  check_fasta: *standard
+  check_gff: *standard
+  check_gtf: *standard
+  check_chrom_sizes: *low
+  compute_genome_stats: *low
+  prep_region_file: *low
+  resolve_taxid: *low
+
+  # Sample download / processing
+  get_fastq_pe: *standard
+  get_fastq_se: *standard
+  run_fastqc: *low
+  process_fastq_pe: *heavy
+  process_fastq_se: *heavy
+  get_available_bam: *standard
+
+  # RNA-seq rules
+  make_STAR_indices: *heavy
+  STAR_map_pe: *heavy
+  STAR_map_se: *heavy
+  filter_rna_pe: *heavy
+  filter_rna_se: *heavy
+  make_rna_stats_pe: *low
+  make_rna_stats_se: *low
+  merging_rna_replicates: *heavy
+  make_rna_stranded_bigwigs: *heavy
+  make_rna_unstranded_bigwigs: *heavy
+  prep_files_for_DEGs: *low
+  call_all_DEGs: *low
+  gather_gene_expression_rpkm: *low
+  plot_expression_levels: *low
+  create_GO_database: *low
+  perform_GO_on_target_file: *low
+  call_rampage_TSS: *heavy
+
+  # Combined analysis
+  prepping_mapping_stats: *low
+  plotting_mapping_stats: *low

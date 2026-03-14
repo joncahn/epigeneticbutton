@@ -1,0 +1,123 @@
+# Test configuration for sRNA (small RNA) integration tests
+# This config is designed for dry-run testing only and does not require actual files
+
+repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
+analysis_name: "test_sRNA"
+sample_file: "tests/integration/data/test_samples_sRNA.tsv"
+
+# Output directories
+output_dir: "results_test_sRNA"
+genome_dir: "genomes_test_sRNA"
+
+# Minimal reference genome configuration for test_genome
+genomes:
+  test_genome:
+    species: "test_species"
+    fasta_file: "tests/integration/data/mock_inputs/test_genome.fa"
+    gff_file: "tests/integration/data/mock_inputs/test_genome.gff3"
+    gtf_file: "tests/integration/data/mock_inputs/test_genome.gtf"
+    structural_rna_fafile: "tests/integration/data/mock_inputs/structural_rnas.fa"
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+
+# Structural RNA depletion
+structural_rna_depletion: true
+
+# Trimming parameters (fastp)
+quality_threshold:
+  sRNA: 10
+
+min_read_length:
+  sRNA: 15
+
+trim_front:
+  sRNA: 0
+
+adapter1:
+  sRNA: "TGGAATTCTCGGGTGCCAAGG"
+
+adapter2:
+  sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA"
+
+# sRNA-specific parameters
+nextflex_v3_deduplication: false
+shortstack_dn_mirna: false
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24"
+srna_min_size: 21
+srna_max_size: 24
+srna_heatmap_sizes: [21, 22, 24]
+
+# Resource allocation (minimal for dry-run)
+low_resources: &low
+  threads: 1
+  mem_mb: 1000
+  tmp_mb: 1000
+  qos: "default"
+
+standard_resources: &standard
+  threads: 2
+  mem_mb: 2000
+  tmp_mb: 2000
+  qos: "default"
+
+heavy_resources: &heavy
+  threads: 4
+  mem_mb: 8000
+  tmp_mb: 16000
+  qos: "default"
+
+max_resources: &max
+  threads: 8
+  mem_mb: 16000
+  tmp_mb: 32000
+  qos: "default"
+
+resources:
+  # Environment setup
+  check_fasta: *standard
+  check_gff: *standard
+  check_gtf: *standard
+  check_chrom_sizes: *low
+  compute_genome_stats: *low
+  prep_region_file: *low
+  resolve_taxid: *low
+
+  # Sample download / processing
+  get_fastq_pe: *standard
+  get_fastq_se: *standard
+  run_fastqc: *low
+  process_fastq_pe: *heavy
+  process_fastq_se: *heavy
+  get_available_bam: *standard
+
+  # sRNA rules
+  deduplicate_srna_nextflexv3: *standard
+  make_bt2_indices_for_structural_RNAs: *heavy
+  filter_structural_rna: *heavy
+  make_bowtie1_indices: *standard
+  make_bowtie1_indices_large: *standard
+  shortstack_map: *heavy
+  make_cluster_bedfiles: *low
+  make_srna_size_stats: *standard
+  filter_size_srna_sample: *standard
+  merging_srna_replicates: *standard
+  make_srna_stranded_bigwigs: *standard
+  analyze_all_srna_samples_on_target_file: *heavy
+  prep_files_for_differential_srna_clusters: *low
+  call_all_differential_srna_clusters: *max
+  call_all_DEGs: *max
+
+  # Combined analysis rules used by sRNA
+  prepping_mapping_stats: *low
+  plotting_mapping_stats: *low
+  prepping_srna_sizes_stats: *low
+  plotting_srna_sizes_stats: *low
+  combine_clusterfiles: *low
+  get_annotations_for_bedfile: *low
+  plotting_upset_regions: *low

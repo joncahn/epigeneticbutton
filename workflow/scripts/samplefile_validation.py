@@ -232,6 +232,7 @@ def check_genome_config(tab, config):
     Raises ValueError with all collected error messages if validation fails.
     """
     errors = []
+    warnings = []
     genomes_cfg = config.get("genomes", {})
 
     # Collect which envs are used per genome
@@ -288,6 +289,10 @@ def check_genome_config(tab, config):
             errors.append(
                 f"[X] motif_ref_genome '{motif_genome}' not found in config['genomes']"
             )
+
+    # --- Print warnings ---
+    for w in warnings:
+        print(w)
 
     if errors:
         full_message = "\n".join(errors)

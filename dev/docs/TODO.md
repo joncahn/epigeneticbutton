@@ -156,7 +156,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### custom adapter handling
 
-* [ ] Sequencing adapters could vary on a per-library basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
+* [ ] Sequencing adapters could vary on a per-sample basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
 
 ### species-specific parameters
 
@@ -331,7 +331,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 ### Expand rule-level dry-run tests
 
 * [x] Expand dmC dry-run tests to cover the full `mC.smk` rule (all bismark workflows + dmC). **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) covers WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl including parameter routing, replicate merging, DMR calling, and CX report conversion. The original `test_dmc_dryrun.py` is retained for focused dmC-only regression testing.
-* [ ] Add similar lightweight dry-run test modules for other rule files (ChIP, RNA, sRNA, ATAC, combined_analysis) using mock inputs and a fake genome, following the mC test pattern.
+* [x] Add similar lightweight dry-run test modules for other rule files (ChIP, RNA, sRNA, ATAC) using mock inputs and a fake genome, following the mC test pattern. **Done**: `test_ChIP_dryrun.py` (22 tests), `test_ATAC_dryrun.py` (24 tests), `test_RNA_dryrun.py` (27 tests), `test_sRNA_dryrun.py` (24 tests). PBAT/EMseq already covered in `test_mC_dryrun.py`. Combined_analysis and folding dmc into mC still TBD.
 
 ### Add test dataset documentation
 
