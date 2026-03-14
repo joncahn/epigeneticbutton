@@ -317,7 +317,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
   * [x] Add A. thaliana EMseq data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the ColCEN test case. **Done**: 4 EMseq PE samples (Col-0 WT × 2 reps, rdr6 × 2 reps) from PRJNA1111825 (SRR29036835-40). Inflorescence tissue.
 
-  * [ ] Document the provenance of all datasets as previously done with S. pombe and H. sapiens test cases.
+  * [x] Document the provenance of all datasets as previously done with S. pombe and H. sapiens test cases. **Done**: `tests/integration/data/colcen_design.md` and `tests/integration/data/pombe_design.md`.
 
 ### H. sapiens test case
 
