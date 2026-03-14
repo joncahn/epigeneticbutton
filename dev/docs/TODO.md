@@ -46,7 +46,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [x] Update Snakefile sample-sheet parsing to read the new columns and build sample metadata accordingly. **Done**: `read_sample_sheet()` + `add_compat_columns()` in Snakefile.
   * [x] Update rule files: automatically generated filenames will change (e.g. "Input" -> the control's Sample_ID). **Done**: All 8 rule files migrated (ChIPseq, RNAseq, ATACseq, smallRNA, mC, combined_analysis, sample_download, environment_setup). TF env eliminated.
   * [x] Update documentation (README, Read the Docs, example sample sheets) to reflect the new format. **Done**: README.md and CLAUDE.md updated.
-  * [x] Update test sample sheets and test code. **Done**: All 4 test sample sheets converted (pombe, colcen, chr5, dmc). Unit tests for sample_sheet.py (49 tests).
+  * [x] Update test sample sheets and test code. **Done**: All test sample sheets converted (pombe, colcen, hg38_chr21, dmc). Unit tests for sample_sheet.py (57 tests).
   * [x] Validate with a full run of the S. pombe integration test. **Done**: 257 pipeline steps, all completed successfully.
 
   | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
@@ -192,7 +192,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Provide a front-end CLI executable script
 
-* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/cli-wrapper-plan.md` for full design and `dev/docs/design-decisions.md` for rationale.
+* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/design-decisions.md` for rationale.
 
 ## Plotting
 **N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete**
@@ -281,7 +281,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Schizosaccharomyces pombe test case
 
-* [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 18 samples (11 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_options_pombe.yaml`.
+* [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 17 samples (10 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_options_pombe.yaml` and `tests/integration/data/pombe_design.md`.
 
 * [x] Gather all necessary genome reference resources (fasta, gff, gtf) from [Pombase.org](https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/). Derive an appropriate test config and test samplefile. **Done**: PomBase Feb 2026 FASTA/GFF3, gffread-derived GTF, Infernal/Rfam-15.0 structural RNA FASTA (261 loci). Files in `tests/integration/data/Spombe/`.
 
@@ -309,7 +309,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Remove files associated with the Chr5 subset. Let's just target the full ColCEN genome. **Done**: `git rm -r tests/integration/data/ColCEN_Chr5/`, `test_options_chr5.yaml`, `test_samples_chr5.tsv`.
 
-* [x] Complete the A. thaliana ColCEN test case: **Done**: 30-sample test sheet with SRA accessions for ChIP (CenH3, H3K9me2) and ATAC, lemna.org URLs for dmC modBAMs. Self-contained `test_options_colcen.yaml` with GitHub URLs for genome reference (Col-CEN v1.2 FASTA, GFF3, EDTA TE GFF3). Required pipeline enhancements: URL support for Read_files and genome config fields, GFF3→BED auto-conversion for TE file.
+* [x] Complete the A. thaliana ColCEN test case: **Done**: 38-sample test sheet with SRA/DDBJ accessions for ChIP (CenH3, H3K9me2), ATAC, EMseq, and PBAT; lemna.org URLs for dmC modBAMs. Self-contained `test_options_colcen.yaml` with GitHub URLs for genome reference (Col-CEN v1.2 FASTA, GFF3, EDTA TE GFF3). Required pipeline enhancements: URL support for Read_files and genome config fields, GFF3→BED auto-conversion for TE file, DRR/ERR accession support. See `tests/integration/data/colcen_design.md` for full dataset provenance.
 
   * [x] Find the corresponding SRA entries for the [Shimada Nat Plants 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11410651/) ChIP samples (CENH3, Input in genotypes WT, rdr126ddm1, rdr126ddm1hp5), GEO series: [GSE132005](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132005) and replace local file paths with these. The ONT methylation samples from the same GEO series are also in SRA (mislabeled as bisulfite). They should've been deposited as modBAMs, need to verify this. **Done**: ChIP CenH3 SRR28453410-21 (12 samples), H3K9me2 SRR28453402-09 (8 samples), dmC modBAMs via lemna.org URLs.
 
@@ -335,7 +335,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Add test dataset documentation
 
-* [ ] Add a test design doc similar to hg38_chr21_design.md for S. pombe and A. thaliana chr5 test cases.
+* [x] Add a test design doc similar to hg38_chr21_design.md for S. pombe and A. thaliana test cases. **Done**: `tests/integration/data/pombe_design.md` and `tests/integration/data/colcen_design.md`.
 
 ## Known Unknowns
 
