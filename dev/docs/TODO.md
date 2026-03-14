@@ -313,7 +313,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
   * [x] Find the corresponding SRA entries for the [Shimada Nat Plants 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11410651/) ChIP samples (CENH3, Input in genotypes WT, rdr126ddm1, rdr126ddm1hp5), GEO series: [GSE132005](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE132005) and replace local file paths with these. The ONT methylation samples from the same GEO series are also in SRA (mislabeled as bisulfite). They should've been deposited as modBAMs, need to verify this. **Done**: ChIP CenH3 SRR28453410-21 (12 samples), H3K9me2 SRR28453402-09 (8 samples), dmC modBAMs via lemna.org URLs.
 
-  * [ ] Find A. thaliana WGBS_nd (Pico Methyl-Seq) and/or PBAT datasets for the ColCEN test case. Need to identify publicly available non-directional bisulfite-seq data in Arabidopsis.
+  * [x] Find A. thaliana PBAT datasets for the ColCEN test case. **Done**: 4 PBAT PE samples (Col-0 WT × 2 reps, tarp1tarp2 × 2 reps) from [Takei et al. 2024 Plant Physiology](https://academic.oup.com/plphys/article/195/2/1333/7623186) PRJDB14218 (DRR400324-27). 10-day seedlings. Required expanding SRA accession regex to accept DRR/ERR prefixes. WGBS_nd (Pico Methyl-Seq) still TBD.
 
   * [x] Add A. thaliana EMseq data from [Trasser et al. 2024 EMBO reports](https://pmc.ncbi.nlm.nih.gov/articles/PMC11624286/) to the ColCEN test case. **Done**: 4 EMseq PE samples (Col-0 WT × 2 reps, rdr6 × 2 reps) from PRJNA1111825 (SRR29036835-40). Inflorescence tissue.
 

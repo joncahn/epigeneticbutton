@@ -27,6 +27,10 @@ WT_flower_EMseq_rep1	EMseq	ColCEN	genotype:WT,tissue:flower	rep1	SRR29036840	PE
 WT_flower_EMseq_rep2	EMseq	ColCEN	genotype:WT,tissue:flower	rep2	SRR29036839	PE
 rdr6_flower_EMseq_rep1	EMseq	ColCEN	genotype:rdr6,tissue:flower	rep1	SRR29036836	PE
 rdr6_flower_EMseq_rep2	EMseq	ColCEN	genotype:rdr6,tissue:flower	rep2	SRR29036835	PE
+WT_seedling_PBAT_rep1	PBAT	ColCEN	genotype:WT,tissue:seedling	rep1	DRR400324	PE
+WT_seedling_PBAT_rep2	PBAT	ColCEN	genotype:WT,tissue:seedling	rep2	DRR400325	PE
+tarp1tarp2_seedling_PBAT_rep1	PBAT	ColCEN	genotype:tarp1tarp2,tissue:seedling	rep1	DRR400326	PE
+tarp1tarp2_seedling_PBAT_rep2	PBAT	ColCEN	genotype:tarp1tarp2,tissue:seedling	rep2	DRR400327	PE
 WT_leaf_ATAC_rep1	ATAC	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12362020	PE
 WT_leaf_ATAC_rep2	ATAC	ColCEN	genotype:WT,tissue:leaf	rep2	SRR12362021	PE
 ddm1_leaf_ATAC_rep1	ATAC	ColCEN	genotype:ddm1,tissue:leaf	rep1	SRR12362026	PE

@@ -92,6 +92,11 @@ mC_mapping:
     map_se: ""
     process_pe: "--buffer_size 16G"
     process_se: "--buffer_size 16G"
+  PBAT:
+    map_pe: "--maxins 1000 --pbat"
+    map_se: "--pbat"
+    process_pe: "--buffer_size 16G"
+    process_se: "--buffer_size 16G"
   dmC:
     map_pe: ""
     map_se: ""

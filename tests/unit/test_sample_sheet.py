@@ -153,6 +153,16 @@ class TestParseReadFiles:
         assert parts == ["SRR111", "SRR222", "SRR333"]
         assert is_sra is True
 
+    def test_ddbj_accession(self):
+        parts, is_sra = parse_read_files("DRR400324", "PE")
+        assert parts == ["DRR400324"]
+        assert is_sra is True
+
+    def test_ena_accession(self):
+        parts, is_sra = parse_read_files("ERR123456", "SE")
+        assert parts == ["ERR123456"]
+        assert is_sra is True
+
     def test_local_se(self):
         parts, is_sra = parse_read_files("/path/to/reads.fq.gz", "SE")
         assert parts == ["/path/to/reads.fq.gz"]
@@ -173,6 +183,11 @@ class TestGetSeqIdAndPath:
     def test_sra_merged(self):
         seq_id, fq_path = get_seq_id_and_path("SRR111+SRR222", "SE")
         assert seq_id == "SRR111,SRR222"
+        assert fq_path == "SRA"
+
+    def test_ddbj(self):
+        seq_id, fq_path = get_seq_id_and_path("DRR400324", "PE")
+        assert seq_id == "DRR400324"
         assert fq_path == "SRA"
 
     def test_bam(self):

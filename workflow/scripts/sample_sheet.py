@@ -103,8 +103,8 @@ def parse_read_files(read_files_str, read_layout):
     For local SE: "/a/reads.fq" → (["/a/reads.fq"], False)
     """
     parts = [p.strip() for p in read_files_str.split("+")]
-    # Check if any part looks like an SRA accession
-    is_sra = bool(re.match(r"^SRR\d+$", parts[0]))
+    # Check if any part looks like an SRA/ENA/DDBJ accession (SRR/ERR/DRR)
+    is_sra = bool(re.match(r"^[SED]RR\d+$", parts[0]))
     return parts, is_sra
 
 

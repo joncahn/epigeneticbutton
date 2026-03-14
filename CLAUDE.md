@@ -93,7 +93,7 @@ scripts/validate_pombe.sh --all
 - `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
 - `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (17 samples, 4 assays)
 - `tests/integration/data/test_samples_hg38_chr21.tsv` - Human chr21 test sample sheet (33 samples, all 6 assay types)
-- `tests/integration/data/test_samples_colcen.tsv` - A. thaliana ColCEN test sample sheet (34 samples: ChIP, ATAC, EMseq, dmC)
+- `tests/integration/data/test_samples_colcen.tsv` - A. thaliana ColCEN test sample sheet (38 samples: ChIP, ATAC, EMseq, PBAT, dmC)
 - `tests/integration/data/test_options_colcen.yaml` - ColCEN test options (GitHub URLs for genome, SRA/URL inputs)
 
 ## Key Details
