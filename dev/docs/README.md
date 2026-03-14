@@ -55,6 +55,9 @@ pytest tests/unit/ -v
 # Integration dry-run (validates Snakemake DAG resolution with S. pombe test data)
 pytest tests/integration/test_pombe_dryrun.py -v
 
+# mC dry-run (validates bisulfite/dmC workflow DAG across assay types)
+pytest tests/integration/test_mC_dryrun.py -v
+
 # Full validation (dry-run + pipeline execution + output checks)
 scripts/validate_pombe.sh --all
 ```
@@ -80,12 +83,17 @@ dev/
         README.md             # This file
         design-decisions.md   # Architectural decisions and rationale
         sample-sheet-spec.md  # Sample sheet format specification
+        benchmarks.md         # Pipeline benchmarking notes
         TODO.md               # Active roadmap and backlog
     plans/                    # Archived implementation plans (gitignored)
     profile_snakemake_log.py  # Snakemake run profiler (see above)
 tests/
-    unit/                     # Fast unit tests
+    unit/                     # Fast unit tests (200+)
     integration/              # Snakemake dry-run and post-run tests
+        data/                 # Test data, sample sheets, and design docs
+            pombe_design.md   # S. pombe test case design
+            colcen_design.md  # A. thaliana ColCEN test case design
+            hg38_chr21_design.md  # Human chr21 test case design
 scripts/
     validate_pombe.sh         # S. pombe integration test orchestrator
     subset_test_data.sh       # SLURM-based chromosome subsetting for test data prep
