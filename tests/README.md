@@ -33,8 +33,11 @@ tests/
 ├── integration/                       # Snakemake dry-run and post-run tests
 │   ├── test_pombe_dryrun.py           #   S. pombe DAG validation (31 tests, ~43s)
 │   ├── test_pombe_postrun.py          #   Post-run output checks (29 tests)
-│   ├── test_dmc_dryrun.py             #   dmC rule routing (modBAM vs bedMethyl)
 │   ├── test_mC_dryrun.py             #   mC workflow dry-run (52 tests, ~52s)
+│   ├── test_ChIP_dryrun.py           #   ChIP broad+narrow dry-run (22 tests)
+│   ├── test_ATAC_dryrun.py           #   ATAC dry-run (24 tests)
+│   ├── test_RNA_dryrun.py            #   RNA-seq + RAMPAGE dry-run (27 tests)
+│   ├── test_sRNA_dryrun.py           #   sRNA dry-run (24 tests)
 │   └── data/
 │       ├── test_samples_pombe.tsv     #   17-sample S. pombe (4 assays)
 │       ├── test_options_pombe.yaml
@@ -74,8 +77,11 @@ pytest tests/unit/ -v
 |------|-------------------|---------|
 | `test_pombe_dryrun.py` | DAG construction, rule selection, wildcard resolution, control linking, replicate handling, checkpoints (31 tests) | ~43s |
 | `test_pombe_postrun.py` | Output file existence, BAM/bigwig integrity, peak files, DEG tables, stats reports (29 tests) | ~5s |
-| `test_dmc_dryrun.py` | dmC-specific rule routing: modBAM vs bedMethyl inputs, Bismark exclusion, DMR analysis | ~30s |
 | `test_mC_dryrun.py` | mC workflow dry-run: WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM/bedMethyl (52 tests) | ~52s |
+| `test_ChIP_dryrun.py` | ChIP broad PE + narrow SE, controls, merging, IDR, differential peaks (22 tests) | ~25s |
+| `test_ATAC_dryrun.py` | ATAC PE, Tn5 shift, peak calling, merging, differential peaks (24 tests) | ~25s |
+| `test_RNA_dryrun.py` | RNAseq + RAMPAGE, STAR, stranded bigwigs, DEGs, TSS calling (27 tests) | ~30s |
+| `test_sRNA_dryrun.py` | sRNA SE, structural RNA depletion, ShortStack, size filtering (24 tests) | ~25s |
 
 ```bash
 # Dry-run only

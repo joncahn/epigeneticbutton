@@ -1,6 +1,0 @@
-Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control
-WT_leaf_dmC_rep1	dmC	test_genome	genotype:WT,tissue:leaf	rep1	tests/integration/data/mock_inputs/dmc_sample1.bam	SE		
-WT_leaf_dmC_rep2	dmC	test_genome	genotype:WT,tissue:leaf	rep2	tests/integration/data/mock_inputs/dmc_sample2.bam	SE		
-WT_root_bedMethyl_rep1	dmC	test_genome	genotype:WT,tissue:root	rep1	tests/integration/data/mock_inputs/bedmethyl_sample1.bed.gz	SE
-mutant_leaf_dmC_rep1	dmC	test_genome	genotype:mutant,tissue:leaf	rep1	tests/integration/data/mock_inputs/dmc_mut_sample1.bam	SE		
-mutant_leaf_dmC_rep2	dmC	test_genome	genotype:mutant,tissue:leaf	rep2	tests/integration/data/mock_inputs/dmc_mut_sample2.bam	SE		

@@ -89,7 +89,6 @@ scripts/validate_pombe.sh --all
 - `tests/unit/test_mC_helpers.py` - Tests mC rule helper functions (`is_dmc_sample`, `parameters_for_mc`)
 - `tests/unit/test_validate_dmc_input.py` - Tests dmC input validation (modBAM MM/ML tags, bedMethyl format)
 - `tests/integration/test_pombe_dryrun.py` - Snakemake dry-run validation with S. pombe test data
-- `tests/integration/test_dmc_dryrun.py` - Snakemake dry-run validation for the dmC workflow
 - `tests/integration/test_pombe_postrun.py` - Post-run output checks (requires completed pipeline run)
 - `tests/integration/data/test_samples_pombe.tsv` - S. pombe test sample sheet (17 samples, 4 assays)
 - `tests/integration/data/test_samples_hg38_chr21.tsv` - Human chr21 test sample sheet (33 samples, all 6 assay types)
