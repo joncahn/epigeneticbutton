@@ -115,6 +115,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [x] The drop-down for Control should be filtered based on the Assay of the currentrow to show only compatible types. For ChIP_broad and ChIP_narrow, both are validAssay sources for Control. For RAMPAGE, only RNAseq Assays are valid Controls. Ifcontrols are available, instead of an empty dropdown list, show an unselectablemessage item "None available" or similar. **Done**: CONTROL_SOURCE_ASSAYS constant drives filtering.
 * [x] Replace underscores in the header row with spaces for display purposes only. **Done**.
 * [x] Add a selection widget to each row to support multi-row selection and actions like delete and duplicate. **Done**: Checkbox column with `rowSelection` formatter, `selectableRows: true`, "Delete Selected" and "Duplicate Selected" toolbar buttons.
+* [x] Change the EPICC branding home button in the upper left corner to EPICCbuilder (with builder italicized and in a complementary color). **Done**: Brand text changed to EPICC*builder* with "builder" in `--accent2` teal, italicized, lighter weight.
 
 **Validation** (see [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) for thecanonical rules):
 
@@ -144,15 +145,13 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file. **Done**: New Reference Genomes tab with genome name management UI (add/remove tiles), per-genome config forms, Genome column in Samples tab constrained to dropdown (freetext still allowed). Genome data flows into YAML export via `configState.genomes`. EPICC brand links to genomes tab.
 
-* [ ] Change the EPICC branding home button in the upper left corner to EPICCbuilder (with builder italicized and in a complementary color).
-
 ##### [x] Bugs
 
 * [x] Sample sheet example should validate, be exportable. **Done**: Fixed PE example rows to include R1,R2 comma-separated paths. Removed `_example` skip guards from validation and export. Example rows now validate normally and are included in TSV export.
 
 * [x] Help text for the factor levels columns should be better. Maybe should say: Levels   of factor {factor}. Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) in the sample sheet TSV 'Levels' column. All rows must have the same factors. Level values form the 'levels_label' in analysis names. **Done**: Factor columns now show factor-specific description via `showFactorDescription()` instead of generic "Levels" text.
 
-* [ ] Fix rows selected on click in any column - should only be selected when clicking on the leftmost column selection box
+* [x] Fix rows selected on click in any column - should only be selected when clicking on the leftmost column selection box. **Done**: Added `selectableRowsCheck` returning false to block automatic row-click selection; checkbox column's explicit `toggleSelect()` call bypasses the check.
 
 ### custom adapter handling
 

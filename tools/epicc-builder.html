@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EPICC Builder</title>
+<title>EPICCbuilder</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔘</text></svg>">
 <link href="https://unpkg.com/tabulator-tables@6/dist/css/tabulator_midnight.min.css" rel="stylesheet">
 <script src="https://unpkg.com/tabulator-tables@6/dist/js/tabulator.min.js"></script>
@@ -580,7 +580,7 @@
 <body>
 
 <nav class="topnav" role="navigation" aria-label="Main navigation">
-  <span class="brand" onclick="switchSection('genomes-section')" title="EPICC Builder">EPICC</span>
+  <span class="brand" onclick="switchSection('genomes-section')" title="EPICC Builder">EPICC<i style="color:var(--accent2);font-weight:400">builder</i></span>
   <div class="nav-tabs">
     <span class="nav-tab active" data-section="genomes-section" onclick="switchSection('genomes-section')">Reference Genomes</span>
     <span class="nav-tab" data-section="samplesheet-section" onclick="switchSection('samplesheet-section')">Samples</span>
@@ -998,7 +998,7 @@ function buildColumnDefs() {
     {
       formatter: "rowSelection", titleFormatter: "rowSelection",
       headerSort: false, width: 30, hozAlign: "center", resizable: false,
-      cellClick: function(e, cell) { cell.getRow().toggleSelect(); },
+      cssClass: "row-select-col",
     },
     {
       title: "", field: "_actions", width: 36, headerSort: false,
@@ -2006,6 +2006,14 @@ table.on("cellEditCancelled", function(cell) {
   flushValidationIfIdle();
 });
 
+// Only allow row selection via the checkbox column — undo automatic selection from other clicks
+table.on("rowClick", function(e, row) {
+  var cell = e.target.closest(".tabulator-cell");
+  if (!cell || !cell.classList.contains("row-select-col")) {
+    // Click was outside the checkbox column — reverse the toggle that just happened
+    if (row.isSelected()) { row.deselect(); } else { row.select(); }
+  }
+});
 table.on("rowDeleted", function() { scheduleValidation(); });
 table.on("rowMoved", function() { scheduleValidation(); });
 table.on("rowSelectionChanged", function(rows) {
