@@ -63,6 +63,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 ### Configuration
 
 - `config/epicc-options.yaml` - Main options file (paths, parameters, resource allocation)
+  - `repo_folder` is optional; auto-detected from `workflow.basedir` at runtime (one level above the Snakefile). Override explicitly only when the repo is accessed from a non-standard path.
   - Reference genomes are namespaced under `genomes:`, each entry containing annotation file paths and species-level parameters (e.g. `genus`, `species`, `ncbi_taxid`)
   - `gtf_file`, `genomesize`, `star_index`, `ncbi_taxid`, and `structural_rna_fafile` are auto-computed at runtime (GTF derived from GFF via gffread, genome stats from FASTA, TaxId from NCBI Datasets CLI, structural RNA FASTA via Infernal/Rfam); user-provided values in the options file override the computed values
   - GO database name is auto-derived as `org.<G><species>_<GenomeName>.eg.db` (e.g. `org.Athaliana_ColCEN.eg.db`)

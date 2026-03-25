@@ -2092,8 +2092,9 @@ document.addEventListener("keydown", function(e) {
 
 var _configFormBuilt = false;
 var configState = {
+  // Optional — auto-detected from Snakefile location if omitted
+  repo_folder: "",
   // Required
-  repo_folder: "/path/to/epigeneticbutton/repo",
   analysis_name: "epicc",
   sample_file: "config/all_samples.tsv",
   // Output options
@@ -2338,12 +2339,17 @@ function buildConfigForm() {
   // --- Required Parameters ---
   var reqSec = el("div", { className: "cfg-section" });
   reqSec.appendChild(el("h2", { textContent: "Required Parameters" }));
-  reqSec.appendChild(buildTextRow("Path to repo folder:", "repo_folder", "/path/to/epigeneticbutton/repo",
-    "Full path to where the epigeneticbutton repository is cloned."));
   reqSec.appendChild(buildTextRow("Analysis name:", "analysis_name", "epicc", "Label for analysis plots."));
   reqSec.appendChild(buildTextRow("Sample file path:", "sample_file", "config/all_samples.tsv",
     "Path to the sample sheet created in the Sample Sheet tab."));
   container.appendChild(reqSec);
+
+  // --- Optional Parameters ---
+  var optSec = el("div", { className: "cfg-section" });
+  optSec.appendChild(el("h2", { textContent: "Optional Parameters" }));
+  optSec.appendChild(buildTextRow("Path to repo folder (optional):", "repo_folder", "",
+    "Auto-detected from the Snakefile location at runtime. Override only if the repository is accessed from a non-standard path."));
+  container.appendChild(optSec);
 
   // --- Output Options ---
   var outSec = el("div", { className: "cfg-section" });
@@ -2589,7 +2595,10 @@ function updateConfigDynamicSections() {
 
 function configStateToYAML() {
   var cfg = {};
-  cfg.repo_folder = configState.repo_folder;
+  // repo_folder is optional — omit from YAML when blank so the Snakefile auto-detects it
+  if (configState.repo_folder && configState.repo_folder.trim() !== "") {
+    cfg.repo_folder = configState.repo_folder;
+  }
   cfg.analysis_name = configState.analysis_name;
   cfg.sample_file = configState.sample_file;
 
