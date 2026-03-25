@@ -228,7 +228,7 @@ def cmd_validate(args, extra_args):
     sample_file = args.samples or config.get("sample_file", "config/all_samples.tsv")
     print(f"  Options file:  {options_file}", file=sys.stderr)
     print(f"  Sample file:   {sample_file}", file=sys.stderr)
-    print(f"  Repo folder:   {config.get('repo_folder', '(not set)')}",
+    print(f"  Repo folder:   {config.get('repo_folder', '(auto-detected)')}",
           file=sys.stderr)
     print(f"  Analysis name: {config.get('analysis_name', '(not set)')}",
           file=sys.stderr)
@@ -247,8 +247,8 @@ def cmd_validate(args, extra_args):
     errors = []
     if not Path(sample_file).exists():
         errors.append(f"Sample file not found: {sample_file}")
-    repo_folder = config.get("repo_folder", ".")
-    if not Path(repo_folder).is_dir():
+    repo_folder = config.get("repo_folder")
+    if repo_folder and not Path(repo_folder).is_dir():
         errors.append(f"Repo folder not found: {repo_folder}")
     for gname, gconf in genomes.items():
         fasta = gconf.get("fasta_file", "")

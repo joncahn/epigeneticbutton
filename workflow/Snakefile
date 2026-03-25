@@ -126,7 +126,7 @@ def maybe_temp(path, keep=False):
     return path if keep else temp(path)
 
 # Define the folder in which the snakemake pipeline has been cloned
-REPO_FOLDER = os.path.abspath(config["repo_folder"])
+REPO_FOLDER = os.path.abspath(config.get("repo_folder", os.path.join(workflow.basedir, "..")))
 if not os.path.isdir(REPO_FOLDER):
     raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the options file!")
 

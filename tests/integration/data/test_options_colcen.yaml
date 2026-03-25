@@ -3,7 +3,6 @@
 # Shimada et al. 2024 Nat Plants (GSE132005), Crisp et al. 2020 (ATAC, GSE155023),
 # Trasser et al. 2024 EMBO Reports (PRJNA1111825, EMseq)
 
-repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_colcen"
 sample_file: "tests/integration/data/test_samples_colcen.tsv"
 

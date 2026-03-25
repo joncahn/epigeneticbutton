@@ -2,7 +2,6 @@
 # This config is designed for dry-run testing only and does not require actual files
 # Covers: WGBS, WGBS_nd, PBAT, EMseq, dmC (modBAM + bedMethyl)
 
-repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_mC"
 sample_file: "tests/integration/data/test_samples_mC.tsv"
 

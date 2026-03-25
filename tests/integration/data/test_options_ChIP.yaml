@@ -2,7 +2,6 @@
 # This config is designed for dry-run testing only and does not require actual files
 # Covers: ChIP_broad (H3K9me2 PE) and ChIP_narrow (H3K4me3 SE)
 
-repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_ChIP"
 sample_file: "tests/integration/data/test_samples_ChIP.tsv"
 

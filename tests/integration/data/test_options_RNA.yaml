@@ -1,7 +1,6 @@
 # Test configuration for RNA-seq (RNAseq + RAMPAGE) integration tests
 # This config is designed for dry-run testing only and does not require actual files
 
-repo_folder: "/grid/martienssen/data/eernst/projects/epicc/epigeneticbutton"
 analysis_name: "test_RNA"
 sample_file: "tests/integration/data/test_samples_RNA.tsv"
 

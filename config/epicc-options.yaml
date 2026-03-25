@@ -1,5 +1,5 @@
-# Path to the working directory where the repository was cloned
-repo_folder: "/grid/martienssen/home/jcahn/nlsas/projects/epigeneticbutton"
+# Path to the repository (optional — auto-detected from Snakefile location if omitted)
+#repo_folder: "/path/to/epigeneticbutton"
 
 # Name of the run
 analysis_name: "epicc"
