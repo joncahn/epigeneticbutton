@@ -126,7 +126,7 @@ if (startsWith(backgroundfile, "results/RNA/DEG/counts__")) {
 	ref_genes<-read.delim(backgroundfile, header = FALSE, col.names = c("Chr","Start","Stop","Name","Value","Strand"))
 	ref_genes<-mutate(ref_genes, GID=str_replace(ref_genes$Name, pattern = ".*ID=(gene:)?([^;]+).*", replacement = "\\2")) %>%
 				select(-Name, -Value)
-	ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.")
+	ref_genes$GID<-str_remove_all(ref_genes$GID, pattern = "_.$")
 	allGenes<-unique(unlist(ref_genes$GID))
 	
 	target<-read.delim(targetfile, header = TRUE)
