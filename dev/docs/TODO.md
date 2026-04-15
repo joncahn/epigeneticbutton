@@ -26,6 +26,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Support calling ATAC peaks with Input
 
+### CUT&RUN / CUT&TAG support 
+
+* [ ] Support CUT&RUN / CUT&TAG nomenclature + analysis
+
 ## UI/UX
 
 ### Handling IDR failures
