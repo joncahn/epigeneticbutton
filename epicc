@@ -22,7 +22,7 @@ from pathlib import Path
 DESCRIPTION = """\
 EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization.
 
-Snakemake pipeline for ChIP-seq, RNA-seq, small RNA-seq, bisulfite
+Snakemake pipeline for ChIP-seq, ATAC-seq, RNA-seq, small RNA-seq, bisulfite
 methylC-seq, and direct methylation from long-read sequencing.
 """
 
