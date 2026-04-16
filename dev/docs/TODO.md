@@ -209,6 +209,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [ ] Catch snakemake/slurm warnings such as "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." and "No SLURM account given, trying to guess.
 No account was given, not able to get a SLURM account via sacct: sacct: invalid option -- '1'" to limit verbose output
 
+* [ ] maybe rename the `profile` sub-command, since profile is a specific option for snakemake.
+
 ## Plotting
 **N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete**
 
