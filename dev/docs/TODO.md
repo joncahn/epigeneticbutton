@@ -83,6 +83,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] epicc-builder: Unless it has been edited by the user, the Sample_ID suggestion should be updated automatically and continuously as the user changes other fields for the sample. **Done**: `_sid_user_edited` flag tracks manual edits; `applySuggestions()` auto-updates cell value when not user-edited; clearing Sample_ID resumes auto-suggestion.
 
+* [ ] If full path(s) are given for samples, verify that the samples exist before starting the run and return detail error.
+
 #### Harmonize analysis_samplefiles
 
 * [x] Analysis samplefiles need to be updated to follow the conventions of the new input samplefile format. **Done**: `analysis_samplefile_*.tsv` now uses new-format columns (Assay, Genome, Levels, IP_target, env, sample_name).
