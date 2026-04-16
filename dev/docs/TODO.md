@@ -2,9 +2,10 @@
 
 ## Documentation
 
-* [ ] Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI. Update README incrementally after each additional modifications.
+* [ ] HIGH PRIORITY: Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI.
+* [ ] Update README continously after each additional modifications.
       
-* [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
+* [ ] HIGH PRIORITY: Integrate README + Read the docs + epicc-builder for concerted changes
 
 * [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
 
@@ -83,7 +84,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] epicc-builder: Unless it has been edited by the user, the Sample_ID suggestion should be updated automatically and continuously as the user changes other fields for the sample. **Done**: `_sid_user_edited` flag tracks manual edits; `applySuggestions()` auto-updates cell value when not user-edited; clearing Sample_ID resumes auto-suggestion.
 
-* [ ] If full path(s) are given for samples, verify that the samples exist before starting the run and return detail error.
+* [ ] If full path(s) are given for samples, verify that the files exist before starting the run and return detail error.
 
 #### Harmonize analysis_samplefiles
 
@@ -187,11 +188,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Skip mCHG/mCHH analysis for animal genomes
 
-* [ ] Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation.
+* [ ] Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation. Decicion: `methylation_contexts` list. Enables full customization (including CHH for mammalian brain) and test with not only `H` entries, but also CAG, CAA, etc.
 
 ### Explicitly handle repeats vs coding gene annotations?
 
-* [ ] Do we currently have a way to specify whether one or the other or both should be used in the analysis?
+* [ ] Do we currently have a way to specify whether one or the other or both should be used in the analysis? Answer: Currently, analysis over gene is always on and there is a `te_analysis` toggle in the config to also do TE. Analysis over genes can be turned off with `full_analysis` toggle, but no TE analysis performed either in this case. Do we want to change this behavior into `full_analysis`=gene+TE (if TE file given), `gene_analysis_only`, `te_analysis_only` (if TE file given) and `no_analysis` options?
 
 ### Configurable output directory
 
@@ -284,6 +285,8 @@ No account was given, not able to get a SLURM account via sacct: sacct: invalid 
 * [x] Add `runtime` to all resource tiers and the SLURM profile to eliminate the "No wall time information given" warning. **Done**: Added `runtime` (minutes) to all 7 resource tiers in `epicc-options.yaml` and `time: "{resources.runtime}"` to SLURM profile sbatch section. Defaults: low=60m, standard=2h, download=12h, heavy=8h, heavier=8h, max=48h, single=8h. Based on hg38 chr21 profiling data with generous margins for full-genome production runs.
 
 * [x] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug). **Done**: switched back to qos=slow_nice for all jobs.
+
+* [ ] HIGH PRIORITY: Make pipeline fully usable on other slurm clusters (at least): requires removing tmp_mb and qos from rule resources (trigger errors on INRAE cluster), include it in profile instead (if possible).
 
 ## Testing
 
