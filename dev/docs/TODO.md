@@ -2,6 +2,8 @@
 
 ## Documentation
 
+* [ ] Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI. Update README incrementally after each additional modifications.
+      
 * [ ] Integrate README + Read the docs + epicc-builder app for concerted changes
 
 * [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
@@ -196,6 +198,13 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 ### Provide a front-end CLI executable script
 
 * [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/design-decisions.md` for rationale.
+
+* [ ] Add `DAG`and `rulegraph`generation options to subcommand `dry-run`and `validate` (output to png with dot)
+
+* [ ] Add specific command (e.g. `analysis` or `extra-output` to ease the targeting of expression plots, browsers, GOs, etc.. (see list in READ THE DOCS Usage/Additional Output Options)
+
+* [ ] Catch snakemake/slurm warnings such as "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." and "No SLURM account given, trying to guess.
+No account was given, not able to get a SLURM account via sacct: sacct: invalid option -- '1'" to limit verbose output
 
 ## Plotting
 **N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete**
