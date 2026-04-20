@@ -49,7 +49,7 @@ genomes:
 
   CabSauv:
     genus: "Vitis"
-    species: "vitifera"
+    species: "vinifera"
     fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
     gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
     gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
