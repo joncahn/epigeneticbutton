@@ -2,10 +2,13 @@
 
 ## Documentation
 
-* [ ] HIGH PRIORITY: Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI.
-* [ ] Update README continously after each additional modifications.
-      
+* [ ] HIGH PRIORITY: Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
+
+* [ ] HIGH PRIORITY: Update Read the docs page to also reflect all changes on the big-refactor.
+
 * [ ] HIGH PRIORITY: Integrate README + Read the docs + epicc-builder for concerted changes
+
+* [ ] **Defer** Update README continously after each additional modifications.
 
 * [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
 
@@ -15,23 +18,23 @@
 
 ### (Differential) splicing analysis for RNAseq
 
-* [ ] heavy pipeline. Here is what was used in my MBD paper:
+* [ ] **deferred for future PR** heavy pipeline. Here is what was used in my MBD paper:
 To look for novel splicing changes that occurred within the mC reader mutants, the reads were mapped with STAR (Dobin et al. 2013) were processed by StringTie and merged together (Pertea et al. 2015) into a master novel transcriptome comprising splicing events from TAIR10 and ones uniquely identified withinthis study. Then reads underwent lightweight alignment using Salmon version 1.4.0 (Patro et al. 2017) against the novel transcriptome from StringTie. Novel and known transcripts belonging to the same genewere analysed for splicing events by SUPPA2 (Trincado et al. 2018). Differential alternative splicing (DAS)was calculated for each event based on abundance of transcripts with and without inclusion of those eventsby SUPPA2 (Trincado et al. 2018).
 
 ### Generic pre-computed bedMethyl input support
 
-* [ ] Support bedMethyl as a generic pre-computed methylation input format for any mC assay (WGBS, EMseq, dmC), not just dmC. Currently bedMethyl handling is exclusively gated behind dmC wildcard constraints (`_DMC_WC`). The underlying scripts (`validate_dmc_input.py`, `bedmethyl_to_cx_report.py`) are already assay-agnostic — the limitation is purely in rule routing.
+* **Defer** [ ] Support bedMethyl as a generic pre-computed methylation input format for any mC assay (WGBS, EMseq, dmC), not just dmC. Currently bedMethyl handling is exclusively gated behind dmC wildcard constraints (`_DMC_WC`). The underlying scripts (`validate_dmc_input.py`, `bedmethyl_to_cx_report.py`) are already assay-agnostic — the limitation is purely in rule routing.
   * **Current state**: A sample with `Assay: WGBS` and `Read_files: /path/to/precomputed.bed.gz` fails because (1) excluded from dmC rules by `_DMC_WC`, (2) `define_cx_report_input()` routes it to Bismark expecting FASTQs.
   * **Approach**: Add `bedMethyl` as a valid Assay in `VALID_ASSAYS` (maps to `mC` env). Modify `define_cx_report_input()` and wildcard constraints to route bedMethyl samples to the conversion pipeline. Reuse existing `get_dmc_input` → `copy_bedmethyl_input` → `convert_bedmethyl_to_cx_report` chain.
   * **Alternative**: Add an optional `Input_format` column (FASTQ/BAM/bedMethyl) to separate assay type from input format. More flexible but larger change.
 
 ### ATAC-seq input sample support
 
-* [ ] Support calling ATAC peaks with Input
+* [ ] **Defer** Support calling ATAC peaks with Input
 
 ### CUT&RUN / CUT&TAG support 
 
-* [ ] Support CUT&RUN / CUT&TAG nomenclature + analysis
+* [ ] **high priority** Support CUT&RUN / CUT&TAG nomenclature + analysis
 
 ## UI/UX
 
@@ -43,7 +46,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Change all references to the "config file" to refer to it as the "options file". This is currently config.yaml. It should become epicc-options.yaml. This will be an extensive rename - Make sure this change is uniformly applied throughout the workflow, documentation, test cases, and the builder. Keep the config/ directory name as-is. A full run configuration is actually the composite of a sample sheet and the information contained in the options file. **Done**: Renamed `config/config.yaml` → `config/epicc-options.yaml`, all test config files → `test_options_*.yaml`. Updated all references across workflow, rules, scripts, tests, builder, and documentation.
 
-* [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries.
+* [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries. Note: probably we want to select specific settings and explicitly expose them as CLI params through the new epicc CLI wrapper.
 
 ### refactor sample sheet
 
@@ -84,7 +87,9 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] epicc-builder: Unless it has been edited by the user, the Sample_ID suggestion should be updated automatically and continuously as the user changes other fields for the sample. **Done**: `_sid_user_edited` flag tracks manual edits; `applySuggestions()` auto-updates cell value when not user-edited; clearing Sample_ID resumes auto-suggestion.
 
-* [ ] If full path(s) are given for samples, verify that the files exist before starting the run and return detail error.
+* [ ] **High priority** If full path(s) are given for samples, verify that the files exist before starting the run and return detail error.
+
+* [ ] Preemptively Input checks for different files, including extra output, e.g. browser target file with bed+label=string(not starting with -)+binsize=Integer(min1)+optional (coordinates+width).
 
 #### Harmonize analysis_samplefiles
 
@@ -164,7 +169,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### custom adapter handling
 
-* [ ] Sequencing adapters could vary on a per-sample basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
+* [ ] **defer for later PR** Sequencing adapters could vary on a per-sample basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
 
 ### species-specific parameters
 
@@ -188,11 +193,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Skip mCHG/mCHH analysis for animal genomes
 
-* [ ] Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation. Decicion: `methylation_contexts` list. Enables full customization (including CHH for mammalian brain) and test with not only `H` entries, but also CAG, CAA, etc.
+* [ ] Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation. **Decision: `methylation_contexts` list.** Initially support CG, CHG, CHH only. Enables full customization (including CHH for mammalian brain). Expand to arbitrary subcontexts in future PR, but also CAG, CAA, etc. Need tests for selecting arbitrary subcontexts like CAG, CAA.
 
 ### Explicitly handle repeats vs coding gene annotations?
 
-* [ ] Do we currently have a way to specify whether one or the other or both should be used in the analysis? Answer: Currently, analysis over gene is always on and there is a `te_analysis` toggle in the config to also do TE. Analysis over genes can be turned off with `full_analysis` toggle, but no TE analysis performed either in this case. Do we want to change this behavior into `full_analysis`=gene+TE (if TE file given), `gene_analysis_only`, `te_analysis_only` (if TE file given) and `no_analysis` options?
+* [ ] **Defer for later consideration** Do we currently have a way to specify whether one or the other or both should be used in the analysis? Answer: Currently, analysis over gene is always on and there is a `te_analysis` toggle in the config to also do TE. Analysis over genes can be turned off with `full_analysis` toggle, but no TE analysis performed either in this case. Do we want to change this behavior into `full_analysis`=gene+TE (if TE file given), `gene_analysis_only`, `te_analysis_only` (if TE file given) and `no_analysis` options?
 
 ### Configurable output directory
 
@@ -202,33 +207,33 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/design-decisions.md` for rationale.
 
+* [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
+
 * [ ] Add `DAG`and `rulegraph`generation options to subcommand `dry-run`and `validate` (output to png with dot)
 
-* [ ] Add specific command (e.g. `analysis` or `extra-output` to ease the targeting of expression plots, browsers, GOs, etc.. (see list in READ THE DOCS Usage/Additional Output Options)
+* [ ] **High priority** Add specific command (e.g. `analysis` or `extra-output` to ease the targeting of expression plots, browsers, GOs, etc.. (see list in READ THE DOCS Usage/Additional Output Options)
 
-* [ ] Catch snakemake/slurm warnings such as "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." and "No SLURM account given, trying to guess.
+* [ ] **High priority** Catch snakemake/slurm warnings such as "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." and "No SLURM account given, trying to guess.
 No account was given, not able to get a SLURM account via sacct: sacct: invalid option -- '1'" to limit verbose output
 
-* [ ] maybe rename the `profile` sub-command, since profile is a specific option for snakemake.
+* [ ] maybe rename the `profile` sub-command to `perf-proile`, since profile is a specific option for snakemake.
 
 ## Plotting
-**N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete**
+N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
 
-* [ ] See if we can improve browser plot sample label readability
+* [ ] **Defer** See if we can improve browser plot sample label readability
 
-* [ ] In plotting peak stats, for now only the first 2 reps are used (empty if not, and idr only between these 2). Would be best to allow for a flexible output where all reps are shown, and all pairwise idr too. Need refactoring the way stats are compiled.
+* [ ] **Defer** In plotting peak stats, for now only the first 2 reps are used (empty if not, and idr only between these 2). Would be best to allow for a flexible output where all reps are shown, and all pairwise idr too. Need refactoring the way stats are compiled.
 
-* [ ] Consider adding correlation matrix of coverage or pairwise plots between selected samples for more QC output
+* [ ] **Defer** Consider adding correlation matrix of coverage or pairwise plots between selected samples for more QC output
 
 ## Codebase Hygiene
 
 * [x] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates. **Done**: 8 chip-specific rule names renamed to generic names across all rule files, resource config, tests, and profiling scripts (filter_chip_pe → filter_bam_pe, make_chip_stats_pe → make_mapping_stats_pe, pe_or_se_chip_dispatch → dispatch_final_bam, merging_chip_replicates → merging_bam_replicates, prepping_chip_peak_stats → prepping_peak_stats, plotting_peaks_stats_chip_tf → plotting_peak_stats, plus SE variants).
 
-* [ ] Improve logging system (naming, concatenating, and cleaning if chosen)
+* [ ] **Defer** Improve logging system (naming, concatenating, and cleaning if chosen) - currently lots of redundancy.
 
-* [ ] Input checks for different files, including extra output, e.g. browser target file with bed+label=string(not starting with -)+binsize=Integer(min1)+optional (coordinates+width)
-
-* [ ] Merging rules to call peaks for ChIP and TSS for RAMPAGE (both macs2), for merging regions (clusters, peaks, TSS)?
+* [ ] **Defer** Merging rules to call peaks for ChIP and TSS for RAMPAGE (both macs2), for merging regions (clusters, peaks, TSS)? Check existing conditions.
 
 ## Performance/Resource Usage
 
@@ -238,7 +243,7 @@ No account was given, not able to get a SLURM account via sacct: sacct: invalid 
 
 ### Speeding up bigwig conversion
 
-* [ ] Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others? Should be actively maintained.
+* [ ] **Defer** Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others? Should be actively maintained.
 
 ### Data acquisition and preparation
 
@@ -363,3 +368,7 @@ No account was given, not able to get a SLURM account via sacct: sacct: invalid 
 ## Known Issues/Bugs
 
 * [x] PlotPCA can fail if no dimensions found. check npz results before starting PCA? **Done**: `plot_PCA_correlation` rule now catches `plotPCA` failures (insufficient data for PCA) and creates a placeholder output instead of failing the pipeline.
+
+* [ ] Chromap dropping >90% reads from ColCEN PE test data. 
+
+* [ ] Chromap SE output not getting properly piped/handled downstream by samtools (see ColCEN test)
