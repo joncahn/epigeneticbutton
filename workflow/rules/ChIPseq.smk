@@ -321,25 +321,30 @@ def define_logs_final_input(wildcards):
     peaktype = get_peaktype_for_env(assay, env)
     rep_sids = get_replicate_sample_ids(sname, samples)
 
+    # ATAC's single peak-calling rule uses a BED-format input and does not
+    # encode PE/SE in its log filename; ChIP's PE- and SE-specific rules do.
+    peakcall_paired = "" if env == "ATAC" else None
+
     for sid in rep_sids:
-        rep_paired = get_sample_field(sid, samples, 'paired')
+        rep_paired = peakcall_paired if peakcall_paired is not None else get_sample_field(sid, samples, 'paired')
         log_files.append(return_log_chip(env, sid, f"final__{peaktype}peak_calling", rep_paired))
         log_files.append(return_log_chip(env, sid, "making_bigwig_final", ""))
         if env != "ATAC":
             log_files.append(return_log_chip(env, sid, "making_fingerprint_final", ""))
 
+    merged_paired = peakcall_paired if peakcall_paired is not None else paired
     if len(rep_sids) >= 2:
         log_files.append(return_log_chip(env, sname, "IDR", ""))
         log_files.append(return_log_chip(env, sname, "merging_reps", ""))
-        log_files.append(return_log_chip(env, sname, f"merged__{peaktype}peak_calling", paired))
-        log_files.append(return_log_chip(env, sname, f"pseudo1__{peaktype}peak_calling", paired))
-        log_files.append(return_log_chip(env, sname, f"pseudo2__{peaktype}peak_calling", paired))
+        log_files.append(return_log_chip(env, sname, f"merged__{peaktype}peak_calling", merged_paired))
+        log_files.append(return_log_chip(env, sname, f"pseudo1__{peaktype}peak_calling", merged_paired))
+        log_files.append(return_log_chip(env, sname, f"pseudo2__{peaktype}peak_calling", merged_paired))
         log_files.append(return_log_chip(env, sname, "splitting_pseudreps", ""))
     else:
         one_sid = rep_sids[0]
         log_files.append(return_log_chip(env, one_sid, "splitting_pseudreps", ""))
-        log_files.append(return_log_chip(env, one_sid, f"pseudo1__{peaktype}peak_calling", paired))
-        log_files.append(return_log_chip(env, one_sid, f"pseudo2__{peaktype}peak_calling", paired))
+        log_files.append(return_log_chip(env, one_sid, f"pseudo1__{peaktype}peak_calling", merged_paired))
+        log_files.append(return_log_chip(env, one_sid, f"pseudo2__{peaktype}peak_calling", merged_paired))
 
     log_files.append(return_log_chip(env, sname, "selecting_best_peaks", ""))
 
