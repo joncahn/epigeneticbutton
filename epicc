@@ -51,6 +51,33 @@ def find_repo_root():
     )
 
 
+def is_url(path):
+    """Return True if the string looks like an HTTP(S) URL."""
+    return isinstance(path, str) and (
+        path.startswith("http://") or path.startswith("https://")
+    )
+
+
+def url_resolves(url, timeout=10):
+    """Check whether an HTTP(S) URL resolves. Returns (ok, detail).
+
+    Uses a ranged GET (bytes=0-0) rather than HEAD because some hosts (e.g.
+    CDN-fronted downloads) mishandle HEAD. Follows redirects via urllib's
+    default opener.
+    """
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(url, headers={"Range": "bytes=0-0"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            code = resp.getcode()
+            return code < 400, f"HTTP {code}"
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}"
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        return False, str(e)
+
+
 def fmt_duration(seconds):
     """Format seconds as human-readable duration."""
     if seconds < 60:
@@ -250,13 +277,31 @@ def cmd_validate(args, extra_args):
     repo_folder = config.get("repo_folder")
     if repo_folder and not Path(repo_folder).is_dir():
         errors.append(f"Repo folder not found: {repo_folder}")
+    genome_fields = [
+        ("fasta_file", "FASTA"),
+        ("gff_file", "GFF"),
+        ("te_file", "TE"),
+    ]
+    url_checks = []
     for gname, gconf in genomes.items():
-        fasta = gconf.get("fasta_file", "")
-        if fasta and not Path(fasta).exists():
-            errors.append(f"Genome {gname}: FASTA not found: {fasta}")
-        gff = gconf.get("gff_file", "")
-        if gff and not Path(gff).exists():
-            errors.append(f"Genome {gname}: GFF not found: {gff}")
+        for field, label in genome_fields:
+            value = gconf.get(field, "")
+            if not value:
+                continue
+            if is_url(value):
+                url_checks.append((gname, label, value))
+            elif not Path(value).exists():
+                errors.append(f"Genome {gname}: {label} not found: {value}")
+    if url_checks:
+        print(f"\n  Checking {len(url_checks)} genome URL(s)...",
+              file=sys.stderr)
+        for gname, label, url in url_checks:
+            ok, detail = url_resolves(url)
+            if not ok:
+                errors.append(
+                    f"Genome {gname}: {label} URL does not resolve "
+                    f"({detail}): {url}"
+                )
 
     if errors:
         print(f"\n  Found {len(errors)} error(s):", file=sys.stderr)
