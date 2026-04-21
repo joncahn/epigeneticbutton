@@ -12,14 +12,14 @@ genomes:
   ColCEN:
     genus: "Arabidopsis"
     species: "thaliana"
-    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
-    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
+    fasta_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
+    gff_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
+    #gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
+    te_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/t2t-col.20201227.fasta.mod.EDTA.TEanno.gff3.gz" # .bed(.gz) or .gff3(.gz) — GFF3 auto-converted to BED6;
     gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-    te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/ColCEN_TEs.bed.gz" # .bed(.gz) or .gff3(.gz) — GFF3 auto-converted to BED6;
-    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
-    star_index: "--genomeSAindexNbases 12"  # optional override (auto-computed from FASTA if omitted)
+    #structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
+    #star_index: "--genomeSAindexNbases 12"  # optional override (auto-computed from FASTA if omitted)
     #genomesize: 1.3e8  # optional override (auto-computed as total bases − N bases if omitted)
     ncbi_taxid: "3702"
 
