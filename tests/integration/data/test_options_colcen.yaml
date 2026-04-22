@@ -108,49 +108,49 @@ low_resources: &low
   mem_mb: 1000
   tmp_mb: 1000
   runtime: 60
-  qos: "default"
+  qos: "cpu_snice"
 
 standard_resources: &standard
   threads: 2
   mem_mb: 2000
   tmp_mb: 2000
   runtime: 120
-  qos: "default"
+  qos: "cpu_snice"
 
 download_resources: &download
   threads: 4
   mem_mb: 4000
   tmp_mb: 16000
   runtime: 720
-  qos: "default"
+  qos: "cpu_snice"
 
 heavy_resources: &heavy
   threads: 4
   mem_mb: 8000
   tmp_mb: 16000
   runtime: 480
-  qos: "default"
+  qos: "cpu_snice"
 
 heavier_resources: &heavier
   threads: 8
   mem_mb: 16000
   tmp_mb: 32000
   runtime: 480
-  qos: "default"
+  qos: "cpu_snice"
 
 max_resources: &max
   threads: 8
   mem_mb: 16000
   tmp_mb: 32000
   runtime: 2880
-  qos: "default"
+  qos: "cpu_snice"
 
 single_thread: &single
   threads: 1
   mem_mb: 8000
   tmp_mb: 16000
   runtime: 480
-  qos: "default"
+  qos: "cpu_snice"
 
 resources:
   # Environment setup
