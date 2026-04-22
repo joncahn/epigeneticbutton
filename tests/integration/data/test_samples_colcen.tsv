@@ -11,18 +11,18 @@ rdr126ddm1hp5_leaf_CenH3_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:le
 rdr126ddm1hp5_leaf_CenH3_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	SRR28453419	PE	CenH3	rdr126ddm1hp5_leaf_CenH3Input_rep2
 rdr126ddm1hp5_leaf_CenH3Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	SRR28453420	PE	Input
 rdr126ddm1hp5_leaf_CenH3Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	SRR28453421	PE	Input
-rdr126ddm1_leaf_H3K9me2_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	SRR28453402	PE	H3K9me2	rdr126ddm1_leaf_H3K9me2Input_rep1
-rdr126ddm1_leaf_H3K9me2_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep2	SRR28453403	PE	H3K9me2	rdr126ddm1_leaf_H3K9me2Input_rep2
-rdr126ddm1_leaf_H3K9me2Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	SRR28453404	PE	Input
-rdr126ddm1_leaf_H3K9me2Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep2	SRR28453405	PE	Input
-rdr126ddm1hp5_leaf_H3K9me2_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	SRR28453406	PE	H3K9me2	rdr126ddm1hp5_leaf_H3K9me2Input_rep1
-rdr126ddm1hp5_leaf_H3K9me2_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	SRR28453407	PE	H3K9me2	rdr126ddm1hp5_leaf_H3K9me2Input_rep2
-rdr126ddm1hp5_leaf_H3K9me2Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	SRR28453408	PE	Input
-rdr126ddm1hp5_leaf_H3K9me2Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	SRR28453409	PE	Input
-rdr126ddm1_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	https://lemna.org/data/shimada2024/SRR28453434.bam	SE
-rdr126ddm1het_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1het,tissue:leaf	rep1	https://lemna.org/data/shimada2024/SRR28453435.bam	SE
-rdr126ddm1hp5_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	https://lemna.org/data/shimada2024/SRR28453436.bam	SE
-rdr126ddm1hethp5_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1hethp5,tissue:leaf	rep1	https://lemna.org/data/shimada2024/SRR28453437.bam	SE
+rdr126ddm1_leaf_H3K9me2_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	SRR28453402	SE	H3K9me2	rdr126ddm1_leaf_H3K9me2Input_rep1
+rdr126ddm1_leaf_H3K9me2_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep2	SRR28453403	SE	H3K9me2	rdr126ddm1_leaf_H3K9me2Input_rep2
+rdr126ddm1_leaf_H3K9me2Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	SRR28453404	SE	Input
+rdr126ddm1_leaf_H3K9me2Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep2	SRR28453405	SE	Input
+rdr126ddm1hp5_leaf_H3K9me2_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	SRR28453406	SE	H3K9me2	rdr126ddm1hp5_leaf_H3K9me2Input_rep1
+rdr126ddm1hp5_leaf_H3K9me2_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	SRR28453407	SE	H3K9me2	rdr126ddm1hp5_leaf_H3K9me2Input_rep2
+rdr126ddm1hp5_leaf_H3K9me2Input_rep1	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	SRR28453408	SE	Input
+rdr126ddm1hp5_leaf_H3K9me2Input_rep2	ChIP_broad	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep2	SRR28453409	SE	Input
+rdr126ddm1_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1,tissue:leaf	rep1	https://transfer.lemna.org/modbams-shimada2024/as5-1_Rep1.bam	SE
+rdr126ddm1het_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1het,tissue:leaf	rep1	https://transfer.lemna.org/modbams-shimada2024/as5-1-wt_Rep1.bam	SE
+rdr126ddm1hp5_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1hp5,tissue:leaf	rep1	https://transfer.lemna.org/modbams-shimada2024/as6-1_Rep1.bam	SE
+rdr126ddm1hethp5_leaf_dmC_rep1	dmC	ColCEN	genotype:rdr126ddm1hethp5,tissue:leaf	rep1	https://transfer.lemna.org/modbams-shimada2024/as6-1-wt_Rep1.bam	SE
 WT_flower_EMseq_rep1	EMseq	ColCEN	genotype:WT,tissue:flower	rep1	SRR29036840	PE
 WT_flower_EMseq_rep2	EMseq	ColCEN	genotype:WT,tissue:flower	rep2	SRR29036839	PE
 rdr6_flower_EMseq_rep1	EMseq	ColCEN	genotype:rdr6,tissue:flower	rep1	SRR29036836	PE
