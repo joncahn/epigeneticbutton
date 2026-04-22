@@ -4,7 +4,6 @@ Col0_WT_H3K4me1_Rep1	ChIP_broad	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821852	
 Col0_WT_Input_Rep1	ChIP_narrow	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821932	PE	Input	
 Col0_suvh1_WGBS_Rep1	WGBS	ColCEN	genotype:Col0,tissue:suvh1	Rep1	SRR27821959	SE		
 Col0_WT_WGBS_Rep1	WGBS	ColCEN	genotype:Col0,tissue:WT	Rep1	SRR27821907	SE		
-Col0_WT_WGBS_Rep2	WGBS	ColCEN	genotype:Col0,tissue:WT	Rep2	SRR27821907	SE		
 Col0_suvh13_RNA_Rep1	RNAseq	ColCEN	genotype:Col0,tissue:suvh13	Rep1	SRR27821840	PE		
 Col0_suvh13_RNA_Rep2	RNAseq	ColCEN	genotype:Col0,tissue:suvh13	Rep2	SRR27821839	PE		
 Col0_suvh13_RNA_Rep3	RNAseq	ColCEN	genotype:Col0,tissue:suvh13	Rep3	SRR27821838	PE		
