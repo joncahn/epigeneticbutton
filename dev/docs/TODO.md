@@ -211,12 +211,15 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Add `DAG`and `rulegraph`generation options to subcommand `dry-run`and `validate` (output to png with dot)
 
-* [ ] **High priority** Add specific command (e.g. `analysis` or `extra-output` to ease the targeting of expression plots, browsers, GOs, etc.. (see list in READ THE DOCS Usage/Additional Output Options)
+* [ ] **High priority** Add specific command (e.g. `analysis` or `extra-output` to ease the targeting of expression plots, browsers, GOs, etc.. (see list in READ THE DOCS Usage/Additional Output Options). A suggested structure would be: `epicc output --plot-type "type" --input-file "path/to/file.txt" (--plot-label "path/to/plot.pdf" --type-specific-args "optional")` where the available "types" are 'rnaseq-histogram', 'go', 'motifs', 'srna-clusters', 'heatmap', 'metaplot', or 'browser'. This command is best used after a complete analysis run has been done, but it should work if given directly. In each type case, the command will launch snakemake with a specific target file to generate the specific analysis on the given input file (required). In addition to adding a target file, the snakemake run will edit the epicc-options.yaml on the command line, with builtin snakemake `--config key=value`. The keys to modify depend on the type of output, for example:
+for rnaseq-histogram: rnaseq_target_file="input-file"; rnaseq_target_file_label=either derived automatically from the input-file name, either using the optional plot-label; the target file of the snakemake run will be derived from the rnaseq_target_file_label and from additional arguments:
+`results/RNA/plots/plot_expression__"analysis-name"__"ref-genome"__"rnaseq_target_file_label".pdf`; "analysis-name" could be optionally modified but defaults to the entry in the epicc-options, while "ref-genome" must be one of the entries in the samplefile.
+The details in the READ THE DOCS "Additional Output Options" should inform on the required arguments for each type of output. The format of the "input-files" should be validated prior to run, depending on the output type. For example, for "rnaseq-histogram", the input-file must be a 1 column list of gene ids for gene that exist in the gff file of the selected ref-genome, with an optional 2nd column of labels to add to the plot titles (other column could exist but are not considered, see workflow/scripts/R_plot_expression_level.R).
 
 * [ ] **High priority** Catch snakemake/slurm warnings such as "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." and "No SLURM account given, trying to guess.
 No account was given, not able to get a SLURM account via sacct: sacct: invalid option -- '1'" to limit verbose output
 
-* [ ] maybe rename the `profile` sub-command to `perf-proile`, since profile is a specific option for snakemake.
+* [ ] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake.
 
 ## Plotting
 N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
