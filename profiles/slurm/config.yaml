@@ -9,6 +9,12 @@ keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
 
+# Safety-net defaults: every rule should declare its own runtime via
+# resources, but if one is missed, fall back to 60 min so the SLURM
+# executor plugin still submits with --time=.
+default-resources:
+  - runtime=60
+
 precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
 
 sbatch:

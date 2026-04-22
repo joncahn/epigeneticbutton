@@ -20,6 +20,7 @@ rule get_fastq_pe:
     threads: config["resources"]["get_fastq_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["get_fastq_pe"]["mem_mb"],
+        runtime=config["resources"]["get_fastq_pe"]["runtime"],
         tmp_mb=config["resources"]["get_fastq_pe"]["tmp_mb"],
         qos=config["resources"]["get_fastq_pe"]["qos"]
     retries: 3
@@ -152,6 +153,7 @@ rule get_fastq_se:
     threads: config["resources"]["get_fastq_se"]["threads"]
     resources:
         mem_mb=config["resources"]["get_fastq_se"]["mem_mb"],
+        runtime=config["resources"]["get_fastq_se"]["runtime"],
         tmp_mb=config["resources"]["get_fastq_se"]["tmp_mb"],
         qos=config["resources"]["get_fastq_se"]["qos"]
     retries: 3
@@ -238,6 +240,7 @@ rule run_fastqc:
     threads: 1
     resources:
         mem_mb=config["resources"]["run_fastqc"]["mem_mb"],
+        runtime=config["resources"]["run_fastqc"]["runtime"],
         tmp_mb=config["resources"]["run_fastqc"]["tmp_mb"],
         qos=config["resources"]["run_fastqc"]["qos"]
     shell:
@@ -269,6 +272,7 @@ rule process_fastq_pe:
     threads: config["resources"]["process_fastq_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["process_fastq_pe"]["mem_mb"],
+        runtime=config["resources"]["process_fastq_pe"]["runtime"],
         tmp_mb=config["resources"]["process_fastq_pe"]["tmp_mb"],
         qos=config["resources"]["process_fastq_pe"]["qos"]
     shell:
@@ -322,6 +326,7 @@ rule process_fastq_se:
     threads: config["resources"]["process_fastq_se"]["threads"]
     resources:
         mem_mb=config["resources"]["process_fastq_se"]["mem_mb"],
+        runtime=config["resources"]["process_fastq_se"]["runtime"],
         tmp_mb=config["resources"]["process_fastq_se"]["tmp_mb"],
         qos=config["resources"]["process_fastq_se"]["qos"]
     shell:
@@ -367,6 +372,7 @@ rule get_available_bam:
     threads: config["resources"]["get_available_bam"]["threads"]
     resources:
         mem_mb=config["resources"]["get_available_bam"]["mem_mb"],
+        runtime=config["resources"]["get_available_bam"]["runtime"],
         tmp_mb=config["resources"]["get_available_bam"]["tmp_mb"],
         qos=config["resources"]["get_available_bam"]["qos"]
     shell:

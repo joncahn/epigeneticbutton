@@ -34,6 +34,7 @@ rule check_fasta:
     threads: config["resources"]["check_fasta"]["threads"]
     resources:
         mem_mb=config["resources"]["check_fasta"]["mem_mb"],
+        runtime=config["resources"]["check_fasta"]["runtime"],
         tmp_mb=config["resources"]["check_fasta"]["tmp_mb"],
         qos=config["resources"]["check_fasta"]["qos"]
     shell:
@@ -85,6 +86,7 @@ rule check_gff:
     threads: config["resources"]["check_gff"]["threads"]
     resources:
         mem_mb=config["resources"]["check_gff"]["mem_mb"],
+        runtime=config["resources"]["check_gff"]["runtime"],
         tmp_mb=config["resources"]["check_gff"]["tmp_mb"],
         qos=config["resources"]["check_gff"]["qos"]
     shell:
@@ -138,6 +140,7 @@ rule check_gtf:
     threads: config["resources"]["check_gtf"]["threads"]
     resources:
         mem_mb=config["resources"]["check_gtf"]["mem_mb"],
+        runtime=config["resources"]["check_gtf"]["runtime"],
         tmp_mb=config["resources"]["check_gtf"]["tmp_mb"],
         qos=config["resources"]["check_gtf"]["qos"]
     shell:
@@ -183,6 +186,7 @@ rule check_chrom_sizes:
     threads: config["resources"]["check_chrom_sizes"]["threads"]
     resources:
         mem_mb=config["resources"]["check_chrom_sizes"]["mem_mb"],
+        runtime=config["resources"]["check_chrom_sizes"]["runtime"],
         tmp_mb=config["resources"]["check_chrom_sizes"]["tmp_mb"],
         qos=config["resources"]["check_chrom_sizes"]["qos"]
     shell:
@@ -206,6 +210,7 @@ rule compute_genome_stats:
     threads: config["resources"]["compute_genome_stats"]["threads"]
     resources:
         mem_mb=config["resources"]["compute_genome_stats"]["mem_mb"],
+        runtime=config["resources"]["compute_genome_stats"]["runtime"],
         tmp_mb=config["resources"]["compute_genome_stats"]["tmp_mb"],
         qos=config["resources"]["compute_genome_stats"]["qos"]
     shell:
@@ -236,6 +241,7 @@ rule resolve_taxid:
     threads: config["resources"]["resolve_taxid"]["threads"]
     resources:
         mem_mb=config["resources"]["resolve_taxid"]["mem_mb"],
+        runtime=config["resources"]["resolve_taxid"]["runtime"],
         tmp_mb=config["resources"]["resolve_taxid"]["tmp_mb"],
         qos=config["resources"]["resolve_taxid"]["qos"]
     shell:
@@ -275,6 +281,7 @@ rule prep_region_file:
     threads: config["resources"]["prep_region_file"]["threads"]
     resources:
         mem_mb=config["resources"]["prep_region_file"]["mem_mb"],
+        runtime=config["resources"]["prep_region_file"]["runtime"],
         tmp_mb=config["resources"]["prep_region_file"]["tmp_mb"],
         qos=config["resources"]["prep_region_file"]["qos"]
     shell:
@@ -297,6 +304,7 @@ rule download_rfam:
     threads: config["resources"]["download_rfam"]["threads"]
     resources:
         mem_mb=config["resources"]["download_rfam"]["mem_mb"],
+        runtime=config["resources"]["download_rfam"]["runtime"],
         tmp_mb=config["resources"]["download_rfam"]["tmp_mb"],
         qos=config["resources"]["download_rfam"]["qos"]
     shell:
@@ -333,6 +341,7 @@ rule build_structural_rna_db:
     threads: config["resources"]["build_structural_rna_db"]["threads"]
     resources:
         mem_mb=config["resources"]["build_structural_rna_db"]["mem_mb"],
+        runtime=config["resources"]["build_structural_rna_db"]["runtime"],
         tmp_mb=config["resources"]["build_structural_rna_db"]["tmp_mb"],
         qos=config["resources"]["build_structural_rna_db"]["qos"]
     shell:
@@ -452,6 +461,7 @@ rule check_te_file:
     threads: config["resources"]["check_te_file"]["threads"]
     resources:
         mem_mb=config["resources"]["check_te_file"]["mem_mb"],
+        runtime=config["resources"]["check_te_file"]["runtime"],
         tmp_mb=config["resources"]["check_te_file"]["tmp_mb"],
         qos=config["resources"]["check_te_file"]["qos"]
     shell:

@@ -167,6 +167,7 @@ rule make_STAR_indices:
     threads: config["resources"]["make_STAR_indices"]["threads"]
     resources:
         mem_mb=config["resources"]["make_STAR_indices"]["mem_mb"],
+        runtime=config["resources"]["make_STAR_indices"]["runtime"],
         tmp_mb=config["resources"]["make_STAR_indices"]["tmp_mb"],
         qos=config["resources"]["make_STAR_indices"]["qos"]
     shell:
@@ -204,6 +205,7 @@ rule STAR_map_pe:
     threads: config["resources"]["STAR_map_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["STAR_map_pe"]["mem_mb"],
+        runtime=config["resources"]["STAR_map_pe"]["runtime"],
         tmp_mb=config["resources"]["STAR_map_pe"]["tmp_mb"],
         qos=config["resources"]["STAR_map_pe"]["qos"]
     shell:
@@ -242,6 +244,7 @@ rule STAR_map_se:
     threads: config["resources"]["STAR_map_se"]["threads"]
     resources:
         mem_mb=config["resources"]["STAR_map_se"]["mem_mb"],
+        runtime=config["resources"]["STAR_map_se"]["runtime"],
         tmp_mb=config["resources"]["STAR_map_se"]["tmp_mb"],
         qos=config["resources"]["STAR_map_se"]["qos"]
     shell:
@@ -271,6 +274,7 @@ rule filter_rna_pe:
     threads: config["resources"]["filter_rna_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["filter_rna_pe"]["mem_mb"],
+        runtime=config["resources"]["filter_rna_pe"]["runtime"],
         tmp_mb=config["resources"]["filter_rna_pe"]["tmp_mb"],
         qos=config["resources"]["filter_rna_pe"]["qos"]
     shell:
@@ -306,6 +310,7 @@ rule filter_rna_se:
     threads: config["resources"]["filter_rna_se"]["threads"]
     resources:
         mem_mb=config["resources"]["filter_rna_se"]["mem_mb"],
+        runtime=config["resources"]["filter_rna_se"]["runtime"],
         tmp_mb=config["resources"]["filter_rna_se"]["tmp_mb"],
         qos=config["resources"]["filter_rna_se"]["qos"]
     shell:
@@ -341,6 +346,7 @@ rule make_rna_stats_pe:
     threads: config["resources"]["make_rna_stats_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["make_rna_stats_pe"]["mem_mb"],
+        runtime=config["resources"]["make_rna_stats_pe"]["runtime"],
         tmp_mb=config["resources"]["make_rna_stats_pe"]["tmp_mb"],
         qos=config["resources"]["make_rna_stats_pe"]["qos"]
     shell:
@@ -379,6 +385,7 @@ rule make_rna_stats_se:
     threads: config["resources"]["make_rna_stats_se"]["threads"]
     resources:
         mem_mb=config["resources"]["make_rna_stats_se"]["mem_mb"],
+        runtime=config["resources"]["make_rna_stats_se"]["runtime"],
         tmp_mb=config["resources"]["make_rna_stats_se"]["tmp_mb"],
         qos=config["resources"]["make_rna_stats_se"]["qos"]
     shell:
@@ -432,6 +439,7 @@ rule merging_rna_replicates:
     threads: config["resources"]["merging_rna_replicates"]["threads"]
     resources:
         mem_mb=config["resources"]["merging_rna_replicates"]["mem_mb"],
+        runtime=config["resources"]["merging_rna_replicates"]["runtime"],
         tmp_mb=config["resources"]["merging_rna_replicates"]["tmp_mb"],
         qos=config["resources"]["merging_rna_replicates"]["qos"]
     shell:
@@ -462,6 +470,7 @@ rule make_rna_stranded_bigwigs:
     threads: config["resources"]["make_rna_stranded_bigwigs"]["threads"]
     resources:
         mem_mb=config["resources"]["make_rna_stranded_bigwigs"]["mem_mb"],
+        runtime=config["resources"]["make_rna_stranded_bigwigs"]["runtime"],
         tmp_mb=config["resources"]["make_rna_stranded_bigwigs"]["tmp_mb"],
         qos=config["resources"]["make_rna_stranded_bigwigs"]["qos"]
     shell:
@@ -511,6 +520,7 @@ rule make_rna_unstranded_bigwigs:
     threads: config["resources"]["make_rna_stranded_bigwigs"]["threads"]
     resources:
         mem_mb=config["resources"]["make_rna_stranded_bigwigs"]["mem_mb"],
+        runtime=config["resources"]["make_rna_stranded_bigwigs"]["runtime"],
         tmp_mb=config["resources"]["make_rna_stranded_bigwigs"]["tmp_mb"],
         qos=config["resources"]["make_rna_stranded_bigwigs"]["qos"]
     shell:
@@ -546,6 +556,7 @@ rule prep_files_for_DEGs:
     threads: config["resources"]["prep_files_for_DEGs"]["threads"]
     resources:
         mem_mb=config["resources"]["prep_files_for_DEGs"]["mem_mb"],
+        runtime=config["resources"]["prep_files_for_DEGs"]["runtime"],
         tmp_mb=config["resources"]["prep_files_for_DEGs"]["tmp_mb"],
         qos=config["resources"]["prep_files_for_DEGs"]["qos"]
     run:
@@ -605,6 +616,7 @@ rule call_all_DEGs:
     threads: config["resources"]["call_all_DEGs"]["threads"]
     resources:
         mem_mb=config["resources"]["call_all_DEGs"]["mem_mb"],
+        runtime=config["resources"]["call_all_DEGs"]["runtime"],
         tmp_mb=config["resources"]["call_all_DEGs"]["tmp_mb"],
         qos=config["resources"]["call_all_DEGs"]["qos"]
     shell:
@@ -633,6 +645,7 @@ rule gather_gene_expression_rpkm:
     threads: config["resources"]["gather_gene_expression_rpkm"]["threads"]
     resources:
         mem_mb=config["resources"]["gather_gene_expression_rpkm"]["mem_mb"],
+        runtime=config["resources"]["gather_gene_expression_rpkm"]["runtime"],
         tmp_mb=config["resources"]["gather_gene_expression_rpkm"]["tmp_mb"],
         qos=config["resources"]["gather_gene_expression_rpkm"]["qos"]
     shell:
@@ -660,6 +673,7 @@ rule plot_expression_levels:
     threads: config["resources"]["plot_expression_levels"]["threads"]
     resources:
         mem_mb=config["resources"]["plot_expression_levels"]["mem_mb"],
+        runtime=config["resources"]["plot_expression_levels"]["runtime"],
         tmp_mb=config["resources"]["plot_expression_levels"]["tmp_mb"],
         qos=config["resources"]["plot_expression_levels"]["qos"]
     shell:
@@ -690,6 +704,7 @@ rule create_GO_database:
     threads: config["resources"]["create_GO_database"]["threads"]
     resources:
         mem_mb=config["resources"]["create_GO_database"]["mem_mb"],
+        runtime=config["resources"]["create_GO_database"]["runtime"],
         tmp_mb=config["resources"]["create_GO_database"]["tmp_mb"],
         qos=config["resources"]["create_GO_database"]["qos"]
     shell:
@@ -731,6 +746,7 @@ rule perform_GO_on_target_file:
     threads: config["resources"]["perform_GO_on_target_file"]["threads"]
     resources:
         mem_mb=config["resources"]["perform_GO_on_target_file"]["mem_mb"],
+        runtime=config["resources"]["perform_GO_on_target_file"]["runtime"],
         tmp_mb=config["resources"]["perform_GO_on_target_file"]["tmp_mb"],
         qos=config["resources"]["perform_GO_on_target_file"]["qos"]
     shell:
@@ -764,6 +780,7 @@ rule call_rampage_TSS:
     threads: config["resources"]["call_rampage_TSS"]["threads"]
     resources:
         mem_mb=config["resources"]["call_rampage_TSS"]["mem_mb"],
+        runtime=config["resources"]["call_rampage_TSS"]["runtime"],
         tmp_mb=config["resources"]["call_rampage_TSS"]["tmp_mb"],
         qos=config["resources"]["call_rampage_TSS"]["qos"]
     shell:

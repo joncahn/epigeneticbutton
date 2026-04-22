@@ -144,6 +144,7 @@ rule make_bismark_indices:
     threads: config["resources"]["make_bismark_indices"]["threads"]
     resources:
         mem_mb=config["resources"]["make_bismark_indices"]["mem_mb"],
+        runtime=config["resources"]["make_bismark_indices"]["runtime"],
         tmp_mb=config["resources"]["make_bismark_indices"]["tmp_mb"],
         qos=config["resources"]["make_bismark_indices"]["qos"]
     shell:
@@ -184,6 +185,7 @@ rule bismark_map_pe:
     threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["bismark_map_pe"]["mem_mb"],
+        runtime=config["resources"]["bismark_map_pe"]["runtime"],
         # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
         # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
         # plus 10 GB headroom, with a 20 GB floor.
@@ -233,6 +235,7 @@ rule bismark_map_se:
     threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
         mem_mb=config["resources"]["bismark_map_se"]["mem_mb"],
+        runtime=config["resources"]["bismark_map_se"]["runtime"],
         # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
         # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
         # plus 10 GB headroom, with a 20 GB floor.
@@ -299,6 +302,7 @@ rule make_mc_stats_pe:
     threads: config["resources"]["make_mc_stats_pe"]["threads"]
     resources:
         mem_mb=config["resources"]["make_mc_stats_pe"]["mem_mb"],
+        runtime=config["resources"]["make_mc_stats_pe"]["runtime"],
         tmp_mb=config["resources"]["make_mc_stats_pe"]["tmp_mb"],
         qos=config["resources"]["make_mc_stats_pe"]["qos"]
     shell:
@@ -351,6 +355,7 @@ rule make_mc_stats_se:
     threads: config["resources"]["make_mc_stats_se"]["threads"]
     resources:
         mem_mb=config["resources"]["make_mc_stats_se"]["mem_mb"],
+        runtime=config["resources"]["make_mc_stats_se"]["runtime"],
         tmp_mb=config["resources"]["make_mc_stats_se"]["tmp_mb"],
         qos=config["resources"]["make_mc_stats_se"]["qos"]
     shell:
@@ -409,6 +414,7 @@ rule merging_mc_replicates:
     threads: config["resources"]["merging_mc_replicates"]["threads"]
     resources:
         mem_mb=config["resources"]["merging_mc_replicates"]["mem_mb"],
+        runtime=config["resources"]["merging_mc_replicates"]["runtime"],
         tmp_mb=config["resources"]["merging_mc_replicates"]["tmp_mb"],
         qos=config["resources"]["merging_mc_replicates"]["qos"]
     shell:
@@ -444,6 +450,7 @@ rule make_mc_bigwig_files:
     threads: config["resources"]["make_mc_bigwig_files"]["threads"]
     resources:
         mem_mb=config["resources"]["make_mc_bigwig_files"]["mem_mb"],
+        runtime=config["resources"]["make_mc_bigwig_files"]["runtime"],
         tmp_mb=config["resources"]["make_mc_bigwig_files"]["tmp_mb"],
         qos=config["resources"]["make_mc_bigwig_files"]["qos"]
     shell:
@@ -558,6 +565,7 @@ rule call_DMRs_pairwise:
     threads: config["resources"]["call_DMRs_pairwise"]["threads"]
     resources:
         mem_mb=config["resources"]["call_DMRs_pairwise"]["mem_mb"],
+        runtime=config["resources"]["call_DMRs_pairwise"]["runtime"],
         tmp_mb=config["resources"]["call_DMRs_pairwise"]["tmp_mb"],
         qos=config["resources"]["call_DMRs_pairwise"]["qos"]
     shell:
@@ -663,6 +671,7 @@ rule get_dmc_input:
     threads: config["resources"]["get_modbam"]["threads"]
     resources:
         mem_mb=config["resources"]["get_modbam"]["mem_mb"],
+        runtime=config["resources"]["get_modbam"]["runtime"],
         tmp_mb=config["resources"]["get_modbam"]["tmp_mb"],
         qos=config["resources"]["get_modbam"]["qos"]
     shell:
@@ -814,6 +823,7 @@ rule prepare_modbam_for_pileup:
     threads: config["resources"]["align_modbam"]["threads"]
     resources:
         mem_mb=config["resources"]["align_modbam"]["mem_mb"],
+        runtime=config["resources"]["align_modbam"]["runtime"],
         tmp_mb=config["resources"]["align_modbam"]["tmp_mb"],
         qos=config["resources"]["align_modbam"]["qos"]
     shell:
@@ -892,6 +902,7 @@ rule modkit_pileup_dmc:
     threads: config["resources"]["modkit_pileup"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_pileup"]["mem_mb"],
+        runtime=config["resources"]["modkit_pileup"]["runtime"],
         tmp_mb=config["resources"]["modkit_pileup"]["tmp_mb"],
         qos=config["resources"]["modkit_pileup"]["qos"]
     shell:
@@ -929,6 +940,7 @@ rule copy_bedmethyl_input:
     threads: config["resources"]["get_bedmethyl"]["threads"]
     resources:
         mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
+        runtime=config["resources"]["get_bedmethyl"]["runtime"],
         tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
         qos=config["resources"]["get_bedmethyl"]["qos"]
     shell:
@@ -981,6 +993,7 @@ rule modkit_summary_dmc:
     threads: config["resources"]["modkit_summary"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
+        runtime=config["resources"]["modkit_summary"]["runtime"],
         tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
         qos=config["resources"]["modkit_summary"]["qos"]
     shell:
@@ -1029,6 +1042,7 @@ rule make_mc_stats_dmc:
     threads: config["resources"]["modkit_summary"]["threads"]
     resources:
         mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
+        runtime=config["resources"]["modkit_summary"]["runtime"],
         tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
         qos=config["resources"]["modkit_summary"]["qos"]
     shell:
@@ -1125,6 +1139,7 @@ rule convert_bedmethyl_to_cx_report:
     threads: 1
     resources:
         mem_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["mem_mb"],
+        runtime=config["resources"]["convert_bedmethyl_to_cx_report"]["runtime"],
         tmp_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["tmp_mb"],
         qos=config["resources"]["convert_bedmethyl_to_cx_report"]["qos"]
     shell:

@@ -146,6 +146,7 @@ rule deduplicate_srna_nextflexv3:
     threads: config["resources"]["deduplicate_srna_nextflexv3"]["threads"]
     resources:
         mem_mb=config["resources"]["deduplicate_srna_nextflexv3"]["mem_mb"],
+        runtime=config["resources"]["deduplicate_srna_nextflexv3"]["runtime"],
         tmp_mb=config["resources"]["deduplicate_srna_nextflexv3"]["tmp_mb"],
         qos=config["resources"]["deduplicate_srna_nextflexv3"]["qos"]
     shell:
@@ -181,6 +182,7 @@ rule make_bt2_indices_for_structural_RNAs:
     threads: config["resources"]["make_bt2_indices_for_structural_RNAs"]["threads"]
     resources:
         mem_mb=config["resources"]["make_bt2_indices_for_structural_RNAs"]["mem_mb"],
+        runtime=config["resources"]["make_bt2_indices_for_structural_RNAs"]["runtime"],
         tmp_mb=config["resources"]["make_bt2_indices_for_structural_RNAs"]["tmp_mb"],
         qos=config["resources"]["make_bt2_indices_for_structural_RNAs"]["qos"]
     shell:
@@ -216,6 +218,7 @@ rule filter_structural_rna:
     threads: config["resources"]["filter_structural_rna"]["threads"]
     resources:
         mem_mb=config["resources"]["filter_structural_rna"]["mem_mb"],
+        runtime=config["resources"]["filter_structural_rna"]["runtime"],
         tmp_mb=config["resources"]["filter_structural_rna"]["tmp_mb"],
         qos=config["resources"]["filter_structural_rna"]["qos"]
     shell:
@@ -250,6 +253,7 @@ rule make_bowtie1_indices:
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
         mem_mb=config["resources"]["make_bowtie1_indices"]["mem_mb"],
+        runtime=config["resources"]["make_bowtie1_indices"]["runtime"],
         tmp_mb=config["resources"]["make_bowtie1_indices"]["tmp_mb"],
         qos=config["resources"]["make_bowtie1_indices"]["qos"]
     shell:
@@ -271,6 +275,7 @@ rule make_bowtie1_indices_large:
     threads: config["resources"]["make_bowtie1_indices"]["threads"]
     resources:
         mem_mb=config["resources"]["make_bowtie1_indices_large"]["mem_mb"],
+        runtime=config["resources"]["make_bowtie1_indices_large"]["runtime"],
         tmp_mb=config["resources"]["make_bowtie1_indices_large"]["tmp_mb"],
         qos=config["resources"]["make_bowtie1_indices_large"]["qos"]
     shell:
@@ -302,6 +307,7 @@ rule shortstack_map:
     threads: config["resources"]["shortstack_map"]["threads"]
     resources:
         mem_mb=config["resources"]["shortstack_map"]["mem_mb"],
+        runtime=config["resources"]["shortstack_map"]["runtime"],
         tmp_mb=config["resources"]["shortstack_map"]["tmp_mb"],
         qos=config["resources"]["shortstack_map"]["qos"]
     shell:
@@ -331,6 +337,7 @@ rule make_cluster_bedfiles:
     threads: config["resources"]["make_cluster_bedfiles"]["threads"]
     resources:
         mem_mb=config["resources"]["make_cluster_bedfiles"]["mem_mb"],
+        runtime=config["resources"]["make_cluster_bedfiles"]["runtime"],
         tmp_mb=config["resources"]["make_cluster_bedfiles"]["tmp_mb"],
         qos=config["resources"]["make_cluster_bedfiles"]["qos"]
     shell:
@@ -356,6 +363,7 @@ rule make_srna_size_stats:
     threads: config["resources"]["make_srna_size_stats"]["threads"]
     resources:
         mem_mb=config["resources"]["make_srna_size_stats"]["mem_mb"],
+        runtime=config["resources"]["make_srna_size_stats"]["runtime"],
         tmp_mb=config["resources"]["make_srna_size_stats"]["tmp_mb"],
         qos=config["resources"]["make_srna_size_stats"]["qos"]
     shell:
@@ -394,6 +402,7 @@ rule filter_size_srna_sample:
     threads: config["resources"]["filter_size_srna_sample"]["threads"]
     resources:
         mem_mb=config["resources"]["filter_size_srna_sample"]["mem_mb"],
+        runtime=config["resources"]["filter_size_srna_sample"]["runtime"],
         tmp_mb=config["resources"]["filter_size_srna_sample"]["tmp_mb"],
         qos=config["resources"]["filter_size_srna_sample"]["qos"]
     shell:
@@ -422,6 +431,7 @@ rule merging_srna_replicates:
     threads: config["resources"]["merging_srna_replicates"]["threads"]
     resources:
         mem_mb=config["resources"]["merging_srna_replicates"]["mem_mb"],
+        runtime=config["resources"]["merging_srna_replicates"]["runtime"],
         tmp_mb=config["resources"]["merging_srna_replicates"]["tmp_mb"],
         qos=config["resources"]["merging_srna_replicates"]["qos"]
     shell:
@@ -456,6 +466,7 @@ rule make_srna_stranded_bigwigs:
     threads: config["resources"]["make_srna_stranded_bigwigs"]["threads"]
     resources:
         mem_mb=config["resources"]["make_srna_stranded_bigwigs"]["mem_mb"],
+        runtime=config["resources"]["make_srna_stranded_bigwigs"]["runtime"],
         tmp_mb=config["resources"]["make_srna_stranded_bigwigs"]["tmp_mb"],
         qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"]
     shell:
@@ -512,6 +523,7 @@ rule analyze_all_srna_samples_on_target_file:
     threads: config["resources"]["analyze_all_srna_samples_on_target_file"]["threads"]
     resources:
         mem_mb=config["resources"]["analyze_all_srna_samples_on_target_file"]["mem_mb"],
+        runtime=config["resources"]["analyze_all_srna_samples_on_target_file"]["runtime"],
         tmp_mb=config["resources"]["analyze_all_srna_samples_on_target_file"]["tmp_mb"],
         qos=config["resources"]["analyze_all_srna_samples_on_target_file"]["qos"]
     shell:
@@ -548,6 +560,7 @@ rule prep_files_for_differential_srna_clusters:
     threads: config["resources"]["prep_files_for_differential_srna_clusters"]["threads"]
     resources:
         mem_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["mem_mb"],
+        runtime=config["resources"]["prep_files_for_differential_srna_clusters"]["runtime"],
         tmp_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp_mb"],
         qos=config["resources"]["prep_files_for_differential_srna_clusters"]["qos"]
     run:
@@ -592,6 +605,7 @@ rule call_all_differential_srna_clusters:
     threads: config["resources"]["call_all_DEGs"]["threads"]
     resources:
         mem_mb=config["resources"]["call_all_DEGs"]["mem_mb"],
+        runtime=config["resources"]["call_all_DEGs"]["runtime"],
         tmp_mb=config["resources"]["call_all_DEGs"]["tmp_mb"],
         qos=config["resources"]["call_all_DEGs"]["qos"]
     shell:
