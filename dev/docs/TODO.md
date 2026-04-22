@@ -2,11 +2,11 @@
 
 ## Documentation
 
-* [ ] HIGH PRIORITY: Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
+* [ ] **high priority** Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
 
-* [ ] HIGH PRIORITY: Update Read the docs page to also reflect all changes on the big-refactor.
+* [ ] **high priority** Update Read the docs page to also reflect all changes on the big-refactor.
 
-* [ ] HIGH PRIORITY: Integrate README + Read the docs + epicc-builder for concerted changes
+* [ ] **high priority** Integrate README + Read the docs + epicc-builder for concerted changes
 
 * [ ] **Defer** Update README continously after each additional modifications.
 
@@ -372,6 +372,6 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] PlotPCA can fail if no dimensions found. check npz results before starting PCA? **Done**: `plot_PCA_correlation` rule now catches `plotPCA` failures (insufficient data for PCA) and creates a placeholder output instead of failing the pipeline.
 
-* [ ] Chromap dropping >90% reads from ColCEN PE test data. 
+* [ ] Chromap dropping >90% reads from ColCEN PE test data.
 
 * [ ] Chromap SE output not getting properly piped/handled downstream by samtools (see ColCEN test)
