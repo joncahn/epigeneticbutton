@@ -164,6 +164,11 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
     if dry_run:
         cmd.append("--dry-run")
 
+    # Re-run any jobs Snakemake marked incomplete on a prior interrupted run.
+    # Without this, Snakemake errors out on the first affected rule, which is
+    # almost never what the user wants when resuming.
+    cmd.append("--rerun-incomplete")
+
     # Verbosity
     if args.verbose:
         cmd.append("--printshellcmds")
