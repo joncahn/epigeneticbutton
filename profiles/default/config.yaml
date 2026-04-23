@@ -101,11 +101,12 @@ set-resources:
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
   # dmC
-  get_modbam: *standard
-  get_bedmethyl: *low
-  align_modbam: *max
-  modkit_summary: *heavy
-  modkit_pileup: *heavier
+  get_dmc_input: *standard
+  copy_bedmethyl_input: *low
+  prepare_modbam_for_pileup: *max
+  make_mc_stats_dmc: *heavy
+  modkit_summary_dmc: *heavy
+  modkit_pileup_dmc: *heavier
   convert_bedmethyl_to_cx_report: *standard
   # RNAseq
   make_STAR_indices: *heavy
@@ -120,6 +121,7 @@ set-resources:
   make_rna_unstranded_bigwigs: *heavy
   prep_files_for_DEGs: *single
   call_all_DEGs: *single
+  call_all_differential_srna_clusters: *single
   gather_gene_expression_rpkm: *single
   plot_expression_levels: *single
   create_GO_database: *single
@@ -139,7 +141,6 @@ set-resources:
   make_srna_stranded_bigwigs: *standard
   analyze_all_srna_samples_on_target_file: *heavy
   prep_files_for_differential_srna_clusters: *single
-  call_all_differential_srna_clusters: *single
   # combined_analysis
   prepping_mapping_stats: *low
   plotting_mapping_stats: *low
@@ -167,6 +168,7 @@ set-resources:
   plot_PCA_correlation: *single
 
 set-threads:
+  # environment_setup
   check_fasta: 4
   check_gff: 4
   check_gtf: 4
@@ -177,12 +179,14 @@ set-threads:
   download_rfam: 4
   build_structural_rna_db: 16
   check_te_file: 4
+  # sample_download
   get_fastq_pe: 8
   get_fastq_se: 8
   run_fastqc: 1
   process_fastq_pe: 4
   process_fastq_se: 4
   get_available_bam: 4
+  # ChIPseq
   make_bt2_indices: 4
   make_chromap_index: 4
   filter_bam_pe: 8
@@ -202,10 +206,12 @@ set-threads:
   find_motifs_in_file: 4
   make_peak_stats: 1
   perform_pairwise_diff_peaks: 4
+  # ATACseq
   atac_shift_bam: 4
   atac_bam_to_bed: 1
   calling_peaks_atac: 4
   make_coverage_atac: 8
+  # mC
   make_bismark_indices: 4
   bismark_map_pe: 16
   bismark_map_se: 16
@@ -214,12 +220,15 @@ set-threads:
   merging_mc_replicates: 4
   make_mc_bigwig_files: 1
   call_DMRs_pairwise: 16
-  get_modbam: 4
-  get_bedmethyl: 1
-  align_modbam: 16
-  modkit_summary: 4
-  modkit_pileup: 8
+  # dmC
+  get_dmc_input: 4
+  copy_bedmethyl_input: 1
+  prepare_modbam_for_pileup: 16
+  make_mc_stats_dmc: 4
+  modkit_summary_dmc: 4
+  modkit_pileup_dmc: 8
   convert_bedmethyl_to_cx_report: 1   # rule is single-threaded (Python script); mem/runtime still comes from *standard
+  # RNAseq
   make_STAR_indices: 4
   STAR_map_pe: 8
   STAR_map_se: 8
@@ -232,11 +241,13 @@ set-threads:
   make_rna_unstranded_bigwigs: 4
   prep_files_for_DEGs: 1
   call_all_DEGs: 1
+  call_all_differential_srna_clusters: 1
   gather_gene_expression_rpkm: 1
   plot_expression_levels: 1
   create_GO_database: 1
   perform_GO_on_target_file: 1
   call_rampage_TSS: 4
+  # smallRNA
   deduplicate_srna_nextflexv3: 4
   make_bt2_indices_for_structural_RNAs: 4
   filter_structural_rna: 4
@@ -250,7 +261,7 @@ set-threads:
   make_srna_stranded_bigwigs: 4
   analyze_all_srna_samples_on_target_file: 4
   prep_files_for_differential_srna_clusters: 1
-  call_all_differential_srna_clusters: 1
+  # combined_analysis
   prepping_mapping_stats: 1
   plotting_mapping_stats: 1
   prepping_peak_stats: 1
