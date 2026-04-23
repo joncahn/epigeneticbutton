@@ -1,4 +1,12 @@
 # profiles/slurm/config.yaml
+#
+# EXAMPLE SLURM profile tuned for the CSHL cluster. To use on a
+# different cluster, copy this file to either
+#   ~/.config/snakemake/<name>/config.yaml      (then: --profile <name>)
+# or any path of your choosing
+#   (then: --profile path/to/config.yaml   or   export SNAKEMAKE_PROFILE=...)
+# and edit every value flagged "EDIT:" below.
+
 executor: slurm
 jobs: 16
 use-conda: true
@@ -9,18 +17,28 @@ keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
 
-# Safety-net defaults: every rule should declare its own runtime via
-# resources, but if one is missed, fall back to 60 min so the SLURM
-# executor plugin still submits with --time=.
+# Safety-net defaults sent with every sbatch submission.
+#
+# SITE-SPECIFIC — review before using on a new cluster:
+#   * slurm_account    Change to your cluster's SLURM account. Silences
+#                      the "No SLURM account given" warning. Remove this
+#                      line if your cluster doesn't require --account.
+#   * runtime          Fallback wall time in minutes, used only if a rule
+#                      fails to declare its own runtime resource. Raise
+#                      if your shortest rule takes longer than 60 min.
 default-resources:
   - runtime=60
+  - slurm_account="martienssenlab"   # EDIT: your SLURM account here
 
 precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
 
-sbatch:
-  job-name: "smk-{rule}-{jobid}"
-  cpus-per-task: "{threads}"
-  mem: "{resources.mem_mb}"
-  tmp: "{resources.tmp_mb}"
-  time: "{resources.runtime}"
-  qos: "{resources.qos}"
+# Per-rule cluster-specific overrides go here if any rule needs different
+# resources/threads on this cluster than profiles/default/config.yaml
+# specifies. Uncomment and adapt as needed:
+#
+# set-resources:
+#   bismark_map_pe:
+#     mem_mb: 48000
+#
+# set-threads:
+#   bismark_map_pe: 16

@@ -452,12 +452,6 @@ rule make_bt2_indices:
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","bowtie_index_{ref_genome}.log"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["make_bt2_indices"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_bt2_indices"]["mem_mb"],
-        runtime=config["resources"]["make_bt2_indices"]["runtime"],
-        tmp_mb=config["resources"]["make_bt2_indices"]["tmp_mb"],
-        qos=config["resources"]["make_bt2_indices"]["qos"]
     shell:
         """
         {{
@@ -475,12 +469,6 @@ rule make_chromap_index:
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","chromap_index_{ref_genome}.log"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["make_chromap_index"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_chromap_index"]["mem_mb"],
-        runtime=config["resources"]["make_chromap_index"]["runtime"],
-        tmp_mb=config["resources"]["make_chromap_index"]["tmp_mb"],
-        qos=config["resources"]["make_chromap_index"]["qos"]
     shell:
         """
         {{
@@ -515,12 +503,6 @@ rule filter_bam_pe:
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "PE"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["filter_bam_pe"]["threads"]
-    resources:
-        mem_mb=config["resources"]["filter_bam_pe"]["mem_mb"],
-        runtime=config["resources"]["filter_bam_pe"]["runtime"],
-        tmp_mb=config["resources"]["filter_bam_pe"]["tmp_mb"],
-        qos=config["resources"]["filter_bam_pe"]["qos"]
     shell:
         """
         {{
@@ -583,12 +565,6 @@ rule filter_bam_se:
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "SE"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["filter_bam_se"]["threads"]
-    resources:
-        mem_mb=config["resources"]["filter_bam_se"]["mem_mb"],
-        runtime=config["resources"]["filter_bam_se"]["runtime"],
-        tmp_mb=config["resources"]["filter_bam_se"]["tmp_mb"],
-        qos=config["resources"]["filter_bam_se"]["qos"]
     shell:
         """
         {{
@@ -643,12 +619,6 @@ rule make_mapping_stats_pe:
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
         trimmed_fastq = config['trimmed_fastqs']
-    threads: config["resources"]["make_mapping_stats_pe"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_mapping_stats_pe"]["mem_mb"],
-        runtime=config["resources"]["make_mapping_stats_pe"]["runtime"],
-        tmp_mb=config["resources"]["make_mapping_stats_pe"]["tmp_mb"],
-        qos=config["resources"]["make_mapping_stats_pe"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -699,12 +669,6 @@ rule make_mapping_stats_se:
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
         trimmed_fastq = config['trimmed_fastqs']
-    threads: config["resources"]["make_mapping_stats_se"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_mapping_stats_se"]["mem_mb"],
-        runtime=config["resources"]["make_mapping_stats_se"]["runtime"],
-        tmp_mb=config["resources"]["make_mapping_stats_se"]["tmp_mb"],
-        qos=config["resources"]["make_mapping_stats_se"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -743,12 +707,6 @@ rule dispatch_final_bam:
     wildcard_constraints:
         env = "ChIP|ATAC"
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["dispatch_final_bam"]["threads"]
-    resources:
-        mem_mb=config["resources"]["dispatch_final_bam"]["mem_mb"],
-        runtime=config["resources"]["dispatch_final_bam"]["runtime"],
-        tmp_mb=config["resources"]["dispatch_final_bam"]["tmp_mb"],
-        qos=config["resources"]["dispatch_final_bam"]["qos"]
     shell:
         """
         cp {input} {output.bam}
@@ -767,12 +725,6 @@ rule make_coverage_chip:
     params:
         binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["make_coverage_chip"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_coverage_chip"]["mem_mb"],
-        runtime=config["resources"]["make_coverage_chip"]["runtime"],
-        tmp_mb=config["resources"]["make_coverage_chip"]["tmp_mb"],
-        qos=config["resources"]["make_coverage_chip"]["qos"]
     shell:
         """
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
@@ -797,12 +749,6 @@ rule make_bigwig_chip:
     log:
         temp(return_log_chip("{env}","{sample_name}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["make_bigwig_chip"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_bigwig_chip"]["mem_mb"],
-        runtime=config["resources"]["make_bigwig_chip"]["runtime"],
-        tmp_mb=config["resources"]["make_bigwig_chip"]["tmp_mb"],
-        qos=config["resources"]["make_bigwig_chip"]["qos"]
     shell:
         """
         {{
@@ -830,12 +776,6 @@ rule make_fingerprint_plot:
     log:
         temp(return_log_chip("{env}","{sample_name}", "making_fingerprint_final", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["make_fingerprint_plot"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_fingerprint_plot"]["mem_mb"],
-        runtime=config["resources"]["make_fingerprint_plot"]["runtime"],
-        tmp_mb=config["resources"]["make_fingerprint_plot"]["tmp_mb"],
-        qos=config["resources"]["make_fingerprint_plot"]["qos"]
     shell:
         """
         {{
@@ -882,12 +822,6 @@ rule calling_peaks_macs2_pe:
     log:
         temp(return_log_chip("{env}","{sample_name}", "{file_type}__{peaktype}peak_calling", "PE"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["calling_peaks_macs2_pe"]["threads"]
-    resources:
-        mem_mb=config["resources"]["calling_peaks_macs2_pe"]["mem_mb"],
-        runtime=config["resources"]["calling_peaks_macs2_pe"]["runtime"],
-        tmp_mb=config["resources"]["calling_peaks_macs2_pe"]["tmp_mb"],
-        qos=config["resources"]["calling_peaks_macs2_pe"]["qos"]
     shell:
         """
         {{
@@ -928,12 +862,6 @@ rule calling_peaks_macs2_se:
     log:
         temp(return_log_chip("{env}","{sample_name}", "{file_type}__{peaktype}peak_calling", "SE"))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["calling_peaks_macs2_se"]["threads"]
-    resources:
-        mem_mb=config["resources"]["calling_peaks_macs2_se"]["mem_mb"],
-        runtime=config["resources"]["calling_peaks_macs2_se"]["runtime"],
-        tmp_mb=config["resources"]["calling_peaks_macs2_se"]["tmp_mb"],
-        qos=config["resources"]["calling_peaks_macs2_se"]["qos"]
     shell:
         """
         {{
@@ -976,12 +904,6 @@ rule idr_analysis_replicates:
     log:
         temp(return_log_chip("{env}","{sample_name}", "IDR", ""))
     conda: CONDA_ENV_IDR
-    threads: config["resources"]["idr_analysis_replicates"]["threads"]
-    resources:
-        mem_mb=config["resources"]["idr_analysis_replicates"]["mem_mb"],
-        runtime=config["resources"]["idr_analysis_replicates"]["runtime"],
-        tmp_mb=config["resources"]["idr_analysis_replicates"]["tmp_mb"],
-        qos=config["resources"]["idr_analysis_replicates"]["qos"]
     shell:
         """
         {{
@@ -1072,12 +994,6 @@ rule merging_bam_replicates:
     log:
         temp(return_log_chip("{env}","{sample_name}", "merging_reps", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["merging_bam_replicates"]["threads"]
-    resources:
-        mem_mb=config["resources"]["merging_bam_replicates"]["mem_mb"],
-        runtime=config["resources"]["merging_bam_replicates"]["runtime"],
-        tmp_mb=config["resources"]["merging_bam_replicates"]["tmp_mb"],
-        qos=config["resources"]["merging_bam_replicates"]["qos"]
     shell:
         """
         {{
@@ -1103,12 +1019,6 @@ rule making_pseudo_replicates:
     log:
         temp(return_log_chip("{env}","{sample_name}", "splitting_pseudreps", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["making_pseudo_replicates"]["threads"]
-    resources:
-        mem_mb=config["resources"]["making_pseudo_replicates"]["mem_mb"],
-        runtime=config["resources"]["making_pseudo_replicates"]["runtime"],
-        tmp_mb=config["resources"]["making_pseudo_replicates"]["tmp_mb"],
-        qos=config["resources"]["making_pseudo_replicates"]["qos"]
     shell:
         """
         {{
@@ -1142,12 +1052,6 @@ rule best_peaks_pseudoreps:
     log:
         temp(return_log_chip("{env}","{sample_name}", "selecting_best_peaks", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["best_peaks_pseudoreps"]["threads"]
-    resources:
-        mem_mb=config["resources"]["best_peaks_pseudoreps"]["mem_mb"],
-        runtime=config["resources"]["best_peaks_pseudoreps"]["runtime"],
-        tmp_mb=config["resources"]["best_peaks_pseudoreps"]["tmp_mb"],
-        qos=config["resources"]["best_peaks_pseudoreps"]["qos"]
     shell:
         """
         {{
@@ -1197,12 +1101,6 @@ rule make_peak_stats:
         tf_name = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'extra_info'),
         rep1 = lambda wildcards: get_replicate_name(wildcards, 0),
         rep2 = lambda wildcards: get_replicate_name(wildcards, 1)
-    threads: config["resources"]["make_peak_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_peak_stats"]["mem_mb"],
-        runtime=config["resources"]["make_peak_stats"]["runtime"],
-        tmp_mb=config["resources"]["make_peak_stats"]["tmp_mb"],
-        qos=config["resources"]["make_peak_stats"]["qos"]
     shell:
         """
         nrep1=$(awk '{{print $1,$2,$3}}' {params.rep1} | sort -k1,1 -k2,2n -u | wc -l)
@@ -1236,12 +1134,6 @@ rule find_motifs_in_file:
     log:
         temp(return_log_chip("{env}","{peak_file}", "motifs", ""))
     conda: CONDA_ENV_IDR
-    threads: config["resources"]["find_motifs_in_file"]["threads"]
-    resources:
-        mem_mb=config["resources"]["find_motifs_in_file"]["mem_mb"],
-        runtime=config["resources"]["find_motifs_in_file"]["runtime"],
-        tmp_mb=config["resources"]["find_motifs_in_file"]["tmp_mb"],
-        qos=config["resources"]["find_motifs_in_file"]["qos"]
     shell:
         """
         {{
@@ -1291,12 +1183,6 @@ rule perform_pairwise_diff_peaks:
     log:
         temp(return_log_chip("{env}","{sample1}_vs_{sample2}", "diff_peaks", ""))
     conda: CONDA_ENV_CHIP
-    threads: config["resources"]["perform_pairwise_diff_peaks"]["threads"]
-    resources:
-        mem_mb=config["resources"]["perform_pairwise_diff_peaks"]["mem_mb"],
-        runtime=config["resources"]["perform_pairwise_diff_peaks"]["runtime"],
-        tmp_mb=config["resources"]["perform_pairwise_diff_peaks"]["tmp_mb"],
-        qos=config["resources"]["perform_pairwise_diff_peaks"]["qos"]
     shell:
         """
         {{

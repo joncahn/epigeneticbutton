@@ -216,9 +216,9 @@ for rnaseq-histogram: rnaseq_target_file="input-file"; rnaseq_target_file_label=
 `results/RNA/plots/plot_expression__"analysis-name"__"ref-genome"__"rnaseq_target_file_label".pdf`; "analysis-name" could be optionally modified but defaults to the entry in the epicc-options, while "ref-genome" must be one of the entries in the samplefile.
 The details in the READ THE DOCS "Additional Output Options" should inform on the required arguments for each type of output. The format of the "input-files" should be validated prior to run, depending on the output type. For example, for "rnaseq-histogram", the input-file must be a 1 column list of gene ids for gene that exist in the gff file of the selected ref-genome, with an optional 2nd column of labels to add to the plot titles (other column could exist but are not considered, see workflow/scripts/R_plot_expression_level.R).
 
-* [ ] **High priority** Catch remaining snakemake/slurm warning: "No SLURM account given, trying to guess.
-No account was given, not able to get a SLURM account via sacct: sacct: invalid option -- '1'" to limit verbose output.
-  * [x] "No wall time information given. This might or might not work on your cluster. If not, specify the resource runtime in your rule or as a reasonable default via --default-resources." **Done**: every rule now pulls `runtime=config["resources"][<rule>]["runtime"]` into its `resources:` block (109 rules across 8 `.smk` files), with a `default-resources: runtime=60` safety net in `profiles/slurm/config.yaml`.
+* [x] Catch snakemake/slurm warnings: "No wall time information given..." and "No SLURM account given, trying to guess. No account was given, not able to get a SLURM account via sacct: sacct: invalid option -- '1'".
+  * [x] Wall time: every rule pulls `runtime=config["resources"][<rule>]["runtime"]` into its `resources:` block (109 rules across 8 `.smk` files), with a `default-resources: runtime=60` safety net in `profiles/slurm/config.yaml`.
+  * [x] SLURM account: `profiles/slurm/config.yaml` now sets `slurm_account="martienssenlab"` via `default-resources`; annotated as site-specific with an `EDIT:` marker for users copying the profile to a different cluster.
 
 * [ ] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake.
 
@@ -297,7 +297,17 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] Resolve slurm issues with QOSMaxSubmitJobPerUserLimit reached sometimes (when it should be limited to 16 in the profile (specific to CSHL cluster, but could be helpful for other environments in case it' a shared bug). **Done**: switched back to qos=slow_nice for all jobs.
 
-* [ ] HIGH PRIORITY: Make pipeline fully usable on other slurm clusters (at least): requires removing tmp_mb and qos from rule resources (trigger errors on INRAE cluster), include it in profile instead (if possible).
+* [ ] **high priority** Split workflow-specific resource tuning from cluster-specific execution settings, following Snakemake 8+ conventions. Currently the rule bodies, `epicc-options.yaml`, and `profiles/slurm/config.yaml` mix both concerns, which breaks portability (e.g. `tmp_mb` and `qos` in rule resources trigger errors on the INRAE cluster). Plan:
+  * Add a repo-internal workflow profile (e.g. `profiles/default/config.yaml`) that carries the workflow-specific bits: per-rule `set-resources:` and `set-threads:` maps, pulling from the resource tiers. Users typically don't edit this; the `epicc` CLI can pass it via `--workflow-profile` by default, with an option to supply a customized replacement.
+  * Reduce `profiles/slurm/config.yaml` (and siblings like `profiles/geno/`, `profiles/uge/`) to *examples* carrying only cluster-specific settings: executor, account, partition, qos, queue caps, precommand. Ship as templates with explicit `EDIT:` markers. Users copy into `~/.config/snakemake/<name>/config.yaml` or pass via `--profile` / `SNAKEMAKE_PROFILE`.
+  * Slim rule `resources:` blocks so they declare only cluster-agnostic fields (`mem_mb`, `runtime`, `threads`, and where truly needed `disk_mb`) — dropping `qos=` and `tmp_mb=` from rule bodies. Those values, if needed, live in the cluster profile's `default-resources:` or `slurm_extra`.
+  * Migrate the entire `resources:` block (rule→tier map + the seven `_resources` YAML anchors) out of `epicc-options.yaml` into the workflow profile. Verified that no rule references `config["resources"]` outside `threads:` / `resources:` blocks, so the swap is purely mechanical. `epicc-options.yaml` then becomes strictly user-facing options (genomes, paths, analysis toggles).
+  * Update `tools/epicc-builder.html`, README, and Read the Docs to document the new profile model.
+
+  Caveats to handle during implementation:
+  * **Bismark dynamic `tmp_mb`**: `bismark_map_pe` / `bismark_map_se` size tmp from input fastq bytes via `tmp_mb=lambda wildcards, input: max(20000, int(sum(os.path.getsize(f) for f in [...]) / 1024**2 * 7) + 10000)`. Snakemake's `set-resources:` accepts formula *strings* (e.g. `"2*input.size_mb"`) but not free-form Python lambdas. Plan: keep just the `disk_mb=lambda ...` line in those two rule bodies (workflow profile supplies every other resource), with a comment explaining why the exception exists.
+  * **`tmp_mb` was always decorative.** `snakemake-executor-plugin-slurm` does not map `disk_mb`/`tmp_mb` to `--tmp`; the legacy `sbatch: tmp: "{resources.tmp_mb}"` template in `profiles/slurm/config.yaml` is ignored by the current executor plugin. So removing `tmp_mb=` from rule bodies changes **no** sbatch invocations on the CSHL cluster. If a future cluster truly needs `--tmp`, it should live in that site profile's `slurm_extra` (or a per-rule `set-resources` override there).
+  * **`qos` is a first-class resource** in the SLURM plugin (`job.resources.qos` → `--qos=<value>` directly), so site profiles can set it via `default-resources: qos="cpu_snice"` rather than embedding in `slurm_extra`.
 
 ## Testing
 

@@ -31,12 +31,6 @@ rule check_fasta:
     log:
         temp(return_log_env("{ref_genome}", "fasta"))
     conda: CONDA_ENV
-    threads: config["resources"]["check_fasta"]["threads"]
-    resources:
-        mem_mb=config["resources"]["check_fasta"]["mem_mb"],
-        runtime=config["resources"]["check_fasta"]["runtime"],
-        tmp_mb=config["resources"]["check_fasta"]["tmp_mb"],
-        qos=config["resources"]["check_fasta"]["qos"]
     shell:
         """
         {{
@@ -83,12 +77,6 @@ rule check_gff:
     log:
         temp(return_log_env("{ref_genome}", "gff"))
     conda: CONDA_ENV
-    threads: config["resources"]["check_gff"]["threads"]
-    resources:
-        mem_mb=config["resources"]["check_gff"]["mem_mb"],
-        runtime=config["resources"]["check_gff"]["runtime"],
-        tmp_mb=config["resources"]["check_gff"]["tmp_mb"],
-        qos=config["resources"]["check_gff"]["qos"]
     shell:
         """
         {{
@@ -137,12 +125,6 @@ rule check_gtf:
     log:
         temp(return_log_env("{ref_genome}", "gtf"))
     conda: CONDA_ENV
-    threads: config["resources"]["check_gtf"]["threads"]
-    resources:
-        mem_mb=config["resources"]["check_gtf"]["mem_mb"],
-        runtime=config["resources"]["check_gtf"]["runtime"],
-        tmp_mb=config["resources"]["check_gtf"]["tmp_mb"],
-        qos=config["resources"]["check_gtf"]["qos"]
     shell:
         """
         {{
@@ -183,12 +165,6 @@ rule check_chrom_sizes:
     log:
         temp(return_log_env("{ref_genome}", "chrom_sizes"))
     conda: CONDA_ENV
-    threads: config["resources"]["check_chrom_sizes"]["threads"]
-    resources:
-        mem_mb=config["resources"]["check_chrom_sizes"]["mem_mb"],
-        runtime=config["resources"]["check_chrom_sizes"]["runtime"],
-        tmp_mb=config["resources"]["check_chrom_sizes"]["tmp_mb"],
-        qos=config["resources"]["check_chrom_sizes"]["qos"]
     shell:
         """
         {{
@@ -207,12 +183,6 @@ rule compute_genome_stats:
     log:
         temp(return_log_env("{ref_genome}", "genome_stats"))
     conda: CONDA_ENV
-    threads: config["resources"]["compute_genome_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["compute_genome_stats"]["mem_mb"],
-        runtime=config["resources"]["compute_genome_stats"]["runtime"],
-        tmp_mb=config["resources"]["compute_genome_stats"]["tmp_mb"],
-        qos=config["resources"]["compute_genome_stats"]["qos"]
     shell:
         """
         {{
@@ -238,12 +208,6 @@ rule resolve_taxid:
     log:
         temp(return_log_env("{ref_genome}", "taxid"))
     conda: CONDA_ENV
-    threads: config["resources"]["resolve_taxid"]["threads"]
-    resources:
-        mem_mb=config["resources"]["resolve_taxid"]["mem_mb"],
-        runtime=config["resources"]["resolve_taxid"]["runtime"],
-        tmp_mb=config["resources"]["resolve_taxid"]["tmp_mb"],
-        qos=config["resources"]["resolve_taxid"]["qos"]
     shell:
         """
         {{
@@ -278,12 +242,6 @@ rule prep_region_file:
     log:
         temp(return_log_env("{ref_genome}", "region_file"))
     conda: CONDA_ENV
-    threads: config["resources"]["prep_region_file"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prep_region_file"]["mem_mb"],
-        runtime=config["resources"]["prep_region_file"]["runtime"],
-        tmp_mb=config["resources"]["prep_region_file"]["tmp_mb"],
-        qos=config["resources"]["prep_region_file"]["qos"]
     shell:
         """
         {{
@@ -301,12 +259,6 @@ rule download_rfam:
     log:
         os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","download_rfam.log")
     conda: CONDA_ENV
-    threads: config["resources"]["download_rfam"]["threads"]
-    resources:
-        mem_mb=config["resources"]["download_rfam"]["mem_mb"],
-        runtime=config["resources"]["download_rfam"]["runtime"],
-        tmp_mb=config["resources"]["download_rfam"]["tmp_mb"],
-        qos=config["resources"]["download_rfam"]["qos"]
     shell:
         """
         {{
@@ -338,12 +290,6 @@ rule build_structural_rna_db:
     log:
         return_log_env("{ref_genome}", "structural_rna")
     conda: CONDA_ENV
-    threads: config["resources"]["build_structural_rna_db"]["threads"]
-    resources:
-        mem_mb=config["resources"]["build_structural_rna_db"]["mem_mb"],
-        runtime=config["resources"]["build_structural_rna_db"]["runtime"],
-        tmp_mb=config["resources"]["build_structural_rna_db"]["tmp_mb"],
-        qos=config["resources"]["build_structural_rna_db"]["qos"]
     shell:
         """
         {{
@@ -458,12 +404,6 @@ rule check_te_file:
     log:
         temp(return_log_env("{ref_genome}", "TEs"))
     conda: CONDA_ENV
-    threads: config["resources"]["check_te_file"]["threads"]
-    resources:
-        mem_mb=config["resources"]["check_te_file"]["mem_mb"],
-        runtime=config["resources"]["check_te_file"]["runtime"],
-        tmp_mb=config["resources"]["check_te_file"]["tmp_mb"],
-        qos=config["resources"]["check_te_file"]["qos"]
     shell:
         """
         {{

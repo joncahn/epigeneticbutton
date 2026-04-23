@@ -76,12 +76,6 @@ rule atac_shift_bam:
     log:
         temp(return_log_chip("ATAC","{sample_name}", "atac_shift_{file_type}", ""))
     conda: CONDA_ENV_ATAC
-    threads: config["resources"]["atac_shift_bam"]["threads"]
-    resources:
-        mem_mb=config["resources"]["atac_shift_bam"]["mem_mb"],
-        runtime=config["resources"]["atac_shift_bam"]["runtime"],
-        tmp_mb=config["resources"]["atac_shift_bam"]["tmp_mb"],
-        qos=config["resources"]["atac_shift_bam"]["qos"]
     shell:
         """
         {{
@@ -104,12 +98,6 @@ rule atac_bam_to_bed:
     log:
         temp(return_log_chip("ATAC","{sample_name}", "atac_bed_{file_type}", ""))
     conda: CONDA_ENV_ATAC
-    threads: config["resources"]["atac_bam_to_bed"]["threads"]
-    resources:
-        mem_mb=config["resources"]["atac_bam_to_bed"]["mem_mb"],
-        runtime=config["resources"]["atac_bam_to_bed"]["runtime"],
-        tmp_mb=config["resources"]["atac_bam_to_bed"]["tmp_mb"],
-        qos=config["resources"]["atac_bam_to_bed"]["qos"]
     shell:
         """
         {{
@@ -134,12 +122,6 @@ rule calling_peaks_atac:
     log:
         temp(return_log_chip("ATAC","{sample_name}", "{file_type}__narrowpeak_calling", ""))
     conda: CONDA_ENV_ATAC
-    threads: config["resources"]["calling_peaks_atac"]["threads"]
-    resources:
-        mem_mb=config["resources"]["calling_peaks_atac"]["mem_mb"],
-        runtime=config["resources"]["calling_peaks_atac"]["runtime"],
-        tmp_mb=config["resources"]["calling_peaks_atac"]["tmp_mb"],
-        qos=config["resources"]["calling_peaks_atac"]["qos"]
     shell:
         """
         {{
@@ -171,12 +153,6 @@ rule make_coverage_atac:
     log:
         temp(return_log_chip("ATAC","{sample_name}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV_ATAC
-    threads: config["resources"]["make_coverage_atac"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_coverage_atac"]["mem_mb"],
-        runtime=config["resources"]["make_coverage_atac"]["runtime"],
-        tmp_mb=config["resources"]["make_coverage_atac"]["tmp_mb"],
-        qos=config["resources"]["make_coverage_atac"]["qos"]
     shell:
         """
         {{

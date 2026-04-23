@@ -28,6 +28,7 @@ methylC-seq, and direct methylation from long-read sequencing.
 
 DEFAULT_OPTIONS = "config/epicc-options.yaml"
 DEFAULT_PROFILE = "profiles/slurm"
+DEFAULT_WORKFLOW_PROFILE = "profiles/default"
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +128,14 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
     if not Path(options_file).exists():
         sys.exit(f"Error: Options file not found: {options_file}")
     cmd += ["--configfile", options_file]
+
+    # Workflow profile — per-rule resource and thread tuning. Ships with the
+    # repo; users normally should not edit it. Override with --workflow-profile.
+    workflow_profile = getattr(args, "workflow_profile", None) or str(
+        repo / DEFAULT_WORKFLOW_PROFILE
+    )
+    if Path(workflow_profile).is_dir():
+        cmd += ["--workflow-profile", workflow_profile]
 
     # Execution mode
     profile, cores = detect_execution_mode(args)
@@ -443,8 +452,14 @@ def add_common_options(parser):
     )
     parser.add_argument(
         "--profile", metavar="DIR",
-        help=f"Snakemake profile directory (default: auto-detect; "
-             f"uses {DEFAULT_PROFILE} if sbatch is available)",
+        help=f"Cluster (execution) profile directory with executor and "
+             f"site-specific settings (default: auto-detect; uses "
+             f"{DEFAULT_PROFILE} if sbatch is available)",
+    )
+    parser.add_argument(
+        "--workflow-profile", metavar="DIR",
+        help=f"Workflow profile directory with per-rule resources/threads "
+             f"(default: {DEFAULT_WORKFLOW_PROFILE})",
     )
     parser.add_argument(
         "--output-dir", metavar="DIR",

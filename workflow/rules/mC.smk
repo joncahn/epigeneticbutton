@@ -141,12 +141,6 @@ rule make_bismark_indices:
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","bismark_index_{ref_genome}.log"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["make_bismark_indices"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_bismark_indices"]["mem_mb"],
-        runtime=config["resources"]["make_bismark_indices"]["runtime"],
-        tmp_mb=config["resources"]["make_bismark_indices"]["tmp_mb"],
-        qos=config["resources"]["make_bismark_indices"]["qos"]
     shell:
         """
         {{
@@ -182,15 +176,11 @@ rule bismark_map_pe:
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["bismark_map_pe"]["threads"]
     resources:
-        mem_mb=config["resources"]["bismark_map_pe"]["mem_mb"],
-        runtime=config["resources"]["bismark_map_pe"]["runtime"],
         # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
         # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
         # plus 10 GB headroom, with a 20 GB floor.
-        tmp_mb=lambda wildcards, input: max(20000, int(sum(os.path.getsize(f) for f in [input.fastq1, input.fastq2]) / 1024**2 * 7) + 10000),
-        qos=config["resources"]["bismark_map_pe"]["qos"]
+        disk_mb=lambda wildcards, input: max(20000, int(sum(os.path.getsize(f) for f in [input.fastq1, input.fastq2]) / 1024**2 * 7) + 10000)
     shell:
         """
         {{
@@ -232,15 +222,11 @@ rule bismark_map_se:
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["bismark_map_se"]["threads"]
     resources:
-        mem_mb=config["resources"]["bismark_map_se"]["mem_mb"],
-        runtime=config["resources"]["bismark_map_se"]["runtime"],
         # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
         # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
         # plus 10 GB headroom, with a 20 GB floor.
-        tmp_mb=lambda wildcards, input: max(20000, int(os.path.getsize(input.fastq0) / 1024**2 * 7) + 10000),
-        qos=config["resources"]["bismark_map_se"]["qos"]
+        disk_mb=lambda wildcards, input: max(20000, int(os.path.getsize(input.fastq0) / 1024**2 * 7) + 10000)
     shell:
         """
         {{
@@ -299,12 +285,6 @@ rule make_mc_stats_pe:
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "PE"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["make_mc_stats_pe"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_mc_stats_pe"]["mem_mb"],
-        runtime=config["resources"]["make_mc_stats_pe"]["runtime"],
-        tmp_mb=config["resources"]["make_mc_stats_pe"]["tmp_mb"],
-        qos=config["resources"]["make_mc_stats_pe"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -352,12 +332,6 @@ rule make_mc_stats_se:
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "SE"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["make_mc_stats_se"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_mc_stats_se"]["mem_mb"],
-        runtime=config["resources"]["make_mc_stats_se"]["runtime"],
-        tmp_mb=config["resources"]["make_mc_stats_se"]["tmp_mb"],
-        qos=config["resources"]["make_mc_stats_se"]["qos"]
     shell:
         """
         printf "\nMaking mapping statistics summary\n"
@@ -411,12 +385,6 @@ rule merging_mc_replicates:
     log:
         temp(return_log_mc("{sample_name}", "merging_reps", ""))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["merging_mc_replicates"]["threads"]
-    resources:
-        mem_mb=config["resources"]["merging_mc_replicates"]["mem_mb"],
-        runtime=config["resources"]["merging_mc_replicates"]["runtime"],
-        tmp_mb=config["resources"]["merging_mc_replicates"]["tmp_mb"],
-        qos=config["resources"]["merging_mc_replicates"]["qos"]
     shell:
         """
         {{
@@ -447,12 +415,6 @@ rule make_mc_bigwig_files:
     log:
         temp(return_log_mc("{sample_name}", "bigwig", ""))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["make_mc_bigwig_files"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_mc_bigwig_files"]["mem_mb"],
-        runtime=config["resources"]["make_mc_bigwig_files"]["runtime"],
-        tmp_mb=config["resources"]["make_mc_bigwig_files"]["tmp_mb"],
-        qos=config["resources"]["make_mc_bigwig_files"]["qos"]
     shell:
         """
         {{
@@ -562,12 +524,6 @@ rule call_DMRs_pairwise:
     log:
         temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["call_DMRs_pairwise"]["threads"]
-    resources:
-        mem_mb=config["resources"]["call_DMRs_pairwise"]["mem_mb"],
-        runtime=config["resources"]["call_DMRs_pairwise"]["runtime"],
-        tmp_mb=config["resources"]["call_DMRs_pairwise"]["tmp_mb"],
-        qos=config["resources"]["call_DMRs_pairwise"]["qos"]
     shell:
         """
         {{
@@ -668,12 +624,6 @@ rule get_dmc_input:
     log:
         temp(return_log_mc("{sample_name}", "get_dmc_input", "dmC"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["get_modbam"]["threads"]
-    resources:
-        mem_mb=config["resources"]["get_modbam"]["mem_mb"],
-        runtime=config["resources"]["get_modbam"]["runtime"],
-        tmp_mb=config["resources"]["get_modbam"]["tmp_mb"],
-        qos=config["resources"]["get_modbam"]["qos"]
     shell:
         """
         {{
@@ -820,12 +770,6 @@ rule prepare_modbam_for_pileup:
     log:
         temp(return_log_mc("{sample_name}", "prepare_modbam", "dmC"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["align_modbam"]["threads"]
-    resources:
-        mem_mb=config["resources"]["align_modbam"]["mem_mb"],
-        runtime=config["resources"]["align_modbam"]["runtime"],
-        tmp_mb=config["resources"]["align_modbam"]["tmp_mb"],
-        qos=config["resources"]["align_modbam"]["qos"]
     shell:
         """
         {{
@@ -899,12 +843,6 @@ rule modkit_pileup_dmc:
     log:
         temp(return_log_mc("{sample_name}", "modkit_pileup", "dmC"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["modkit_pileup"]["threads"]
-    resources:
-        mem_mb=config["resources"]["modkit_pileup"]["mem_mb"],
-        runtime=config["resources"]["modkit_pileup"]["runtime"],
-        tmp_mb=config["resources"]["modkit_pileup"]["tmp_mb"],
-        qos=config["resources"]["modkit_pileup"]["qos"]
     shell:
         """
         {{
@@ -937,12 +875,6 @@ rule copy_bedmethyl_input:
     log:
         temp(return_log_mc("{sample_name}", "copy_bedmethyl", "dmC"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["get_bedmethyl"]["threads"]
-    resources:
-        mem_mb=config["resources"]["get_bedmethyl"]["mem_mb"],
-        runtime=config["resources"]["get_bedmethyl"]["runtime"],
-        tmp_mb=config["resources"]["get_bedmethyl"]["tmp_mb"],
-        qos=config["resources"]["get_bedmethyl"]["qos"]
     shell:
         """
         {{
@@ -990,12 +922,6 @@ rule modkit_summary_dmc:
     log:
         temp(return_log_mc("{sample_name}", "modkit_summary", "dmC"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["modkit_summary"]["threads"]
-    resources:
-        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
-        runtime=config["resources"]["modkit_summary"]["runtime"],
-        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
-        qos=config["resources"]["modkit_summary"]["qos"]
     shell:
         """
         {{
@@ -1039,12 +965,6 @@ rule make_mc_stats_dmc:
     log:
         temp(return_log_mc("{sample_name}", "making_stats", "dmC"))
     conda: CONDA_ENV_MC
-    threads: config["resources"]["modkit_summary"]["threads"]
-    resources:
-        mem_mb=config["resources"]["modkit_summary"]["mem_mb"],
-        runtime=config["resources"]["modkit_summary"]["runtime"],
-        tmp_mb=config["resources"]["modkit_summary"]["tmp_mb"],
-        qos=config["resources"]["modkit_summary"]["qos"]
     shell:
         """
         {{
@@ -1137,11 +1057,6 @@ rule convert_bedmethyl_to_cx_report:
         temp(return_log_mc("{sample_name}", "bedmethyl_to_cx", "dmC"))
     conda: CONDA_ENV_MC
     threads: 1
-    resources:
-        mem_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["mem_mb"],
-        runtime=config["resources"]["convert_bedmethyl_to_cx_report"]["runtime"],
-        tmp_mb=config["resources"]["convert_bedmethyl_to_cx_report"]["tmp_mb"],
-        qos=config["resources"]["convert_bedmethyl_to_cx_report"]["qos"]
     shell:
         """
         {{

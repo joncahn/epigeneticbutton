@@ -143,12 +143,6 @@ rule deduplicate_srna_nextflexv3:
     log:
         temp(return_log_smallrna("{sample_name}", "deduplicate_srna_nextflexv3", "all"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["deduplicate_srna_nextflexv3"]["threads"]
-    resources:
-        mem_mb=config["resources"]["deduplicate_srna_nextflexv3"]["mem_mb"],
-        runtime=config["resources"]["deduplicate_srna_nextflexv3"]["runtime"],
-        tmp_mb=config["resources"]["deduplicate_srna_nextflexv3"]["tmp_mb"],
-        qos=config["resources"]["deduplicate_srna_nextflexv3"]["qos"]
     shell:
         """
         {{
@@ -179,12 +173,6 @@ rule make_bt2_indices_for_structural_RNAs:
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","structural_RNA_bt2_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_bt2_indices_for_structural_RNAs"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_bt2_indices_for_structural_RNAs"]["mem_mb"],
-        runtime=config["resources"]["make_bt2_indices_for_structural_RNAs"]["runtime"],
-        tmp_mb=config["resources"]["make_bt2_indices_for_structural_RNAs"]["tmp_mb"],
-        qos=config["resources"]["make_bt2_indices_for_structural_RNAs"]["qos"]
     shell:
         """
         {{
@@ -215,12 +203,6 @@ rule filter_structural_rna:
     log:
         temp(return_log_smallrna("{sample_name}", "filter_structural_rna", "all"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["filter_structural_rna"]["threads"]
-    resources:
-        mem_mb=config["resources"]["filter_structural_rna"]["mem_mb"],
-        runtime=config["resources"]["filter_structural_rna"]["runtime"],
-        tmp_mb=config["resources"]["filter_structural_rna"]["tmp_mb"],
-        qos=config["resources"]["filter_structural_rna"]["qos"]
     shell:
         """
         {{
@@ -250,12 +232,6 @@ rule make_bowtie1_indices:
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_bowtie1_indices"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_bowtie1_indices"]["mem_mb"],
-        runtime=config["resources"]["make_bowtie1_indices"]["runtime"],
-        tmp_mb=config["resources"]["make_bowtie1_indices"]["tmp_mb"],
-        qos=config["resources"]["make_bowtie1_indices"]["qos"]
     shell:
         """
         {{
@@ -272,12 +248,6 @@ rule make_bowtie1_indices_large:
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","large_bt1_index_{ref_genome}.log"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_bowtie1_indices"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_bowtie1_indices_large"]["mem_mb"],
-        runtime=config["resources"]["make_bowtie1_indices_large"]["runtime"],
-        tmp_mb=config["resources"]["make_bowtie1_indices_large"]["tmp_mb"],
-        qos=config["resources"]["make_bowtie1_indices_large"]["qos"]
     shell:
         """
         {{
@@ -304,12 +274,6 @@ rule shortstack_map:
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["shortstack_map"]["threads"]
-    resources:
-        mem_mb=config["resources"]["shortstack_map"]["mem_mb"],
-        runtime=config["resources"]["shortstack_map"]["runtime"],
-        tmp_mb=config["resources"]["shortstack_map"]["tmp_mb"],
-        qos=config["resources"]["shortstack_map"]["qos"]
     shell:
         """
         {{
@@ -334,12 +298,6 @@ rule make_cluster_bedfiles:
     log:
         temp(return_log_smallrna("{sample_name}", "make_cluster_bedfiles", "all"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_cluster_bedfiles"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_cluster_bedfiles"]["mem_mb"],
-        runtime=config["resources"]["make_cluster_bedfiles"]["runtime"],
-        tmp_mb=config["resources"]["make_cluster_bedfiles"]["tmp_mb"],
-        qos=config["resources"]["make_cluster_bedfiles"]["qos"]
     shell:
         """
         {{
@@ -360,12 +318,6 @@ rule make_srna_size_stats:
     log:
         temp(return_log_smallrna("{sample_name}", "make_srna_stats", "all"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_srna_size_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_srna_size_stats"]["mem_mb"],
-        runtime=config["resources"]["make_srna_size_stats"]["runtime"],
-        tmp_mb=config["resources"]["make_srna_size_stats"]["tmp_mb"],
-        qos=config["resources"]["make_srna_size_stats"]["qos"]
     shell:
         """
         {{
@@ -399,12 +351,6 @@ rule filter_size_srna_sample:
     log:
         temp(return_log_smallrna("{sample_name}", "filter_size_srna", "{size}"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["filter_size_srna_sample"]["threads"]
-    resources:
-        mem_mb=config["resources"]["filter_size_srna_sample"]["mem_mb"],
-        runtime=config["resources"]["filter_size_srna_sample"]["runtime"],
-        tmp_mb=config["resources"]["filter_size_srna_sample"]["tmp_mb"],
-        qos=config["resources"]["filter_size_srna_sample"]["qos"]
     shell:
         """
         {{
@@ -428,12 +374,6 @@ rule merging_srna_replicates:
     log:
         temp(return_log_smallrna("{sample_name}", "merging_srna_reps", "{size}"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["merging_srna_replicates"]["threads"]
-    resources:
-        mem_mb=config["resources"]["merging_srna_replicates"]["mem_mb"],
-        runtime=config["resources"]["merging_srna_replicates"]["runtime"],
-        tmp_mb=config["resources"]["merging_srna_replicates"]["tmp_mb"],
-        qos=config["resources"]["merging_srna_replicates"]["qos"]
     shell:
         """
         {{
@@ -463,12 +403,6 @@ rule make_srna_stranded_bigwigs:
     log:
         temp(return_log_smallrna("{sample_name}", "making_bigiwig", "{size}"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["make_srna_stranded_bigwigs"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_srna_stranded_bigwigs"]["mem_mb"],
-        runtime=config["resources"]["make_srna_stranded_bigwigs"]["runtime"],
-        tmp_mb=config["resources"]["make_srna_stranded_bigwigs"]["tmp_mb"],
-        qos=config["resources"]["make_srna_stranded_bigwigs"]["qos"]
     shell:
         """
         {{
@@ -520,12 +454,6 @@ rule analyze_all_srna_samples_on_target_file:
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_analysis", "{target_name}"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["analyze_all_srna_samples_on_target_file"]["threads"]
-    resources:
-        mem_mb=config["resources"]["analyze_all_srna_samples_on_target_file"]["mem_mb"],
-        runtime=config["resources"]["analyze_all_srna_samples_on_target_file"]["runtime"],
-        tmp_mb=config["resources"]["analyze_all_srna_samples_on_target_file"]["tmp_mb"],
-        qos=config["resources"]["analyze_all_srna_samples_on_target_file"]["qos"]
     shell:
         """
         {{
@@ -557,12 +485,6 @@ rule prep_files_for_differential_srna_clusters:
         target_name = lambda wildcards: wildcards.target_name
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_prep", "{target_name}"))
-    threads: config["resources"]["prep_files_for_differential_srna_clusters"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["mem_mb"],
-        runtime=config["resources"]["prep_files_for_differential_srna_clusters"]["runtime"],
-        tmp_mb=config["resources"]["prep_files_for_differential_srna_clusters"]["tmp_mb"],
-        qos=config["resources"]["prep_files_for_differential_srna_clusters"]["qos"]
     run:
         filtered_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == params.ref_genome) ].copy()
         filtered_samples['Sample'] = filtered_samples['levels_label']
@@ -602,12 +524,6 @@ rule call_all_differential_srna_clusters:
     log:
         temp(return_log_smallrna("{ref_genome}", "{analysis_name}_cluster_degs", "{target_name}"))
     conda: CONDA_ENV_SRNA
-    threads: config["resources"]["call_all_DEGs"]["threads"]
-    resources:
-        mem_mb=config["resources"]["call_all_DEGs"]["mem_mb"],
-        runtime=config["resources"]["call_all_DEGs"]["runtime"],
-        tmp_mb=config["resources"]["call_all_DEGs"]["tmp_mb"],
-        qos=config["resources"]["call_all_DEGs"]["qos"]
     shell:
         """
         printf "running edgeR for all samples in {params.ref_genome}\n"

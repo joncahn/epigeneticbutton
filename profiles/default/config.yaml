@@ -1,0 +1,277 @@
+# profiles/default/config.yaml
+#
+# EPICC workflow profile. Carries the workflow-specific resource tuning
+# (per-rule mem/runtime/threads via set-resources and set-threads). Intended
+# to be used in combination with a cluster profile that supplies executor
+# and site-specific settings (account, partition, qos, etc.).
+#
+# The `epicc` CLI passes --workflow-profile profiles/default automatically.
+# To use a different tuning, pass --workflow-profile path/to/your/dir.
+#
+# Cluster profiles' set-resources/set-threads override values defined here,
+# so site-specific tuning on top of this baseline is additive.
+
+# ------------------------------------------------------------------------
+# Resource tiers
+# ------------------------------------------------------------------------
+
+low_resources: &low
+  mem_mb: 1000
+  runtime: 60
+
+standard_resources: &standard
+  mem_mb: 2000
+  runtime: 120
+
+download_resources: &download
+  mem_mb: 16000
+  runtime: 720
+
+heavy_resources: &heavy
+  mem_mb: 16000
+  runtime: 480
+
+heavier_resources: &heavier
+  mem_mb: 32000
+  runtime: 480
+
+max_resources: &max
+  mem_mb: 32000
+  runtime: 2880
+
+single_thread: &single
+  mem_mb: 32000
+  runtime: 480
+
+# ------------------------------------------------------------------------
+# Per-rule resource bindings
+# ------------------------------------------------------------------------
+
+set-resources:
+  # environment_setup
+  check_fasta: *standard
+  check_gff: *standard
+  check_gtf: *standard
+  check_chrom_sizes: *single
+  compute_genome_stats: *single
+  resolve_taxid: *single
+  prep_region_file: *low
+  download_rfam: *standard
+  build_structural_rna_db: *max
+  check_te_file: *standard
+  # sample_download
+  get_fastq_pe: *download
+  get_fastq_se: *download
+  run_fastqc: *single
+  process_fastq_pe: *heavy
+  process_fastq_se: *heavy
+  get_available_bam: *standard
+  # ChIPseq
+  make_bt2_indices: *heavy
+  make_chromap_index: *heavy
+  filter_bam_pe: *heavier
+  filter_bam_se: *heavier
+  make_mapping_stats_pe: *low
+  make_mapping_stats_se: *low
+  dispatch_final_bam: *standard
+  make_coverage_chip: *heavy
+  make_bigwig_chip: *heavy
+  make_fingerprint_plot: *heavy
+  calling_peaks_macs2_pe: *heavy
+  calling_peaks_macs2_se: *heavy
+  idr_analysis_replicates: *single
+  merging_bam_replicates: *heavy
+  making_pseudo_replicates: *heavy
+  best_peaks_pseudoreps: *low
+  find_motifs_in_file: *heavy
+  make_peak_stats: *low
+  perform_pairwise_diff_peaks: *heavy
+  # ATACseq
+  atac_shift_bam: *standard
+  atac_bam_to_bed: *low
+  calling_peaks_atac: *heavy
+  make_coverage_atac: *heavier
+  # mC
+  make_bismark_indices: *heavy
+  bismark_map_pe: *max
+  bismark_map_se: *max
+  make_mc_stats_pe: *low
+  make_mc_stats_se: *low
+  merging_mc_replicates: *heavy
+  make_mc_bigwig_files: *single
+  call_DMRs_pairwise: *max
+  # dmC
+  get_modbam: *standard
+  get_bedmethyl: *low
+  align_modbam: *max
+  modkit_summary: *heavy
+  modkit_pileup: *heavier
+  convert_bedmethyl_to_cx_report: *standard
+  # RNAseq
+  make_STAR_indices: *heavy
+  STAR_map_pe: *heavier
+  STAR_map_se: *heavier
+  filter_rna_pe: *heavy
+  filter_rna_se: *heavy
+  make_rna_stats_pe: *low
+  make_rna_stats_se: *low
+  merging_rna_replicates: *heavy
+  make_rna_stranded_bigwigs: *heavy
+  make_rna_unstranded_bigwigs: *heavy
+  prep_files_for_DEGs: *single
+  call_all_DEGs: *single
+  gather_gene_expression_rpkm: *single
+  plot_expression_levels: *single
+  create_GO_database: *single
+  perform_GO_on_target_file: *single
+  call_rampage_TSS: *heavy
+  # smallRNA
+  deduplicate_srna_nextflexv3: *standard
+  make_bt2_indices_for_structural_RNAs: *heavy
+  filter_structural_rna: *heavy
+  make_bowtie1_indices: *single
+  make_bowtie1_indices_large: *single
+  shortstack_map: *heavier
+  make_cluster_bedfiles: *low
+  make_srna_size_stats: *standard
+  filter_size_srna_sample: *standard
+  merging_srna_replicates: *standard
+  make_srna_stranded_bigwigs: *standard
+  analyze_all_srna_samples_on_target_file: *heavy
+  prep_files_for_differential_srna_clusters: *single
+  call_all_differential_srna_clusters: *single
+  # combined_analysis
+  prepping_mapping_stats: *low
+  plotting_mapping_stats: *low
+  prepping_peak_stats: *low
+  plotting_peak_stats: *low
+  prepping_srna_sizes_stats: *low
+  plotting_srna_sizes_stats: *low
+  combine_peakfiles: *low
+  combine_clusterfiles: *low
+  combine_TSS: *low
+  get_annotations_for_bedfile: *low
+  plotting_upset_regions: *low
+  making_stranded_matrix_on_targetfile: *heavy
+  merging_matrix: *single
+  computing_matrix_scales: *single
+  sort_heatmap: *single
+  plotting_heatmap_on_targetfile: *single
+  plotting_sorted_heatmap_on_targetfile: *single
+  plotting_profile_on_targetfile: *single
+  prep_chromosomes_for_browser: *low
+  prep_browser_on_region: *heavy
+  make_single_loci_browser_plot: *single
+  merge_region_browser_plots: *low
+  summarize_tracks_pca: *max
+  plot_PCA_correlation: *single
+
+set-threads:
+  check_fasta: 4
+  check_gff: 4
+  check_gtf: 4
+  check_chrom_sizes: 1
+  compute_genome_stats: 1
+  resolve_taxid: 1
+  prep_region_file: 1
+  download_rfam: 4
+  build_structural_rna_db: 16
+  check_te_file: 4
+  get_fastq_pe: 8
+  get_fastq_se: 8
+  run_fastqc: 1
+  process_fastq_pe: 4
+  process_fastq_se: 4
+  get_available_bam: 4
+  make_bt2_indices: 4
+  make_chromap_index: 4
+  filter_bam_pe: 8
+  filter_bam_se: 8
+  make_mapping_stats_pe: 1
+  make_mapping_stats_se: 1
+  dispatch_final_bam: 4
+  make_coverage_chip: 4
+  make_bigwig_chip: 4
+  make_fingerprint_plot: 4
+  calling_peaks_macs2_pe: 4
+  calling_peaks_macs2_se: 4
+  idr_analysis_replicates: 1
+  merging_bam_replicates: 4
+  making_pseudo_replicates: 4
+  best_peaks_pseudoreps: 1
+  find_motifs_in_file: 4
+  make_peak_stats: 1
+  perform_pairwise_diff_peaks: 4
+  atac_shift_bam: 4
+  atac_bam_to_bed: 1
+  calling_peaks_atac: 4
+  make_coverage_atac: 8
+  make_bismark_indices: 4
+  bismark_map_pe: 16
+  bismark_map_se: 16
+  make_mc_stats_pe: 1
+  make_mc_stats_se: 1
+  merging_mc_replicates: 4
+  make_mc_bigwig_files: 1
+  call_DMRs_pairwise: 16
+  get_modbam: 4
+  get_bedmethyl: 1
+  align_modbam: 16
+  modkit_summary: 4
+  modkit_pileup: 8
+  convert_bedmethyl_to_cx_report: 1   # rule is single-threaded (Python script); mem/runtime still comes from *standard
+  make_STAR_indices: 4
+  STAR_map_pe: 8
+  STAR_map_se: 8
+  filter_rna_pe: 4
+  filter_rna_se: 4
+  make_rna_stats_pe: 1
+  make_rna_stats_se: 1
+  merging_rna_replicates: 4
+  make_rna_stranded_bigwigs: 4
+  make_rna_unstranded_bigwigs: 4
+  prep_files_for_DEGs: 1
+  call_all_DEGs: 1
+  gather_gene_expression_rpkm: 1
+  plot_expression_levels: 1
+  create_GO_database: 1
+  perform_GO_on_target_file: 1
+  call_rampage_TSS: 4
+  deduplicate_srna_nextflexv3: 4
+  make_bt2_indices_for_structural_RNAs: 4
+  filter_structural_rna: 4
+  make_bowtie1_indices: 1
+  make_bowtie1_indices_large: 1
+  shortstack_map: 8
+  make_cluster_bedfiles: 1
+  make_srna_size_stats: 4
+  filter_size_srna_sample: 4
+  merging_srna_replicates: 4
+  make_srna_stranded_bigwigs: 4
+  analyze_all_srna_samples_on_target_file: 4
+  prep_files_for_differential_srna_clusters: 1
+  call_all_differential_srna_clusters: 1
+  prepping_mapping_stats: 1
+  plotting_mapping_stats: 1
+  prepping_peak_stats: 1
+  plotting_peak_stats: 1
+  prepping_srna_sizes_stats: 1
+  plotting_srna_sizes_stats: 1
+  combine_peakfiles: 1
+  combine_clusterfiles: 1
+  combine_TSS: 1
+  get_annotations_for_bedfile: 1
+  plotting_upset_regions: 1
+  making_stranded_matrix_on_targetfile: 4
+  merging_matrix: 1
+  computing_matrix_scales: 1
+  sort_heatmap: 1
+  plotting_heatmap_on_targetfile: 1
+  plotting_sorted_heatmap_on_targetfile: 1
+  plotting_profile_on_targetfile: 1
+  prep_chromosomes_for_browser: 1
+  prep_browser_on_region: 4
+  make_single_loci_browser_plot: 1
+  merge_region_browser_plots: 1
+  summarize_tracks_pca: 16
+  plot_PCA_correlation: 1
