@@ -49,23 +49,25 @@ set-threads:
   bismark_map_se: 6
   
 set-resources:
-# Environment setup
-  check_fasta: *download
-  check_gff: *download
+# environment_setup
+  check_fasta: *standard
+  check_gff: *standard
   check_gtf: *standard
-  check_chrom_sizes: *low
-  compute_genome_stats: *low
+  check_chrom_sizes: *single
+  compute_genome_stats: *single
   resolve_taxid: *single
   prep_region_file: *low
-  check_te_file: *download
-# Sample download
+  download_rfam: *standard
+  build_structural_rna_db: *max
+  check_te_file: *standard
+  # sample_download
   get_fastq_pe: *download
   get_fastq_se: *download
   run_fastqc: *single
   process_fastq_pe: *heavy
   process_fastq_se: *heavy
   get_available_bam: *standard
-# ChIPseq
+  # ChIPseq
   make_bt2_indices: *heavy
   make_chromap_index: *heavy
   filter_bam_pe: *heavier
@@ -85,12 +87,12 @@ set-resources:
   find_motifs_in_file: *heavy
   make_peak_stats: *low
   perform_pairwise_diff_peaks: *heavy
-# ATACseq
+  # ATACseq
   atac_shift_bam: *standard
   atac_bam_to_bed: *low
   calling_peaks_atac: *heavy
   make_coverage_atac: *heavier
-# mC / dmC
+  # mC
   make_bismark_indices: *heavy
   bismark_map_pe: *max
   bismark_map_se: *max
@@ -99,22 +101,56 @@ set-resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   call_DMRs_pairwise: *max
-  make_modkit_context_beds: *heavy
-  get_modbam: *download
+  # dmC
+  get_modbam: *standard
   get_bedmethyl: *low
   align_modbam: *max
   modkit_summary: *heavy
-  modkit_pileup: *heavy
-  split_bedmethyl_by_context: *heavy
-  make_dmc_bigwig_files: *single
-  call_DMRs_modkit: *max
+  modkit_pileup: *heavier
   convert_bedmethyl_to_cx_report: *standard
-# Combined analysis
+  # RNAseq
+  make_STAR_indices: *heavy
+  STAR_map_pe: *heavier
+  STAR_map_se: *heavier
+  filter_rna_pe: *heavy
+  filter_rna_se: *heavy
+  make_rna_stats_pe: *low
+  make_rna_stats_se: *low
+  merging_rna_replicates: *heavy
+  make_rna_stranded_bigwigs: *heavy
+  make_rna_unstranded_bigwigs: *heavy
+  prep_files_for_DEGs: *single
+  call_all_DEGs: *single
+  gather_gene_expression_rpkm: *single
+  plot_expression_levels: *single
+  create_GO_database: *single
+  perform_GO_on_target_file: *single
+  call_rampage_TSS: *heavy
+  # smallRNA
+  deduplicate_srna_nextflexv3: *standard
+  make_bt2_indices_for_structural_RNAs: *heavy
+  filter_structural_rna: *heavy
+  make_bowtie1_indices: *single
+  make_bowtie1_indices_large: *single
+  shortstack_map: *heavier
+  make_cluster_bedfiles: *low
+  make_srna_size_stats: *standard
+  filter_size_srna_sample: *standard
+  merging_srna_replicates: *standard
+  make_srna_stranded_bigwigs: *standard
+  analyze_all_srna_samples_on_target_file: *heavy
+  prep_files_for_differential_srna_clusters: *single
+  call_all_differential_srna_clusters: *single
+  # combined_analysis
   prepping_mapping_stats: *low
   plotting_mapping_stats: *low
   prepping_peak_stats: *low
   plotting_peak_stats: *low
+  prepping_srna_sizes_stats: *low
+  plotting_srna_sizes_stats: *low
   combine_peakfiles: *low
+  combine_clusterfiles: *low
+  combine_TSS: *low
   get_annotations_for_bedfile: *low
   plotting_upset_regions: *low
   making_stranded_matrix_on_targetfile: *heavy
