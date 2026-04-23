@@ -80,6 +80,10 @@ rule atac_shift_bam:
         """
         {{
         printf "\nApplying Tn5 shift for {params.file_type}__{params.sample_name}\n"
+        # alignmentSieve requires an indexed input BAM. Some upstream rules
+        # (making_pseudo_replicates, merging_bam_replicates) produce sorted
+        # BAMs without .bai, so build one here on demand.
+        [ -f {input.bamfile}.bai ] || samtools index -@ {threads} {input.bamfile}
         # Single-threaded alignmentSieve (stdout-safe) piped into parallel
         # samtools sort: Tn5 shift is IO-bound and fast, and alignmentSieve's
         # multithreaded mode emits records out of position order anyway. If
