@@ -17,31 +17,31 @@
 
 low_resources: &low
   mem_mb: 1000
-  runtime: 60
+  runtime: "1h"
 
 standard_resources: &standard
   mem_mb: 2000
-  runtime: 120
+  runtime: "2h"
 
 download_resources: &download
   mem_mb: 16000
-  runtime: 720
+  runtime: "12h"
 
 heavy_resources: &heavy
   mem_mb: 16000
-  runtime: 480
+  runtime: "8h"
 
 heavier_resources: &heavier
   mem_mb: 32000
-  runtime: 480
+  runtime: "8h"
 
 max_resources: &max
   mem_mb: 32000
-  runtime: 2880
+  runtime: "2d"
 
 single_thread: &single
   mem_mb: 32000
-  runtime: 480
+  runtime: "8h"
 
 # ------------------------------------------------------------------------
 # Per-rule resource bindings
