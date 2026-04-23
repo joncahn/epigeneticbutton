@@ -80,7 +80,12 @@ rule atac_shift_bam:
         """
         {{
         printf "\nApplying Tn5 shift for {params.file_type}__{params.sample_name}\n"
-        alignmentSieve --ATACshift -b {input.bamfile} -p {threads} -o {output.shifted_bam}
+        # Single-threaded alignmentSieve (stdout-safe) piped into parallel
+        # samtools sort: Tn5 shift is IO-bound and fast, and alignmentSieve's
+        # multithreaded mode emits records out of position order anyway. If
+        # this becomes a wall-time bottleneck on very large BAMs, revisit.
+        alignmentSieve --ATACshift -b {input.bamfile} -p 1 -o /dev/stdout \
+            | samtools sort -@ {threads} -o {output.shifted_bam} -
         samtools index -@ {threads} {output.shifted_bam}
         }} 2>&1 | tee -a "{log}"
         """
