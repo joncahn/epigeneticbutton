@@ -638,15 +638,18 @@ rule get_dmc_input:
         seq_id="{params.seq_id}"
 
         if [[ "$dmc_path" == http://* || "$dmc_path" == https://* ]]; then
-            # URL provided — download to temp location
+            # URL provided — download to a persistent path under the rule's
+            # output directory (NOT TMPDIR / SLURM_TMPDIR, which gets cleaned
+            # up at job exit and would orphan the validated symlink).
             printf "Downloading dmC input from URL: $dmc_path\n"
             url_path="${{dmc_path%%\\?*}}"
             dl_suffix="${{url_path##*.}}"
-            tmpfile=$(mktemp --suffix=".$dl_suffix")
+            outdir="$(dirname {output.validated})"
+            mkdir -p "$outdir"
+            input_file="${{outdir}}/raw__{params.sample_name}.${{dl_suffix}}"
             curl --fail --show-error --location --max-redirs 5 \
                  --retry 3 --connect-timeout 30 --max-time 7200 \
-                 --proto '=https,http' -o "$tmpfile" "$dmc_path"
-            input_file="$tmpfile"
+                 --proto '=https,http' -o "$input_file" "$dmc_path"
             printf "Downloaded to: $input_file\n"
         elif [[ -f "$dmc_path" ]]; then
             # Direct file path provided
