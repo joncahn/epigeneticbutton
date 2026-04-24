@@ -92,6 +92,29 @@ def fmt_duration(seconds):
         return f"{int(h)}h {int(m)}m"
 
 
+def maybe_clear_stale_lock(args, repo):
+    """Auto-unlock the working directory if a stale Snakemake lock is found.
+
+    Killed runs (SLURM timeouts, Ctrl-C, node failures) leave files in
+    `.snakemake/locks/` that block subsequent invocations until manually
+    cleared. We can't reliably detect a *live* concurrent coordinator in a
+    cluster environment (it could be on any node, and the lock files contain
+    no PID/host info), so we just clear non-empty locks with a visible notice.
+    Pass --no-auto-unlock to disable this behavior.
+    """
+    if getattr(args, "no_auto_unlock", False):
+        return
+    locks = repo / ".snakemake" / "locks"
+    if not locks.exists() or not any(locks.iterdir()):
+        return
+    print("EPICC: Detected stale Snakemake lock from a prior run; unlocking.",
+          file=sys.stderr)
+    subprocess.run(
+        ["snakemake", "--unlock", "--configfile", args.options],
+        cwd=str(repo), check=False,
+    )
+
+
 def detect_execution_mode(args):
     """Determine whether to use a SLURM profile or local cores.
 
@@ -198,6 +221,8 @@ def cmd_run(args, extra_args):
     """Execute the pipeline."""
     repo = find_repo_root()
     os.chdir(repo)
+
+    maybe_clear_stale_lock(args, repo)
 
     profile, cores = detect_execution_mode(args)
     mode_desc = f"profile {profile}" if profile else f"{cores} local cores"
@@ -503,6 +528,11 @@ def add_run_options(parser):
     parser.add_argument(
         "--forcerun", nargs="+", metavar="RULE",
         help="Force re-execution of specific rules",
+    )
+    parser.add_argument(
+        "--no-auto-unlock", action="store_true",
+        help="Don't auto-unlock the working directory if a stale Snakemake "
+             "lock is detected at startup (default: auto-unlock with notice)",
     )
 
 
