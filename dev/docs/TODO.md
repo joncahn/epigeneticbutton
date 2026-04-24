@@ -220,7 +220,7 @@ The details in the READ THE DOCS "Additional Output Options" should inform on th
   * [x] Wall time: every rule pulls `runtime=config["resources"][<rule>]["runtime"]` into its `resources:` block (109 rules across 8 `.smk` files), with a `default-resources: runtime=60` safety net in `profiles/slurm/config.yaml`.
   * [x] SLURM account: `profiles/slurm/config.yaml` now sets `slurm_account="martienssenlab"` via `default-resources`; annotated as site-specific with an `EDIT:` marker for users copying the profile to a different cluster.
 
-* [ ] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake.
+* [ ] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake. Also, does not seem to work ("Parsing .snakemake/log/2026-04-24T105453.098500.snakemake.log ... No completed jobs found in log." when some jobs were completed)
 
 ## Plotting
 N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
