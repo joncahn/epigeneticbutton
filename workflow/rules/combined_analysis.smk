@@ -51,11 +51,6 @@ def get_matrix_inputs(wildcards):
 
 def define_sort_options(wildcards):
     sort_options = config['heatmaps_sort_options']
-    matrix_param = wildcards.matrix_param
-    env = wildcards.env
-    analysis_name=config['analysis_name']
-    ref_genome = wildcards.ref_genome
-    target_name = wildcards.target_name
     if sort_options == "no":
         return "--sortRegions keep"
     elif sort_options == "mean":
@@ -487,6 +482,13 @@ def define_individual_browser_plots(wildcards):
     for row_number, _ in enumerate(regions.itertuples(index=False),start=starter):
         files.append(f"{RESULTS_DIR}/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
     return files
+
+def get_TE_file(wildcards):
+    ref_genome = wildcards.ref_genome
+    te_file = config['genomes'][ref_genome].get('te_file')
+    if config['browser_TE_file'] and te_file:
+        return f"{GENOMES_DIR}/{ref_genome}/{ref_genome}__TE_file.bed"
+    return []
 
 def define_input_for_pca(wildcards, string):
     tracks = []
@@ -1349,7 +1351,7 @@ rule prep_browser_on_region:
         chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes",
         gff = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
         all_genes = lambda wildcards: f"{RESULTS_DIR}/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
-        TE_file = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/{wildcards.ref_genome}__TE_file.bed" if config['browser_TE_file'] else []
+        TE_file = lambda wildcards: get_TE_file(wildcards)
     output:
         filenames = f"{RESULTS_DIR}/combined/matrix/filenames__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
         genes = f"{RESULTS_DIR}/combined/matrix/genes_in_locus__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.gff",
