@@ -69,7 +69,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
   - GO database name is auto-derived as `org.<G><species>_<GenomeName>.eg.db` (e.g. `org.Athaliana_ColCEN.eg.db`)
   - Access pattern in rule files: `config["genomes"][ref_genome][field]`
   - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning
-- `config/all_samples.tsv` - Sample metadata (see Sample Sheet section above)
+- `config/example_samples.tsv` - Documented sample-sheet template (copy and edit; pass to epicc via `--samples`)
 - `profiles/slurm/config.yaml` - SLURM executor settings
 
 ## Testing

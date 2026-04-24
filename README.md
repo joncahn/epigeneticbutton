@@ -67,7 +67,7 @@ If you want to run the pipeline on a different platform than locally or slurm, y
 For new users, it is recommended to use the configuration app to validate your sample metadata file and choose analysis options:\
 https://epicc-builder.streamlit.app/
 
-1. Prepare your sample metadata file (default to `config/all_samples.tsv`) with the required columns below (see Input requirements for more details specific to each data-type):
+1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
    - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `EMseq` | `dmC`]
    - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)

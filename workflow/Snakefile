@@ -139,6 +139,12 @@ analysis_name = config["analysis_name"]
 # ---------------------------------------------------------------------------
 # Read and validate sample sheet (new format)
 # ---------------------------------------------------------------------------
+if not config.get("sample_file"):
+    sys.exit(
+        "Error: No sample sheet specified. Set `sample_file:` in your options "
+        "YAML or pass --config sample_file=PATH (or use `epicc run --samples "
+        "PATH`). See config/example_samples.tsv for a documented template."
+    )
 samples = read_sample_sheet(config["sample_file"])
 check_table(samples)
 check_genome_config(samples, config)

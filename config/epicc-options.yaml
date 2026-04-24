@@ -4,8 +4,10 @@
 # Name of the run
 analysis_name: "epicc"
 
-# Path to the sample metadata file
-sample_file: "config/all_samples.tsv"
+# Path to the sample metadata file (required).
+# No default is provided; pass --samples on the CLI or set this here.
+# See config/example_samples.tsv for a documented template.
+#sample_file: "config/my_samples.tsv"
 
 # Reference genomes — each entry defines paths to annotation files and species-level parameters
 genomes:

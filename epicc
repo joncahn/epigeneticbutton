@@ -291,7 +291,12 @@ def cmd_validate(args, extra_args):
         config = yaml.safe_load(f)
 
     # Basic config checks
-    sample_file = args.samples or config.get("sample_file", "config/all_samples.tsv")
+    sample_file = args.samples or config.get("sample_file")
+    if not sample_file:
+        sys.exit(
+            "Error: no sample sheet specified. Pass --samples PATH on the "
+            "CLI, or set `sample_file:` in your options YAML."
+        )
     print(f"  Options file:  {options_file}", file=sys.stderr)
     print(f"  Sample file:   {sample_file}", file=sys.stderr)
     print(f"  Repo folder:   {config.get('repo_folder', '(auto-detected)')}",

@@ -2096,7 +2096,7 @@ var configState = {
   repo_folder: "",
   // Required
   analysis_name: "epicc",
-  sample_file: "config/all_samples.tsv",
+  sample_file: "config/example_samples.tsv",
   // Output options
   full_analysis: true,
   te_analysis: false,
@@ -2340,7 +2340,7 @@ function buildConfigForm() {
   var reqSec = el("div", { className: "cfg-section" });
   reqSec.appendChild(el("h2", { textContent: "Required Parameters" }));
   reqSec.appendChild(buildTextRow("Analysis name:", "analysis_name", "epicc", "Label for analysis plots."));
-  reqSec.appendChild(buildTextRow("Sample file path:", "sample_file", "config/all_samples.tsv",
+  reqSec.appendChild(buildTextRow("Sample file path:", "sample_file", "config/example_samples.tsv",
     "Path to the sample sheet created in the Sample Sheet tab."));
   container.appendChild(reqSec);
 
