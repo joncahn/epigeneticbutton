@@ -1010,7 +1010,9 @@ rule making_pseudo_replicates:
         temp_pseudo1 = temp(f"{RESULTS_DIR}/{{env}}/mapped/temp_pseudo1__{{sample_name}}.bam"),
         temp_pseudo2 = temp(f"{RESULTS_DIR}/{{env}}/mapped/temp_pseudo2__{{sample_name}}.bam"),
         pseudo1 = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo1__{{sample_name}}.bam"),
-        pseudo2 = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo2__{{sample_name}}.bam")
+        pseudo1_bai = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo1__{{sample_name}}.bam.bai"),
+        pseudo2 = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo2__{{sample_name}}.bam"),
+        pseudo2_bai = temp(f"{RESULTS_DIR}/{{env}}/mapped/pseudo2__{{sample_name}}.bam.bai")
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
@@ -1026,6 +1028,10 @@ rule making_pseudo_replicates:
         samtools view -b -h -s 1.5 -@ {threads} -U {output.temp_pseudo2} -o {output.temp_pseudo1} {input.bamfile}
 		samtools sort -@ {threads} -o {output.pseudo1} {output.temp_pseudo1}
 		samtools sort -@ {threads} -o {output.pseudo2} {output.temp_pseudo2}
+        # Index alongside the BAM so downstream rules (e.g. atac_shift_bam,
+        # which calls alignmentSieve) can require a fresh .bai as input.
+        samtools index -@ {threads} {output.pseudo1}
+        samtools index -@ {threads} {output.pseudo2}
         }} 2>&1 | tee -a "{log}"
         """
 
