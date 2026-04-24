@@ -831,8 +831,13 @@ rule prepare_modbam_for_pileup:
                 samtools sort -@ {threads} -o {output.aligned_bam} -
             samtools index -@ {threads} {output.aligned_bam}
         else
-            printf "BAM is already aligned to compatible reference, linking\n"
-            ln -sf $(realpath {input.validated}) {output.aligned_bam}
+            printf "BAM is already aligned to compatible reference, claiming\n"
+            # Move (don't symlink) the input into this rule's output location
+            # so aligned_bam is a single-owner file. For URL-downloaded data,
+            # this is a rename of the real BAM. For local-file/directory
+            # inputs where validated is a symlink, mv renames the symlink
+            # itself (POSIX default) — the user's source file is untouched.
+            mv {input.validated} {output.aligned_bam}
             samtools index -@ {threads} {output.aligned_bam}
         fi
 
