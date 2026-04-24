@@ -617,7 +617,13 @@ rule get_dmc_input:
         chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
     output:
         type_marker = f"{RESULTS_DIR}/mC/dmc/input_type__{{sample_name}}.txt",
-        validated = f"{RESULTS_DIR}/mC/dmc/validated__{{sample_name}}.input"
+        # validated holds the actual data for URL inputs (downloaded directly)
+        # and a symlink to the user's data for local-file/directory inputs.
+        # Either way it's marked as a candidate for cleanup once downstream
+        # consumers (prepare_modbam_for_pileup or copy_bedmethyl_input) are
+        # done, mirroring how raw__*.fastq.gz works in sample_download.smk.
+        # Set keep_dmc_inputs=True in the options to retain across runs.
+        validated = maybe_temp(f"{RESULTS_DIR}/mC/dmc/validated__{{sample_name}}.input", config.get('keep_dmc_inputs', False))
     wildcard_constraints:
         sample_name = _DMC_WC
     params:
@@ -638,18 +644,17 @@ rule get_dmc_input:
         seq_id="{params.seq_id}"
 
         if [[ "$dmc_path" == http://* || "$dmc_path" == https://* ]]; then
-            # URL provided — download to a persistent path under the rule's
-            # output directory (NOT TMPDIR / SLURM_TMPDIR, which gets cleaned
-            # up at job exit and would orphan the validated symlink).
+            # URL provided — download directly to {output.validated}. The
+            # `.input` extension hides modBAM/bedMethyl, but downstream type
+            # detection in validate_dmc_input.py uses BAM magic bytes and
+            # gzip+text content checks, not extension matching, so the loss
+            # of the original suffix is fine.
             printf "Downloading dmC input from URL: $dmc_path\n"
-            url_path="${{dmc_path%%\\?*}}"
-            dl_suffix="${{url_path##*.}}"
-            outdir="$(dirname {output.validated})"
-            mkdir -p "$outdir"
-            input_file="${{outdir}}/raw__{params.sample_name}.${{dl_suffix}}"
+            mkdir -p "$(dirname {output.validated})"
             curl --fail --show-error --location --max-redirs 5 \
                  --retry 3 --connect-timeout 30 --max-time 7200 \
-                 --proto '=https,http' -o "$input_file" "$dmc_path"
+                 --proto '=https,http' -o "{output.validated}" "$dmc_path"
+            input_file="{output.validated}"
             printf "Downloaded to: $input_file\n"
         elif [[ -f "$dmc_path" ]]; then
             # Direct file path provided
@@ -722,8 +727,11 @@ rule get_dmc_input:
         # Validate based on detected type
         python {params.validate_script} "$input_type" "$input_file" {input.chrom_sizes}
 
-        # Create a symlink to the validated input
-        ln -sf $(realpath "$input_file") {output.validated}
+        # For non-URL paths, link the user's data into the validated location
+        # (zero-copy). For URL paths the download already wrote there.
+        if [[ "$input_file" != "{output.validated}" ]]; then
+            ln -sf "$(realpath "$input_file")" "{output.validated}"
+        fi
 
         printf "\nInput validated successfully\n"
         }} 2>&1 | tee -a "{log}"
