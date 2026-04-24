@@ -181,9 +181,13 @@ def get_seq_id_and_path(read_files_str, read_layout):
 def read_sample_sheet(filepath):
     """Read and validate a new-format sample sheet TSV.
 
+    Lines starting with '#' (and any '# ...' tail of a non-comment line)
+    are skipped as comments — useful for parking samples without deleting
+    their rows.
+
     Returns a DataFrame sorted by [Genome, Assay, Levels, Sample_ID].
     """
-    df = pd.read_csv(filepath, sep="\t", header=0, dtype=str)
+    df = pd.read_csv(filepath, sep="\t", header=0, dtype=str, comment="#")
     df.columns = df.columns.str.strip()
 
     # Fill optional columns with empty strings

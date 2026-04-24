@@ -29,6 +29,7 @@ from sample_sheet import (
     get_env,
     get_peaktype,
     add_compat_columns,
+    read_sample_sheet,
 )
 
 
@@ -432,3 +433,30 @@ class TestAddCompatColumns:
         result = add_compat_columns(pombe_df)
         row = result[result["Sample_ID"] == "WT_H3K9me2_rep1"].iloc[0]
         assert row["levels_label"] == "WT"
+
+
+class TestReadSampleSheet:
+    HEADER = "Sample_ID\tAssay\tGenome\tLevels\tReplicate_ID\tRead_files\tRead_layout\tIP_target\tControl"
+    ROW_A = "A\tChIP_broad\tColCEN\tgenotype:WT\trep1\tSRR000001\tSE\tH3K9me2\tInputA"
+    ROW_B = "B\tChIP_broad\tColCEN\tgenotype:WT\trep2\tSRR000002\tSE\tH3K9me2\tInputA"
+    ROW_C = "InputA\tChIP_broad\tColCEN\tgenotype:WT\trep1\tSRR000003\tSE\tInput\t"
+
+    def test_full_line_comments_skipped(self, tmp_path):
+        f = tmp_path / "samples.tsv"
+        f.write_text(
+            "\n".join([
+                "# this is a header comment",
+                self.HEADER,
+                "# parked sample, do not run",
+                self.ROW_A,
+                self.ROW_C,
+            ]) + "\n"
+        )
+        df = read_sample_sheet(f)
+        assert sorted(df["Sample_ID"]) == ["A", "InputA"]
+
+    def test_no_comments_unaffected(self, tmp_path):
+        f = tmp_path / "samples.tsv"
+        f.write_text("\n".join([self.HEADER, self.ROW_A, self.ROW_B, self.ROW_C]) + "\n")
+        df = read_sample_sheet(f)
+        assert sorted(df["Sample_ID"]) == ["A", "B", "InputA"]
