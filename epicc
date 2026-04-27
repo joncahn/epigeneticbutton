@@ -7,6 +7,7 @@ Usage:
     epicc run [options] [-- SNAKEMAKE_ARGS...]
     epicc dry-run [options] [-- SNAKEMAKE_ARGS...]
     epicc validate [options]
+    epicc output --plot-type TYPE --input-file PATH [options]
     epicc perf [--single | LOGFILE] [--html FILE]
     epicc clean [--intermediates] [--conda-envs] [--logs] [--all]
 """
@@ -453,6 +454,293 @@ def cmd_validate(args, extra_args):
     return 1 if errors else 0
 
 
+# ---------------------------------------------------------------------------
+# `epicc output` — targeted single-product runs
+# ---------------------------------------------------------------------------
+
+# Per-plot-type metadata. Each entry declares:
+#   target  : Python format string for the snakemake target file. Available
+#             placeholders: {output_dir}, {analysis_name}, {ref_genome},
+#             {env}, {label}, {matrix}.
+#   inputs  : ordered list of (config_key, source) tuples. source is
+#             "input_file" → the user's --input-file, or "label" → the
+#             resolved plot label, or "ref_genome" → the resolved genome.
+#   needs   : list of arg attributes that must resolve to a value
+#             (e.g. "ref_genome", "env"). Surfaces a clear error early.
+#   format  : input-file format validator name ("tsv_geneids", "bed",
+#             "loci"). Used by validate_output_input().
+OUTPUT_TYPES = {
+    "rnaseq-histogram": {
+        "target": "{output_dir}/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__{label}.pdf",
+        "inputs": [
+            ("rnaseq_target_file", "input_file"),
+            ("rnaseq_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "tsv_geneids",
+    },
+    "go": {
+        "target": "{output_dir}/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{label}.done",
+        "inputs": [
+            ("rnaseq_target_file", "input_file"),
+            ("rnaseq_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "tsv_geneids",
+    },
+    "motifs": {
+        "target": "{output_dir}/ChIP/chkpts/motifs__{label}.done",
+        "inputs": [
+            ("motif_target_file", "input_file"),
+            ("motif_target_file_label", "label"),
+            ("motif_ref_genome", "ref_genome"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "bed",
+    },
+    "srna-clusters": {
+        "target": "{output_dir}/sRNA/clusters/{analysis_name}__{ref_genome}__on_{label}/Counts.txt",
+        "inputs": [
+            ("srna_target_file", "input_file"),
+            ("srna_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "loci",
+    },
+    "heatmap": {
+        "target": "{output_dir}/combined/plots/Heatmap__{matrix}__{env}__{analysis_name}__{ref_genome}__{label}.pdf",
+        "inputs": [
+            ("heatmap_target_file", "input_file"),
+            ("heatmap_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome", "env"],
+        "format": "bed",
+    },
+    "metaplot": {
+        "target": "{output_dir}/combined/plots/Profile__{matrix}__{env}__{analysis_name}__{ref_genome}__{label}.pdf",
+        "inputs": [
+            ("heatmap_target_file", "input_file"),
+            ("heatmap_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome", "env"],
+        "format": "bed",
+    },
+    "browser": {
+        "target": "{output_dir}/combined/plots/Browser_{label}__{env}__{analysis_name}__{ref_genome}.pdf",
+        "inputs": [
+            ("browser_target_file", "input_file"),
+            ("browser_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome", "env"],
+        "format": "bed",
+    },
+}
+
+VALID_OUTPUT_ENVS = ("ChIP", "ATAC", "RNA", "sRNA", "mC", "mCG", "mCHG", "mCHH")
+VALID_OUTPUT_MATRICES = ("regions", "tss", "tes")
+
+
+def derive_label_from_filename(path):
+    """Strip extension(s) from a basename to use as a default plot label.
+
+    "/data/target_genes.txt" → "target_genes"
+    "/data/regions.bed.gz"   → "regions"
+    """
+    name = Path(path).name
+    while True:
+        stem, ext = os.path.splitext(name)
+        if not ext:
+            break
+        name = stem
+    return name or "target"
+
+
+def validate_output_input(input_path, fmt):
+    """Lightweight format check on the user-provided input file.
+
+    "tsv_geneids" : at least one non-comment line, first column non-empty.
+    "bed"         : at least one non-comment line with ≥3 cols where
+                    col2/col3 are non-negative integers.
+    "loci"        : just verify the file is non-empty and readable.
+
+    Raises SystemExit with a clear message on validation failure.
+    """
+    p = Path(input_path)
+    if not p.exists():
+        sys.exit(f"Error: --input-file not found: {input_path}")
+    if p.stat().st_size == 0:
+        sys.exit(f"Error: --input-file is empty: {input_path}")
+
+    # Open .gz transparently
+    import gzip
+    opener = gzip.open if str(p).endswith(".gz") else open
+    try:
+        with opener(p, "rt") as fh:
+            first = None
+            for line in fh:
+                line = line.rstrip("\n")
+                if not line or line.startswith("#"):
+                    continue
+                first = line
+                break
+    except OSError as e:
+        sys.exit(f"Error: cannot read --input-file: {e}")
+
+    if first is None:
+        sys.exit(f"Error: --input-file has no data rows: {input_path}")
+
+    if fmt == "tsv_geneids":
+        cols = first.split("\t")
+        if not cols[0].strip():
+            sys.exit(
+                f"Error: first column of {input_path} is empty (expected gene IDs)."
+            )
+    elif fmt == "bed":
+        cols = first.split("\t")
+        if len(cols) < 3:
+            sys.exit(
+                f"Error: {input_path} doesn't look like BED — expected ≥3 "
+                f"tab-separated columns, got {len(cols)}."
+            )
+        try:
+            start = int(cols[1])
+            end = int(cols[2])
+        except ValueError:
+            # Could be a header row; let snakemake's has_header handle it
+            return
+        if start < 0 or end < start:
+            sys.exit(
+                f"Error: {input_path} BED coordinates look wrong on the "
+                f"first data row (start={cols[1]}, end={cols[2]})."
+            )
+    elif fmt == "loci":
+        # ShortStack accepts gff3, bed, or simple chr:start-end; just confirm readability
+        return
+    else:
+        sys.exit(f"Internal error: unknown input format '{fmt}'")
+
+
+def cmd_output(args, extra_args):
+    """Run snakemake on a single user-targeted plot/output."""
+    repo = find_repo_root()
+    os.chdir(repo)
+
+    spec = OUTPUT_TYPES[args.plot_type]
+
+    # --- Resolve label
+    label = args.plot_label or derive_label_from_filename(args.input_file)
+    # Strip any path components and disallow path separators
+    if "/" in label or "\\" in label or label.startswith("-"):
+        sys.exit(
+            f"Error: --plot-label must be a plain identifier (no path "
+            f"separators, no leading dash): got '{label}'"
+        )
+
+    # --- Validate input file format
+    validate_output_input(args.input_file, spec["format"])
+
+    # --- Load options to resolve analysis_name / output_dir defaults
+    try:
+        import yaml
+    except ImportError:
+        sys.exit("Error: PyYAML not available. Activate the epicc conda environment.")
+    if not Path(args.options).exists():
+        sys.exit(f"Error: Options file not found: {args.options}")
+    with open(args.options) as f:
+        cfg = yaml.safe_load(f) or {}
+
+    analysis_name = args.analysis_name or cfg.get("analysis_name") or "epicc"
+    output_dir = args.output_dir or cfg.get("output_dir", "results")
+    ref_genome = args.ref_genome
+    env = args.env
+    matrix = args.matrix or "regions"
+
+    # --- Required-arg gating per type
+    for need in spec["needs"]:
+        if not getattr(args, need.replace("-", "_"), None):
+            sys.exit(
+                f"Error: --{need.replace('_', '-')} is required for "
+                f"--plot-type {args.plot_type}."
+            )
+    if "env" in spec["needs"] and env not in VALID_OUTPUT_ENVS:
+        sys.exit(
+            f"Error: --env {env!r} is not one of "
+            f"{', '.join(VALID_OUTPUT_ENVS)}."
+        )
+    if matrix not in VALID_OUTPUT_MATRICES:
+        sys.exit(
+            f"Error: --matrix {matrix!r} is not one of "
+            f"{', '.join(VALID_OUTPUT_MATRICES)}."
+        )
+
+    # --- Build target path
+    target = spec["target"].format(
+        output_dir=output_dir,
+        analysis_name=analysis_name,
+        ref_genome=ref_genome or "",
+        env=env or "",
+        label=label,
+        matrix=matrix,
+    )
+
+    # --- Build snakemake config overrides for the target's input wiring
+    sources = {
+        "input_file": args.input_file,
+        "label": label,
+        "ref_genome": ref_genome or "",
+    }
+    config_overrides = []
+    for cfg_key, source in spec["inputs"]:
+        config_overrides.append(f"{cfg_key}={sources[source]}")
+    if args.analysis_name:
+        config_overrides.append(f"analysis_name={analysis_name}")
+
+    # --- Build snakemake command (re-uses the same execution-mode logic)
+    cmd = ["snakemake"]
+    if not Path(args.options).exists():
+        sys.exit(f"Error: Options file not found: {args.options}")
+    cmd += ["--configfile", args.options]
+    workflow_profile = getattr(args, "workflow_profile", None) or str(
+        repo / DEFAULT_WORKFLOW_PROFILE
+    )
+    if Path(workflow_profile).is_dir():
+        cmd += ["--workflow-profile", workflow_profile]
+    profile, cores = detect_execution_mode(args)
+    if profile:
+        cmd += ["--profile", profile]
+    else:
+        cmd += ["--use-conda", "--conda-frontend", "conda", "--cores", str(cores)]
+    if args.samples:
+        if not Path(args.samples).exists():
+            sys.exit(f"Error: Sample file not found: {args.samples}")
+        config_overrides.append(f"sample_file={args.samples}")
+    if args.output_dir:
+        config_overrides.append(f"output_dir={args.output_dir}")
+    if args.genome_dir:
+        config_overrides.append(f"genome_dir={args.genome_dir}")
+    if config_overrides:
+        cmd += ["--config"] + config_overrides
+    cmd.append("--rerun-incomplete")
+    if args.verbose:
+        cmd.append("--printshellcmds")
+    if args.quiet:
+        cmd.append("--quiet")
+    if args.dry_run:
+        cmd.append("--dry-run")
+    if extra_args:
+        cmd += extra_args
+    # Use -- separator to prevent Snakemake from interpreting the target as an option
+    cmd.append("--")
+    cmd.append(target)
+
+    print(f"EPICC: Targeting output → {target}", file=sys.stderr)
+    if args.verbose:
+        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
 def cmd_perf(args, extra_args):
     """Generate an execution timing report from a pipeline run's logs."""
     repo = find_repo_root()
@@ -676,6 +964,53 @@ def build_parser():
     add_common_options(p_val)
     add_graph_options(p_val)
 
+    # --- output ---
+    p_out = subparsers.add_parser(
+        "output", help="Generate a single targeted output (plot/GO/clusters/browser)",
+        description="Run a single, user-targeted output type against a "
+                    "supplied input file. Available types: "
+                    + ", ".join(OUTPUT_TYPES.keys()) + ".",
+    )
+    add_common_options(p_out)
+    p_out.add_argument(
+        "--plot-type", required=True, choices=sorted(OUTPUT_TYPES.keys()),
+        help="Output product to generate.",
+    )
+    p_out.add_argument(
+        "--input-file", required=True, metavar="PATH",
+        help="Input data file for the target output (gene list, BED, "
+             "GFF/loci file). Format is validated per --plot-type.",
+    )
+    p_out.add_argument(
+        "--plot-label", metavar="LABEL",
+        help="Label embedded in output filenames. Defaults to the input "
+             "file's basename without extension.",
+    )
+    p_out.add_argument(
+        "--analysis-name", metavar="NAME",
+        help="Override analysis_name from the options file.",
+    )
+    p_out.add_argument(
+        "--ref-genome", metavar="GENOME",
+        help="Reference genome name (must match a genome configured in "
+             "the options file). Required for most plot types.",
+    )
+    p_out.add_argument(
+        "--env", metavar="ENV", choices=VALID_OUTPUT_ENVS,
+        help="Data type for env-aware plots (heatmap/metaplot/browser): "
+             + ", ".join(VALID_OUTPUT_ENVS) + ".",
+    )
+    p_out.add_argument(
+        "--matrix", metavar="KIND", choices=VALID_OUTPUT_MATRICES,
+        default="regions",
+        help="Matrix layout for heatmap/metaplot: regions (whole feature), "
+             "tss, or tes. Default: regions.",
+    )
+    p_out.add_argument(
+        "--dry-run", action="store_true",
+        help="Resolve and print the snakemake plan without running.",
+    )
+
     # --- perf ---
     p_perf = subparsers.add_parser(
         "perf", help="Profile pipeline performance",
@@ -757,6 +1092,7 @@ def main():
         "run": cmd_run,
         "dry-run": cmd_dry_run,
         "validate": cmd_validate,
+        "output": cmd_output,
         "unlock": cmd_unlock,
         "perf": cmd_perf,
         "clean": cmd_clean,
