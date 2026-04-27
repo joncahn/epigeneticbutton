@@ -109,14 +109,21 @@ def _generate_se_sam(path, n_reads=100, n_dups=10, seed=42):
 # ---------------------------------------------------------------------------
 
 def run_filter_bam_pe(sam_path, out_bam, metrics_dup, metrics_flag, tmpdir, threads=1):
-    """Execute the filter_bam_pe pipeline: view → fixmate → sort → markdup → flagstat."""
+    """Execute the filter_bam_pe pipeline: view -F → fixmate → view -q → sort → markdup → flagstat.
+
+    Mirrors the rule order: MAPQ filtering must happen after fixmate so that
+    dropping a low-MAPQ mate doesn't desync the name-collated stream feeding
+    fixmate.
+    """
+    temp0 = tmpdir / "temp0.bam"
     temp1 = tmpdir / "temp1.bam"
     temp2 = tmpdir / "temp2.bam"
     temp3 = tmpdir / "temp3.bam"
 
     cmds = [
-        f"samtools view -@ {threads} -b -h -q 10 -F 256 -o {temp1} {sam_path}",
-        f"samtools fixmate -@ {threads} -m {temp1} {temp2}",
+        f"samtools view -@ {threads} -b -h -F 256 -o {temp0} {sam_path}",
+        f"samtools fixmate -@ {threads} -m {temp0} {temp1}",
+        f"samtools view -@ {threads} -b -h -q 10 -o {temp2} {temp1}",
         f"samtools sort -@ {threads} -o {temp3} {temp2}",
         f"samtools markdup -r -s -f {metrics_dup} -@ {threads} {temp3} {out_bam}",
         f"samtools flagstat -@ {threads} {out_bam} > {metrics_flag}",

@@ -512,6 +512,13 @@ rule filter_bam_pe:
         printf "samtools sort memory: {params.sort_mem} per thread\n"
         samtools --version | head -1
 
+        # NOTE: samtools view -q (MAPQ filter) must run *after* fixmate, not
+        # before. fixmate requires name-collated input where mates are
+        # adjacent. Filtering on MAPQ first can drop one mate but keep the
+        # other, so fixmate then sees a stream where adjacent records are
+        # from different pairs and incorrectly pairs them — visible as
+        # large unexplained read loss on highly repetitive references
+        # (e.g. >90% loss on ColCEN PE).
         if [[ "$aligner" == "chromap" ]]; then
             chromap --version
             chromap -t {threads} \
@@ -519,8 +526,9 @@ rule filter_bam_pe:
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq1}" -2 "{input.fastq2}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \
-            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools view -@ 2 -bh -F 256 \
             | samtools fixmate -@ 2 -m - - \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} \
             | samtools sort -@ {threads} -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
@@ -528,8 +536,9 @@ rule filter_bam_pe:
                 -x "{input.index}/{params.ref_genome}" \
                 -1 "{input.fastq1}" -2 "{input.fastq2}" \
                 2> "{output.metrics_map}" \
-            | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
+            | samtools view -@ 2 -bh -F 256 \
             | samtools fixmate -@ 2 -m - - \
+            | samtools view -@ 2 -bh -q {params.mapq_filter} \
             | samtools sort -@ 2 -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
@@ -576,13 +585,14 @@ rule filter_bam_se:
 
         if [[ "$aligner" == "chromap" ]]; then
             chromap --version
+            # No samtools fixmate here: this is the SE branch (single-end has
+            # no mates). markdup works on coord-sorted SE input directly.
             chromap -t {threads} \
                 --SAM -q 0 \
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools fixmate -@ 2 -m - - \
             | samtools sort -@ {threads} -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
