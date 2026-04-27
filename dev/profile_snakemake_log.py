@@ -4,13 +4,17 @@
 Usage:
     python dev/profile_snakemake_log.py .snakemake/log/<logfile>.snakemake.log
     python dev/profile_snakemake_log.py --html report.html <logfile>
-    python dev/profile_snakemake_log.py --latest          # auto-pick newest log
+    python dev/profile_snakemake_log.py                   # aggregate latest run
+    python dev/profile_snakemake_log.py --single          # newest single log only
+
+By default, all logs from the same resumed run are aggregated. Run identity is
+derived from log content (output_dir + analysis_name wildcards), not timestamps.
 """
 
 import argparse
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -25,6 +29,10 @@ WILDCARDS_RE = re.compile(r"^\s+wildcards:\s*(.+)")
 THREADS_RE = re.compile(r"^\s+threads:\s*(\d+)")
 FINISHED_RE = re.compile(r"^Finished jobid:\s*(\d+)\s*\(Rule:\s*(\S+)\)")
 STEPS_RE = re.compile(r"^(\d+) of (\d+) steps")
+# SLURM-mode submission line: encodes rule and wildcard path in the slurm log path.
+SLURM_SUBMIT_RE = re.compile(
+    r"^Job (\d+) has been submitted with SLURM jobid \d+ \(log: .*?/rule_(\S+?)/(\S+?)/[^/]+\.log\)"
+)
 
 # Rule-name prefix → phase mapping (used for analysis and Gantt coloring)
 PHASE_MAP = {
@@ -146,6 +154,20 @@ def parse_log(path):
                     break
                 continue
 
+            m = SLURM_SUBMIT_RE.match(line)
+            if m and current_ts:
+                jobid = int(m.group(1))
+                # Don't clobber a pending entry — if the verbose rule block already
+                # registered this jobid (with proper wildcards), keep that.
+                if jobid not in jobs_pending:
+                    jobs_pending[jobid] = {
+                        "rule": m.group(2),
+                        "start": current_ts,
+                        "wildcards": m.group(3),
+                        "threads": 1,
+                    }
+                continue
+
             m = FINISHED_RE.match(line)
             if m and current_ts:
                 jobid = int(m.group(1))
@@ -227,9 +249,17 @@ def analyze(jobs):
 def report_markdown(stats):
     lines = []
     lines.append("# Snakemake Execution Profile\n")
-    period = (f"{stats['total_start'].strftime('%Y-%m-%d %H:%M:%S')} — "
-              f"{stats['total_end'].strftime('%H:%M:%S')}")
-    parallelism = f"{stats['cpu_time'] / stats['wall_time']:.1f}x"
+    if stats["total_start"].date() == stats["total_end"].date():
+        period = (f"{stats['total_start'].strftime('%Y-%m-%d %H:%M:%S')} — "
+                  f"{stats['total_end'].strftime('%H:%M:%S')}")
+    else:
+        period = (f"{stats['total_start'].strftime('%Y-%m-%d %H:%M:%S')} — "
+                  f"{stats['total_end'].strftime('%Y-%m-%d %H:%M:%S')}")
+    parallelism = (f"{stats['cpu_time'] / stats['wall_time']:.1f}x"
+                   if stats["wall_time"] > 0 else "n/a")
+    if stats.get("num_logs", 1) > 1:
+        lines.append(f"_Aggregated across {stats['num_logs']} resumed-run logs; "
+                     f"wall time excludes idle gaps between resumptions._\n")
     lines.append("| Run period | Wall time | Total jobs | Total CPU time | Avg parallelism |")
     lines.append("|------------|-----------|------------|----------------|-----------------|")
     lines.append(f"| {period} | {fmt_duration(stats['wall_time'])} | "
@@ -237,12 +267,14 @@ def report_markdown(stats):
                  f"{parallelism} |")
     lines.append("")
 
-    # Phase summary
+    # Phase summary — % is share of total job time, so it sums to 100%
+    # regardless of parallelism. (Job time = sum of durations across all jobs.)
+    total_job_sec = sum(d["total_sec"] for d in stats["phases"].values()) or 1.0
     lines.append("## Phase Summary\n")
-    lines.append("| Phase | Jobs | Total time | % of wall |")
-    lines.append("|-------|------|-----------|-----------|")
+    lines.append("| Phase | Jobs | Total time | % of total |")
+    lines.append("|-------|------|-----------|------------|")
     for phase, data in stats["phases"].items():
-        pct = data["total_sec"] / stats["wall_time"] * 100
+        pct = data["total_sec"] / total_job_sec * 100
         lines.append(f"| {phase} | {data['count']} | "
                      f"{fmt_duration(data['total_sec'])} | {pct:.1f}% |")
 
@@ -598,10 +630,88 @@ def find_latest_log():
     return logs[-1]
 
 
+# Output-dir capture: the path component appearing before /<env>/, where <env>
+# is one of EPICC's per-datatype results subdirs.
+_RESULT_PREFIX_RE = re.compile(
+    r"(?:^|[\s'\"])(\S+?)/(?:ChIP|ATAC|RNA|sRNA|mC|combined)/"
+)
+_ANALYSIS_NAME_RE = re.compile(r"analysis_name=([^,\s]+)")
+
+
+def extract_run_signature(path, max_hits=200):
+    """Identify the run a log belongs to, from log content.
+
+    Returns (output_dir, frozenset_of_analysis_names) or None for an empty log.
+    output_dir is the most common path prefix appearing before an EPICC results
+    subdirectory; analysis_names is the set of 'analysis_name=...' wildcards.
+    """
+    prefix_counts = Counter()
+    analysis_names = set()
+    try:
+        with open(path) as fh:
+            for line in fh:
+                for m in _RESULT_PREFIX_RE.finditer(line):
+                    prefix_counts[m.group(1)] += 1
+                m = _ANALYSIS_NAME_RE.search(line)
+                if m:
+                    analysis_names.add(m.group(1))
+                if sum(prefix_counts.values()) >= max_hits:
+                    break
+    except OSError:
+        return None
+    if not prefix_counts:
+        return None
+    output_dir = prefix_counts.most_common(1)[0][0]
+    return (output_dir, frozenset(analysis_names))
+
+
+def find_run_logs():
+    """Return (logs_in_run, signature) for the most recently active resumed run.
+
+    Walks logs newest-first to find the most recent log with an extractable
+    signature, then collects all logs sharing the same output_dir and either
+    overlapping or empty analysis_name sets. Falls back to the newest log alone
+    if no signature can be extracted.
+    """
+    log_dir = Path(".snakemake/log")
+    if not log_dir.exists():
+        sys.exit("No .snakemake/log directory found. Run from the Snakemake project root.")
+    logs = sorted(log_dir.glob("*.snakemake.log"))
+    if not logs:
+        sys.exit("No Snakemake log files found.")
+
+    target_sig = None
+    for p in reversed(logs):
+        sig = extract_run_signature(p)
+        if sig is not None:
+            target_sig = sig
+            break
+    if target_sig is None:
+        return [logs[-1]], None
+
+    target_dir, target_names = target_sig
+    matched = []
+    for p in logs:
+        sig = extract_run_signature(p)
+        if sig is None:
+            continue
+        out_dir, names = sig
+        if out_dir != target_dir:
+            continue
+        # If both logs have analysis_names, require overlap; otherwise accept.
+        if target_names and names and target_names.isdisjoint(names):
+            continue
+        matched.append(p)
+    return matched, target_sig
+
+
 def main():
     parser = argparse.ArgumentParser(description="Profile a Snakemake run from its log file.")
-    parser.add_argument("logfile", nargs="?", help="Path to .snakemake.log file")
-    parser.add_argument("--latest", action="store_true", help="Auto-select newest log")
+    parser.add_argument("logfile", nargs="?", help="Path to a specific .snakemake.log file")
+    parser.add_argument("--latest", action="store_true",
+                        help="(Default) Aggregate logs from the most recent resumed run")
+    parser.add_argument("--single", action="store_true",
+                        help="Profile only the newest single log, without aggregating")
     parser.add_argument("--html", metavar="FILE", help="Write HTML report to FILE")
     parser.add_argument("--multi", nargs="+", metavar="LABEL=LOG",
                         help="Generate multi-section HTML: 'Label=path/to/log' ...")
@@ -629,21 +739,46 @@ def main():
         print(f"Multi-section HTML report written to {args.html}", file=sys.stderr)
         return
 
-    if args.latest or not args.logfile:
-        logpath = find_latest_log()
-    else:
+    signature = None
+    if args.logfile:
         logpath = Path(args.logfile)
+        if not logpath.exists():
+            sys.exit(f"Log file not found: {logpath}")
+        logs_to_parse = [logpath]
+    elif args.single:
+        logs_to_parse = [find_latest_log()]
+    else:
+        logs_to_parse, signature = find_run_logs()
 
-    if not logpath.exists():
-        sys.exit(f"Log file not found: {logpath}")
+    if len(logs_to_parse) == 1:
+        print(f"Parsing {logs_to_parse[0]} ...", file=sys.stderr)
+    else:
+        out_dir = signature[0] if signature else "?"
+        names = sorted(signature[1]) if signature and signature[1] else []
+        names_label = f", analysis_name={'|'.join(names)}" if names else ""
+        print(f"Aggregating {len(logs_to_parse)} logs from resumed run "
+              f"(output_dir={out_dir}{names_label}):", file=sys.stderr)
+        for p in logs_to_parse:
+            print(f"  {p.name}", file=sys.stderr)
 
-    print(f"Parsing {logpath} ...", file=sys.stderr)
-    jobs = parse_log(logpath)
+    log_jobs = [parse_log(p) for p in logs_to_parse]
+    all_jobs = [j for jobs in log_jobs for j in jobs]
 
-    if not jobs:
-        sys.exit("No completed jobs found in log.")
+    if not all_jobs:
+        sys.exit("No completed jobs found in log(s).")
 
-    stats = analyze(jobs)
+    stats = analyze(all_jobs)
+
+    # When aggregating, replace wall_time with the sum of per-log spans so
+    # idle gaps between manual resumptions don't dilute parallelism.
+    if len(logs_to_parse) > 1:
+        active = sum(
+            (max(j["end"] for j in jobs) - min(j["start"] for j in jobs)).total_seconds()
+            for jobs in log_jobs if jobs
+        )
+        if active > 0:
+            stats["wall_time"] = active
+        stats["num_logs"] = len(logs_to_parse)
 
     if args.html:
         html = report_html(stats)

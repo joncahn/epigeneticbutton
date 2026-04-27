@@ -7,7 +7,7 @@ Usage:
     epicc run [options] [-- SNAKEMAKE_ARGS...]
     epicc dry-run [options] [-- SNAKEMAKE_ARGS...]
     epicc validate [options]
-    epicc profile [--latest | LOGFILE] [--html FILE]
+    epicc perf [--single | LOGFILE] [--html FILE]
     epicc clean [--intermediates] [--conda-envs] [--logs] [--all]
 """
 
@@ -239,7 +239,7 @@ def cmd_run(args, extra_args):
     if result.returncode == 0:
         print(f"EPICC: Pipeline completed in {fmt_duration(elapsed)}.",
               file=sys.stderr)
-        print("  Tip: Run 'epicc profile --latest' to see the execution profile.",
+        print("  Tip: Run 'epicc perf' to see the execution timing report.",
               file=sys.stderr)
     else:
         print(f"EPICC: Pipeline failed after {fmt_duration(elapsed)} "
@@ -370,8 +370,8 @@ def cmd_validate(args, extra_args):
     return 1 if errors else 0
 
 
-def cmd_profile(args, extra_args):
-    """Run the pipeline profiler."""
+def cmd_perf(args, extra_args):
+    """Generate an execution timing report from a pipeline run's logs."""
     repo = find_repo_root()
     os.chdir(repo)
 
@@ -381,12 +381,10 @@ def cmd_profile(args, extra_args):
 
     cmd = [sys.executable, str(profiler)]
 
-    if args.latest:
-        cmd.append("--latest")
-    elif args.logfile:
+    if args.logfile:
         cmd.append(args.logfile)
-    else:
-        cmd.append("--latest")
+    elif args.single:
+        cmd.append("--single")
 
     if args.html:
         cmd += ["--html", args.html]
@@ -576,25 +574,27 @@ def build_parser():
     )
     add_common_options(p_val)
 
-    # --- profile ---
-    p_prof = subparsers.add_parser(
-        "profile", help="Profile a pipeline run",
-        description="Generate an execution profile report from a snakemake "
-                    "log file. Wraps dev/profile_snakemake_log.py.",
+    # --- perf ---
+    p_perf = subparsers.add_parser(
+        "perf", help="Profile pipeline performance",
+        description="Generate an execution timing report from snakemake log "
+                    "files. By default, all logs from the most recent resumed "
+                    "run are aggregated. Wraps dev/profile_snakemake_log.py.",
     )
-    p_prof.add_argument(
+    p_perf.add_argument(
         "logfile", nargs="?",
-        help="Path to .snakemake.log file (default: latest)",
+        help="Path to a specific .snakemake.log file "
+             "(default: aggregate latest run)",
     )
-    p_prof.add_argument(
-        "--latest", action="store_true",
-        help="Auto-select the most recent log file",
+    p_perf.add_argument(
+        "--single", action="store_true",
+        help="Profile only the newest single log, without aggregating",
     )
-    p_prof.add_argument(
+    p_perf.add_argument(
         "--html", metavar="FILE",
         help="Write HTML report to FILE",
     )
-    p_prof.add_argument(
+    p_perf.add_argument(
         "--multi", nargs="+", metavar="LABEL=LOG",
         help="Generate multi-section HTML: 'Label=path/to/log' ...",
     )
@@ -656,7 +656,7 @@ def main():
         "dry-run": cmd_dry_run,
         "validate": cmd_validate,
         "unlock": cmd_unlock,
-        "profile": cmd_profile,
+        "perf": cmd_perf,
         "clean": cmd_clean,
     }
 

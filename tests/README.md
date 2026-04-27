@@ -153,6 +153,12 @@ pytest tests/unit/ --cov=workflow/scripts --cov-report=term-missing
 After a completed pipeline run:
 
 ```bash
-python dev/profile_snakemake_log.py --latest                # markdown to stdout
-python dev/profile_snakemake_log.py --latest --html r.html  # HTML with Gantt chart
+python dev/profile_snakemake_log.py                         # aggregate latest run
+python dev/profile_snakemake_log.py --html r.html           # HTML with Gantt chart
+python dev/profile_snakemake_log.py --single                # newest log only
 ```
+
+The default mode aggregates all `.snakemake/log/*.snakemake.log` files belonging
+to the same resumed run (identified by output_dir + analysis_name wildcards
+extracted from log content), so a pipeline that took multiple `snakemake`
+invocations to complete is reported as one profile.

@@ -205,7 +205,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 ### Provide a front-end CLI executable script
 
-* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `profile`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/design-decisions.md` for rationale.
+* [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `perf`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/design-decisions.md` for rationale.
 
 * [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
 
@@ -220,7 +220,7 @@ The details in the READ THE DOCS "Additional Output Options" should inform on th
   * [x] Wall time: every rule pulls `runtime=config["resources"][<rule>]["runtime"]` into its `resources:` block (109 rules across 8 `.smk` files), with a `default-resources: runtime=60` safety net in `profiles/slurm/config.yaml`.
   * [x] SLURM account: `profiles/slurm/config.yaml` now sets `slurm_account="martienssenlab"` via `default-resources`; annotated as site-specific with an `EDIT:` marker for users copying the profile to a different cluster.
 
-* [ ] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake. Also, does not seem to work ("Parsing .snakemake/log/2026-04-24T105453.098500.snakemake.log ... No completed jobs found in log." when some jobs were completed)
+* [x] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake. Also, does not seem to work ("Parsing .snakemake/log/2026-04-24T105453.098500.snakemake.log ... No completed jobs found in log." when some jobs were completed) **Done**: Renamed to `epicc perf` (chose `perf` over `perf-profile` for brevity and consistency with other single-word subcommands). Default mode now aggregates all logs from the same resumed run, identified by `output_dir` + `analysis_name` wildcards extracted from log content. Fixed the "No completed jobs found" bug — the parser was missing SLURM-submitted jobs (which use `Job N has been submitted with SLURM jobid M (log: .../rule_RULE/WC/...)` instead of the verbose `rule X:` block).
 
 ## Plotting
 N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
