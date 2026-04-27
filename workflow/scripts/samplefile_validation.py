@@ -16,8 +16,31 @@ _CHIP_ASSAYS = {"ChIP_broad", "ChIP_narrow"}
 _CONTROL_ASSAYS = {"ChIP_broad", "ChIP_narrow", "RAMPAGE"}
 
 
-def check_table(tab):
+def _is_url(path):
+    """Return True if the path looks like an HTTP(S) URL."""
+    return path.startswith("http://") or path.startswith("https://")
+
+
+def _is_local_path(token):
+    """True if a Read_files component entry is a local filesystem path.
+
+    Excludes empty strings, SRA-style accessions, and HTTP(S) URLs.
+    """
+    if not token:
+        return False
+    if _SRA_REGEX.match(token):
+        return False
+    if _is_url(token):
+        return False
+    return True
+
+
+def check_table(tab, check_paths=True):
     """Validate a new-format sample sheet DataFrame.
+
+    When ``check_paths`` is True (default), local Read_files paths are checked
+    for existence on disk. Pass ``check_paths=False`` for dry-run-style
+    validation where the inputs may not yet be staged.
 
     Raises ValueError with all collected error messages if validation fails.
     """
@@ -165,6 +188,22 @@ def check_table(tab):
                 else:
                     seen_inputs[f] = sid
 
+    # --- Read_files: local path existence check ---
+    # For SRA accessions and HTTP(S) URLs we can't (or won't) probe ahead of
+    # time; for local paths, fail fast if they don't exist on disk.
+    if check_paths:
+        for i, (_, row) in enumerate(tab.iterrows(), start=1):
+            read_files = str(row.get("Read_files", "")).strip()
+            sid = str(row.get("Sample_ID", "")).strip()
+            if not read_files or read_files == "nan":
+                continue
+            for comp in (c.strip() for c in read_files.split("+")):
+                for f in (x.strip() for x in comp.split(",")):
+                    if _is_local_path(f) and not os.path.exists(f):
+                        errors.append(
+                            f"[X] Row #{i} '{sid}': Read_files path '{f}' does not exist"
+                        )
+
     # --- IP_target: required for ChIP, blank for others ---
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
         assay = str(row.get("Assay", "")).strip()
@@ -226,8 +265,13 @@ def check_table(tab):
 # (kept for reference; genomesize and star_index are no longer validated as required)
 
 
-def check_genome_config(tab, config):
+def check_genome_config(tab, config, check_paths=True):
     """Validate that config['genomes'] has required fields for all genomes in the sample sheet.
+
+    When ``check_paths`` is True (default), local genome-config file paths
+    (``fasta_file``, ``gff_file``, ``gtf_file``, ``te_file``,
+    ``structural_rna_fafile``, ``gaf_file``, ``gene_info_file``) are checked
+    for existence on disk. URLs and the ``<auto>`` sentinel are skipped.
 
     Raises ValueError with all collected error messages if validation fails.
     """
@@ -261,17 +305,29 @@ def check_genome_config(tab, config):
             if field not in gcfg:
                 errors.append(f"[X] Genome '{genome}': missing required field '{field}'")
 
+        # Local path existence checks (URLs and "<auto>" sentinels are skipped).
+        # gtf_file is optional and defaults to "<auto>" (derived from gff_file).
+        # te_file is optional. fasta_file and gff_file are required above.
+        if check_paths:
+            for field in ("fasta_file", "gff_file", "gtf_file", "te_file"):
+                val = gcfg.get(field)
+                if val and val != "<auto>" and not _is_url(val) and not os.path.exists(val):
+                    errors.append(
+                        f"[X] Genome '{genome}': {field} '{val}' does not exist"
+                    )
+
         # genomesize and star_index are auto-computed from the reference FASTA;
         # user-provided values in the options file are optional overrides
 
         # structural_rna_fafile is optional: auto-derived via Infernal when absent or "<auto>"
-        # Validate that the file exists if a non-auto path is provided
-        if "sRNA" in envs and config.get("structural_rna_depletion", True):
+        if check_paths and "sRNA" in envs and config.get("structural_rna_depletion", True):
             srna_fa = gcfg.get("structural_rna_fafile", "<auto>")
-            if srna_fa and srna_fa != "<auto>" and not os.path.exists(srna_fa):
-                warnings.append(
-                    f"[!] Genome '{genome}': structural_rna_fafile '{srna_fa}' "
-                    f"not found (will fail at runtime if not created)"
+            if (srna_fa and srna_fa != "<auto>"
+                    and not _is_url(srna_fa)
+                    and not os.path.exists(srna_fa)):
+                errors.append(
+                    f"[X] Genome '{genome}': structural_rna_fafile '{srna_fa}' "
+                    f"does not exist"
                 )
 
         # GO fields when GO: true
@@ -281,6 +337,14 @@ def check_genome_config(tab, config):
                     errors.append(
                         f"[X] Genome '{genome}': missing '{field}' (required when GO: true)"
                     )
+            # Existence check for the GO annotation files
+            if check_paths:
+                for field in ("gaf_file", "gene_info_file"):
+                    val = gcfg.get(field)
+                    if val and not _is_url(val) and not os.path.exists(val):
+                        errors.append(
+                            f"[X] Genome '{genome}': {field} '{val}' does not exist"
+                        )
 
     # motif_ref_genome must reference a valid genome when motifs are enabled
     if config.get("motifs", False):
