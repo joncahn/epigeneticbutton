@@ -92,6 +92,85 @@ def fmt_duration(seconds):
         return f"{int(h)}h {int(m)}m"
 
 
+# Snakemake graph flags: (cli_kind, snakemake_flag)
+GRAPH_KINDS = (("dag", "--dag"), ("rulegraph", "--rulegraph"))
+
+
+def render_graph(args, kind, snakemake_flag, output_path):
+    """Run `snakemake <flag>` and render its dot output to a file.
+
+    Output format is inferred from ``output_path``'s extension.  ``.dot``
+    writes the raw dot text; everything else is piped through graphviz
+    ``dot -T<fmt>`` (png/svg/pdf/...). Requires the ``dot`` executable on PATH
+    for non-``.dot`` outputs.
+    """
+    import shutil as _shutil
+
+    out = Path(output_path)
+    fmt = out.suffix.lstrip(".").lower() or "png"
+
+    cmd = ["snakemake", snakemake_flag,
+           "--configfile", args.options,
+           "--cores", "1", "--quiet", "all"]
+    # Honor the same workflow profile and config overrides as the run.
+    repo = find_repo_root()
+    workflow_profile = getattr(args, "workflow_profile", None) or str(
+        repo / DEFAULT_WORKFLOW_PROFILE
+    )
+    if Path(workflow_profile).is_dir():
+        cmd += ["--workflow-profile", workflow_profile]
+    overrides = []
+    if getattr(args, "samples", None):
+        overrides.append(f"sample_file={args.samples}")
+    if getattr(args, "output_dir", None):
+        overrides.append(f"output_dir={args.output_dir}")
+    if getattr(args, "genome_dir", None):
+        overrides.append(f"genome_dir={args.genome_dir}")
+    if overrides:
+        cmd += ["--config"] + overrides
+
+    print(f"EPICC: Generating {kind} → {out}", file=sys.stderr)
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stderr)
+        return proc.returncode
+    dot_text = proc.stdout
+
+    if fmt == "dot":
+        out.write_text(dot_text)
+        return 0
+    if not _shutil.which("dot"):
+        sys.exit(
+            f"Error: graphviz 'dot' not found on PATH (needed to render "
+            f"{out}). Install graphviz, or output a .dot file instead."
+        )
+    render = subprocess.run(
+        ["dot", f"-T{fmt}", "-o", str(out)],
+        input=dot_text, text=True, capture_output=True,
+    )
+    if render.returncode != 0:
+        sys.stderr.write(render.stderr)
+    return render.returncode
+
+
+def maybe_render_graphs(args):
+    """If --dag or --rulegraph was requested, render and return True.
+
+    Returns the number of graph files successfully written (0 if none asked).
+    Caller decides whether to short-circuit downstream work.
+    """
+    written = 0
+    for kind, flag in GRAPH_KINDS:
+        out = getattr(args, kind, None)
+        if not out:
+            continue
+        rc = render_graph(args, kind, flag, out)
+        if rc != 0:
+            sys.exit(rc)
+        written += 1
+    return written
+
+
 def maybe_clear_stale_lock(args, repo):
     """Auto-unlock the working directory if a stale Snakemake lock is found.
 
@@ -267,6 +346,9 @@ def cmd_dry_run(args, extra_args):
         print(f"\nEPICC: Dry-run failed (exit code {result.returncode}).",
               file=sys.stderr)
 
+    if result.returncode == 0:
+        maybe_render_graphs(args)
+
     return result.returncode
 
 
@@ -362,6 +444,7 @@ def cmd_validate(args, extra_args):
         result = subprocess.run(cmd)
         if result.returncode == 0:
             print("\nEPICC: Validation passed.", file=sys.stderr)
+            maybe_render_graphs(args)
         else:
             print(f"\nEPICC: Dry-run validation failed (exit code "
                   f"{result.returncode}).", file=sys.stderr)
@@ -539,6 +622,23 @@ def add_run_options(parser):
     )
 
 
+def add_graph_options(parser):
+    """Add --dag / --rulegraph file outputs.
+
+    Format is inferred from the file extension (.png/.svg/.pdf via graphviz
+    ``dot``; .dot writes raw dot text). Available on dry-run and validate.
+    """
+    parser.add_argument(
+        "--dag", metavar="FILE",
+        help="Render the per-job DAG to FILE (format from extension: "
+             "png/svg/pdf/dot). Requires graphviz 'dot' for non-dot formats.",
+    )
+    parser.add_argument(
+        "--rulegraph", metavar="FILE",
+        help="Render the rule-level graph to FILE (format from extension).",
+    )
+
+
 def build_parser():
     """Build the argument parser with subcommands."""
     parser = argparse.ArgumentParser(
@@ -565,6 +665,7 @@ def build_parser():
     )
     add_common_options(p_dry)
     add_run_options(p_dry)
+    add_graph_options(p_dry)
 
     # --- validate ---
     p_val = subparsers.add_parser(
@@ -573,6 +674,7 @@ def build_parser():
                     "then run a snakemake dry-run for full DAG validation.",
     )
     add_common_options(p_val)
+    add_graph_options(p_val)
 
     # --- perf ---
     p_perf = subparsers.add_parser(
