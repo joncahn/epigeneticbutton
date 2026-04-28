@@ -14,9 +14,7 @@
 
 ### Analysis
 
-#### CUT&RUN / CUT&TAG support
-
-* [ ] **high priority** Support CUT&RUN / CUT&TAG nomenclature + analysis
+(no pending items — see Complete > CUT&RUN/CUT&Tag support)
 
 ### UI/UX
 
@@ -85,6 +83,14 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] **Defer** Support calling ATAC peaks with Input
 
+#### CUT&RUN/CUT&Tag follow-ups
+
+* [ ] **Defer for later PR** Spike-in normalization for CUT&RUN (E. coli) and CUT&Tag (Drosophila). Requires a second alignment to the spike-in genome and a scale-factor injection into bigwig generation; useful for cross-sample normalization but not strictly necessary when using IgG-aware peak callers (SEACR with non-norm + stringent threshold, epic2 with control input).
+
+* [ ] **Defer for later PR** CUT&RUN fragment-size splitting. The original Skene & Henikoff CUT&RUN protocol distinguishes TF/short-fragment peaks (<120bp) from histone/long-fragment peaks (>150bp) by filtering BEDPE intervals before bedgraph generation. Currently the entire fragment-size distribution is used. A flag like `cut_callpeaks.fragment_filter: short|long|all` could expose this for narrow-mark TF analyses.
+
+* [ ] **Defer** CUT&Tag and CUT&RUN narrow (TF) ColCEN integration test data — currently only CUT_RUN_broad H3K27me3 from GSE123602 is in the test sheet. Identify a comparable public Arabidopsis CUT&Tag dataset (candidates: GSE201962 Ouyang 2022, PRJNA940156 Zhao 2023) and a CUT&RUN narrow/TF dataset.
+
 ### UI/UX
 
 #### custom adapter handling
@@ -122,6 +128,12 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 ### Documentation
 
 * [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
+
+### Analysis
+
+#### CUT&RUN / CUT&Tag support
+
+* [x] Support CUT&RUN / CUT&Tag nomenclature + analysis. **Done**: Added four new assays (`CUT_RUN_broad`, `CUT_RUN_narrow`, `CUT_TAG_broad`, `CUT_TAG_narrow`) routed to the ChIP env via the new `IP_PEAK_ASSAYS` set (sample_sheet.py + samplefile_validation.py + epicc-builder). Peak calling defaults are peak-shape-aware: epic2 for `*_broad`, SEACR for `*_narrow`, MACS2 as explicit fallback (toggleable via `cut_callpeaks.{broad,narrow}_caller`). Both new tools' outputs are converted to UCSC broadPeak/narrowPeak (`workflow/scripts/convert_peaks.py`) so all downstream rules (idr, best_peaks_pseudoreps, peak_stats, motifs) work unchanged. ChIP rules `calling_peaks_macs2_pe/se` renamed to `calling_peaks_pe/se` and refactored as caller-aware dispatchers. Conda env gains `seacr` + `epic2`. Test coverage: 73 unit tests (converter + sample-sheet vocabulary), 17 dry-run integration tests covering all four assays + caller overrides. ColCEN test sheet adds three CUT&RUN samples from Zheng & Gehring 2019 (GSE123602) — H3K27me3 reps 1/2 sharing one IgG Control. Builder updated with all four assays, peaktype-aware known-marks recommendation, and per-family Control-source dropdowns. See sample-sheet-spec.md for the full spec.
 
 ### UI/UX
 

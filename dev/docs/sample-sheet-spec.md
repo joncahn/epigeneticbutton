@@ -54,6 +54,10 @@ routing, environment mapping, and peak-calling mode.
 |-------|------------|-----------|-------------|
 | `ChIP_broad` | `ChIP` | broad | Histone mark ChIP-seq (H3K9me2, H3K27me3, etc.) |
 | `ChIP_narrow` | `ChIP` | narrow | TF / sharp-mark ChIP-seq (H3K4me3, CTCF, etc.) |
+| `CUT_RUN_broad` | `ChIP` | broad | CUT&RUN for diffuse marks (H3K27me3, H3K9me2, etc.); default caller: epic2 |
+| `CUT_RUN_narrow` | `ChIP` | narrow | CUT&RUN for sharp marks/TFs; default caller: SEACR |
+| `CUT_TAG_broad` | `ChIP` | broad | CUT&Tag for diffuse marks; default caller: epic2 |
+| `CUT_TAG_narrow` | `ChIP` | narrow | CUT&Tag for sharp marks/TFs; default caller: SEACR |
 | `ATAC` | `ATAC` | narrow | ATAC-seq |
 | `RNAseq` | `RNA` | — | RNA-seq (mRNA/total RNA) |
 | `RAMPAGE` | `RNA` | — | RAMPAGE TSS profiling |
@@ -63,6 +67,15 @@ routing, environment mapping, and peak-calling mode.
 | `dmC` | `mC` | — | Direct methylation (nanopore modBAM or pre-computed bedMethyl) |
 
 These values are defined in `workflow/scripts/sample_sheet.py:VALID_ASSAYS`.
+
+**IP-with-peaks family.** The six broad/narrow assays (ChIP_broad/narrow,
+CUT_RUN_broad/narrow, CUT_TAG_broad/narrow) are collected in
+`IP_PEAK_ASSAYS` and share the same sample-sheet semantics: `IP_target`
+is required (must be non-empty for both IPs and their controls), and
+`Control` may reference another sample. The default peak caller is
+chosen per family + peak shape: ChIP* → MACS2, CUT&* broad → epic2,
+CUT&* narrow → SEACR. Override via `cut_callpeaks.broad_caller` /
+`narrow_caller` in the options file (`epic2`, `seacr`, or `macs2`).
 
 ### Genome
 
@@ -149,8 +162,8 @@ analysis-level names and plot labels.
 
 | Rule | Detail |
 |------|--------|
-| Required for ChIP | Must be non-empty for `ChIP_broad` and `ChIP_narrow` assays, **including control samples** (e.g. `Input`, `WCE`, `IgG`) |
-| Blank for others | Must be empty/absent for all non-ChIP assays (`ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `EMseq`, `dmC`) |
+| Required for IP-peak assays | Must be non-empty for any assay in `IP_PEAK_ASSAYS` (`ChIP_broad/narrow`, `CUT_RUN_broad/narrow`, `CUT_TAG_broad/narrow`), **including control samples** (e.g. `Input`, `WCE`, `IgG`) |
+| Blank for others | Must be empty/absent for all non-IP assays (`ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `EMseq`, `dmC`) |
 
 **Examples**: `H3K9me2`, `H3K4me3`, `H3K27me3`, `CTCF`, `Input`, `WCE`, `IgG`
 
@@ -161,13 +174,19 @@ References the Sample_ID of the control sample used for normalization.
 | Rule | Detail |
 |------|--------|
 | Valid reference | Must match an existing Sample_ID in the sheet |
-| Allowed assays only | May only be specified for `ChIP_broad`, `ChIP_narrow`, and `RAMPAGE` samples |
+| Allowed assays only | May only be specified for IP-peak assays (`ChIP_*`, `CUT_RUN_*`, `CUT_TAG_*`) and `RAMPAGE` samples |
 | No chaining | The referenced control sample must not itself have a Control value |
-| Sharing allowed | Multiple IP samples may reference the same control |
+| Sharing allowed | Multiple IP samples may reference the same control (typical CUT&RUN convention: one IgG per batch) |
 | Optional | Blank/absent is valid (sample has no associated control) |
 
-**Examples**: If `WT_leaf_Input_rep1` is a Sample_ID with `Assay: ChIP_broad`
-and `IP_target: Input`, then a ChIP sample can set `Control: WT_leaf_Input_rep1`.
+**Examples**:
+- ChIP: `WT_leaf_Input_rep1` (`Assay: ChIP_broad`, `IP_target: Input`)
+  referenced as `Control` by H3K9me2 IP samples.
+- CUT&RUN: `WT_endosperm_IgG_rep1` (`Assay: CUT_RUN_broad`, `IP_target: IgG`)
+  shared as `Control` by both H3K27me3 replicates in the same family. The
+  builder constrains the Control dropdown to same-family assays
+  (`ChIP_*`, `CUT_RUN_*`, or `CUT_TAG_*`), but freetext entry is allowed
+  for cross-family controls if a study uses one.
 
 ## Cross-Field Validation
 
