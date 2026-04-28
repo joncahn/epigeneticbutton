@@ -139,7 +139,7 @@ class TestChIPBroadWorkflow:
 
         output = result.stdout + result.stderr
 
-        assert "calling_peaks_macs2_pe" in output, \
+        assert "calling_peaks_pe" in output, \
             "PE peak calling rule should be in ChIP broad workflow"
         assert "--broad" in output, \
             "ChIP broad should use --broad flag in MACS2"

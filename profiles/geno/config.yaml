@@ -78,8 +78,8 @@ set-resources:
   make_coverage_chip: *heavy
   make_bigwig_chip: *heavy
   make_fingerprint_plot: *heavy
-  calling_peaks_macs2_pe: *heavy
-  calling_peaks_macs2_se: *heavy
+  calling_peaks_pe: *heavy
+  calling_peaks_se: *heavy
   idr_analysis_replicates: *single
   merging_bam_replicates: *heavy
   making_pseudo_replicates: *heavy

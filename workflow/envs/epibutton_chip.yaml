@@ -10,5 +10,7 @@ dependencies:
   - bedtools
   - deeptools
   - macs2
+  - seacr
+  - epic2
   - pigz
   - manorm

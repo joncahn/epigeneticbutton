@@ -59,6 +59,23 @@ def get_peaktype_for_env(sample_name_or_assay, env):
     assay = _resolve_assay(sample_name_or_assay)
     return ASSAY_TO_PEAKTYPE.get(assay, "broad")
 
+def _resolve_peakcaller(sample_name_or_assay):
+    """Return the peak-calling tool for a sample: ``macs2``, ``seacr``, or ``epic2``.
+
+    For CUT&RUN/CUT&Tag samples, the family-level default in
+    ``cut_callpeaks`` is consulted (``broad_caller`` for *_broad assays,
+    ``narrow_caller`` for *_narrow). All other peak-calling assays
+    (ChIP_*, ATAC) currently default to MACS2.
+    """
+    assay = _resolve_assay(sample_name_or_assay)
+    if assay.startswith(("CUT_RUN", "CUT_TAG")):
+        cut_cfg = config.get("cut_callpeaks", {})
+        if assay.endswith("_broad"):
+            return cut_cfg.get("broad_caller", "epic2")
+        return cut_cfg.get("narrow_caller", "seacr")
+    return "macs2"
+
+
 def _resolve_assay(sample_name_or_assay):
     """Resolve a sample_name or Assay value to its Assay.
 
@@ -811,11 +828,13 @@ print(int(total_bins * 0.5))
         }} 2>&1 | tee -a "{log}"
         """
 
-rule calling_peaks_macs2_pe:
+rule calling_peaks_pe:
     input:
         ipfile = f"{RESULTS_DIR}/{{env}}/mapped/{{file_type}}__{{sample_name}}.bam",
         inputfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
-        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
+        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes",
+        converter = os.path.join(REPO_FOLDER, "workflow", "scripts", "convert_peaks.py")
     output:
         peakfile = f"{RESULTS_DIR}/{{env}}/peaks/peaks_pe__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
@@ -825,9 +844,15 @@ rule calling_peaks_macs2_pe:
         sample_name = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_chip_input(wildcards),
         peaktype = lambda wildcards: ASSAY_TO_PEAKTYPE.get(_resolve_assay(wildcards.sample_name), "broad"),
+        caller = lambda wildcards: _resolve_peakcaller(wildcards.sample_name),
+        is_cut = lambda wildcards: "1" if _resolve_assay(wildcards.sample_name).startswith(("CUT_RUN", "CUT_TAG")) else "0",
         file_type = lambda wildcards: wildcards.file_type,
         env = lambda wildcards: wildcards.env,
-        params = config["chip_callpeaks"]['params'],
+        chip_macs2_params = config["chip_callpeaks"]["params"],
+        cut_macs2_params_pe = config.get("cut_callpeaks", {}).get("macs2_params_pe", "--keep-dup 'all' --nomodel"),
+        epic2_params = config.get("cut_callpeaks", {}).get("epic2_params", "--bin-size 150 --gaps-allowed 2"),
+        seacr_norm = config.get("cut_callpeaks", {}).get("seacr_norm", "non"),
+        seacr_threshold = config.get("cut_callpeaks", {}).get("seacr_threshold", "stringent"),
         genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
         temp(return_log_chip("{env}","{sample_name}", "{file_type}__{peaktype}peak_calling", "PE"))
@@ -835,27 +860,75 @@ rule calling_peaks_macs2_pe:
     shell:
         """
         {{
+        set -euo pipefail
         if [[ -n "{params.genomesize_override}" ]]; then
             gsize="{params.genomesize_override}"
         else
             gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
         fi
-        if [[ "{params.peaktype}" == "broad" ]]; then
-            add="--broad"
-        else
-            add=""
-        fi
-        printf "\nCalling {params.peaktype} peaks for paired-end {params.sample_name} (vs {params.inputname}) using macs2 version:\n"
-        macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g $gsize {params.params} -n peaks_pe__{params.file_type}__{params.sample_name} --outdir {config[output_dir]}/{params.env}/peaks/ ${{add}}
+        outdir="{config[output_dir]}/{params.env}/peaks"
+        prefix="peaks_pe__{params.file_type}__{params.sample_name}"
+        printf "\\nCalling {params.peaktype} peaks (caller={params.caller}) for paired-end {params.sample_name} (vs {params.inputname})\\n"
+        case "{params.caller}" in
+        macs2)
+            if [[ "{params.is_cut}" == "1" ]]; then
+                macs_params="{params.cut_macs2_params_pe}"
+            else
+                macs_params="{params.chip_macs2_params}"
+            fi
+            extra=""
+            if [[ "{params.peaktype}" == "broad" ]]; then extra="--broad"; fi
+            macs2 --version
+            macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAMPE -g $gsize $macs_params -n $prefix --outdir $outdir $extra
+            ;;
+        epic2)
+            if [[ "{params.peaktype}" != "broad" ]]; then
+                echo "[X] epic2 only supports broad peak calling; pick seacr or macs2 for narrow." >&2
+                exit 2
+            fi
+            efrac=$(python3 -c "import json; s=json.load(open('{input.genome_stats}')); print(s['effective_size']/s['total_bases'])")
+            raw="$outdir/${{prefix}}.epic2.tsv"
+            epic2 --version
+            epic2 -t {input.ipfile} -c {input.inputfile} \
+                  --chromsizes {input.chrom_sizes} \
+                  --effective-genome-fraction "$efrac" \
+                  {params.epic2_params} \
+                  --output "$raw"
+            python3 {input.converter} --caller epic2 --peaktype broad "$raw" "{output.peakfile}"
+            rm -f "$raw"
+            ;;
+        seacr)
+            tmpd=$(mktemp -d)
+            trap 'rm -rf "$tmpd"' EXIT
+            for tag in ip ctrl; do
+                if [[ "$tag" == "ip" ]]; then bam="{input.ipfile}"; else bam="{input.inputfile}"; fi
+                samtools sort -n -@ {threads} -O bam -T "$tmpd/sort_$tag" "$bam" \
+                  | bedtools bamtobed -bedpe -i - 2>/dev/null \
+                  | awk 'BEGIN{{OFS="\\t"}} $1==$4 && $6-$2 < 1000 {{print $1, $2, $6}}' \
+                  | sort -k1,1 -k2,2n -k3,3n \
+                  | bedtools genomecov -bg -i - -g {input.chrom_sizes} > "$tmpd/$tag.bg"
+            done
+            raw="$outdir/${{prefix}}.seacr.bed"
+            SEACR_1.3.sh "$tmpd/ip.bg" "$tmpd/ctrl.bg" {params.seacr_norm} {params.seacr_threshold} "$outdir/$prefix"
+            mv "$outdir/${{prefix}}.{params.seacr_threshold}.bed" "$raw"
+            python3 {input.converter} --caller seacr --peaktype {params.peaktype} "$raw" "{output.peakfile}"
+            rm -f "$raw"
+            ;;
+        *)
+            echo "[X] Unknown peak caller: {params.caller}" >&2
+            exit 1
+            ;;
+        esac
         }} 2>&1 | tee -a "{log}"
         """
 
-rule calling_peaks_macs2_se:
+rule calling_peaks_se:
     input:
         ipfile = f"{RESULTS_DIR}/{{env}}/mapped/{{file_type}}__{{sample_name}}.bam",
         inputfile = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/mapped/{wildcards.file_type}__{assign_chip_input(wildcards)}.bam",
-        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
+        genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes",
+        converter = os.path.join(REPO_FOLDER, "workflow", "scripts", "convert_peaks.py")
     output:
         peakfile = f"{RESULTS_DIR}/{{env}}/peaks/peaks_se__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
@@ -865,9 +938,15 @@ rule calling_peaks_macs2_se:
         sample_name = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_chip_input(wildcards),
         peaktype = lambda wildcards: ASSAY_TO_PEAKTYPE.get(_resolve_assay(wildcards.sample_name), "broad"),
+        caller = lambda wildcards: _resolve_peakcaller(wildcards.sample_name),
+        is_cut = lambda wildcards: "1" if _resolve_assay(wildcards.sample_name).startswith(("CUT_RUN", "CUT_TAG")) else "0",
         file_type = lambda wildcards: wildcards.file_type,
         env = lambda wildcards: wildcards.env,
-        params = config["chip_callpeaks"]['params'],
+        chip_macs2_params = config["chip_callpeaks"]["params"],
+        cut_macs2_params_se = config.get("cut_callpeaks", {}).get("macs2_params_se", "--keep-dup 'all' --nomodel --shift -75 --extsize 150"),
+        epic2_params = config.get("cut_callpeaks", {}).get("epic2_params", "--bin-size 150 --gaps-allowed 2"),
+        seacr_norm = config.get("cut_callpeaks", {}).get("seacr_norm", "non"),
+        seacr_threshold = config.get("cut_callpeaks", {}).get("seacr_threshold", "stringent"),
         genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
         temp(return_log_chip("{env}","{sample_name}", "{file_type}__{peaktype}peak_calling", "SE"))
@@ -875,19 +954,61 @@ rule calling_peaks_macs2_se:
     shell:
         """
         {{
+        set -euo pipefail
         if [[ -n "{params.genomesize_override}" ]]; then
             gsize="{params.genomesize_override}"
         else
             gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
         fi
-        if [[ "{params.peaktype}" == "broad" ]]; then
-            add="--broad"
-        else
-            add=""
-        fi
-        printf "\nCalling {params.peaktype} peaks for single-end {params.sample_name} (vs {params.inputname}) using macs2 version:\n"
-        macs2 --version
-        macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g $gsize {params.params} -n peaks_se__{params.file_type}__{params.sample_name} --outdir {config[output_dir]}/{params.env}/peaks/ ${{add}}
+        outdir="{config[output_dir]}/{params.env}/peaks"
+        prefix="peaks_se__{params.file_type}__{params.sample_name}"
+        printf "\\nCalling {params.peaktype} peaks (caller={params.caller}) for single-end {params.sample_name} (vs {params.inputname})\\n"
+        case "{params.caller}" in
+        macs2)
+            if [[ "{params.is_cut}" == "1" ]]; then
+                macs_params="{params.cut_macs2_params_se}"
+            else
+                macs_params="{params.chip_macs2_params}"
+            fi
+            extra=""
+            if [[ "{params.peaktype}" == "broad" ]]; then extra="--broad"; fi
+            macs2 --version
+            macs2 callpeak -t {input.ipfile} -c {input.inputfile} -f BAM -g $gsize $macs_params -n $prefix --outdir $outdir $extra
+            ;;
+        epic2)
+            if [[ "{params.peaktype}" != "broad" ]]; then
+                echo "[X] epic2 only supports broad peak calling; pick seacr or macs2 for narrow." >&2
+                exit 2
+            fi
+            efrac=$(python3 -c "import json; s=json.load(open('{input.genome_stats}')); print(s['effective_size']/s['total_bases'])")
+            raw="$outdir/${{prefix}}.epic2.tsv"
+            epic2 --version
+            epic2 -t {input.ipfile} -c {input.inputfile} \
+                  --chromsizes {input.chrom_sizes} \
+                  --effective-genome-fraction "$efrac" \
+                  {params.epic2_params} \
+                  --output "$raw"
+            python3 {input.converter} --caller epic2 --peaktype broad "$raw" "{output.peakfile}"
+            rm -f "$raw"
+            ;;
+        seacr)
+            tmpd=$(mktemp -d)
+            trap 'rm -rf "$tmpd"' EXIT
+            for tag in ip ctrl; do
+                if [[ "$tag" == "ip" ]]; then bam="{input.ipfile}"; else bam="{input.inputfile}"; fi
+                bedtools genomecov -bg -ibam "$bam" > "$tmpd/$tag.bg"
+            done
+            raw="$outdir/${{prefix}}.seacr.bed"
+            SEACR_1.3.sh "$tmpd/ip.bg" "$tmpd/ctrl.bg" {params.seacr_norm} {params.seacr_threshold} "$outdir/$prefix"
+            mv "$outdir/${{prefix}}.{params.seacr_threshold}.bed" "$raw"
+            python3 {input.converter} --caller seacr --peaktype {params.peaktype} "$raw" "{output.peakfile}"
+            rm -f "$raw"
+            ;;
+        *)
+            echo "[X] Unknown peak caller: {params.caller}" >&2
+            exit 1
+            ;;
+        esac
         }} 2>&1 | tee -a "{log}"
         """
 
