@@ -37,6 +37,9 @@ ddm1_leaf_ATAC_rep1	ATAC	ColCEN	genotype:ddm1,tissue:leaf	rep1	SRR12362026	PE
 ddm1_leaf_ATAC_rep2	ATAC	ColCEN	genotype:ddm1,tissue:leaf	rep2	SRR12362027	PE
 nrpd1_leaf_ATAC_rep1	ATAC	ColCEN	genotype:nrpd1,tissue:leaf	rep1	SRR12362044	PE
 nrpd1_leaf_ATAC_rep2	ATAC	ColCEN	genotype:nrpd1,tissue:leaf	rep2	SRR12362045	PE
+WT_endosperm_H3K27me3_rep1	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310960	PE	H3K27me3	WT_endosperm_IgG_rep1
+WT_endosperm_H3K27me3_rep2	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep2	SRR8310958	PE	H3K27me3	WT_endosperm_IgG_rep1
+WT_endosperm_IgG_rep1	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310961	PE	IgG
 
 # ─── migrated from config/all_samples.tsv ────────────────────────────
 # WGBS samples are active; all other assays are parked (commented).

@@ -156,6 +156,35 @@ genes and their cis-regulatory space in plant genomes." *PNAS* 117(38),
 | nrpd1 | rep1 | SRR12362044 |
 | nrpd1 | rep2 | SRR12362045 |
 
+## Dataset 6: CUT&RUN (H3K27me3) — Zheng & Gehring 2019
+
+- **Citation**: Zheng XY, Gehring M. *Plant Reproduction* 32:63-75 (2019),
+  doi:10.1007/s00497-018-00358-1
+- **GEO**: [GSE123602](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE123602)
+- **SRA project**: SRP173263
+
+### Experimental design
+
+CUT&RUN profiling of H3K27me3 in *A. thaliana* unfixed endosperm nuclei
+(~20,000 nuclei FACS-sorted per sample). The full study covers fixed and
+unfixed endosperm, seed coat, and leaf, but for the integration test we
+use only the unfixed endosperm subset to give a clean two-replicate
+comparison sharing a single IgG control — a representative real-world
+CUT&RUN design pattern that exercises the new sample sheet's
+multi-IP/single-control routing.
+
+### Samples (3)
+
+| Sample | SRX | SRR | Layout | Reads |
+|--------|-----|-----|--------|-------|
+| Endo_Unfixed_H3K27me3_1 | SRX5124458 | SRR8310960 | PE | ~10.0M |
+| Endo_Unfixed_H3K27me3_2 | SRX5124456 | SRR8310958 | PE | ~4.7M |
+| Endo_Unfixed_IgG_1      | SRX5124459 | SRR8310961 | PE | ~5.8M |
+
+The `IgG_1` sample serves as Control for *both* H3K27me3 replicates —
+the Zheng & Gehring paper paired one IgG per fixation condition rather
+than per IP replicate.
+
 ## Assay Coverage Matrix
 
 | Assay | Genotypes | Tissue | Layout | Reps | Samples | Source |
@@ -166,8 +195,9 @@ genes and their cis-regulatory space in plant genomes." *PNAS* 117(38),
 | EMseq | WT, rdr6 | flower | PE | 2 | 4 | SRA (PRJNA1111825) |
 | PBAT | WT, tarp1tarp2 | seedling | PE | 2 | 4 | DDBJ (PRJDB14218) |
 | ATAC | WT, ddm1, nrpd1 | leaf | PE | 2 | 6 | SRA (GSE155023) |
+| CUT_RUN_broad (H3K27me3) | WT | endosperm | PE | 2 + 1 IgG | 3 | SRA (GSE123602) |
 
-**Total**: 38 samples across 6 assay types.
+**Total**: 41 samples across 7 assay types.
 
 ## Known Design Considerations
 
@@ -193,6 +223,17 @@ Only one replicate per genotype is available for the dmC samples. This is
 sufficient to exercise the dmC pipeline path (modBAM download, alignment,
 modkit pileup, bedMethyl conversion, CX report) but DMR calling between
 dmC genotypes will have limited statistical power.
+
+### CUT&RUN single-genotype, shared IgG
+
+The CUT&RUN samples come from a single genotype (WT) in a tissue (endosperm)
+not used by any other dataset, so they don't combine into cross-assay or
+genotype-comparison plots. The IgG control is a single sample shared by
+both H3K27me3 replicates — this is the standard CUT&RUN convention (one
+IgG per experimental batch, not per IP replicate) and exercises the new
+sample sheet's multi-IP/single-control linkage. CUT&Tag and CUT&RUN
+narrow (TF) test data are not yet included; deferred until a comparable
+public Arabidopsis dataset is identified.
 
 ### PBAT uses DDBJ accessions
 
