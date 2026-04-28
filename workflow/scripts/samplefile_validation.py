@@ -364,3 +364,242 @@ def check_genome_config(tab, config, check_paths=True):
             f"[X] Genome config validation failed — please fix the errors below "
             f"in your options file and rerun.\n{full_message}\n\n"
         )
+
+
+# ---------------------------------------------------------------------------
+# Extra output target file format validation (Snakefile-driven analyses)
+# ---------------------------------------------------------------------------
+
+def _open_maybe_gzip(path):
+    """Open a text file, transparently decompressing if it's gzipped."""
+    import gzip
+    if str(path).endswith(".gz"):
+        return gzip.open(path, "rt")
+    return open(path, "rt")
+
+
+def _iter_data_lines(path):
+    """Yield (line_number, columns) for non-comment, non-blank rows in a TSV.
+
+    The first non-blank line is yielded even if it looks like a header — the
+    caller decides whether to treat it as one based on column-1 content.
+    """
+    with _open_maybe_gzip(path) as fh:
+        for i, line in enumerate(fh, start=1):
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            yield i, line.split("\t")
+
+
+def _looks_like_header(cols):
+    """Heuristic: a BED first row is a header if cols[1]/cols[2] aren't ints."""
+    if len(cols) < 3:
+        return False
+    try:
+        int(cols[1]); int(cols[2])
+        return False
+    except (ValueError, IndexError):
+        return True
+
+
+def _validate_browser_target_file(path, errors):
+    """Validate the browser_target_file's extended-BED schema.
+
+    Each data row must be:
+        chrom \t start \t end \t label \t binsize [\t htstart \t htwidth]
+
+    where label is a non-empty string not beginning with '-' (so deeptools
+    doesn't mis-parse it as a flag), binsize is an integer >= 1, and the
+    optional htstart/htwidth columns are comma-separated coordinates and
+    widths. The first row may be a header (column 2/3 non-integer).
+    """
+    saw_data = False
+    for lineno, cols in _iter_data_lines(path):
+        if not saw_data and _looks_like_header(cols):
+            saw_data = True
+            continue
+        saw_data = True
+        if len(cols) < 5:
+            errors.append(
+                f"[X] browser_target_file '{path}' line {lineno}: expected "
+                f"at least 5 tab-separated columns "
+                f"(chrom, start, end, label, binsize), got {len(cols)}"
+            )
+            continue
+        chrom, start_s, end_s, label, binsize_s = cols[:5]
+        try:
+            start, end = int(start_s), int(end_s)
+            if start < 0 or end <= start:
+                errors.append(
+                    f"[X] browser_target_file '{path}' line {lineno}: "
+                    f"invalid coordinates start={start_s} end={end_s}"
+                )
+        except ValueError:
+            errors.append(
+                f"[X] browser_target_file '{path}' line {lineno}: "
+                f"start/end not integers (start={start_s!r}, end={end_s!r})"
+            )
+        if not label or label.startswith("-"):
+            errors.append(
+                f"[X] browser_target_file '{path}' line {lineno}: label "
+                f"{label!r} must be non-empty and must not start with '-' "
+                f"(would be misinterpreted as a CLI flag downstream)"
+            )
+        try:
+            bs = int(binsize_s)
+            if bs < 1:
+                errors.append(
+                    f"[X] browser_target_file '{path}' line {lineno}: "
+                    f"binsize must be >= 1, got {bs}"
+                )
+        except ValueError:
+            errors.append(
+                f"[X] browser_target_file '{path}' line {lineno}: binsize "
+                f"{binsize_s!r} is not an integer"
+            )
+        # Optional htstart/htwidth: pair-or-neither, comma-separated ints
+        ht_start = cols[5] if len(cols) > 5 else ""
+        ht_width = cols[6] if len(cols) > 6 else ""
+        if (ht_start and not ht_width) or (ht_width and not ht_start):
+            errors.append(
+                f"[X] browser_target_file '{path}' line {lineno}: htstart "
+                f"and htwidth must both be present or both absent"
+            )
+        for label_, val in (("htstart", ht_start), ("htwidth", ht_width)):
+            if not val:
+                continue
+            for tok in val.split(","):
+                try:
+                    v = int(tok)
+                    if v < 0:
+                        raise ValueError
+                except ValueError:
+                    errors.append(
+                        f"[X] browser_target_file '{path}' line {lineno}: "
+                        f"{label_} entry {tok!r} is not a non-negative integer"
+                    )
+    if not saw_data:
+        errors.append(
+            f"[X] browser_target_file '{path}' has no data rows"
+        )
+
+
+def _validate_bed_target_file(path, key, errors):
+    """Validate a BED-format target file (chrom, start, end[, name[, score, strand]])."""
+    saw_data = False
+    for lineno, cols in _iter_data_lines(path):
+        if not saw_data and _looks_like_header(cols):
+            saw_data = True
+            continue
+        saw_data = True
+        if len(cols) < 3:
+            errors.append(
+                f"[X] {key} '{path}' line {lineno}: expected ≥3 "
+                f"tab-separated columns, got {len(cols)}"
+            )
+            continue
+        try:
+            start, end = int(cols[1]), int(cols[2])
+            if start < 0 or end <= start:
+                errors.append(
+                    f"[X] {key} '{path}' line {lineno}: invalid "
+                    f"coordinates start={cols[1]} end={cols[2]}"
+                )
+        except ValueError:
+            errors.append(
+                f"[X] {key} '{path}' line {lineno}: start/end not integers"
+            )
+    if not saw_data:
+        errors.append(f"[X] {key} '{path}' has no data rows")
+
+
+def _validate_geneid_target_file(path, key, errors):
+    """Validate a TSV gene-id list (col 1 = gene id, optional col 2 = label)."""
+    saw_data = False
+    for lineno, cols in _iter_data_lines(path):
+        saw_data = True
+        if not cols[0].strip():
+            errors.append(
+                f"[X] {key} '{path}' line {lineno}: first column "
+                f"(gene ID) is empty"
+            )
+    if not saw_data:
+        errors.append(f"[X] {key} '{path}' has no data rows")
+
+
+def check_extra_output_files(config, check_paths=True):
+    """Validate optional 'extra output' target files referenced in the options.
+
+    The pipeline supports several optional inputs that drive add-on outputs
+    (motif scans, gene-expression plots, GO enrichment, sRNA cluster
+    analysis, heatmaps, browser plots). Each is gated by an analysis flag
+    in the options file; we only validate when the relevant analysis is
+    enabled and the configured path exists. Missing-file errors are
+    surfaced too, so users learn at startup rather than mid-run that a
+    referenced file isn't where they said it was.
+
+    Pass ``check_paths=False`` to skip on-disk existence (mirrors the
+    other validators' behavior).
+    """
+    errors = []
+
+    full_analysis = config.get("full_analysis", False)
+    motifs_on = config.get("motifs", False)
+    go_on = config.get("GO", False)
+
+    # (key, gate, validator)
+    checks = [
+        ("browser_target_file", full_analysis, _validate_browser_target_file),
+        ("heatmap_target_file", full_analysis, lambda p, e: _validate_bed_target_file(p, "heatmap_target_file", e)),
+        ("motif_target_file", motifs_on, lambda p, e: _validate_bed_target_file(p, "motif_target_file", e)),
+        ("rnaseq_target_file", True, lambda p, e: _validate_geneid_target_file(p, "rnaseq_target_file", e)),
+        ("srna_target_file", True, None),  # ShortStack accepts gff/bed/tab; existence only
+    ]
+
+    for key, gated_on, validator in checks:
+        if not gated_on:
+            continue
+        val = config.get(key)
+        if not val:
+            continue
+        if not check_paths:
+            continue
+        if not os.path.exists(val):
+            # Skip default placeholder paths that the user clearly hasn't
+            # touched; warn loudly otherwise. The default values shipped
+            # in epicc-options.yaml all live under "data/" and end with
+            # the well-known stub names, so we only flag when the path
+            # has been customized away from those defaults.
+            default_stubs = {
+                "browser_target_file": "data/target_loci.bed",
+                "heatmap_target_file": "data/target_genes.bed",
+                "motif_target_file": "data/target_genes.bed",
+                "rnaseq_target_file": "data/target_genes.txt",
+                "srna_target_file": "config/ath.gff3",
+            }
+            if val == default_stubs.get(key):
+                continue
+            errors.append(f"[X] {key}: '{val}' does not exist")
+            continue
+        if validator is not None:
+            validator(val, errors)
+
+    # Background file for GO enrichment is optional; "default" is a sentinel
+    if go_on:
+        bg = config.get("rnaseq_background_file", "")
+        if bg and bg != "default":
+            if check_paths and not os.path.exists(bg):
+                errors.append(
+                    f"[X] rnaseq_background_file: '{bg}' does not exist"
+                )
+            elif check_paths:
+                _validate_geneid_target_file(bg, "rnaseq_background_file", errors)
+
+    if errors:
+        full_message = "\n".join(errors)
+        raise ValueError(
+            f"[X] Extra output target-file validation failed — please fix "
+            f"the errors below in your options file and rerun.\n"
+            f"{full_message}\n\n"
+        )

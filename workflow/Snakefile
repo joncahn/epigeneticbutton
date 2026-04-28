@@ -10,7 +10,9 @@ from collections import defaultdict
 import time
 import atexit
 import traceback
-from scripts.samplefile_validation import check_table, check_genome_config
+from scripts.samplefile_validation import (
+    check_table, check_genome_config, check_extra_output_files,
+)
 from scripts.sample_sheet import (
     VALID_ASSAYS, ASSAY_TO_ENV, ASSAY_TO_PEAKTYPE,
     parse_levels, levels_to_label, levels_to_factors,
@@ -148,6 +150,7 @@ if not config.get("sample_file"):
 samples = read_sample_sheet(config["sample_file"])
 check_table(samples)
 check_genome_config(samples, config)
+check_extra_output_files(config)
 
 # Add backward-compatible columns derived from new-format fields
 samples = add_compat_columns(samples)

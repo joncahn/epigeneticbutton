@@ -17,7 +17,9 @@ import pytest
 _REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "workflow"))
 
-from scripts.samplefile_validation import check_table, check_genome_config
+from scripts.samplefile_validation import (
+    check_table, check_genome_config, check_extra_output_files,
+)
 
 
 def _row(sample_id, assay, read_files, layout="SE", **overrides):
@@ -167,3 +169,161 @@ class TestGenomeConfigPathExistence:
             gff_file=str(tmp_path / "absent.gff3"),
         )
         check_genome_config(_minimal_sample_df(), cfg, check_paths=False)
+
+
+# ---------------------------------------------------------------------------
+# Extra output target file format validation
+# ---------------------------------------------------------------------------
+
+class TestBrowserTargetFile:
+    """Browser target file: chrom/start/end/label/binsize[/htstart/htwidth]."""
+
+    def _write(self, path, rows, header=None):
+        with open(path, "w") as fh:
+            if header:
+                fh.write("\t".join(header) + "\n")
+            for r in rows:
+                fh.write("\t".join(str(c) for c in r) + "\n")
+
+    def test_minimal_valid_5col(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "promoterX", 50)])
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        check_extra_output_files(cfg)
+
+    def test_with_optional_ht(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "loc1", 50, "150,250", "20,30")])
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        check_extra_output_files(cfg)
+
+    def test_with_header_row(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(
+            f, [("chrI", 100, 500, "loc1", 50)],
+            header=["chrom", "start", "end", "name", "bs"],
+        )
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        check_extra_output_files(cfg)
+
+    def test_label_starting_with_dash_rejected(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "-flag", 50)])
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "must not start with '-'" in str(exc.value)
+
+    def test_binsize_zero_rejected(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "loc1", 0)])
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "binsize must be >= 1" in str(exc.value)
+
+    def test_binsize_non_integer_rejected(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "loc1", "abc")])
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "binsize" in str(exc.value)
+
+    def test_too_few_columns_rejected(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "loc1")])  # missing binsize
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "at least 5" in str(exc.value)
+
+    def test_invalid_coords(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 500, 100, "loc1", 50)])  # end < start
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "invalid coordinates" in str(exc.value)
+
+    def test_ht_pair_required(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        self._write(f, [("chrI", 100, 500, "loc1", 50, "150", "")])
+        cfg = {"full_analysis": True, "browser_target_file": str(f)}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "htstart" in str(exc.value)
+
+    def test_skipped_when_full_analysis_off(self, tmp_path):
+        f = tmp_path / "browser.bed"
+        # Even malformed rows should slip through when the analysis is disabled.
+        self._write(f, [("chrI", 100, 500, "-flag", 0)])
+        cfg = {"full_analysis": False, "browser_target_file": str(f)}
+        check_extra_output_files(cfg)
+
+    def test_default_placeholder_path_skipped(self):
+        # The shipped default value points to a path that doesn't exist;
+        # users who don't customize it shouldn't see a startup error.
+        cfg = {"full_analysis": True,
+               "browser_target_file": "data/target_loci.bed"}
+        check_extra_output_files(cfg)
+
+    def test_missing_customized_path_errors(self, tmp_path):
+        cfg = {"full_analysis": True,
+               "browser_target_file": str(tmp_path / "absent.bed")}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "does not exist" in str(exc.value)
+
+
+class TestOtherExtraTargetFiles:
+    def test_heatmap_bed_validates(self, tmp_path):
+        f = tmp_path / "regions.bed"
+        f.write_text("chrI\t100\t500\tname\n")
+        cfg = {"full_analysis": True, "heatmap_target_file": str(f)}
+        check_extra_output_files(cfg)
+
+    def test_heatmap_bed_too_few_cols(self, tmp_path):
+        f = tmp_path / "regions.bed"
+        f.write_text("chrI\t100\n")
+        cfg = {"full_analysis": True, "heatmap_target_file": str(f)}
+        with pytest.raises(ValueError):
+            check_extra_output_files(cfg)
+
+    def test_motif_bed_validated_only_if_motifs_on(self, tmp_path):
+        f = tmp_path / "motifs.bed"
+        f.write_text("chrI\t100\n")  # malformed
+        cfg_off = {"motifs": False, "motif_target_file": str(f)}
+        check_extra_output_files(cfg_off)  # gate is off → no validation
+        cfg_on = {"motifs": True, "motif_target_file": str(f)}
+        with pytest.raises(ValueError):
+            check_extra_output_files(cfg_on)
+
+    def test_rnaseq_target_geneids_validates(self, tmp_path):
+        f = tmp_path / "genes.txt"
+        f.write_text("AT1G01010\nAT1G01020\tlabel2\n")
+        cfg = {"rnaseq_target_file": str(f)}
+        check_extra_output_files(cfg)
+
+    def test_rnaseq_target_empty_first_col_rejected(self, tmp_path):
+        f = tmp_path / "genes.txt"
+        f.write_text("\tlabel\n")
+        cfg = {"rnaseq_target_file": str(f)}
+        with pytest.raises(ValueError):
+            check_extra_output_files(cfg)
+
+    def test_go_background_default_sentinel_skipped(self, tmp_path):
+        cfg = {"GO": True, "rnaseq_background_file": "default"}
+        check_extra_output_files(cfg)
+
+    def test_go_background_path_existence_required_when_set(self, tmp_path):
+        cfg = {"GO": True,
+               "rnaseq_background_file": str(tmp_path / "missing.txt")}
+        with pytest.raises(ValueError) as exc:
+            check_extra_output_files(cfg)
+        assert "rnaseq_background_file" in str(exc.value)
+
+    def test_check_paths_false_bypass(self, tmp_path):
+        cfg = {"full_analysis": True,
+               "browser_target_file": str(tmp_path / "absent.bed")}
+        check_extra_output_files(cfg, check_paths=False)
