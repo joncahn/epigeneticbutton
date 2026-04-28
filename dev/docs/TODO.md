@@ -1,6 +1,8 @@
 # Big Refactor TODO
 
-## Documentation
+## Pending
+
+### Documentation
 
 * [ ] **high priority** Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
 
@@ -8,43 +10,17 @@
 
 * [ ] **high priority** Integrate README + Read the docs + epicc-builder for concerted changes
 
-* [ ] **Defer** Update README continously after each additional modifications.
-
-* [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
-
 * [ ] We should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark, and/or refer users to a discussion of this distinction elsewhere (perhaps in the MACS documentation).
 
-## Analysis
+### Analysis
 
-### (Differential) splicing analysis for RNAseq
-
-* [ ] **deferred for future PR** heavy pipeline. Here is what was used in my MBD paper:
-To look for novel splicing changes that occurred within the mC reader mutants, the reads were mapped with STAR (Dobin et al. 2013) were processed by StringTie and merged together (Pertea et al. 2015) into a master novel transcriptome comprising splicing events from TAIR10 and ones uniquely identified withinthis study. Then reads underwent lightweight alignment using Salmon version 1.4.0 (Patro et al. 2017) against the novel transcriptome from StringTie. Novel and known transcripts belonging to the same genewere analysed for splicing events by SUPPA2 (Trincado et al. 2018). Differential alternative splicing (DAS)was calculated for each event based on abundance of transcripts with and without inclusion of those eventsby SUPPA2 (Trincado et al. 2018).
-
-### Generic pre-computed bedMethyl input support
-
-* **Defer** [ ] Support bedMethyl as a generic pre-computed methylation input format for any mC assay (WGBS, EMseq, dmC), not just dmC. Currently bedMethyl handling is exclusively gated behind dmC wildcard constraints (`_DMC_WC`). The underlying scripts (`validate_dmc_input.py`, `bedmethyl_to_cx_report.py`) are already assay-agnostic — the limitation is purely in rule routing.
-  * **Current state**: A sample with `Assay: WGBS` and `Read_files: /path/to/precomputed.bed.gz` fails because (1) excluded from dmC rules by `_DMC_WC`, (2) `define_cx_report_input()` routes it to Bismark expecting FASTQs.
-  * **Approach**: Add `bedMethyl` as a valid Assay in `VALID_ASSAYS` (maps to `mC` env). Modify `define_cx_report_input()` and wildcard constraints to route bedMethyl samples to the conversion pipeline. Reuse existing `get_dmc_input` → `copy_bedmethyl_input` → `convert_bedmethyl_to_cx_report` chain.
-  * **Alternative**: Add an optional `Input_format` column (FASTQ/BAM/bedMethyl) to separate assay type from input format. More flexible but larger change.
-
-### ATAC-seq input sample support
-
-* [ ] **Defer** Support calling ATAC peaks with Input
-
-### CUT&RUN / CUT&TAG support 
+#### CUT&RUN / CUT&TAG support
 
 * [ ] **high priority** Support CUT&RUN / CUT&TAG nomenclature + analysis
 
-## UI/UX
+### UI/UX
 
-### Handling IDR failures
-
-* [x] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and here reflects the biology of the S. pombe samples. If we can't work around the minimum requirement of 20 peaks by parameterizing IDR differently, we should also choose a different mark for the S. pombe test case that will be more likely to give a larger number of peaks. In any case, an IDR failure of this kind should not be a pipeline failure, and we should gracefully recover/continue and report. **Done**: `idr_analysis_replicates` now checks IDR exit code instead of blanket `|| true`. On failure: emits a clear warning banner (cause, peak counts, explanation that this is analytical not a bug), creates empty IDR output files, and continues. Downstream `best_peaks_pseudoreps` already handles IDR=0 correctly — peak selection uses merged ∩ pseudoreplicate consistency, IDR is informational only. `mv` of PNG plot is now conditional on IDR success. Postrun test updated to allow empty IDR peak files.
-
-### Configuration fileset
-
-* [x] Change all references to the "config file" to refer to it as the "options file". This is currently config.yaml. It should become epicc-options.yaml. This will be an extensive rename - Make sure this change is uniformly applied throughout the workflow, documentation, test cases, and the builder. Keep the config/ directory name as-is. A full run configuration is actually the composite of a sample sheet and the information contained in the options file. **Done**: Renamed `config/config.yaml` → `config/epicc-options.yaml`, all test config files → `test_options_*.yaml`. Updated all references across workflow, rules, scripts, tests, builder, and documentation.
+#### Configuration fileset
 
 * [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries. Note: probably we want to select specific settings and explicitly expose them as CLI params through the new epicc CLI wrapper.
 
@@ -52,9 +28,114 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Clean up all entries with personal information (cluster paths and email addresses)
 
-### refactor sample sheet
+#### Skip mCHG/mCHH analysis for animal genomes
 
-#### New format
+* [ ] **high priority** Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation. **Decision: `methylation_contexts` list.** Initially support CG, CHG, CHH only. Enables full customization (including CHH for mammalian brain). Expand to arbitrary subcontexts in future PR, but also CAG, CAA, etc. Need tests for selecting arbitrary subcontexts like CAG, CAA. **corresponding action** Change the config file for mC_context: "all" to list of contexts `["CG", "CHG", "CHH"]`, and use it appropriately throughout the pipeline (e.g. in combined_analysis, to extract which bigwigs to generate and use in plots, and for which context to use in R_call_DMRs script. Only for these three contexts first, defer for other subcontexts.
+
+#### Provide a front-end CLI executable script
+
+* [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
+
+* [ ] for 'epicc validate', capture the snakemake output silently (all the rules that would run, the files that would be removed, etc..) and only print out the diagnostic/results of the command.
+
+* [ ] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway.
+
+### Performance/Resource Usage
+
+#### Full code review of snakemake rules
+
+* [ ] Do a full code review of the complete workflow with parallel subagents, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis.
+
+### Testing
+
+#### H. sapiens test case
+
+* [ ] Re-examine hg38 chr21 test data quality. The current dataset has limitations:
+  * **sRNA**: EN-TEx sRNA libraries are rRNA-depleted total RNA, not true miRNA-seq. No miRNAs detected in the chr21 subset (zero reads in 21-24 nt range). Consider sourcing dedicated miRNA-seq libraries (e.g. TCGA miRNA-seq) or adding a second organism's sRNA test that exercises the miRNA discovery path.
+  * **dmC**: Only a pre-computed bedMethyl sample (HG002). Adding a modBAM sample would exercise the `modkit pileup` path (alignment, pileup, `--combine-mods` handling) which is currently untested in integration.
+  * **mC coverage**: ~~WGBS samples have very low chr21 mapping rates (~0.001%), resulting in sparse methylation data that causes PCA failures and uninformative DMR calls. May be inherent to the chr21 subset approach with whole-genome libraries.~~ **Fixed**: Root cause was Snakemake's `OMP_NUM_THREADS` export breaking bowtie2 inside bismark (see commit caa0809). WGBS samples now map at 99.8-99.9%. mCHG/mCHH PCA plots are still empty/corrupt because animals lack asymmetric methylation — those contexts contain only background false-positive calls.
+
+### Known Issues/Bugs
+
+* [ ] Chromap dropping >90% reads from ColCEN PE test data.
+
+* [ ] Chromap SE output not getting properly piped/handled downstream by samtools (see ColCEN test)
+
+## Deferred
+
+### Documentation
+
+* [ ] **Defer** Update README continuously after each additional modifications.
+
+### Analysis
+
+#### (Differential) splicing analysis for RNAseq
+
+* [ ] **deferred for future PR** heavy pipeline. Here is what was used in my MBD paper:
+To look for novel splicing changes that occurred within the mC reader mutants, the reads were mapped with STAR (Dobin et al. 2013) were processed by StringTie and merged together (Pertea et al. 2015) into a master novel transcriptome comprising splicing events from TAIR10 and ones uniquely identified withinthis study. Then reads underwent lightweight alignment using Salmon version 1.4.0 (Patro et al. 2017) against the novel transcriptome from StringTie. Novel and known transcripts belonging to the same genewere analysed for splicing events by SUPPA2 (Trincado et al. 2018). Differential alternative splicing (DAS)was calculated for each event based on abundance of transcripts with and without inclusion of those eventsby SUPPA2 (Trincado et al. 2018).
+
+#### Generic pre-computed bedMethyl input support
+
+* **Defer** [ ] Support bedMethyl as a generic pre-computed methylation input format for any mC assay (WGBS, EMseq, dmC), not just dmC. Currently bedMethyl handling is exclusively gated behind dmC wildcard constraints (`_DMC_WC`). The underlying scripts (`validate_dmc_input.py`, `bedmethyl_to_cx_report.py`) are already assay-agnostic — the limitation is purely in rule routing.
+  * **Current state**: A sample with `Assay: WGBS` and `Read_files: /path/to/precomputed.bed.gz` fails because (1) excluded from dmC rules by `_DMC_WC`, (2) `define_cx_report_input()` routes it to Bismark expecting FASTQs.
+  * **Approach**: Add `bedMethyl` as a valid Assay in `VALID_ASSAYS` (maps to `mC` env). Modify `define_cx_report_input()` and wildcard constraints to route bedMethyl samples to the conversion pipeline. Reuse existing `get_dmc_input` → `copy_bedmethyl_input` → `convert_bedmethyl_to_cx_report` chain.
+  * **Alternative**: Add an optional `Input_format` column (FASTQ/BAM/bedMethyl) to separate assay type from input format. More flexible but larger change.
+
+#### ATAC-seq input sample support
+
+* [ ] **Defer** Support calling ATAC peaks with Input
+
+### UI/UX
+
+#### custom adapter handling
+
+* [ ] **defer for later PR** Sequencing adapters could vary on a per-sample basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
+
+#### Explicitly handle repeats vs coding gene annotations?
+
+* [ ] **Defer for later consideration** Do we currently have a way to specify whether one or the other or both should be used in the analysis? Answer: Currently, analysis over gene is always on and there is a `te_analysis` toggle in the config to also do TE. Analysis over genes can be turned off with `full_analysis` toggle, but no TE analysis performed either in this case. Do we want to change this behavior into `full_analysis`=gene+TE (if TE file given), `gene_analysis_only`, `te_analysis_only` (if TE file given) and `no_analysis` options?
+
+### Plotting
+
+N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
+
+* [ ] **Defer** See if we can improve browser plot sample label readability
+
+* [ ] **Defer** In plotting peak stats, for now only the first 2 reps are used (empty if not, and idr only between these 2). Would be best to allow for a flexible output where all reps are shown, and all pairwise idr too. Need refactoring the way stats are compiled.
+
+* [ ] **Defer** Consider adding correlation matrix of coverage or pairwise plots between selected samples for more QC output
+
+### Codebase Hygiene
+
+* [ ] **Defer** Improve logging system (naming, concatenating, and cleaning if chosen) - currently lots of redundancy.
+
+* [ ] **Defer** Merging rules to call peaks for ChIP and TSS for RAMPAGE (both macs2), for merging regions (clusters, peaks, TSS)? Check existing conditions.
+
+### Performance/Resource Usage
+
+#### Speeding up bigwig conversion
+
+* [ ] **Defer** Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others? Should be actively maintained.
+
+## Complete
+
+### Documentation
+
+* [x] Update README and CLAUDE.md to suggest creating a conda environment named epicc instead of smk9. Rename the config file epicc-env.txt. **Done**: Renamed `config/smk9.txt` → `config/epicc-env.txt`, updated all references in README.md, CLAUDE.md, validate_pombe.sh, tests/unit/README.md, test_rule_commands.py.
+
+### UI/UX
+
+#### Handling IDR failures
+
+* [x] How can we better handle IDR failures like in the case of the S. pombe test case? It shouldn't be a failure in the pipeline sense - it's an analytical outcome, and here reflects the biology of the S. pombe samples. If we can't work around the minimum requirement of 20 peaks by parameterizing IDR differently, we should also choose a different mark for the S. pombe test case that will be more likely to give a larger number of peaks. In any case, an IDR failure of this kind should not be a pipeline failure, and we should gracefully recover/continue and report. **Done**: `idr_analysis_replicates` now checks IDR exit code instead of blanket `|| true`. On failure: emits a clear warning banner (cause, peak counts, explanation that this is analytical not a bug), creates empty IDR output files, and continues. Downstream `best_peaks_pseudoreps` already handles IDR=0 correctly — peak selection uses merged ∩ pseudoreplicate consistency, IDR is informational only. `mv` of PNG plot is now conditional on IDR success. Postrun test updated to allow empty IDR peak files.
+
+#### Configuration fileset
+
+* [x] Change all references to the "config file" to refer to it as the "options file". This is currently config.yaml. It should become epicc-options.yaml. This will be an extensive rename - Make sure this change is uniformly applied throughout the workflow, documentation, test cases, and the builder. Keep the config/ directory name as-is. A full run configuration is actually the composite of a sample sheet and the information contained in the options file. **Done**: Renamed `config/config.yaml` → `config/epicc-options.yaml`, all test config files → `test_options_*.yaml`. Updated all references across workflow, rules, scripts, tests, builder, and documentation.
+
+#### refactor sample sheet
+
+##### New format
 
 * [x] New sample sheet format streamlines and clarifies input specifications. Controls can now be arbitrary samples (WCE for yeast ChIP, RNA-seq for RAMPAGE, etc.) referenced by Sample_ID rather than a boolean flag. **Done**: New format with 9 columns (Sample_ID, Assay, Genome, Levels, Replicate_ID, Read_files, Read_layout, IP_target, Control). Central logic in `workflow/scripts/sample_sheet.py`. Migration script at `scripts/migrate_sample_sheet.py`.
   * [x] Update Snakefile sample-sheet parsing to read the new columns and build sample metadata accordingly. **Done**: `read_sample_sheet()` + `add_compat_columns()` in Snakefile.
@@ -66,7 +147,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   | Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
   |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
   | [freetext] | [ChIP_broad, ChIP_narrow, ATAC, RNAseq, RAMPAGE, sRNA, WGBS, WGBS_nd, PBAT, EMseq, dmC] | [freetext] | [freetext] | [freetext] | FASTQ SE:[/path/to/file/name.r1.fq], FASTQ PE:[/path/to/file/name.r1.fq,/path/to/file/name.r2.fq], BAM SE or PE: [/path/to/file/name.bam], SRA: [SRRxxxxx], SRA merge multiple:   [SRRxxxxx+SRRxxxxx+SRRxxxxx] | [SE or PE] | [freetext name of IP target or control, e.g. H3K9me2, or Input, WCE, etc.] required for ChIP_broad/ChIP_narrow | [valid sample ID] |
-  
+
   Sample_ID: a name that uniquely identifies this sample. Will be used to track the sample internally, and can be used to assign controls to ChIP_broad, ChIP_narrow, and RAMPAGE Assays. We will not enforce any format, other than uniqueness, but the epicc-builder app should suggest a concise ID (see epicc-builder specification).
   Assay: controlled vocabulary, replaces data_type/sample_type and provides the menu of accepted assay   types for analysis.
   Genome: Reference genome name
@@ -77,7 +158,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   IP_target: Required for all ChIP_broad and ChIP_narrow samples, including controls. Describes what was pulled down — e.g. `H3K9me2` for an IP sample, or `Input`, `WCE`, `IgG` for a control sample.
   Control: Must be a valid Sample_ID. Used only for normalizing ChIP_broad, ChIP_narrow, and RAMPAGE samples. Validation rules: (1) the referenced Sample_ID must exist in the sheet, (2) a control sample must not itself reference another control (no chaining), (3) it is an error to specify a Control for non-ChIP/RAMPAGE assays, (4) multiple IP samples may share the same control.
 
-##### Input validation
+###### Input validation
 
 * [x] Per-field validation rules are defined in [`dev/docs/sample-sheet-spec.md`](sample-sheet-spec.md) (the canonical specification) and implemented in `workflow/scripts/samplefile_validation.py`. The epicc-builder app should implement the same rules. See the spec file for the full list of per-field constraints, cross-field checks, and derived name definitions.
 
@@ -95,25 +176,25 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Preemptive input checks for extra-output target files. **Done**: `check_extra_output_files()` in `samplefile_validation.py` validates the optional target files referenced in the options file (`browser_target_file`, `heatmap_target_file`, `motif_target_file`, `rnaseq_target_file`, `srna_target_file`, `rnaseq_background_file`). Each check is gated on the corresponding analysis flag (`full_analysis`, `motifs`, `GO`) so users who haven't enabled an analysis aren't required to supply a real file. Default placeholder paths (e.g. `data/target_loci.bed`) are recognized and skipped to avoid false positives on out-of-the-box configs. The `browser_target_file` validator enforces the extended-BED schema described in this TODO entry: chrom + start + end + label (non-empty, must not start with `-`) + binsize (integer ≥ 1) + optional comma-separated `htstart`/`htwidth` (paired or absent). Wired into the Snakefile alongside `check_table` / `check_genome_config`. Tests in `tests/unit/test_samplefile_validation.py`.
 
-#### Harmonize analysis_samplefiles
+##### Harmonize analysis_samplefiles
 
 * [x] Analysis samplefiles need to be updated to follow the conventions of the new input samplefile format. **Done**: `analysis_samplefile_*.tsv` now uses new-format columns (Assay, Genome, Levels, IP_target, env, sample_name).
 
-#### Remove old format detection in samplefile_validation.py
+##### Remove old format detection in samplefile_validation.py
 
 * [x] Old format TSVs didn't always have headers, so we can't rely on column names for detection. Let's just get rid of the detection routine and make sure the README.md informs users that they can run migrate_sample_sheet.py if they're using the old format. **Done**: Removed old-format detection from `samplefile_validation.py` and `sample_sheet.py`. Removed `OLD_COLNAMES` constant (migration script defines its own). Added usage example to README.md and sample-sheet-spec.md.
 
 * [x] Ensure migrate_sample_sheet.py is up to date and remember to update it if any changes are made to the new sample sheet format. **Done**: Verified — handles all 9 new columns, all assay types, Control linking, and Sample_ID generation.
 
-#### Derived Names
+##### Derived Names
 
 * [x] For samples without {IP_target}, we should avoid "____" in the filenames. Since many samples could lack an IP_target, best if we can do this by just eliminating the term and spacer, avoiding a placeholder like __NA__. This may already be the case, in which case we should just document the fact in sample-sheet-spec.md. **Done**: `build_analysis_name()` now filters empty parts before joining. E.g. `RNAseq__WT_cell__Spombe` (not `RNAseq__WT_cell____Spombe`). Documented in sample-sheet-spec.md.
 
-#### epicc-builder
+##### epicc-builder
 
 * [x] Currently, epicc-builder (as referenced in the README) is a standalone web app hosted remotely, and currently broken. We should develop a new version of epicc-builder as a self-contained HTML5/javascript app that helps users create a valid sample sheet with a tabular GUI. It will be deployed as a single HTML file that can be opened offline in any modern browser. **Done**: `tools/epicc-builder.html` (Tabulator 6.x, ~1165 lines), symlinked at repo root.
 
-##### [x] Implementation Stage 1: Sample sheet preparation helper
+###### [x] Implementation Stage 1: Sample sheet preparation helper
 
 **Prerequisite research**: Identify a suitable JS library for table drawing andwidgets (e.g. Handsontable, AG Grid, or a lightweight alternative that can bebundled into a single HTML file).  **Decision reached: use [tabulator] <https:/tabulator.info/>**.
 
@@ -142,7 +223,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 * [x] Cells with unresolved warnings should show an indicator of this in the UI.Possibilities are yellow cell border or small yellow circle or exclamation mark inthe cell. Same for errors, but with red. **Done**: red left border for errors, yellow for warnings.
 * [x] When a user enters an IP_target, we should compare with the list of knownmarks, and if the user has entered a ChIP_broad or ChIP_narrow value that conflictswith the recommendation in the known marks, we should warn. **Done**: `KNOWN_MARKS` constant with regex patterns from `config/epicc-options.yaml` peaktype mappings. Warning emitted during validation when assay conflicts with recommendation.
 
-##### [x] Implementation Stage 2: Config file helper and concordance with original hosted app
+###### [x] Implementation Stage 2: Config file helper and concordance with original hosted app
 
 * [x] Augment the sample sheet builder with another interactive section just above allowing for the creation, editing, removal of the factors that will be used in Levels in the sample file. This can be something like an New Factor text field and button. Committed factors will then appear as tiles showing their name with an "x" inside to enable removal. Then, in the sample sheet builder, instead of showing the Levels as a table column, we should automatically populate/update the table GUI with columns having the names of the factors, so the users will just enter the level value there. The TSV will keep the same factor:level format for the Levels column, so epicc-builder should handle this transformation on import/export. **Done**: Factor panel with add/remove tiles, dynamic `_factor_*` columns replacing Levels, import/export round-trips correctly.
 
@@ -151,11 +232,11 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
   * [x] The dedicated sample file check button probably isn't necessary since we're doing real time validation. **Done**: Real-time validation replaces the button.
   * [x] Keep all of the jokey prompts in the options file form. **Done**: All jokey prompts from the original Streamlit app preserved (full_analysis, te_analysis, GO, trimmed_fastqs, aligned_bams, motifs, nextflex, structural RNA, stranded heatmaps, browser TE, etc.).
 
-##### [x] Deployment
+###### [x] Deployment
 
 * [x] Host the new epicc-builder on Github Pages so users who are primarily working with a remote installation of epicc don't necessarily have to download the HTML file and run it locally. **Done**: GitHub Actions workflow `.github/workflows/deploy-builder.yml` deploys `tools/epicc-builder.html` as `index.html` on push to main. Requires enabling GitHub Pages (Source: GitHub Actions) in repo Settings > Pages.
 
-##### [x] Tweaks
+###### [x] Tweaks
 
 * [x] Show help text for column headers on mouse over of headers specifically, instead of just on click. Retain current show-on-click behavior for header row and value cells. **Done**: Added `headerMouseEnter` callbacks alongside existing `headerClick` and `cellClick` in `descHooks()` and factor column inline hooks.
 
@@ -163,7 +244,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Promote the Reference Genomes section out of the current Config file form to a separate top-level menu tab appearing just to the right of the EPICC brand (and becoming the new link destination for EPICC). The new layout becomes Reference Genomes | Samples | Options. The data from the Reference Genomes page will constrain which Reference Genomes are available to choose from in the sample sheet (Genomes field becomes a dropdown list), and will still be used as it is now to populate the relevant section of the options file. **Done**: New Reference Genomes tab with genome name management UI (add/remove tiles), per-genome config forms, Genome column in Samples tab constrained to dropdown (freetext still allowed). Genome data flows into YAML export via `configState.genomes`. EPICC brand links to genomes tab.
 
-##### [x] Bugs
+###### [x] Bugs
 
 * [x] Sample sheet example should validate, be exportable. **Done**: Fixed PE example rows to include R1,R2 comma-separated paths. Removed `_example` skip guards from validation and export. Example rows now validate normally and are included in TSV export.
 
@@ -171,11 +252,7 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] Fix rows selected on click in any column - should only be selected when clicking on the leftmost column selection box. **Done**: Added `selectableRowsCheck` returning false to block automatic row-click selection; checkbox column's explicit `toggleSelect()` call bypasses the check.
 
-### custom adapter handling
-
-* [ ] **defer for later PR** Sequencing adapters could vary on a per-sample basis. Maybe there should be an optional sample file column for custom adapters and we remove the global params from epicc-options.yaml.
-
-### species-specific parameters
+#### species-specific parameters
 
 * [x] Reference Genome Species (as in Species-dependent parameters in epicc-options.yaml) should probably be defined as their binomial like Zea_mays to avoid collisions. Could we just get rid of that section altogether and stick ncbiID and go_database along with the params for each reference genome? We can just compute the genome size of the reference and not bother with it in the config, same with —genomeSAindexNbases, no? **Done**: Species params inlined into genome entries (earlier refactor). `genomesize` and `star_index` are now auto-computed from the reference FASTA by `compute_genome_stats` rule; user values in options file are optional overrides. Removed from test configs; kept in main config as override examples.
 
@@ -187,31 +264,21 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
   If we cannot find a match (and the option is set to auto), gracefully warn and skip the dependent analysis. If the user overrides, and their value doesn't match an actual OrgDb, then Error instead of warn.
 
-### Eliminate redundant requirement for GTF
+#### Eliminate redundant requirement for GTF
 
 * [x] Currently, users must supply both a GFF annotation file and GTF transcript annotation file. We provide instructions for deriving the latter from the former in the README.md, but we should instead simply try to create the GTF without requiring it from the user. If GTF creation fails we can raise a clear error message and ask the user to supply one explicitly and re-run. **Done**: `gtf_file` defaults to `<auto>`, auto-derived from GFF via `gffread` in `check_gtf` rule. User-provided paths still work as overrides. `gffread` added to `epibutton.yaml`. Validation no longer requires `gtf_file`. Builder shows `<auto>` placeholder and skips it on YAML export.
 
-### Use Infernal workflow for building structural_rna_depletion FASTA database
+#### Use Infernal workflow for building structural_rna_depletion FASTA database
 
 * [x] Current suggested approach is cumbersome and results in a FASTA database that isn't ref genome specific. If we instead just run Infernal (with lots of threads and paralellized by chromosome if on the cluster) and filter overlapping hits, determine an e-value threshold, we could incorporate this into the pipeline in the event that the user doesn't specify an override file. Research whether this approach will have significantly different outcomes than the currently prescribed approach. **Done**: `structural_rna_fafile` defaults to `<auto>`. New `download_rfam` rule fetches and presses Rfam CMs (shared across genomes). New `build_structural_rna_db` rule runs `cmscan` per chromosome/contig (parallelized via `xargs -P`; contigs < 1 Mbp binned together), filters clan overlaps, extracts FASTA via `bedtools getfasta`. Uses `--cut_ga` (Rfam gathering thresholds) by default; configurable via `infernal_threshold` option (`"ga"` or numeric E-value). `infernal` added to `epibutton.yaml`. Validation no longer requires `structural_rna_fafile`. epicc-builder updated with `<auto>` placeholder and `infernal_threshold` in sRNA options.
 
-### Skip mCHG/mCHH analysis for animal genomes
-
-* [ ] **high priority** Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation. **Decision: `methylation_contexts` list.** Initially support CG, CHG, CHH only. Enables full customization (including CHH for mammalian brain). Expand to arbitrary subcontexts in future PR, but also CAG, CAA, etc. Need tests for selecting arbitrary subcontexts like CAG, CAA. **corresponding action** Change the config file for mC_context: "all" to list of contexts `["CG", "CHG", "CHH"]`, and use it appropriately throughout the pipeline (e.g. in combined_analysis, to extract which bigwigs to generate and use in plots, and for which context to use in R_call_DMRs script. Only for these three contexts first, defer for other subcontexts.
-
-### Explicitly handle repeats vs coding gene annotations?
-
-* [ ] **Defer for later consideration** Do we currently have a way to specify whether one or the other or both should be used in the analysis? Answer: Currently, analysis over gene is always on and there is a `te_analysis` toggle in the config to also do TE. Analysis over genes can be turned off with `full_analysis` toggle, but no TE analysis performed either in this case. Do we want to change this behavior into `full_analysis`=gene+TE (if TE file given), `gene_analysis_only`, `te_analysis_only` (if TE file given) and `no_analysis` options?
-
-### Configurable output directory
+#### Configurable output directory
 
 * [x] Allow specifying an output directory other than the hardcoded `results/`. **Done**: Added `output_dir` and `genome_dir` config keys with defaults `"results"` and `"genomes"`. Python context uses `RESULTS_DIR`/`GENOMES_DIR` variables; shell blocks use `{config[output_dir]}`/`{config[genome_dir]}` Snakemake substitution. 827 path references updated across 9 files via `dev/refactor_paths.py`. CLI wrapper wired with `--output-dir` and `--genome-dir` flags. Validated with pombe dry-run using both default and custom directories.
 
-### Provide a front-end CLI executable script
+#### Provide a front-end CLI executable script
 
 * [x] Currently, users must call snakemake to run the pipeline. Instead, we should build a project-specific executable wrapper script (called epicc) that will expose the necessary command line parameters for runtime configuration of the pipeline and calling snakemake. **Done**: `epicc` Python script at repo root with subcommands: `run`, `dry-run`, `validate`, `perf`, `unlock`, `clean`. Auto-detects SLURM vs local execution. Passthrough to snakemake via `--` separator. `--output-dir` and `--genome-dir` flags for configurable output directories. See `dev/docs/design-decisions.md` for rationale.
-
-* [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
 
 * [x] Add `DAG` and `rulegraph` generation options to subcommand `dry-run` and `validate` (output to png with dot). **Done**: `epicc dry-run` and `epicc validate` accept `--dag FILE` / `--rulegraph FILE`; format inferred from extension (png/svg/pdf via graphviz `dot`, or `.dot` for raw text).
 
@@ -223,38 +290,13 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake. Also, does not seem to work ("Parsing .snakemake/log/2026-04-24T105453.098500.snakemake.log ... No completed jobs found in log." when some jobs were completed) **Done**: Renamed to `epicc perf` (chose `perf` over `perf-profile` for brevity and consistency with other single-word subcommands). Default mode now aggregates all logs from the same resumed run, identified by `output_dir` + `analysis_name` wildcards extracted from log content. Fixed the "No completed jobs found" bug — the parser was missing SLURM-submitted jobs (which use `Job N has been submitted with SLURM jobid M (log: .../rule_RULE/WC/...)` instead of the verbose `rule X:` block).
 
-* [ ] for 'epicc validate', capture the snakemake output silently (all the rules that would run, the files that would be removed, etc..) and only print out the diagnostic/results of the command.
-
-* [ ] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway.
-
-## Plotting
-N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
-
-* [ ] **Defer** See if we can improve browser plot sample label readability
-
-* [ ] **Defer** In plotting peak stats, for now only the first 2 reps are used (empty if not, and idr only between these 2). Would be best to allow for a flexible output where all reps are shown, and all pairwise idr too. Need refactoring the way stats are compiled.
-
-* [ ] **Defer** Consider adding correlation matrix of coverage or pairwise plots between selected samples for more QC output
-
-## Codebase Hygiene
+### Codebase Hygiene
 
 * [x] Rename shared routines to generic names, e.g. merging_chip_replicates → merging_bam_replicates. **Done**: 8 chip-specific rule names renamed to generic names across all rule files, resource config, tests, and profiling scripts (filter_chip_pe → filter_bam_pe, make_chip_stats_pe → make_mapping_stats_pe, pe_or_se_chip_dispatch → dispatch_final_bam, merging_chip_replicates → merging_bam_replicates, prepping_chip_peak_stats → prepping_peak_stats, plotting_peaks_stats_chip_tf → plotting_peak_stats, plus SE variants).
 
-* [ ] **Defer** Improve logging system (naming, concatenating, and cleaning if chosen) - currently lots of redundancy.
+### Performance/Resource Usage
 
-* [ ] **Defer** Merging rules to call peaks for ChIP and TSS for RAMPAGE (both macs2), for merging regions (clusters, peaks, TSS)? Check existing conditions.
-
-## Performance/Resource Usage
-
-### Full code review of snakemake rules
-
-* [ ] Do a full code review of the complete workflow with parallel subagents, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis.
-
-### Speeding up bigwig conversion
-
-* [ ] **Defer** Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others? Should be actively maintained.
-
-### Data acquisition and preparation
+#### Data acquisition and preparation
 
 * [x] Switch to direct fastq.gz downloads from ENA for download speed, better transitory disk space usage? Maybe add alternative fastq_path=ENA, or try ENA first and fall back to SRA. Look into storing SRA downloads as compressed FASTQs to avoid writing huge uncompressed data to disk, and the post-hoc wait for compression. **Done**: ENA-first downloads via `workflow/scripts/ena_download.sh` with automatic fallback to fasterq-dump. ENA provides pre-compressed `.fastq.gz`, eliminating uncompressed intermediates. `fasterq-dump --temp "$TMPDIR"` uses SLURM scratch instead of `/tmp`.
 
@@ -262,7 +304,7 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] pigz appears to be limited to 4 threads for at least local runs, which can bottleneck the pipeline when there are few samples, but with a high read volume. **Done**: New `download` resource preset with 8 threads (up from 4 in `heavy`). Download rules (`get_fastq_pe`, `get_fastq_se`) now use this preset.
 
-### Disk usage
+#### Disk usage
 
 * [x] See if we can refactor the conda envs to decrease required disk space - current config uses ~32GiB. Are there any low-hanging dependency fruits that can be removed? Would consolidation of the majority of the analysis packages into a single environment while maintaining packages with problematic dependencies or dependency version conflicts be an optimal solution to save disk space and initial installation time by eliminating core package redundancy? **Done**: Consolidated 8 → 5 envs. Merged `epibutton_upset` into `epibutton` (removed install_github hack), `epibutton_srna` into `epibutton_rnaseq` (shared R/Bioconductor stack), `epibutton_dmc` into `epibutton_mc` (independent aligners, no conflicts). Estimated ~3-4.5 GB savings.
 
@@ -276,19 +318,19 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] ChIPseq.smk - we should not be writing SAM files to disk. Wasteful of both network storage I/O (slow) and disk space. **Done**: Merged bowtie2_map + filter_chip rules into single piped rules (filter_chip_pe, filter_chip_se). Bowtie2 stdout pipes directly into samtools view → fixmate → sort, eliminating the SAM-to-disk step and reducing intermediate BAMs from 3 to 1.
 
-### Read trimming
+#### Read trimming
 
 * [x] Explore faster options than cutadapt, like fastp or skewer, which supports automatic Illumina adapter detection (while still allowing explicit overrides in the options file). There are a number of different use cases for read trimming - let's investigate all to make sure a substitution would cover all of them. **Done**: Replaced cutadapt with fastp across the pipeline. Config restructured: `trimming_quality` (CLI strings) replaced with tool-agnostic `quality_threshold`, `min_read_length`, `trim_front` keys. Standard Illumina adapters set to `"auto"` (fastp auto-detection); non-standard adapters (NextFlex, Nextera) kept explicit. Trimming metrics changed from `.txt` to `.json`; HTML QC reports added. All 6 downstream stats rules updated to parse fastp JSON. epicc-builder config form updated. TF keys removed.
 
-### Read Mapping
+#### Read Mapping
 
 * [x] (ChIP/ATAC):  look at adding option to use [Chromap](https://github.com/haowenz/chromap) for ~10X speedup (and set as default), consider supporting different sensitivity levels if possible as with bt2. **Done**: Chromap added as default aligner for ChIP/ATAC (`chip_aligner`/`atac_aligner` config keys). Auto-falls back to bowtie2 for `repeat`/`repeatall` strategies (chromap lacks `-k 100` multi-mapping). MAPQ filter extracted from config instead of hardcoded. Dual-format metrics parsing in stats rules. epicc-builder updated with aligner selection UI.
 
-### Local
+#### Local
 
 * [x] Check snakemake log times for the S. pombe integration test to profile each stage of the DAG. **Done**: Use `dev/profile_snakemake_log.py` to profile runs. Top bottleneck was `plotFingerprint` (45% CPU); addressed via auto-scaled `--numberOfSamples`, optional `chip_fingerprint_plots` toggle, and per-rep-only restriction. Also added `samtools sort -m` to `filter_bam_pe`/`se`. Full pipeline completes in ~25 min on 56 cores (down from ~42 min pre-optimization).
 
-### Cluster
+#### Cluster
 
 * [x] Reconsider the resource request delineations, and maybe add more fine-grained/task-specific options like proc-intensive/himem-lowproc/mapping, etc. **Partially done**: Bismark rules now compute `tmp_mb` dynamically from input FASTQ sizes instead of using a static tier. Bismark resource tier bumped to `*max` (16 threads). `--multicore` factor changed from `threads//3` to `threads//2` for better CPU utilization. Current tier system (`low`/`standard`/`download`/`heavy`/`heavier`/`max`/`single`) covers the main use cases; further per-rule tuning can be done as profiling data comes in.
 
@@ -304,15 +346,15 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] Split workflow-specific resource tuning from cluster-specific execution settings, following Snakemake 8+ conventions. **Done**: workflow profile at `profiles/default/config.yaml` carries the per-rule `set-resources` / `set-threads` maps (167 rules covered, with named tiers via YAML anchors). `profiles/slurm/config.yaml` is now a cluster-specific *example* (executor, account, partition, precommand) with `EDIT:` markers and an empty `set-resources:` stub for site overrides. Rule bodies no longer carry `qos=` or `tmp_mb=`; the only `disk_mb=lambda` remaining is the dynamic Bismark sizing, kept in the rule body because `set-resources:` does not accept free-form lambdas. The `resources:` block has been removed from `epicc-options.yaml` (no rule references `config["resources"]`). `epicc` CLI passes `--workflow-profile profiles/default` automatically. README/RTD/builder doc updates folded into the deferred docs pass.
 
-## Testing
+### Testing
 
-### Methylation assay types and testing
+#### Methylation assay types and testing
 
 * [x] Add named assay types for non-directional WGBS (`WGBS_nd`) and PBAT (`PBAT`) with correct bismark flags (`--non_directional`, `--pbat`). **Done**: WGBS_nd and PBAT added throughout codebase (sample_sheet.py, mC.smk, config, builder, tests). See design-decisions.md for rationale.
 
 * [x] Create comprehensive mC dry-run test covering all methylation code paths. **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) validates WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl workflows including parameter routing, replicate merging, DMR calling, and CX report conversion.
 
-### Schizosaccharomyces pombe test case
+#### Schizosaccharomyces pombe test case
 
 * [x] Add S. pombe integration test for faster development, user installation validation, and local single-host execution as well as cluster execution. **Done**: 17 samples (10 ChIP, 4 RNA-seq, 3 sRNA), 259 pipeline steps, ~1h 11m on gemmule with 56 threads. See `tests/integration/data/test_options_pombe.yaml` and `tests/integration/data/pombe_design.md`.
 
@@ -338,7 +380,7 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] Fix pombe test sample metadata: rename Ekwall `veg` → `WT` (HU3112 is WT), fix Kim/Chang WCE controls from `IP_target: Input` → `WCE` (SRR5445712 is whole-cell extract, not Input). **Done**: Updated test_samples_pombe.tsv, test_pombe_dryrun.py, test_pombe_postrun.py, test_sample_sheet.py.
 
-### Complete A. thaliana ColCEN test case
+#### Complete A. thaliana ColCEN test case
 
 * [x] Remove files associated with the Chr5 subset. Let's just target the full ColCEN genome. **Done**: `git rm -r tests/integration/data/ColCEN_Chr5/`, `test_options_chr5.yaml`, `test_samples_chr5.tsv`.
 
@@ -352,32 +394,23 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
   * [x] Document the provenance of all datasets as previously done with S. pombe and H. sapiens test cases. **Done**: `tests/integration/data/colcen_design.md` and `tests/integration/data/pombe_design.md`.
 
-### H. sapiens test case
+#### H. sapiens test case
 
 * [x] Add H. sapiens Chr21 test case.
 
-* [ ] Re-examine hg38 chr21 test data quality. The current dataset has limitations:
-  * **sRNA**: EN-TEx sRNA libraries are rRNA-depleted total RNA, not true miRNA-seq. No miRNAs detected in the chr21 subset (zero reads in 21-24 nt range). Consider sourcing dedicated miRNA-seq libraries (e.g. TCGA miRNA-seq) or adding a second organism's sRNA test that exercises the miRNA discovery path.
-  * **dmC**: Only a pre-computed bedMethyl sample (HG002). Adding a modBAM sample would exercise the `modkit pileup` path (alignment, pileup, `--combine-mods` handling) which is currently untested in integration.
-  * **mC coverage**: ~~WGBS samples have very low chr21 mapping rates (~0.001%), resulting in sparse methylation data that causes PCA failures and uninformative DMR calls. May be inherent to the chr21 subset approach with whole-genome libraries.~~ **Fixed**: Root cause was Snakemake's `OMP_NUM_THREADS` export breaking bowtie2 inside bismark (see commit caa0809). WGBS samples now map at 99.8-99.9%. mCHG/mCHH PCA plots are still empty/corrupt because animals lack asymmetric methylation — those contexts contain only background false-positive calls.
-
-### Expand rule-level dry-run tests
+#### Expand rule-level dry-run tests
 
 * [x] Expand dmC dry-run tests to cover the full `mC.smk` rule (all bismark workflows + dmC). **Done**: `tests/integration/test_mC_dryrun.py` (52 tests) covers WGBS, WGBS_nd, PBAT, EMseq, dmC modBAM, and dmC bedMethyl including parameter routing, replicate merging, DMR calling, and CX report conversion. The original `test_dmc_dryrun.py` was merged into this and removed.
 * [x] Add similar lightweight dry-run test modules for other rule files (ChIP, RNA, sRNA, ATAC) using mock inputs and a fake genome, following the mC test pattern. **Done**: `test_ChIP_dryrun.py` (22 tests), `test_ATAC_dryrun.py` (24 tests), `test_RNA_dryrun.py` (27 tests), `test_sRNA_dryrun.py` (24 tests). PBAT/EMseq already covered in `test_mC_dryrun.py`. Combined_analysis and folding dmc into mC still TBD.
 
-### Add test dataset documentation
+#### Add test dataset documentation
 
 * [x] Add a test design doc similar to hg38_chr21_design.md for S. pombe and A. thaliana test cases. **Done**: `tests/integration/data/pombe_design.md` and `tests/integration/data/colcen_design.md`.
 
-## Known Unknowns
+### Known Unknowns
 
 * [x] ~~For now, ChIPseq replicates are only properly merged if same paired information (all PE or all SE). Not sure what happens if both PE and SE reps are available with the same line+tissue name.~~ Mixed PE/SE analysis groups force SE treatment for merged peak calling with a startup warning. Per-replicate peaks use each sample's own layout. See `dev/docs/design-decisions.md`.
 
-## Known Issues/Bugs
+### Known Issues/Bugs
 
 * [x] PlotPCA can fail if no dimensions found. check npz results before starting PCA? **Done**: `plot_PCA_correlation` rule now catches `plotPCA` failures (insufficient data for PCA) and creates a placeholder output instead of failing the pipeline.
-
-* [ ] Chromap dropping >90% reads from ColCEN PE test data.
-
-* [ ] Chromap SE output not getting properly piped/handled downstream by samtools (see ColCEN test)
