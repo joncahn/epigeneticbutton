@@ -61,7 +61,7 @@ rampage_calltss:
 
 # Gene expression targets
 rnaseq_target_file_label: "target_genes"
-rnaseq_target_file: "default"
+rnaseq_target_file: "data/target_genes.txt"  # recognized default-stub; skipped by validator
 rnaseq_background_file: "default"
 
 # Resource allocation (minimal for dry-run)
