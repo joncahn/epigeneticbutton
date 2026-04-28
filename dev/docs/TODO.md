@@ -48,6 +48,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries. Note: probably we want to select specific settings and explicitly expose them as CLI params through the new epicc CLI wrapper.
 
+* [ ] **high priority** change default paths to genome files in epicc-options, to remove hardcoded paths from Elzar. Should we remove genomes that are not fetchable online, and/or add some that are?
+
+* [ ] Clean up all entries with personal information (cluster paths and email addresses)
+
 ### refactor sample sheet
 
 #### New format
