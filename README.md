@@ -69,7 +69,7 @@ https://epicc-builder.streamlit.app/
 
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
-   - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `EMseq` | `dmC`]
+   - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `CUT_RUN_broad` | `CUT_RUN_narrow` | `CUT_TAG_broad` | `CUT_TAG_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `EMseq` | `dmC`]
    - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
@@ -198,6 +198,26 @@ WT_leaf_Input_rep1	ChIP_narrow	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12348	PE	I
 To use different controls for different marks (e.g. H3 for one mark, H4 for another), simply assign the appropriate control Sample_ID in the `Control` column.
 
 - Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `ChIP_broad`, using `MNase` as IP_target for the light digest and `Input` for the heavy digest.
+
+### CUT&RUN / CUT&Tag
+
+- **Assay**: `CUT_RUN_broad` / `CUT_TAG_broad` for diffuse marks (H3K27me3, H3K9me2, etc.); `CUT_RUN_narrow` / `CUT_TAG_narrow` for sharp marks and TFs (H3K4me3, CTCF, etc.). All four route through the ChIP env.
+- **IP_target**: Required for all CUT&x samples including controls. Use the antibody target (e.g. `H3K27me3`, `CTCF`) for IPs and `IgG` for controls.
+- **Control**: For IP samples, the Sample_ID of the IgG control sample. Multiple IPs commonly share a single IgG (the typical CUT&RUN convention is one IgG per batch, not per replicate).
+- **Peak callers**: defaults are peak-shape-aware — `*_broad` → epic2, `*_narrow` → SEACR. MACS2 is available as a fallback. Override via `cut_callpeaks.broad_caller` / `narrow_caller` in `config/epicc-options.yaml`.
+
+CUT&RUN example (sharing a single IgG across reps):
+```
+WT_endo_H3K27me3_rep1	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310960	PE	H3K27me3	WT_endo_IgG_rep1
+WT_endo_H3K27me3_rep2	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep2	SRR8310958	PE	H3K27me3	WT_endo_IgG_rep1
+WT_endo_IgG_rep1	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310961	PE	IgG
+```
+
+CUT&Tag for a TF (single-end, defaulting to SEACR for narrow peak calling):
+```
+WT_leaf_CTCF_rep1	CUT_TAG_narrow	hg38	genotype:WT,tissue:leaf	rep1	SRR12345	SE	CTCF	WT_leaf_IgG_rep1
+WT_leaf_IgG_rep1	CUT_TAG_broad	hg38	genotype:WT,tissue:leaf	rep1	SRR12346	SE	IgG
+```
 
 ### RNA-seq
 
