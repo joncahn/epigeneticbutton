@@ -93,13 +93,19 @@ def repo_root():
 
 @pytest.fixture(scope="session")
 def snakemake_available():
-    """Check if snakemake is available."""
+    """Check if snakemake is available.
+
+    On cold compute nodes Snakemake's import-heavy startup typically
+    takes 7-10s; under NFS load it can spike past that. The fixture is
+    session-scoped, so a single timeout poisons the entire run — give
+    it a generous 60s ceiling rather than racing the cold path.
+    """
     try:
         result = subprocess.run(
             ["snakemake", "--version"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=60,
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
