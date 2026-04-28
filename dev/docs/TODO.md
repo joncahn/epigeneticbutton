@@ -223,6 +223,10 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [x] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake. Also, does not seem to work ("Parsing .snakemake/log/2026-04-24T105453.098500.snakemake.log ... No completed jobs found in log." when some jobs were completed) **Done**: Renamed to `epicc perf` (chose `perf` over `perf-profile` for brevity and consistency with other single-word subcommands). Default mode now aggregates all logs from the same resumed run, identified by `output_dir` + `analysis_name` wildcards extracted from log content. Fixed the "No completed jobs found" bug — the parser was missing SLURM-submitted jobs (which use `Job N has been submitted with SLURM jobid M (log: .../rule_RULE/WC/...)` instead of the verbose `rule X:` block).
 
+* [ ] for 'epicc validate', capture the snakemake output silently (all the rules that would run, the files that would be removed, etc..) and only print out the diagnostic/results of the command.
+
+* [ ] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway.
+
 ## Plotting
 N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
 
