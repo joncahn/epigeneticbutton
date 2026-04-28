@@ -21,6 +21,7 @@ DATA_DIR = Path(__file__).parent / "data"
 _DRYRUN_SAMPLE_SHEETS = (
     "test_samples_ATAC.tsv",
     "test_samples_ChIP.tsv",
+    "test_samples_CUT.tsv",
     "test_samples_RNA.tsv",
     "test_samples_sRNA.tsv",
     "test_samples_mC.tsv",

@@ -367,12 +367,54 @@ class TestGetPeaktype:
     def test_atac(self):
         assert get_peaktype("ATAC") == "narrow"
 
+    def test_cut_run_broad(self):
+        assert get_peaktype("CUT_RUN_broad") == "broad"
+
+    def test_cut_run_narrow(self):
+        assert get_peaktype("CUT_RUN_narrow") == "narrow"
+
+    def test_cut_tag_broad(self):
+        assert get_peaktype("CUT_TAG_broad") == "broad"
+
+    def test_cut_tag_narrow(self):
+        assert get_peaktype("CUT_TAG_narrow") == "narrow"
+
     def test_config_override(self):
         assert get_peaktype("ChIP_broad", {"ChIP_broad": "narrow"}) == "narrow"
 
     def test_no_peaktype(self):
         with pytest.raises(ValueError, match="No peak type"):
             get_peaktype("RNAseq")
+
+
+class TestCUTAssayVocabulary:
+    """Sample_sheet should treat CUT&RUN/CUT&Tag as IP_PEAK_ASSAYS routed to the ChIP env."""
+
+    def test_all_four_in_valid_assays(self):
+        for a in ("CUT_RUN_broad", "CUT_RUN_narrow",
+                  "CUT_TAG_broad", "CUT_TAG_narrow"):
+            assert a in VALID_ASSAYS
+
+    def test_all_four_route_to_chip_env(self):
+        for a in ("CUT_RUN_broad", "CUT_RUN_narrow",
+                  "CUT_TAG_broad", "CUT_TAG_narrow"):
+            assert ASSAY_TO_ENV[a] == "ChIP"
+
+    def test_peaktype_suffix_matches_designation(self):
+        for a in ("CUT_RUN_broad", "CUT_TAG_broad"):
+            assert ASSAY_TO_PEAKTYPE[a] == "broad"
+        for a in ("CUT_RUN_narrow", "CUT_TAG_narrow"):
+            assert ASSAY_TO_PEAKTYPE[a] == "narrow"
+
+    def test_in_ip_peak_assays_set(self):
+        from workflow.scripts.sample_sheet import IP_PEAK_ASSAYS
+        for a in ("ChIP_broad", "ChIP_narrow",
+                  "CUT_RUN_broad", "CUT_RUN_narrow",
+                  "CUT_TAG_broad", "CUT_TAG_narrow"):
+            assert a in IP_PEAK_ASSAYS
+        # Non-IP assays must not leak into the set
+        for a in ("ATAC", "RNAseq", "RAMPAGE", "sRNA", "WGBS", "dmC"):
+            assert a not in IP_PEAK_ASSAYS
 
 
 # ---------------------------------------------------------------------------
