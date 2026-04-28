@@ -650,7 +650,10 @@ const COLUMNS = [
 ];
 
 const VALID_ASSAYS = [
-  "ChIP_broad", "ChIP_narrow", "ATAC",
+  "ChIP_broad", "ChIP_narrow",
+  "CUT_RUN_broad", "CUT_RUN_narrow",
+  "CUT_TAG_broad", "CUT_TAG_narrow",
+  "ATAC",
   "RNAseq", "RAMPAGE",
   "sRNA",
   "WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC"
@@ -658,6 +661,8 @@ const VALID_ASSAYS = [
 
 const ASSAY_TO_ENV = {
   ChIP_broad: "ChIP", ChIP_narrow: "ChIP",
+  CUT_RUN_broad: "ChIP", CUT_RUN_narrow: "ChIP",
+  CUT_TAG_broad: "ChIP", CUT_TAG_narrow: "ChIP",
   ATAC: "ATAC",
   RNAseq: "RNA", RAMPAGE: "RNA",
   sRNA: "sRNA",
@@ -665,27 +670,50 @@ const ASSAY_TO_ENV = {
 };
 
 const VALID_ASSAYS_SET = new Set(VALID_ASSAYS);
-const CHIP_ASSAYS = new Set(["ChIP_broad", "ChIP_narrow"]);
-const CONTROL_ASSAYS = new Set(["ChIP_broad", "ChIP_narrow", "RAMPAGE"]);
+// Per-family subsets — used to constrain Control-source dropdowns
+const CHIP_ASSAYS    = new Set(["ChIP_broad", "ChIP_narrow"]);
+const CUT_RUN_ASSAYS = new Set(["CUT_RUN_broad", "CUT_RUN_narrow"]);
+const CUT_TAG_ASSAYS = new Set(["CUT_TAG_broad", "CUT_TAG_narrow"]);
+// Assays that pull down a target via antibody and call peaks against an
+// (Input/WCE/IgG) control. Share the ChIP env, peak-calling machinery,
+// and IP_target/Control sample-sheet semantics.
+const IP_PEAK_ASSAYS = new Set([
+  ...CHIP_ASSAYS, ...CUT_RUN_ASSAYS, ...CUT_TAG_ASSAYS
+]);
+const CONTROL_ASSAYS = new Set([...IP_PEAK_ASSAYS, "RAMPAGE"]);
 
-// Which assays can provide a control for each control-bearing assay
+// Which assays can provide a control for each control-bearing assay.
+// Controls are typically drawn from the same family (ChIP Input/WCE
+// for ChIP IPs; IgG CUT&RUN for CUT&RUN IPs; etc.).
 const CONTROL_SOURCE_ASSAYS = {
-  ChIP_broad:  CHIP_ASSAYS,
-  ChIP_narrow: CHIP_ASSAYS,
-  RAMPAGE:     new Set(["RNAseq"]),
+  ChIP_broad:    CHIP_ASSAYS,
+  ChIP_narrow:   CHIP_ASSAYS,
+  CUT_RUN_broad: CUT_RUN_ASSAYS,
+  CUT_RUN_narrow: CUT_RUN_ASSAYS,
+  CUT_TAG_broad: CUT_TAG_ASSAYS,
+  CUT_TAG_narrow: CUT_TAG_ASSAYS,
+  RAMPAGE:       new Set(["RNAseq"]),
 };
 
-// Known marks and recommended assay type (derived from config/epicc-options.yaml peaktype)
+// Known marks and recommended *peaktype* (derived from config/epicc-options.yaml peaktype).
+// Recommendations apply across all IP_PEAK_ASSAYS — only the broad/narrow
+// designation is checked, not the specific assay family.
 const KNOWN_MARKS = [
-  { pattern: /^(H3K27me[123]|H3K9me[123]|H4K20me[123]|H3K36me3|H3\.3|H3\.1|MGH3|CenH3|.*DDM1|PolIIS2P|H2AT120Ph|H2AKub)$/i, assay: "ChIP_broad" },
-  { pattern: /^(H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase)$/i, assay: "ChIP_narrow" },
-  { pattern: /^(H3|H4)$/i, assay: "ChIP_broad" },
+  { pattern: /^(H3K27me[123]|H3K9me[123]|H4K20me[123]|H3K36me3|H3\.3|H3\.1|MGH3|CenH3|.*DDM1|PolIIS2P|H2AT120Ph|H2AKub)$/i, peaktype: "broad" },
+  { pattern: /^(H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase)$/i, peaktype: "narrow" },
+  { pattern: /^(H3|H4)$/i, peaktype: "broad" },
 ];
 
-function getRecommendedAssay(ipTarget) {
+function getRecommendedPeaktype(ipTarget) {
   for (var i = 0; i < KNOWN_MARKS.length; i++) {
-    if (KNOWN_MARKS[i].pattern.test(ipTarget)) return KNOWN_MARKS[i].assay;
+    if (KNOWN_MARKS[i].pattern.test(ipTarget)) return KNOWN_MARKS[i].peaktype;
   }
+  return null;
+}
+
+function assayPeaktype(assay) {
+  if (/_broad$/.test(assay)) return "broad";
+  if (/_narrow$/.test(assay)) return "narrow";
   return null;
 }
 
@@ -700,14 +728,14 @@ function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
 
 const COLUMN_DESCRIPTIONS = {
   Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
-  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads).",
+  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), CUT_RUN_broad / CUT_RUN_narrow (CUT&RUN), CUT_TAG_broad / CUT_TAG_narrow (CUT&Tag), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads).",
   Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
   Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated for merging. PE: comma-separated R1,R2 pair.",
   Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
-  IP_target: "What was immunoprecipitated. Required for ChIP assays (e.g. H3K9me2, Input). Must be blank for non-ChIP assays.",
-  Control: "Sample_ID of the control sample (e.g. Input for ChIP). Only for ChIP_broad, ChIP_narrow, RAMPAGE. No chaining allowed."
+  IP_target: "What was immunoprecipitated. Required for ChIP and CUT&RUN/CUT&Tag assays (e.g. H3K9me2, Input, WCE, IgG). Must be blank for non-IP assays.",
+  Control: "Sample_ID of the control sample (e.g. Input/WCE for ChIP, IgG for CUT&RUN/CUT&Tag, RNAseq for RAMPAGE). No chaining allowed."
 };
 
 // Assay short names for Sample_ID suggestion (non-ChIP assays)
@@ -777,7 +805,7 @@ function suggestSampleId(rowData) {
   if (!levels) return "";
   var label = levelsToLabel(levels);
   if (!label || !rep) return "";
-  if (CHIP_ASSAYS.has(assay)) {
+  if (IP_PEAK_ASSAYS.has(assay)) {
     if (!ip) return "";
     return label + "_" + ip + "_" + rep;
   }
@@ -1069,7 +1097,7 @@ function buildColumnDefs() {
       editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
       editable: function(cell) {
         var assay = (cell.getRow().getData().Assay || "").trim();
-        return CHIP_ASSAYS.has(assay);
+        return IP_PEAK_ASSAYS.has(assay);
       },
     }, descHooks("IP_target")),
     Object.assign({
@@ -1358,15 +1386,18 @@ function runValidation() {
     }
 
     // IP_target
-    if (CHIP_ASSAYS.has(assay)) {
+    if (IP_PEAK_ASSAYS.has(assay)) {
       if (!ipTarget) {
         addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target is required for " + assay);
       } else {
-        // Check known marks vs assay recommendation
-        var recommended = getRecommendedAssay(ipTarget);
-        if (recommended && recommended !== assay) {
+        // Compare recommended peaktype (from known marks) to the assay's
+        // own broad/narrow suffix. Warn only on peaktype mismatch — the
+        // assay family (ChIP vs CUT_RUN vs CUT_TAG) is the user's choice.
+        var recommendedPt = getRecommendedPeaktype(ipTarget);
+        var assayPt = assayPeaktype(assay);
+        if (recommendedPt && assayPt && recommendedPt !== assayPt) {
           addIssue(cellIssues, warnings, rowKey, "IP_target",
-            "[!] Row #" + rowNum + " '" + sid + "': IP_target '" + ipTarget + "' is typically called with " + recommended + ", but Assay is " + assay, "warnings");
+            "[!] Row #" + rowNum + " '" + sid + "': IP_target '" + ipTarget + "' is typically called as a " + recommendedPt + " peak, but Assay '" + assay + "' is " + assayPt, "warnings");
         }
       }
     } else if (assay) {
@@ -1481,7 +1512,7 @@ function runValidation() {
     if (!sid || !assay || !genome) continue;
     // Skip control samples
     var ctrl = (data[i].Control || "").trim();
-    if (CHIP_ASSAYS.has(assay) && (!ipTarget || /^(WCE|Input)$/i.test(ipTarget))) continue;
+    if (IP_PEAK_ASSAYS.has(assay) && (!ipTarget || /^(WCE|Input|IgG)$/i.test(ipTarget))) continue;
     var groupKey = [assay, levels, ipTarget, genome].join("||");
     if (!analysisGroups[groupKey]) analysisGroups[groupKey] = [];
     analysisGroups[groupKey].push({sid: sid, layout: layout, rowKey: rows[i] ? rows[i].getIndex() : i, rowNum: i + 1});
@@ -1986,10 +2017,10 @@ table.on("cellEdited", function(cell) {
     // If newVal === suggestion, keep current _sid_user_edited state
   }
 
-  // When Assay changes, clear IP_target for non-ChIP
+  // When Assay changes, clear IP_target for non-IP-peak assays
   if (field === "Assay") {
     var assay = (cell.getValue() || "").trim();
-    if (!CHIP_ASSAYS.has(assay)) {
+    if (!IP_PEAK_ASSAYS.has(assay)) {
       row.update({ IP_target: "" });
     }
   }

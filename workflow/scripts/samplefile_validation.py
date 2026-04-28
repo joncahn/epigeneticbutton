@@ -5,15 +5,17 @@ Implements the rules defined in dev/docs/sample-sheet-spec.md.
 
 import os
 import re
-from scripts.sample_sheet import VALID_ASSAYS, ASSAY_TO_ENV
+from scripts.sample_sheet import VALID_ASSAYS, ASSAY_TO_ENV, IP_PEAK_ASSAYS
 
 # Characters that are unsafe for filesystem use in Sample_ID
 _UNSAFE_CHARS = re.compile(r'[/\\\s\'\";&|<>$`!{}()\[\]?*~#]')
 _DOUBLE_UNDERSCORE = re.compile(r'__')
 _SRA_REGEX = re.compile(r'^[SDE]RR\d+$')
 
-_CHIP_ASSAYS = {"ChIP_broad", "ChIP_narrow"}
-_CONTROL_ASSAYS = {"ChIP_broad", "ChIP_narrow", "RAMPAGE"}
+# Assays that may declare a Control sample. RAMPAGE is normalized against
+# an RNA-seq Control rather than an IP-style Input/IgG, but the Control
+# field semantics (Sample_ID reference, no chaining) are the same.
+_CONTROL_ASSAYS = IP_PEAK_ASSAYS | {"RAMPAGE"}
 
 
 def _is_url(path):
@@ -211,7 +213,7 @@ def check_table(tab, check_paths=True):
         sid = str(row.get("Sample_ID", "")).strip()
         if ip_target == "nan":
             ip_target = ""
-        if assay in _CHIP_ASSAYS:
+        if assay in IP_PEAK_ASSAYS:
             if not ip_target:
                 errors.append(
                     f"[X] Row #{i} '{sid}': IP_target is required for {assay}"

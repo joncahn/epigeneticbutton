@@ -19,15 +19,31 @@ NEW_COLNAMES = [
 ]
 
 VALID_ASSAYS = [
-    "ChIP_broad", "ChIP_narrow", "ATAC",
+    "ChIP_broad", "ChIP_narrow",
+    "CUT_RUN_broad", "CUT_RUN_narrow",
+    "CUT_TAG_broad", "CUT_TAG_narrow",
+    "ATAC",
     "RNAseq", "RAMPAGE",
     "sRNA",
     "WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC",
 ]
 
+# Assays that pull down a target via antibody and call peaks against an
+# (Input/WCE/IgG) control. They share the ChIP env, peak-type machinery,
+# and IP_target/Control sample-sheet semantics.
+IP_PEAK_ASSAYS = {
+    "ChIP_broad", "ChIP_narrow",
+    "CUT_RUN_broad", "CUT_RUN_narrow",
+    "CUT_TAG_broad", "CUT_TAG_narrow",
+}
+
 ASSAY_TO_ENV = {
     "ChIP_broad": "ChIP",
     "ChIP_narrow": "ChIP",
+    "CUT_RUN_broad": "ChIP",
+    "CUT_RUN_narrow": "ChIP",
+    "CUT_TAG_broad": "ChIP",
+    "CUT_TAG_narrow": "ChIP",
     "ATAC": "ATAC",
     "RNAseq": "RNA",
     "RAMPAGE": "RNA",
@@ -42,6 +58,10 @@ ASSAY_TO_ENV = {
 ASSAY_TO_PEAKTYPE = {
     "ChIP_broad": "broad",
     "ChIP_narrow": "narrow",
+    "CUT_RUN_broad": "broad",
+    "CUT_RUN_narrow": "narrow",
+    "CUT_TAG_broad": "broad",
+    "CUT_TAG_narrow": "narrow",
     "ATAC": "narrow",
 }
 
@@ -400,7 +420,9 @@ def get_peaktype(assay, config_override=None):
     if pt is None:
         raise ValueError(
             f"No peak type defined for assay '{assay}'. "
-            "Peak types are only defined for ChIP_broad, ChIP_narrow, and ATAC."
+            "Peak types are only defined for ChIP_broad, ChIP_narrow, "
+            "CUT_RUN_broad, CUT_RUN_narrow, CUT_TAG_broad, "
+            "CUT_TAG_narrow, and ATAC."
         )
     return pt
 
@@ -437,9 +459,9 @@ def add_compat_columns(df):
     df["line"] = df["Levels"].apply(lambda x: _extract_level(x, 0))
     df["tissue"] = df["Levels"].apply(lambda x: _extract_level(x, 1))
 
-    # sample_type: IP_target for ChIP, else Assay
+    # sample_type: IP_target for IP-with-peaks assays, else Assay
     def _derive_sample_type(row):
-        if row["Assay"] in ("ChIP_broad", "ChIP_narrow"):
+        if row["Assay"] in IP_PEAK_ASSAYS:
             return row["IP_target"] if row["IP_target"] else row["Assay"]
         return row["Assay"]
 
