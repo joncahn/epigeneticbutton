@@ -28,7 +28,7 @@ max-status-checks-per-second: 5
 #                      if your shortest rule takes longer than 60 min.
 default-resources:
   - runtime="1h"
-  - slurm_account="martienssenlab"   # EDIT: replace with your cluster's SLURM account (or remove the line if your cluster doesn't require --account). The shipped value matches the CSHL Martienssen lab — outside users MUST change it before first run; otherwise sbatch will silently reject every job.
+  - slurm_account="<your-slurm-account>"   # EDIT: replace with your cluster's SLURM account, or remove this line if --account is not required. The placeholder must be edited before first run — `epicc run`/`epicc validate` detects it upfront and errors out with a pointer back here.
 
 precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
 

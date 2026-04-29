@@ -198,6 +198,58 @@ def maybe_clear_stale_lock(args, repo):
     )
 
 
+_PLACEHOLDER_RE = __import__("re").compile(r"<your-[a-z0-9-]+>", __import__("re").IGNORECASE)
+
+
+def check_profile_placeholders(profile_arg):
+    """Fail fast if the user's profile still ships an unedited placeholder.
+
+    profiles/slurm/config.yaml ships `slurm_account="<your-slurm-account>"`
+    as the default. Without this check, sbatch silently rejects every job
+    submitted under that account name and the run hangs at
+    "Select jobs to execute..." with nothing visible in `squeue` — a
+    debugging trap (see e.g. github.com/joncahn/epigeneticbutton/issues/...
+    for the original report). Surface the unedited value upfront with a
+    pointer back at the offending file so the user knows exactly what to
+    fix.
+
+    `profile_arg` is whatever the user passed to --profile (a directory
+    or a config.yaml path); this resolves either to the actual config
+    file before scanning.
+    """
+    if not profile_arg:
+        return
+    repo = find_repo_root()
+    candidate = Path(profile_arg)
+    if not candidate.is_absolute():
+        candidate = (repo / candidate).resolve()
+    if candidate.is_dir():
+        config_path = candidate / "config.yaml"
+    else:
+        config_path = candidate
+    if not config_path.exists():
+        return  # snakemake will report the missing-profile error itself
+    text = config_path.read_text()
+    placeholders = sorted(set(_PLACEHOLDER_RE.findall(text)))
+    if not placeholders:
+        return
+    print(
+        "EPICC: profile contains unedited placeholder value(s):",
+        file=sys.stderr,
+    )
+    for ph in placeholders:
+        print(f"    {ph}", file=sys.stderr)
+    print(
+        f"  in: {config_path}\n"
+        "  Edit that file to fill in the real value(s) for your cluster, "
+        "or remove the offending lines if not applicable. Without this fix, "
+        "sbatch will silently reject every job and the run will hang at "
+        "'Select jobs to execute...' with nothing in the queue.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
 def detect_execution_mode(args):
     """Determine whether to use a SLURM profile or local cores.
 
@@ -308,6 +360,7 @@ def cmd_run(args, extra_args):
     maybe_clear_stale_lock(args, repo)
 
     profile, cores = detect_execution_mode(args)
+    check_profile_placeholders(profile)
     mode_desc = f"profile {profile}" if profile else f"{cores} local cores"
     cmd = build_snakemake_cmd(args, extra_args)
     print(f"EPICC: Starting pipeline ({mode_desc})", file=sys.stderr)
@@ -339,6 +392,10 @@ def cmd_validate(args, extra_args):
     options_file = Path(args.options)
     if not options_file.exists():
         sys.exit(f"Error: Options file not found: {options_file}")
+
+    # Catch unedited placeholder values in the cluster profile (e.g.
+    # slurm_account=<your-slurm-account>) before snakemake even starts.
+    check_profile_placeholders(getattr(args, "profile", None))
 
     print("EPICC: Validating configuration...\n", file=sys.stderr)
 
