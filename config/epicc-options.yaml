@@ -9,57 +9,47 @@ analysis_name: "epicc"
 # See config/example_samples.tsv for a documented template.
 #sample_file: "config/my_samples.tsv"
 
-# Reference genomes — each entry defines paths to annotation files and species-level parameters
+# Reference genomes — each entry defines paths to annotation files and
+# species-level parameters. ColCEN below is a fully working public-URL
+# example (Arabidopsis thaliana, schatzlab Col-CEN v1.2 + EDTA TE
+# annotation). Add your own genomes following the same pattern: every
+# `*_file` field accepts a local path (absolute or relative to the repo)
+# or an HTTP(S) URL; gzipped inputs are handled transparently.
 genomes:
   ColCEN:
     genus: "Arabidopsis"
     species: "thaliana"
     fasta_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
     gff_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
-    #gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Arabidopsis/ColCEN/Col-CEN_v1.2_genes.tair10.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
+    #gtf_file: "<path/to/your.gtf(.gz)>"  # optional override (auto-derived from GFF via gffread if omitted)
     te_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/t2t-col.20201227.fasta.mod.EDTA.TEanno.gff3.gz" # .bed(.gz) or .gff3(.gz) — GFF3 auto-converted to BED6;
     gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
     gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-    #structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
+    #structural_rna_fafile: "<auto>"  # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
     #star_index: "--genomeSAindexNbases 12"  # optional override (auto-computed from FASTA if omitted)
     #genomesize: 1.3e8  # optional override (auto-computed as total bases − N bases if omitted)
     ncbi_taxid: "3702"
 
-  B73_v5:
-    genus: "Zea"
-    species: "mays"
-    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0.fa.gz" # can be gzipped or not
-    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-REFERENCE-NAM-5.0_Zm00001eb.1.gff3" # can be gzipped or not
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Zea_mays/B73_v5/Zm-B73-NAM-Zm00001eb.1.gtf" # optional override (auto-derived from GFF via gffread if omitted)
-    gaf_file: "data/B73_v5_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-    gene_info_file: "data/B73_v5_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
-    te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/TEs/B73_v5_TEs.bed.gz" # can be gzipped or not;
-    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
-    star_index: "--genomeSAindexNbases 14"
-    ncbi_taxid: "4577"
-    #genomesize: 2.2e9
+  # ── Additional genome examples (commented out) ────────────────────────
+  # The block below is a skeleton for adding your own reference genome.
+  # Uncomment, rename, and replace the placeholder paths with real files
+  # (local paths or HTTP(S) URLs). Auto-derived fields (gtf_file,
+  # genomesize, star_index, structural_rna_fafile) can be left as
+  # "<auto>" or omitted entirely.
+  #
+  #MyGenome:
+  #  genus: "Zea"
+  #  species: "mays"
+  #  fasta_file: "<path/to/genome.fa(.gz)>"
+  #  gff_file: "<path/to/genes.gff3(.gz)>"
+  #  te_file: "<path/to/transposable_elements.bed(.gz) or .gff3(.gz)>"
+  #  gaf_file: "<path/to/GO_annotations.tab(.gz)>"        # only for GO: true
+  #  gene_info_file: "<path/to/gene_info.tab(.gz)>"       # only for GO: true
+  #  #structural_rna_fafile: "<auto>"
+  #  #star_index: "--genomeSAindexNbases 14"
+  #  ncbi_taxid: "4577"
 
-  la8011:
-    genus: "Lemna"
-    species: "aequinoctialis"
-    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.fasta.gz"
-    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.noname.gff3.gz"
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Duckweeds/la8011_v24/la8011-202407.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
-    #structural_rna_fafile: "<auto>" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
-    #star_index: "--genomeSAindexNbases 12"
-    #genomesize: 8.0e8
 
-  CabSauv:
-    genus: "Vitis"
-    species: "vinifera"
-    fasta_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.fasta.gz"
-    gff_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gff3.gz"
-    gtf_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.gtf.gz" # optional override (auto-derived from GFF via gffread if omitted)
-    te_file: "/grid/martienssen/home/jcahn/nlsas/Genomes/Vitis_vinifera/CabSauv08/VITVvi_vCabSauv08_v1.1.pseudomolecules.all.repeats.filtered100bp.bed.gz"
-    #structural_rna_fafile: "<auto>" # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
-    #star_index: "--genomeSAindexNbases 12"
-    #genomesize: 5.0e8  
-  
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
 full_analysis: true
 te_analysis: false

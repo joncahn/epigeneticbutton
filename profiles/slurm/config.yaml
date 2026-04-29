@@ -28,7 +28,7 @@ max-status-checks-per-second: 5
 #                      if your shortest rule takes longer than 60 min.
 default-resources:
   - runtime="1h"
-  - slurm_account="martienssenlab"   # EDIT: your SLURM account here
+  - slurm_account="<your-slurm-account>"   # EDIT: replace with your cluster's account, or remove this line if --account is not required
 
 precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
 

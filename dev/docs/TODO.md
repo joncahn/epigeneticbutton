@@ -24,7 +24,6 @@
 
 * [ ] **high priority** change default paths to genome files in epicc-options, to remove hardcoded paths from Elzar. Should we remove genomes that are not fetchable online, and/or add some that are?
 
-* [ ] Clean up all entries with personal information (cluster paths and email addresses)
 
 #### Skip mCHG/mCHH analysis for animal genomes
 
@@ -301,6 +300,8 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 * [x] for 'epicc validate', capture the snakemake output silently (all the rules that would run, the files that would be removed, etc..) and only print out the diagnostic/results of the command. **Done**: `cmd_validate` now captures snakemake's dry-run output and only emits a concise summary (Job stats table + warnings + files-to-be-removed). Full output is dumped on dry-run failure or when `--verbose` is passed. New `_summarize_dryrun` helper extracts the relevant sections without parsing the per-job rule blocks.
 
 * [x] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway. **Done**: Removed the `dry-run` subcommand (parser, dispatcher, and cmd_dry_run function). Header docstring updated to point users at `epicc validate` for the friendly path or `epicc run -- --dry-run` for the raw snakemake output.
+
+* [x] Clean up all entries with personal information (cluster paths and email addresses). **Done**: Removed the lab-specific `/grid/martienssen/home/jcahn/...` paths from the B73_v5/la8011/CabSauv genome blocks in `config/epicc-options.yaml`; replaced with a generic commented-out skeleton (`MyGenome`) so users see the schema without picking up Martienssen-lab cluster paths. `profiles/slurm/config.yaml` slurm_account changed from the `martienssenlab` literal to a `<your-slurm-account>` placeholder. `profiles/geno/config.yaml` is correctly scoped as a site-specific example and untouched.
 
 ### Codebase Hygiene
 
