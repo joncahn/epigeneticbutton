@@ -237,7 +237,13 @@ rna_tracks:
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
 
 # WGBS parameters
-mC_context: "all" # another option should be set for CG-only (changes parameters for methylation extraction step)
+# Methylation contexts to analyze (subset of CG, CHG, CHH). Plants
+# typically use all three; animal genomes lack substantive non-CpG
+# methylation, so set ["CG"] to skip the empty mCHG/mCHH bigwigs, DMR
+# calls, and PCA plots for animal samples. Subcontexts (CAG, CAA, etc.)
+# are not yet supported. Legacy mC_context "all"/"CG-only" is still
+# accepted with a deprecation warning.
+methylation_contexts: ["CG", "CHG", "CHH"]
 pca_bs: 1000 # binsize for PCA 
 pca_step: 10000 # step between bins for PCA 
 # If using the Pico or EMseq kit for DNA methylation, set trim_front.mC to 10 above

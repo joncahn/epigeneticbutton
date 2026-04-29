@@ -26,8 +26,8 @@ GO: false
 trimmed_fastqs: false
 aligned_bams: false
 
-# Methylation context
-mC_context: "all"
+# Methylation contexts (subset of CG, CHG, CHH)
+methylation_contexts: ["CG", "CHG", "CHH"]
 
 # dmC (direct methylation) parameters
 dmc_methylation:

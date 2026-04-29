@@ -557,8 +557,8 @@ def define_final_combined_output(ref_genome):
     full_analysis = config['full_analysis']
     te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
-    mc_sort = config['heatmap_sort_mc_after_others']    
-    mc_context = config['mC_context']
+    mc_sort = config['heatmap_sort_mc_after_others']
+    mc_contexts = get_methylation_contexts()
     plot_files = []
     te_plots = []
     
@@ -636,9 +636,15 @@ def define_final_combined_output(ref_genome):
 
     mc_rep_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
     if len(mc_rep_samples) >=3:
-        plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
-        if mc_context == "all":
+        # PCA plots gated on the active methylation_contexts list. CG is
+        # added if requested (typically true); CHG/CHH only if asked for —
+        # animal genomes set methylation_contexts: ["CG"] to skip empty
+        # asymmetric-context PCAs.
+        if "CG" in mc_contexts:
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
+        if "CHG" in mc_contexts:
             plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
+        if "CHH" in mc_contexts:
             plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
     
     all_chip_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()

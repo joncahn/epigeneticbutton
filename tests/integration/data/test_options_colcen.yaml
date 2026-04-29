@@ -32,8 +32,8 @@ genomes:
     gene_info_file: "data/ColCEN_genes_info.tab.gz"
     ncbi_taxid: "3702"
 
-# Methylation context
-mC_context: "all"
+# Methylation contexts (subset of CG, CHG, CHH)
+methylation_contexts: ["CG", "CHG", "CHH"]
 
 # Direct methylation (dmC) parameters
 dmc_methylation:

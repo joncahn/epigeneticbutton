@@ -69,11 +69,83 @@ def script_DMRs():
     custom = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs_custom.R")
     return custom if script_dmrs else default
 
+# Cache the resolved methylation_contexts list across the whole run so we
+# emit the deprecation warning at most once. _MC_CONTEXTS_CACHE is set on
+# first call to get_methylation_contexts().
+_MC_CONTEXTS_CACHE = None
+
+def get_methylation_contexts():
+    """Return the list of methylation contexts to analyze (subset of CG, CHG, CHH).
+
+    Preferred config key (new): ``methylation_contexts: ["CG", "CHG", "CHH"]``
+    — a list of contexts to generate bigwigs for, call DMRs in, and run
+    PCA on. Animal genomes can pass ``["CG"]`` to skip empty mCHG/mCHH
+    plots. Order is normalized to CG → CHG → CHH on output.
+
+    Legacy config key: ``mC_context: "all"|"CG-only"`` — translated to
+    ``["CG","CHG","CHH"]`` and ``["CG"]`` respectively, with a one-time
+    deprecation warning. If both keys are set, the new key wins.
+
+    Subcontexts beyond CG/CHG/CHH (CAG, CAA, etc.) are not yet supported
+    and raise an error. The default when neither key is set is the full
+    plant set ``["CG","CHG","CHH"]``.
+    """
+    global _MC_CONTEXTS_CACHE
+    if _MC_CONTEXTS_CACHE is not None:
+        return _MC_CONTEXTS_CACHE
+
+    valid = ["CG", "CHG", "CHH"]
+    valid_set = set(valid)
+    new = config.get("methylation_contexts")
+    legacy = config.get("mC_context")
+
+    if new is not None:
+        if not isinstance(new, list) or not new:
+            raise ValueError(
+                "methylation_contexts must be a non-empty list, e.g. "
+                "[\"CG\", \"CHG\", \"CHH\"] or [\"CG\"] for animal genomes"
+            )
+        for c in new:
+            if c not in valid_set:
+                raise ValueError(
+                    f"methylation_contexts entry '{c}' not in {valid} "
+                    "(CAG/CAA and other subcontexts are not yet supported; "
+                    "support deferred to a future PR)"
+                )
+        if legacy is not None:
+            sys.stderr.write(
+                "[!] Both methylation_contexts (new) and mC_context (legacy) "
+                "are set in the options file — using methylation_contexts. "
+                "Remove the mC_context line to silence this warning.\n"
+            )
+        # Normalize order
+        contexts = [c for c in valid if c in new]
+    elif legacy is not None:
+        sys.stderr.write(
+            "[!] mC_context is deprecated; replace with the new "
+            "methylation_contexts list, e.g. methylation_contexts: "
+            "[\"CG\", \"CHG\", \"CHH\"] for plants or [\"CG\"] for animals.\n"
+        )
+        if legacy == "all":
+            contexts = ["CG", "CHG", "CHH"]
+        elif legacy == "CG-only":
+            contexts = ["CG"]
+        else:
+            raise ValueError(
+                f"mC_context value '{legacy}' not recognized; use "
+                "'all' or 'CG-only', or migrate to methylation_contexts."
+            )
+    else:
+        # No key set — default to the full plant set
+        contexts = ["CG", "CHG", "CHH"]
+
+    _MC_CONTEXTS_CACHE = contexts
+    return contexts
+
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]
     analysis = config['full_analysis']
     trimmed_fastqs = config['trimmed_fastqs']
-    mC_context = config['mC_context']
     map_files = []
     dmr_files = []
     bigwig_files = []
@@ -415,92 +487,89 @@ rule make_mc_bigwig_files:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        context = config['mC_context']
+        # Space-separated list of contexts to actually generate bigwig
+        # data for. Contexts NOT in the list still get an empty placeholder
+        # bigwig (downstream rules require all three .bw outputs to exist).
+        contexts = " ".join(get_methylation_contexts())
     log:
         temp(return_log_mc("{sample_name}", "bigwig", ""))
     conda: CONDA_ENV_MC
     shell:
         """
         {{
-        if [[ "{params.context}" == "all" ]]; then
-            # Pre-create empty bedGraph files so awk output redirection
-            # doesn't leave missing files when a context/strand has no data
-            # (e.g. combined-strand dmC input has no minus-strand calls)
-            for context in CG CHG CHH; do
-                > "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bedGraph"
+        outdir="{config[output_dir]}/mC/tracks"
+        sname="{params.sample_name}"
+        active_contexts="{params.contexts}"
+
+        # Pre-create empty bedGraph files so awk redirection doesn't leave
+        # missing files when a context/strand has no data (e.g. combined-
+        # strand dmC input has no minus-strand calls).
+        for context in CG CHG CHH; do
+            > "$outdir/${{sname}}__${{context}}.bedGraph"
+            for strand in plus minus; do
+                > "$outdir/${{sname}}__${{context}}__${{strand}}.bedGraph"
+            done
+        done
+
+        # Demux methylation calls into per-context bedGraphs (and per-strand
+        # variants). The CX_report has all three contexts interleaved; the
+        # awk output redirection writes each line to the matching context
+        # file. Cheap to do unconditionally — empty bedGraphs are dropped
+        # below for inactive contexts.
+        zcat {input.cx_report} | awk -v OFS="\t" -v s=$sname '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CG.bedGraph"}}'
+        for strand in plus minus; do
+            case "$strand" in
+                plus)  sign="+";;
+                minus) sign="-";;
+            esac
+            zcat {input.cx_report} | awk -v n="$sign" '$3==n' | awk -v OFS="\t" -v s=$sname -v d=$strand '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CG__"d".bedGraph"}}'
+        done
+
+        for context in CG CHG CHH; do
+            # Skip contexts the user didn't ask for: emit a 1-bp placeholder
+            # bigwig so snakemake's declared outputs all exist (downstream
+            # heatmaps/PCA rules gate on the presence of these files).
+            if ! [[ " $active_contexts " == *" $context "* ]]; then
+                printf "\nContext $context not in methylation_contexts; emitting empty placeholder bigwig\n"
+                chrom=$(head -1 {input.chrom_sizes} | cut -f1)
+                printf "%s\t0\t1\t0\n" "$chrom" > "$outdir/empty__${{sname}}__${{context}}.bg"
+                bedGraphToBigWig "$outdir/empty__${{sname}}__${{context}}.bg" {input.chrom_sizes} "$outdir/${{sname}}__${{context}}.bw"
+                rm -f "$outdir/empty__${{sname}}__${{context}}.bg"
                 for strand in plus minus; do
-                    > "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph"
+                    printf "%s\t0\t1\t0\n" "$chrom" > "$outdir/empty__${{sname}}__${{context}}__${{strand}}.bg"
+                    bedGraphToBigWig "$outdir/empty__${{sname}}__${{context}}__${{strand}}.bg" {input.chrom_sizes} "$outdir/${{sname}}__${{context}}__${{strand}}.bw"
+                    rm -f "$outdir/empty__${{sname}}__${{context}}__${{strand}}.bg"
                 done
-            done
-            zcat {input.cx_report} | awk -v OFS="\t" -v s={params.sample_name} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CG.bedGraph"}}'
+                continue
+            fi
+
+            printf "\nMaking bigwig files of $context context for $sname\n"
+            if [[ -s "$outdir/${{sname}}__${{context}}.bedGraph" ]]; then
+                LC_COLLATE=C sort -k1,1 -k2,2n "$outdir/${{sname}}__${{context}}.bedGraph" > "$outdir/sorted__${{sname}}__${{context}}.bedGraph"
+                bedGraphToBigWig "$outdir/sorted__${{sname}}__${{context}}.bedGraph" {input.chrom_sizes} "$outdir/${{sname}}__${{context}}.bw"
+            else
+                printf "No data for $context context — creating empty bigwig\n"
+                chrom=$(head -1 {input.chrom_sizes} | cut -f1)
+                printf "%s\t0\t1\t0\n" "$chrom" > "$outdir/empty__${{sname}}__${{context}}.bg"
+                bedGraphToBigWig "$outdir/empty__${{sname}}__${{context}}.bg" {input.chrom_sizes} "$outdir/${{sname}}__${{context}}.bw"
+                rm -f "$outdir/empty__${{sname}}__${{context}}.bg"
+            fi
             for strand in plus minus; do
-                case "${{strand}}" in
-                    plus)	sign="+";;
-                    minus)	sign="-";;
-                esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" -v s={params.sample_name} -v d=${{strand}} '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHH__"d".bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CHG__"d".bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 >> "{config[output_dir]}/mC/tracks/"s"__CG__"d".bedGraph"}}'
-            done
-            for context in CG CHG CHH; do
-                printf "\nMaking bigwig files of ${{context}} context for {params.sample_name}\n"
-                if [[ -s "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bedGraph" ]]; then
-                    LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph
-                    bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bw
+                printf "\nMaking $strand strand bigwig files of $context context for $sname\n"
+                if [[ -s "$outdir/${{sname}}__${{context}}__${{strand}}.bedGraph" ]]; then
+                    LC_COLLATE=C sort -k1,1 -k2,2n "$outdir/${{sname}}__${{context}}__${{strand}}.bedGraph" > "$outdir/sorted__${{sname}}__${{context}}__${{strand}}.bedGraph"
+                    bedGraphToBigWig "$outdir/sorted__${{sname}}__${{context}}__${{strand}}.bedGraph" {input.chrom_sizes} "$outdir/${{sname}}__${{context}}__${{strand}}.bw"
                 else
-                    printf "No data for ${{context}} context — creating empty bigwig\n"
+                    printf "No data for $context $strand strand — creating empty bigwig\n"
                     chrom=$(head -1 {input.chrom_sizes} | cut -f1)
-                    printf "%s\t0\t1\t0\n" "$chrom" > {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}.bg
-                    bedGraphToBigWig {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}.bg {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}.bw
-                    rm -f {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}.bg
-                fi
-                for strand in plus minus
-                do
-                    printf "\nMaking ${{strand}} strand bigwig files of ${{context}} context for {params.sample_name}\n"
-                    if [[ -s "{config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph" ]]; then
-                        LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph
-                        bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__${{context}}__${{strand}}.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
-                    else
-                        printf "No data for ${{context}} ${{strand}} strand — creating empty bigwig\n"
-                        chrom=$(head -1 {input.chrom_sizes} | cut -f1)
-                        printf "%s\t0\t1\t0\n" "$chrom" > {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
-                        bedGraphToBigWig {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__${{context}}__${{strand}}.bw
-                        rm -f {config[output_dir]}/mC/tracks/empty__{params.sample_name}__${{context}}__${{strand}}.bg
-                    fi
-                done
-            done
-            rm -f {config[output_dir]}/mC/tracks/*"{params.sample_name}"*bedGraph*
-        elif [[ "{params.context}" == "CG-only" ]]; then
-            zcat {input.cx_report} | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "{config[output_dir]}/mC/tracks/"{params.sample_name}"__CG.bedGraph"
-            for strand in plus minus; do
-                case "${{strand}}" in
-                    plus)	sign="+";;
-                    minus)	sign="-";;
-                esac
-                zcat {input.cx_report} | awk -v n=${{sign}} '$3==n' | awk -v OFS="\t" '($4+$5)>0 {{a=$4+$5; print $1,$2-1,$2,$4/a*100}}' > "{config[output_dir]}/mC/tracks/"{params.sample_name}"__CG__"${{strand}}".bedGraph"
-            done
-            printf "\nMaking bigwig files of CG context for {params.sample_name}\n"
-            LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__CG.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG.bedGraph
-            bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__CG.bw
-            for strand in plus minus
-            do
-                printf "\nMaking ${{strand}} strand bigwig files of CG context for {params.sample_name}\n"
-                if [[ -s "{config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph" ]]; then
-                    LC_COLLATE=C sort -k1,1 -k2,2n {config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bedGraph > {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph
-                    bedGraphToBigWig {config[output_dir]}/mC/tracks/sorted__{params.sample_name}__CG__${{strand}}.bedGraph {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
-                else
-                    printf "No data for CG ${{strand}} strand — creating empty bigwig\n"
-                    chrom=$(head -1 {input.chrom_sizes} | cut -f1)
-                    printf "%s\t0\t1\t0\n" "$chrom" > {config[output_dir]}/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
-                    bedGraphToBigWig {config[output_dir]}/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg {input.chrom_sizes} {config[output_dir]}/mC/tracks/{params.sample_name}__CG__${{strand}}.bw
-                    rm -f {config[output_dir]}/mC/tracks/empty__{params.sample_name}__CG__${{strand}}.bg
+                    printf "%s\t0\t1\t0\n" "$chrom" > "$outdir/empty__${{sname}}__${{context}}__${{strand}}.bg"
+                    bedGraphToBigWig "$outdir/empty__${{sname}}__${{context}}__${{strand}}.bg" {input.chrom_sizes} "$outdir/${{sname}}__${{context}}__${{strand}}.bw"
+                    rm -f "$outdir/empty__${{sname}}__${{context}}__${{strand}}.bg"
                 fi
             done
-            touch {output.bigwigchg} # they are required for downstream rules
-            touch {output.bigwigchh} # they are required for downstream rules
-            rm -f {config[output_dir]}/mC/tracks/*"{params.sample_name}"*bedGraph*
-        else
-            printf "Unknown sequence context selection! Check the options file and set 'mC_context' to either 'all' or 'CG-only'\n"
-            exit 1
-        fi
+        done
+
+        rm -f "$outdir/"*"$sname"*bedGraph*
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
         """
@@ -520,7 +589,10 @@ rule call_DMRs_pairwise:
         dmr_summary = f"{RESULTS_DIR}/mC/DMRs/summary__{{sample1}}__vs__{{sample2}}__DMRs.txt"
     params:
         script = script_DMRs(),
-        context = config['mC_context'],
+        # R script accepts a comma-separated context list, e.g. "CG,CHG,CHH"
+        # for plants or "CG" for animals. Replaces the legacy "all"/"CG-only"
+        # string the script used to receive.
+        contexts = ",".join(get_methylation_contexts()),
         sample1 = lambda wildcards: wildcards.sample1,
         sample2 = lambda wildcards: wildcards.sample2,
         nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
@@ -532,7 +604,7 @@ rule call_DMRs_pairwise:
         """
         {{
         printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
-        Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.context}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" {input.sample1} {input.sample2}
+        Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" {input.sample1} {input.sample2}
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -1059,7 +1131,8 @@ rule convert_bedmethyl_to_cx_report:
     unified downstream processing with merging_mc_replicates, make_mc_bigwig_files,
     and call_DMRs_pairwise.
 
-    When mC_context is 'CG-only', filters output to only include CG context.
+    When methylation_contexts is a strict subset of {CG, CHG, CHH}, the
+    output is filtered to only those contexts.
     """
     input:
         bedmethyl = f"{RESULTS_DIR}/mC/dmc/pileup__{{sample_name}}.bedmethyl.gz",
@@ -1072,7 +1145,10 @@ rule convert_bedmethyl_to_cx_report:
     params:
         script = os.path.join(REPO_FOLDER, "workflow", "scripts", "bedmethyl_to_cx_report.py"),
         sample_name = lambda wildcards: wildcards.sample_name,
-        context = config['mC_context']
+        # Pipe-separated regex alternatives ("CG|CHG|CHH" or "CG", etc.) for
+        # the post-processing context filter. When all three are active no
+        # filtering is needed.
+        context_filter = "|".join(get_methylation_contexts())
     log:
         temp(return_log_mc("{sample_name}", "bedmethyl_to_cx", "dmC"))
     conda: CONDA_ENV_MC
@@ -1081,15 +1157,17 @@ rule convert_bedmethyl_to_cx_report:
         """
         {{
         printf "Converting bedMethyl to CX_report format for {params.sample_name}...\n"
-        printf "Context mode: {params.context}\n"
+        printf "Active methylation contexts: {params.context_filter}\n"
 
         # Convert bedMethyl to CX_report (context determined from reference)
         python {params.script} {input.bedmethyl} {input.fasta} /dev/stdout > {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx
 
-        # Filter by context if CG-only mode
-        if [[ "{params.context}" == "CG-only" ]]; then
-            printf "Filtering to CG context only...\n"
-            awk -F'\\t' '$6 == "CG"' {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx > {config[output_dir]}/mC/dmc/tmp__{params.sample_name}_filtered.cx
+        # Filter to active contexts if the user requested a strict subset.
+        # The full set is "CG|CHG|CHH" — when that's what we got, skip the
+        # filter pass.
+        if [[ "{params.context_filter}" != "CG|CHG|CHH" ]]; then
+            printf "Filtering CX_report to contexts: {params.context_filter}\n"
+            awk -F'\\t' -v p='^({params.context_filter})$' '$6 ~ p' {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx > {config[output_dir]}/mC/dmc/tmp__{params.sample_name}_filtered.cx
             mv {config[output_dir]}/mC/dmc/tmp__{params.sample_name}_filtered.cx {config[output_dir]}/mC/dmc/tmp__{params.sample_name}.cx
         fi
 
