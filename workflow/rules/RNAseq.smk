@@ -605,8 +605,8 @@ rule create_GO_database:
         taxid_file = f"{GENOMES_DIR}/{{ref_genome}}/taxid.json"
     output:
         godb = directory(f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}"),
-        tempgaf = temp(f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gaf_file.tab"),
-        tempgeneinfo = temp(f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gene_info.tab")
+        gaf = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gaf_file.tab",
+        geneinfo = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gene_info.tab"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -633,13 +633,15 @@ rule create_GO_database:
         fi
         ncbi_taxid=$(python3 -c "import json; print(json.load(open('{input.taxid_file}'))['ncbi_taxid'])")
         printf "Creating GO database for {params.ref_genome} (TaxId: $ncbi_taxid)\n"
-        Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "$ncbi_taxid"
+        Rscript "{params.script}" "{output.gaf}" "{output.geneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "$ncbi_taxid"
         }} 2>&1 | tee -a "{log}"
         """
 
 rule perform_GO_on_target_file:
     input:
         godb = lambda wildcards: directory(get_go_database(wildcards.ref_genome)),
+        gaf = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gaf_file.tab",
+        geneinfo = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gene_info.tab",
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
