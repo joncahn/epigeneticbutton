@@ -26,7 +26,7 @@ if (!requireNamespace(dbname, quietly = TRUE)) {
 	install.packages(dbname, repos=NULL, type="source")
 }
 library(dbname, character.only = TRUE)
-info<-read.delim(paste0(dbname,"_",refgenome,"_gaf_file.tab"), header=FALSE)
+info<-read.delim(paste0(dbname,"_gaf_file.tab"), header=FALSE)
 setwd(original_wd)
 
 fGO<-info[,c(1,6,10)]
