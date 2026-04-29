@@ -20,7 +20,7 @@ refgenome<-args[3]
 genus<-args[4]
 species<-args[5]
 ncbi_taxid<-args[6]
-refgenome<-args[7]
+
 dbname<-paste0("org.",substr(genus,1,1),species,"_",refgenome,".eg.db")
 
 fGO<-unique(gaf[,c(1,6,10)])
