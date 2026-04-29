@@ -22,9 +22,6 @@
 
 * [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries. Note: probably we want to select specific settings and explicitly expose them as CLI params through the new epicc CLI wrapper.
 
-* [ ] **high priority** change default paths to genome files in epicc-options, to remove hardcoded paths from Elzar. Should we remove genomes that are not fetchable online, and/or add some that are?
-
-
 #### Skip mCHG/mCHH analysis for animal genomes
 
 * [ ] **high priority** Animals lack asymmetric (non-CpG) DNA methylation, so mCHG and mCHH contexts contain only background false-positive calls. PCA, DMR, and browser plots for these contexts are empty or corrupt for animal genomes. Need to determine the right mechanism to gate CHG/CHH analysis — options include a per-genome config flag (e.g. `asymmetric_methylation: true/false`), inference from genus/species (plant vs animal), or a more general `methylation_contexts` list. Should also consider edge cases like insects with low-level non-CpG methylation. **Decision: `methylation_contexts` list.** Initially support CG, CHG, CHH only. Enables full customization (including CHH for mammalian brain). Expand to arbitrary subcontexts in future PR, but also CAG, CAA, etc. Need tests for selecting arbitrary subcontexts like CAG, CAA. **corresponding action** Change the config file for mC_context: "all" to list of contexts `["CG", "CHG", "CHH"]`, and use it appropriately throughout the pipeline (e.g. in combined_analysis, to extract which bigwigs to generate and use in plots, and for which context to use in R_call_DMRs script. Only for these three contexts first, defer for other subcontexts.
@@ -302,6 +299,8 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 * [x] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway. **Done**: Removed the `dry-run` subcommand (parser, dispatcher, and cmd_dry_run function). Header docstring updated to point users at `epicc validate` for the friendly path or `epicc run -- --dry-run` for the raw snakemake output.
 
 * [x] Clean up all entries with personal information (cluster paths and email addresses). **Done**: Removed the lab-specific `/grid/martienssen/home/jcahn/...` paths from the B73_v5/la8011/CabSauv genome blocks in `config/epicc-options.yaml`; replaced with a generic commented-out skeleton (`MyGenome`) so users see the schema without picking up Martienssen-lab cluster paths. `profiles/slurm/config.yaml` slurm_account changed from the `martienssenlab` literal to a `<your-slurm-account>` placeholder. `profiles/geno/config.yaml` is correctly scoped as a site-specific example and untouched.
+
+* [x] change default paths to genome files in epicc-options, to remove hardcoded paths from Elzar. Should we remove genomes that are not fetchable online, and/or add some that are? **Done**: Default options now ship one fully-fetchable working genome (ColCEN with public schatzlab URLs, used by the ColCEN integration test) plus three commented-out templates: Spombe (PomBase URLs we already validate against in the pombe integration test), TAIR10 (Ensembl Plants URLs — release-XX placeholder noted), and a generic `MyGenome` skeleton. Lab-specific Elzar paths (B73_v5, la8011, CabSauv) removed in the same configuration cleanup pass.
 
 ### Codebase Hygiene
 

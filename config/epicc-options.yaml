@@ -31,15 +31,36 @@ genomes:
     ncbi_taxid: "3702"
 
   # ── Additional genome examples (commented out) ────────────────────────
-  # The block below is a skeleton for adding your own reference genome.
-  # Uncomment, rename, and replace the placeholder paths with real files
-  # (local paths or HTTP(S) URLs). Auto-derived fields (gtf_file,
-  # genomesize, star_index, structural_rna_fafile) can be left as
-  # "<auto>" or omitted entirely.
+  # The blocks below are starting templates for popular references.
+  # Uncomment whichever you need, or copy a block to add your own
+  # genome. Every `*_file` field accepts a local path (absolute or
+  # relative to the repo) or an HTTP(S) URL; gzipped inputs are
+  # handled transparently. Auto-derived fields (gtf_file, genomesize,
+  # star_index, structural_rna_fafile) can be set to "<auto>" or
+  # omitted entirely.
   #
+  # --- Schizosaccharomyces pombe (PomBase, dated release) ---
+  # Same files used by tests/integration/test_options_pombe.yaml.
+  #Spombe:
+  #  genus: "Schizosaccharomyces"
+  #  species: "pombe"
+  #  fasta_file: "https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/genome_sequence/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
+  #  gff_file: "https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/gff3/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
+  #  ncbi_taxid: "4896"
+  #
+  # --- Arabidopsis thaliana TAIR10 (Ensembl Plants) ---
+  # Update the release-XX number to the current Ensembl Plants release.
+  #TAIR10:
+  #  genus: "Arabidopsis"
+  #  species: "thaliana"
+  #  fasta_file: "https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-62/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz"
+  #  gff_file: "https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-62/gff3/arabidopsis_thaliana/Arabidopsis_thaliana.TAIR10.62.gff3.gz"
+  #  ncbi_taxid: "3702"
+  #
+  # --- Generic skeleton for any new genome ---
   #MyGenome:
-  #  genus: "Zea"
-  #  species: "mays"
+  #  genus: "<Genus>"
+  #  species: "<species>"
   #  fasta_file: "<path/to/genome.fa(.gz)>"
   #  gff_file: "<path/to/genes.gff3(.gz)>"
   #  te_file: "<path/to/transposable_elements.bed(.gz) or .gff3(.gz)>"
@@ -47,7 +68,7 @@ genomes:
   #  gene_info_file: "<path/to/gene_info.tab(.gz)>"       # only for GO: true
   #  #structural_rna_fafile: "<auto>"
   #  #star_index: "--genomeSAindexNbases 14"
-  #  ncbi_taxid: "4577"
+  #  ncbi_taxid: "<NCBI taxonomy ID>"
 
 
 # Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
