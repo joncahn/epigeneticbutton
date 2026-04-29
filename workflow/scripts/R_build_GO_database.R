@@ -39,8 +39,7 @@ makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               tax_id = ncbi_taxid,
               genus = genus,
               species = species,
-              goTable="go",
-              unlink=TRUE)
+              goTable="go")
 
 db<-paste0("./genomes/",refgenome,"/GO/")
 setwd(db)
