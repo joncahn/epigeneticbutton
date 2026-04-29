@@ -21,7 +21,7 @@ genus<-args[4]
 species<-args[5]
 ncbi_taxid<-args[6]
 
-dbname<-paste0("org.",substr(genus,1,1),species,"_",refgenome,".eg.db")
+dbname<-paste0("org.",substr(genus,1,1),species,".eg.db")
 
 fGO<-unique(gaf[,c(1,6,10)])
 colnames(fGO)<-c("GID","GO","EVIDENCE")
@@ -33,8 +33,8 @@ fChr<-unique(select(genes, GID, Chr))
 
 makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               version="0.1",
-              maintainer="user <user@epicbutton>",
-              author="user <user@epicbutton>",
+              maintainer="user <user@epicc>",
+              author="user <user@epicc>",
               outputDir = paste0("./genomes/",refgenome,"/GO"),
               tax_id = ncbi_taxid,
               genus = genus,
