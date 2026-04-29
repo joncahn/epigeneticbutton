@@ -605,8 +605,8 @@ rule create_GO_database:
         taxid_file = f"{GENOMES_DIR}/{{ref_genome}}/taxid.json"
     output:
         godb = directory(f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}"),
-        gaf = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gaf_file.tab",
-        geneinfo = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gene_info.tab"
+        gaf = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_gaf_file.tab",
+        geneinfo = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_gene_info.tab"
     params:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_build_GO_database.R"),
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -640,8 +640,8 @@ rule create_GO_database:
 rule perform_GO_on_target_file:
     input:
         godb = lambda wildcards: directory(get_go_database(wildcards.ref_genome)),
-        gaf = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gaf_file.tab",
-        geneinfo = f"{GENOMES_DIR}/{{ref_genome}}/GO/{{dbname}}_{{ref_genome}}_gene_info.tab",
+        gaf = lambda wildcards: f"{get_go_database(wildcards.ref_genome)}_gaf_file.tab",
+        geneinfo = lambda wildcards: f"{get_go_database(wildcards.ref_genome)}_gene_info.tab",
         target_file = lambda wildcards: define_rnaseq_target_file(wildcards),
         background_file = lambda wildcards: define_rnaseq_background_file(wildcards)
     output:
