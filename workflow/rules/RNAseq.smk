@@ -622,14 +622,14 @@ rule create_GO_database:
         {{
         rm -rf {output.godb}
         if file {params.gaffile} | grep -q 'gzip compressed'; then
-            gunzip -c {params.gaffile} > {output.tempgaf}
+            gunzip -c {params.gaffile} > {output.gaf}
         else
-            cp {params.gaffile} {output.tempgaf}
+            cp {params.gaffile} {output.gaf}
         fi
         if file {params.geneinfofile} | grep -q 'gzip compressed'; then
-            gunzip -c {params.geneinfofile} > {output.tempgeneinfo}
+            gunzip -c {params.geneinfofile} > {output.geneinfo}
         else
-            cp {params.geneinfofile} {output.tempgeneinfo}
+            cp {params.geneinfofile} {output.geneinfo}
         fi
         ncbi_taxid=$(python3 -c "import json; print(json.load(open('{input.taxid_file}'))['ncbi_taxid'])")
         printf "Creating GO database for {params.ref_genome} (TaxId: $ncbi_taxid)\n"
