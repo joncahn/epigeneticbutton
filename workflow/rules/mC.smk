@@ -189,9 +189,9 @@ rule bismark_map_pe:
         # own --multicore process management, causing near-zero mapping rates.
         unset OMP_NUM_THREADS
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
-        # --gzip omitted: bismark rejects --gzip with --pbat, and --gzip only
-        # affects intermediate temp files (not the final BAM), so the disk
-        # cost is small and consistent across all mC assay types.
+        # gzip output omitted: bismark rejects gzipped output in PBAT mode,
+        # and the flag only affects intermediate temp files (not the final
+        # BAM), so the disk cost is small and consistent across all mC types.
         bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}

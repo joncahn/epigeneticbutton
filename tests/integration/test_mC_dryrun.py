@@ -22,6 +22,8 @@ Test samples (from test_samples_mC.tsv):
     WT_root_bedMethyl_rep1  dmC      SE   genotype:WT,tissue:root     (bedMethyl)
 """
 
+import re
+
 import pytest
 from pathlib import Path
 
@@ -32,6 +34,17 @@ from tests.integration.conftest import (
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
+
+
+def _has_cli_flag(text, flag):
+    """Return True iff ``flag`` appears as a standalone CLI argument in ``text``.
+
+    Avoids false positives from comment lines or prose that happens to mention
+    the flag literally — e.g. a comment ``# bismark rejects --pbat with --gzip``
+    must not trigger ``_has_cli_flag(out, "--pbat")``.
+    """
+    pattern = rf"(?:^|\s){re.escape(flag)}(?=\s|$|[\\\"'])"
+    return re.search(pattern, text) is not None
 
 _OUTPUT_DIR = load_output_dir("test_options_mC.yaml")
 
@@ -198,57 +211,57 @@ class TestBismarkParameterRouting:
 
     def test_wgbs_no_non_directional(self, wgbs_output):
         """WGBS should NOT have --non_directional."""
-        assert "--non_directional" not in wgbs_output
+        assert not _has_cli_flag(wgbs_output, "--non_directional")
 
     def test_wgbs_no_pbat(self, wgbs_output):
         """WGBS should NOT have --pbat."""
-        assert "--pbat" not in wgbs_output
+        assert not _has_cli_flag(wgbs_output, "--pbat")
 
     def test_wgbs_has_ignore_r2(self, wgbs_output):
         """WGBS PE extraction should include --ignore_r2."""
-        assert "--ignore_r2" in wgbs_output
+        assert _has_cli_flag(wgbs_output, "--ignore_r2")
 
     # -- WGBS_nd: non-directional, no --ignore_r2 --
 
     def test_wgbs_nd_has_non_directional(self, wgbs_nd_output):
         """WGBS_nd should have --non_directional."""
-        assert "--non_directional" in wgbs_nd_output
+        assert _has_cli_flag(wgbs_nd_output, "--non_directional")
 
     def test_wgbs_nd_no_pbat(self, wgbs_nd_output):
         """WGBS_nd should NOT have --pbat."""
-        assert "--pbat" not in wgbs_nd_output
+        assert not _has_cli_flag(wgbs_nd_output, "--pbat")
 
     def test_wgbs_nd_no_ignore_r2(self, wgbs_nd_output):
         """WGBS_nd should NOT have --ignore_r2."""
-        assert "--ignore_r2" not in wgbs_nd_output
+        assert not _has_cli_flag(wgbs_nd_output, "--ignore_r2")
 
     # -- PBAT: --pbat flag, no --ignore_r2 --
 
     def test_pbat_has_pbat(self, pbat_output):
         """PBAT should have --pbat."""
-        assert "--pbat" in pbat_output
+        assert _has_cli_flag(pbat_output, "--pbat")
 
     def test_pbat_no_non_directional(self, pbat_output):
         """PBAT should NOT have --non_directional."""
-        assert "--non_directional" not in pbat_output
+        assert not _has_cli_flag(pbat_output, "--non_directional")
 
     def test_pbat_no_ignore_r2(self, pbat_output):
         """PBAT should NOT have --ignore_r2."""
-        assert "--ignore_r2" not in pbat_output
+        assert not _has_cli_flag(pbat_output, "--ignore_r2")
 
     # -- EMseq: standard directional (like WGBS but no --ignore_r2) --
 
     def test_emseq_no_non_directional(self, emseq_output):
         """EMseq should NOT have --non_directional."""
-        assert "--non_directional" not in emseq_output
+        assert not _has_cli_flag(emseq_output, "--non_directional")
 
     def test_emseq_no_pbat(self, emseq_output):
         """EMseq should NOT have --pbat."""
-        assert "--pbat" not in emseq_output
+        assert not _has_cli_flag(emseq_output, "--pbat")
 
     def test_emseq_no_ignore_r2(self, emseq_output):
         """EMseq should NOT have --ignore_r2."""
-        assert "--ignore_r2" not in emseq_output
+        assert not _has_cli_flag(emseq_output, "--ignore_r2")
 
 
 # ===========================================================================
