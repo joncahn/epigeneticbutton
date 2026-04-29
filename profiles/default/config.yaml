@@ -39,6 +39,15 @@ max_resources: &max
   mem_mb: 32000
   runtime: "2d"
 
+# DMRcaller pools per-replicate CX_reports into GRanges in memory and
+# parallelizes per-context. Plant-genome runs with multiple replicates
+# routinely overshoot the 32G *max budget once MulticoreParam is
+# registered (each worker holds a slice). Doubled to 64G; bump further
+# in a site profile if needed (large mammalian runs may need >100G).
+dmr_resources: &dmr
+  mem_mb: 64000
+  runtime: "2d"
+
 single_thread: &single
   mem_mb: 32000
   runtime: "8h"
@@ -99,7 +108,7 @@ set-resources:
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
-  call_DMRs_pairwise: *max
+  call_DMRs_pairwise: *dmr
   # dmC
   get_dmc_input: *standard
   copy_bedmethyl_input: *low

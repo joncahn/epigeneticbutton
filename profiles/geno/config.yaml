@@ -39,6 +39,12 @@ max_resources: &max
   tmp_mb: 32000
   runtime: "2d"
 
+# DMRcaller-specific tier — see profiles/default/config.yaml for rationale.
+dmr_resources: &dmr
+  mem_mb: 64000
+  tmp_mb: 32000
+  runtime: "2d"
+
 single_thread: &single
   mem_mb: 8000
   tmp_mb: 16000
@@ -100,7 +106,7 @@ set-resources:
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
-  call_DMRs_pairwise: *max
+  call_DMRs_pairwise: *dmr
   # dmC
   get_modbam: *standard
   get_bedmethyl: *low

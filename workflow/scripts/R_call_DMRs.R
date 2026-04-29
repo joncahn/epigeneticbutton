@@ -2,11 +2,36 @@
 
 library(dplyr)
 library(DMRcaller)
+library(BiocParallel)
 
 args = commandArgs(trailingOnly=TRUE)
 
 threads<-as.numeric(args[1])
 chromsizes<-read.table(args[2], col.names = c("chr", "length"))
+
+# Wire the allocated threads through every parallel mechanism we might
+# hit. DMRcaller 1.38 uses parallel::mclapply with an explicit
+# mc.cores=cores arg, so passing cores=threads to computeDMRs() below
+# already covers the primary path. The setup below adds belt-and-
+# suspenders for the remaining vectors:
+#   - register(MulticoreParam(workers=threads)) makes bpparam() return
+#     MulticoreParam instead of SerialParam — fixes the explicit
+#     SerialParam observation from
+#     github.com/joncahn/epigeneticbutton/issues/23 and future-proofs
+#     against DMRcaller versions that switch to BiocParallel.
+#   - options(mc.cores) is the default for any mclapply() that doesn't
+#     set mc.cores explicitly.
+#   - OMP_NUM_THREADS prevents any C/Fortran OpenMP region (e.g. in
+#     BLAS-backed calls) from oversubscribing the slot.
+if (threads > 1) {
+    register(MulticoreParam(workers=threads))
+    options(mc.cores=threads)
+    Sys.setenv(OMP_NUM_THREADS=as.character(threads))
+}
+cat("R_call_DMRs.R parallelism setup: threads=", threads,
+    " | BiocParallel backend=", class(bpparam())[1],
+    " | options(mc.cores)=", getOption("mc.cores", 1L),
+    "\n", sep="")
 # args[3] is a comma-separated list of methylation contexts to call DMRs in,
 # e.g. "CG,CHG,CHH" for plants or "CG" for animal genomes that lack
 # substantive non-CpG methylation. Replaces the legacy "all"/"CG-only"
