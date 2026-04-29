@@ -34,10 +34,6 @@
 
 * [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
 
-* [ ] for 'epicc validate', capture the snakemake output silently (all the rules that would run, the files that would be removed, etc..) and only print out the diagnostic/results of the command.
-
-* [ ] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway.
-
 ### Performance/Resource Usage
 
 #### Full code review of snakemake rules
@@ -301,6 +297,10 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
   * [x] SLURM account: `profiles/slurm/config.yaml` now sets `slurm_account="martienssenlab"` via `default-resources`; annotated as site-specific with an `EDIT:` marker for users copying the profile to a different cluster.
 
 * [x] maybe rename the `profile` sub-command to `perf-profile`, since profile is a specific option for snakemake. Also, does not seem to work ("Parsing .snakemake/log/2026-04-24T105453.098500.snakemake.log ... No completed jobs found in log." when some jobs were completed) **Done**: Renamed to `epicc perf` (chose `perf` over `perf-profile` for brevity and consistency with other single-word subcommands). Default mode now aggregates all logs from the same resumed run, identified by `output_dir` + `analysis_name` wildcards extracted from log content. Fixed the "No completed jobs found" bug — the parser was missing SLURM-submitted jobs (which use `Job N has been submitted with SLURM jobid M (log: .../rule_RULE/WC/...)` instead of the verbose `rule X:` block).
+
+* [x] for 'epicc validate', capture the snakemake output silently (all the rules that would run, the files that would be removed, etc..) and only print out the diagnostic/results of the command. **Done**: `cmd_validate` now captures snakemake's dry-run output and only emits a concise summary (Job stats table + warnings + files-to-be-removed). Full output is dumped on dry-run failure or when `--verbose` is passed. New `_summarize_dryrun` helper extracts the relevant sections without parsing the per-job rule blocks.
+
+* [x] remove 'epicc dry-run' option, which is redundant with validate (not as informative), and can be easily run with 'epicc run -- --dry-run' anyway. **Done**: Removed the `dry-run` subcommand (parser, dispatcher, and cmd_dry_run function). Header docstring updated to point users at `epicc validate` for the friendly path or `epicc run -- --dry-run` for the raw snakemake output.
 
 ### Codebase Hygiene
 

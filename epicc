@@ -5,11 +5,14 @@ User-friendly CLI wrapper around the EPICC Snakemake pipeline.
 
 Usage:
     epicc run [options] [-- SNAKEMAKE_ARGS...]
-    epicc dry-run [options] [-- SNAKEMAKE_ARGS...]
     epicc validate [options]
     epicc output --plot-type TYPE --input-file PATH [options]
     epicc perf [--single | LOGFILE] [--html FILE]
     epicc clean [--intermediates] [--conda-envs] [--logs] [--all]
+
+For a dry-run, prefer ``epicc validate`` (parses the config + sample sheet
+and surfaces a concise summary) or pass --dry-run through to snakemake
+via ``epicc run -- --dry-run`` for the raw output.
 """
 
 import argparse
@@ -328,31 +331,6 @@ def cmd_run(args, extra_args):
     return result.returncode
 
 
-def cmd_dry_run(args, extra_args):
-    """Dry-run the pipeline (no execution)."""
-    repo = find_repo_root()
-    os.chdir(repo)
-
-    cmd = build_snakemake_cmd(args, extra_args, dry_run=True)
-
-    print("EPICC: Dry-run (no jobs will be executed)", file=sys.stderr)
-    if args.verbose:
-        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
-
-    result = subprocess.run(cmd)
-
-    if result.returncode == 0:
-        print("\nEPICC: Dry-run passed.", file=sys.stderr)
-    else:
-        print(f"\nEPICC: Dry-run failed (exit code {result.returncode}).",
-              file=sys.stderr)
-
-    if result.returncode == 0:
-        maybe_render_graphs(args)
-
-    return result.returncode
-
-
 def cmd_validate(args, extra_args):
     """Validate configuration without running the pipeline."""
     repo = find_repo_root()
@@ -442,16 +420,94 @@ def cmd_validate(args, extra_args):
         print("\n  Running snakemake dry-run for DAG validation...\n",
               file=sys.stderr)
         cmd = build_snakemake_cmd(args, extra_args, dry_run=True)
-        result = subprocess.run(cmd)
+        # In verbose mode, stream snakemake's output directly. Otherwise
+        # capture it and surface only the diagnostic summary (rule counts,
+        # files-to-be-removed, etc.) — most users care about "what would
+        # the pipeline do" rather than the full DAG dump. On dry-run
+        # failure, the captured output is dumped so the user can debug.
+        if args.verbose:
+            result = subprocess.run(cmd)
+            if result.returncode == 0:
+                print("\nEPICC: Validation passed.", file=sys.stderr)
+                maybe_render_graphs(args)
+            else:
+                print(f"\nEPICC: Dry-run validation failed (exit code "
+                      f"{result.returncode}).", file=sys.stderr)
+            return result.returncode
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
-            print("\nEPICC: Validation passed.", file=sys.stderr)
+            summary = _summarize_dryrun(result.stdout, result.stderr)
+            if summary:
+                print(summary, file=sys.stderr)
+                print("", file=sys.stderr)
+            print("EPICC: Validation passed.", file=sys.stderr)
+            print("  (re-run with --verbose to see the full snakemake output)",
+                  file=sys.stderr)
             maybe_render_graphs(args)
         else:
             print(f"\nEPICC: Dry-run validation failed (exit code "
-                  f"{result.returncode}).", file=sys.stderr)
+                  f"{result.returncode}). Full snakemake output below:\n",
+                  file=sys.stderr)
+            if result.stdout:
+                sys.stderr.write(result.stdout)
+            if result.stderr:
+                sys.stderr.write(result.stderr)
         return result.returncode
 
     return 1 if errors else 0
+
+
+def _summarize_dryrun(stdout, stderr):
+    """Extract a concise summary from snakemake dry-run output.
+
+    Pulls the ``Job stats:`` table (rule → count, plus the totals row), any
+    ``Removing files...`` notice, and any leading warnings — drops the
+    per-job rule blocks that dominate the volume. Returns the formatted
+    block as a string, or ``None`` if nothing summary-like was found, in
+    which case the caller can decide how to fall back.
+    """
+    sections = []
+
+    # 1. Warnings printed before the DAG build (one-line each, on stderr).
+    warning_lines = [
+        line for line in stderr.splitlines()
+        if line.lstrip().startswith(("Warning", "WARNING", "[!]"))
+    ]
+    if warning_lines:
+        sections.append("\n".join(warning_lines))
+
+    # 2. The Job stats: table — present whenever snakemake plans any jobs.
+    lines = stdout.splitlines()
+    block = []
+    in_block = False
+    seen_total = False
+    for line in lines:
+        if line.startswith("Job stats:"):
+            in_block = True
+        if in_block:
+            block.append(line)
+            stripped = line.lstrip()
+            if stripped.startswith("total"):
+                seen_total = True
+                continue
+            if seen_total and line.strip() == "":
+                break
+    if block:
+        sections.append("\n".join(block).rstrip())
+
+    # 3. Files snakemake plans to remove (typical when temp/touch outputs
+    # are stale, or after a configuration change).
+    remove_lines = [
+        line for line in stdout.splitlines()
+        if line.lstrip().startswith("Removing")
+    ]
+    if remove_lines:
+        sections.append("Files to be removed:\n  " + "\n  ".join(remove_lines))
+
+    if not sections:
+        return None
+    return "\n\n".join(sections)
 
 
 # ---------------------------------------------------------------------------
@@ -841,7 +897,7 @@ def cmd_clean(args, extra_args):
 # ---------------------------------------------------------------------------
 
 def add_common_options(parser):
-    """Add options shared by run/dry-run/validate."""
+    """Add options shared by run/validate."""
     parser.add_argument(
         "--options", default=DEFAULT_OPTIONS, metavar="FILE",
         help=f"Path to options YAML file (default: {DEFAULT_OPTIONS})",
@@ -890,7 +946,7 @@ def add_common_options(parser):
 
 
 def add_run_options(parser):
-    """Add options specific to run/dry-run."""
+    """Add options specific to run."""
     parser.add_argument(
         "--target", metavar="TARGET",
         help="Named target (default: all)",
@@ -914,7 +970,7 @@ def add_graph_options(parser):
     """Add --dag / --rulegraph file outputs.
 
     Format is inferred from the file extension (.png/.svg/.pdf via graphviz
-    ``dot``; .dot writes raw dot text). Available on dry-run and validate.
+    ``dot``; .dot writes raw dot text). Available on validate.
     """
     parser.add_argument(
         "--dag", metavar="FILE",
@@ -944,16 +1000,6 @@ def build_parser():
     )
     add_common_options(p_run)
     add_run_options(p_run)
-
-    # --- dry-run ---
-    p_dry = subparsers.add_parser(
-        "dry-run", help="Dry-run the pipeline (no execution)",
-        description="Perform a dry-run to verify the DAG without executing "
-                    "any jobs. Arguments after -- are passed to snakemake.",
-    )
-    add_common_options(p_dry)
-    add_run_options(p_dry)
-    add_graph_options(p_dry)
 
     # --- validate ---
     p_val = subparsers.add_parser(
@@ -1090,7 +1136,6 @@ def main():
 
     dispatch = {
         "run": cmd_run,
-        "dry-run": cmd_dry_run,
         "validate": cmd_validate,
         "output": cmd_output,
         "unlock": cmd_unlock,
