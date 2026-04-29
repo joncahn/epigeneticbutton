@@ -33,7 +33,7 @@ def define_rnaseq_background_file(wildcards):
 def get_go_database(ref_genome):
     species=config["genomes"][ref_genome]['species']
     genus=config["genomes"][ref_genome]['genus']
-    return f"{GENOMES_DIR}/{ref_genome}/GO/org.{genus[0]}{species}_{ref_genome}.eg.db"
+    return f"{GENOMES_DIR}/{ref_genome}/GO/org.{genus[0]}{species}.eg.db"
 
 def assign_rna_input(wildcards):
     """Find the RNA control bam for a RAMPAGE sample.
