@@ -43,5 +43,12 @@ makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
 
 db<-paste0("./genomes/",refgenome,"/GO/")
 setwd(db)
-install.packages(dbname, repos=NULL, type="source")
+# Install into the per-genome GO directory and prepend it to .libPaths()
+# so this run loads its own org.<G><species>.eg.db, isolated from any
+# same-named package built for a different reference genome with the
+# same binomial. AnnotationForge fixes the package name to
+# org.<G><species>.eg.db, so the only way to keep multiple genomes
+# coexisting is to scope each install to its own library directory.
+.libPaths(c(getwd(), .libPaths()))
+install.packages(dbname, repos=NULL, type="source", lib=getwd())
 setwd("../../..")

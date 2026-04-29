@@ -67,7 +67,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
   - `repo_folder` is optional; auto-detected from `workflow.basedir` at runtime (one level above the Snakefile). Override explicitly only when the repo is accessed from a non-standard path.
   - Reference genomes are namespaced under `genomes:`, each entry containing annotation file paths and species-level parameters (e.g. `genus`, `species`, `ncbi_taxid`)
   - `gtf_file`, `genomesize`, `star_index`, `ncbi_taxid`, and `structural_rna_fafile` are auto-computed at runtime (GTF derived from GFF via gffread, genome stats from FASTA, TaxId from NCBI Datasets CLI, structural RNA FASTA via Infernal/Rfam); user-provided values in the options file override the computed values
-  - GO database name is auto-derived as `org.<G><species>_<GenomeName>.eg.db` (e.g. `org.Athaliana_ColCEN.eg.db`)
+  - GO database name is auto-derived as `org.<G><species>.eg.db` (e.g. `org.Athaliana.eg.db`) — matches AnnotationForge's strict `org.<G><species>.eg.db` package-name format. To keep multiple reference genomes of the same species (e.g. ColCEN + TAIR10) from colliding in the conda env's shared R library, each genome's GO package is installed into and loaded from `genomes/<refgenome>/GO/` via per-call `lib=` / prepended `.libPaths()`.
   - Access pattern in rule files: `config["genomes"][ref_genome][field]`
   - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning
 - `config/example_samples.tsv` - Documented sample-sheet template (copy and edit; pass to epicc via `--samples`)

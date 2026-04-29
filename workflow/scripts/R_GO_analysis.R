@@ -22,8 +22,14 @@ genome_dir<-args[8]
 original_wd<-getwd()
 db<-paste0("./",genome_dir,"/",refgenome,"/GO/")
 setwd(db)
+# Prepend the per-genome GO directory to .libPaths() so requireNamespace,
+# library, and rrvgo's orgdb-driven calls below all resolve dbname against
+# this genome's installed package -- not whichever same-named package
+# happens to be in the conda env's R library from an earlier run with
+# a different reference genome of the same species.
+.libPaths(c(getwd(), .libPaths()))
 if (!requireNamespace(dbname, quietly = TRUE)) {
-	install.packages(dbname, repos=NULL, type="source")
+	install.packages(dbname, repos=NULL, type="source", lib=getwd())
 }
 library(dbname, character.only = TRUE)
 info<-read.delim(paste0(dbname,"_gaf_file.tab"), header=FALSE)
