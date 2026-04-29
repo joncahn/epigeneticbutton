@@ -633,7 +633,7 @@ rule create_GO_database:
         fi
         ncbi_taxid=$(python3 -c "import json; print(json.load(open('{input.taxid_file}'))['ncbi_taxid'])")
         printf "Creating GO database for {params.ref_genome} (TaxId: $ncbi_taxid)\n"
-        Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "$ncbi_taxid" "{params.ref_genome}"
+        Rscript "{params.script}" "{output.tempgaf}" "{output.tempgeneinfo}" "{params.ref_genome}" "{params.genus}" "{params.species}" "$ncbi_taxid"
         }} 2>&1 | tee -a "{log}"
         """
 
