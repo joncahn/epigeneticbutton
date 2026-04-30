@@ -72,7 +72,7 @@ atac_tracks:
 # For ATAC peaks
 atac_callpeaks:
   peaktype: "narrow"
-  params: "--keep-dup 'all' --nomodel --shift 75 --extsize 150"
+  params: "--keep-dup all --nomodel --shift 75 --extsize 150"
 
 # ChIP peak calling config (needed because ATAC reuses some ChIP rules for pseudo-rep peaks)
 chip_callpeaks:
@@ -80,7 +80,7 @@ chip_callpeaks:
     'H3K4me1|H3K27me1|H3K27me2|H3K27me3|H3K9me1|H3K9me2|H3K9me3|H4K20me1|H4K20me2|H4K20me3': "broad"
     'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow"
     'H3|H4': "broad"
-  params: "--keep-dup 'all' --nomodel"
+  params: "--keep-dup all --nomodel"
 
 # Differential peaks (MAnorm)
 diffpeaks_params:

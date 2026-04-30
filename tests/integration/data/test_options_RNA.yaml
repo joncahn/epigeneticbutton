@@ -57,7 +57,7 @@ rna_tracks:
 
 rampage_calltss:
   peaktype: "narrow"
-  params: "--keep-dup 'all' --nomodel --extsize 100"
+  params: "--keep-dup all --nomodel --extsize 100"
 
 # Gene expression targets
 rnaseq_target_file_label: "target_genes"

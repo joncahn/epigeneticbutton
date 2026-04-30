@@ -186,7 +186,7 @@ chip_callpeaks:
     'H3K4me1|H3K27me1|H3K27me2|H3K27me3|H3K9me1|H3K9me2|H3K9me3|H4K20me1|H4K20me2|H4K20me3|.*DDM1|H3\.3|H3\.1|MGH3|CenH3|PolIIS2P|H2AT120Ph|H2AKub|H3K36me3': "broad"
     'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow"
     'H3|H4': "broad"
-  params: "--keep-dup 'all' --nomodel"
+  params: "--keep-dup all --nomodel"
 
 # CUT&RUN / CUT&Tag peak calling. Default callers are picked per peak shape:
 # epic2 for diffuse/broad signal (window/RoI based), SEACR for sharp/narrow
@@ -199,19 +199,19 @@ cut_callpeaks:
   epic2_params: "--bin-size 150 --gaps-allowed 2"
   seacr_norm: "non"               # norm | non — set "non" when an IgG control is supplied
   seacr_threshold: "stringent"    # stringent | relaxed
-  macs2_params_pe: "--keep-dup 'all' --nomodel"
-  macs2_params_se: "--keep-dup 'all' --nomodel --shift -75 --extsize 150"
+  macs2_params_pe: "--keep-dup all --nomodel"
+  macs2_params_se: "--keep-dup all --nomodel --shift -75 --extsize 150"
   # Defer for later PR: spike-in normalization (E. coli for CUT&RUN,
   # Drosophila for CUT&Tag) and CUT&RUN fragment-size splitting
   # (TF <120bp / histone >150bp).
 
 atac_callpeaks:
   peaktype: "narrow"
-  params: "--keep-dup 'all' --nomodel --shift 75 --extsize 150"
+  params: "--keep-dup all --nomodel --shift 75 --extsize 150"
   
 rampage_calltss:
   peaktype: "narrow"
-  params: "--keep-dup 'all' --nomodel --extsize 100"
+  params: "--keep-dup all --nomodel --extsize 100"
 
 diffpeaks_params:
   chip_pe: "-w 2000 --pe"
