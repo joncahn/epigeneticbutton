@@ -324,8 +324,11 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
 
     # Re-run any jobs Snakemake marked incomplete on a prior interrupted run.
     # Without this, Snakemake errors out on the first affected rule, which is
-    # almost never what the user wants when resuming.
-    cmd.append("--rerun-incomplete")
+    # almost never what the user wants when resuming. The --no-rerun-incomplete
+    # flag opts out (e.g. when investigating which jobs are flagged incomplete,
+    # or to force a fresh start without re-running them).
+    if not getattr(args, "no_rerun_incomplete", False):
+        cmd.append("--rerun-incomplete")
 
     # Verbosity
     if args.verbose:
@@ -833,7 +836,8 @@ def cmd_output(args, extra_args):
         config_overrides.append(f"genome_dir={args.genome_dir}")
     if config_overrides:
         cmd += ["--config"] + config_overrides
-    cmd.append("--rerun-incomplete")
+    if not getattr(args, "no_rerun_incomplete", False):
+        cmd.append("--rerun-incomplete")
     if args.verbose:
         cmd.append("--printshellcmds")
     if args.quiet:
@@ -1020,6 +1024,14 @@ def add_run_options(parser):
         "--no-auto-unlock", action="store_true",
         help="Don't auto-unlock the working directory if a stale Snakemake "
              "lock is detected at startup (default: auto-unlock with notice)",
+    )
+    parser.add_argument(
+        "--no-rerun-incomplete", action="store_true",
+        help="Don't pass --rerun-incomplete to snakemake. Default behavior "
+             "is to re-run any jobs Snakemake marked incomplete on a prior "
+             "interrupted run; opt out when you want to inspect which jobs "
+             "are flagged incomplete or force a fresh start without "
+             "re-running them.",
     )
 
 
