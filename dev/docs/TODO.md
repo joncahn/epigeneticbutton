@@ -79,6 +79,14 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] **Defer** CUT&Tag and CUT&RUN narrow (TF) ColCEN integration test data — currently only CUT_RUN_broad H3K27me3 from GSE123602 is in the test sheet. Identify a comparable public Arabidopsis CUT&Tag dataset (candidates: GSE201962 Ouyang 2022, PRJNA940156 Zhao 2023) and a CUT&RUN narrow/TF dataset.
 
+#### mC contexts and analyses
+
+* [ ] **defer** Add options to analyze subcontexts (e.g. CAG, CAA). This would require expanding the mC contexts options, sorting the cx-report based on the new patterns (potentially checking early that the pattern exists), allowing specific base nomenclature (W, N), checking whether DMRcaller works with custom contexts, and adapting the correct parameters for the corresponding type (e.g. CAA based on CHH parameters, CAG based on CHG).
+ 
+* [ ] **defer** Rework the make_mc_bigwig_files to only have named output files matching the required contexts, without placeholders files for not necessary contexts (i.e. CHG and CHH if only ["CG"] present in the context list). This is better snakemake practice, and would allow sub-contexts bigwig files to be generated as well. This should still be done in a single rule however, to limit the number of time cx-report needs to be read, and filter each required contexts with the same awk line.
+
+* [ ] **defer** Related to the configuration fileset above, the parameters for DMR analysis should be more easily customizable, to allow for different . While the custom script allows this, being able to pass the DMR parameters more explicitly could be useful, including as a list of different combinations of values to try (e.g. 50, 100, 150bp windows; min_c cutoff: 3,5,10; diff_cutoff: 0.1, 0.2). To do this, these parameters should either be top-levels in epicc-options (and allow for lists of parameters), or potentially managed through a specific CLI argument --DMR_parameters.
+
 ### UI/UX
 
 #### custom adapter handling
