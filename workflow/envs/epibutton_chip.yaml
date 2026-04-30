@@ -12,5 +12,6 @@ dependencies:
   - macs2
   - seacr
   - epic2
+  - setuptools  # epic2 imports pkg_resources, which lives in setuptools and is no longer auto-installed on Python >=3.12
   - pigz
   - manorm
