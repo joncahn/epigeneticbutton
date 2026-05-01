@@ -270,7 +270,12 @@ rule shortstack_map:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         srna_params = config['srna_mapping_params'],
-        dn_mirna = "--dn_mirna" if config.get('shortstack_dn_mirna', True) else ""
+        dn_mirna = "--dn_mirna" if config.get('shortstack_dn_mirna', True) else "",
+        # ShortStack delegates sort/merge to internal samtools calls
+        # which honor TMPDIR. Route it to a per-sample sibling of outdir
+        # to keep big intermediate sort buckets off any cluster /tmp
+        # tmpfs container.
+        ss_tmpdir = lambda wildcards: f"{RESULTS_DIR}/sRNA/.shortstack_tmp__{wildcards.sample_name}"
     log:
         temp(return_log_smallrna("{sample_name}", "mapping_shortstack", "all"))
     conda: CONDA_ENV_SRNA
@@ -278,6 +283,9 @@ rule shortstack_map:
         """
         {{
         rm -rf {config[output_dir]}/sRNA/mapped/{params.sample_name}
+        mkdir -p "{params.ss_tmpdir}"
+        trap 'rm -rf "{params.ss_tmpdir}"' EXIT
+        export TMPDIR="{params.ss_tmpdir}"
         printf "\nMapping {params.sample_name} to {params.ref_genome} with Shortstack version:\n"
         ShortStack --version
         ShortStack --readfile {input.fastq} --genomefile {input.fasta} --threads {threads} {params.srna_params} {params.dn_mirna} --outdir {config[output_dir]}/sRNA/mapped/{params.sample_name}
