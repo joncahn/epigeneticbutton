@@ -61,14 +61,30 @@ context_params <- list(
 
 call_dmrs_for_context <- function(ctx) {
   p <- context_params[[ctx]]
-  computeDMRs(
+  base_args <- list(
     methylationDatasample1pool, methylationDatasample2pool,
     regions=chrs, context=ctx,
     method=p$method, binSize=200, test="score",
     pValueThreshold=0.01, minCytosinesCount=5,
     minProportionDifference=p$minProportionDifference,
-    minGap=200, minSize=50, minReadsPerCytosine=3, cores=threads
+    minGap=200, minSize=50, minReadsPerCytosine=3
   )
+  # DMRcaller >=1.42 introduced a new `parallel=FALSE` default that
+  # hardcodes BPPARAM to SerialParam regardless of cores= or any
+  # globally-registered backend, so the legacy cores= parameter alone
+  # is effectively ignored on those versions and the job runs serial
+  # despite a multi-CPU allocation. Pass the explicit parallel/BPPARAM
+  # pair when DMRcaller exposes them; fall back to cores= for older
+  # versions (1.38 and earlier, which used parallel::mclapply directly).
+  fnames <- names(formals(computeDMRs))
+  if (threads > 1 && all(c("parallel", "BPPARAM") %in% fnames)) {
+    base_args$parallel <- TRUE
+    base_args$BPPARAM <- MulticoreParam(workers=threads)
+  }
+  if ("cores" %in% fnames) {
+    base_args$cores <- threads
+  }
+  do.call(computeDMRs, base_args)
 }
 
 summarize_dmrs <- function(dmrs, ctx) {
