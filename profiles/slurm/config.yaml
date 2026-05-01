@@ -1,7 +1,6 @@
 # profiles/slurm/config.yaml
 #
-# EXAMPLE SLURM profile tuned for the CSHL cluster. To use on a
-# different cluster, copy this file to either
+# EXAMPLE SLURM profile. Copy this file and edit for your cluster, to either
 #   ~/.config/snakemake/<name>/config.yaml      (then: --profile <name>)
 # or any path of your choosing
 #   (then: --profile path/to/config.yaml   or   export SNAKEMAKE_PROFILE=...)
@@ -30,6 +29,33 @@ default-resources:
   - runtime="1h"
   #- slurm_account="<your-slurm-account>"   # EDIT: uncomment and replace with your cluster's SLURM account if --account is required.
 
+# precommand runs in every job's shell before the rule body. Use it to
+# wire TMPDIR for the cluster's local-scratch convention. Two common
+# situations require attention:
+#
+#   1. Plain SLURM (no JobContainerType): default TMPDIR may be /tmp
+#      on the node, shared across jobs. Per-job subdir under /tmp
+#      avoids collisions:
+#
+#        precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR"
+#          && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID
+#          && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
+#
+#   2. JobContainerType=job_container/tmpfs (common at HPCs that want
+#      strong /tmp isolation): each job gets a private /tmp tmpfs
+#      whose size is bounded by the job's RAM allocation, NOT by the
+#      node's TmpDisk. Heavy-temp rules (e.g. deeptools bamCompare
+#      --binSize 1 on a plant genome) easily exceed 16G and hit ENOSPC
+#      even when --tmp= is requested at the scheduler. Route TMPDIR
+#      to a path *outside* the container, e.g. on a shared filesystem
+#      that's NFS-mounted everywhere:
+#
+#        precommand: 'test -n "\$SLURM_JOB_ID"
+#          && export TMPDIR=/path/to/shared/scratch/\$USER/slurm_\$SLURM_JOB_ID
+#          && mkdir -p \$TMPDIR || true'
+#
+# To detect whether your cluster uses job_container/tmpfs, run
+# `scontrol show config | grep JobContainerType` on a login node.
 precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
 
 # Per-rule cluster-specific overrides go here if any rule needs different
