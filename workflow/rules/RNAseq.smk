@@ -160,7 +160,11 @@ rule make_STAR_indices:
     output:
         indices = directory(f"{GENOMES_DIR}/{{ref_genome}}/STAR_index")
     params:
-        star_index_override = lambda wildcards: config["genomes"][wildcards.ref_genome].get('star_index', '')
+        star_index_override = lambda wildcards: config["genomes"][wildcards.ref_genome].get('star_index', ''),
+        # Explicit STAR scratch — STAR insists the directory not exist
+        # at startup, so we rm -rf before the call. Routing into the
+        # genomes/ tree keeps temp work off any tmpfs/$TMPDIR.
+        outtmpdir = f"{GENOMES_DIR}/{{ref_genome}}/STAR_index_tmp"
     log:
         temp(os.path.join(REPO_FOLDER, RESULTS_DIR,"logs","STAR_index_{ref_genome}.log"))
     conda: CONDA_ENV_RNA
@@ -175,7 +179,9 @@ rule make_STAR_indices:
         fi
         printf "\nBuilding STAR index directory for {wildcards.ref_genome} ($star_idx)\n"
         mkdir "{output.indices}"
-        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}" $star_idx
+        rm -rf "{params.outtmpdir}"
+        STAR --runThreadN {threads} --runMode genomeGenerate --genomeDir "{output.indices}" --genomeFastaFiles "{input.fasta}" --sjdbGTFfile "{input.gtf}" --outTmpDir "{params.outtmpdir}" $star_idx
+        rm -rf "{params.outtmpdir}"
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -192,7 +198,11 @@ rule STAR_map_pe:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
         file_order = lambda wildcards: config['rna_tracks'][parse_sample_name(wildcards.sample_name)['sample_type']]['file_order'],
-        prefix = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_pe__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_pe__{wildcards.sample_name}_",
+        # STAR's intermediate scratch. STAR insists the directory not
+        # exist at startup, so we rm -rf before the call. Routing to
+        # results/ keeps temp work off any tmpfs/$TMPDIR.
+        outtmpdir = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_pe_tmp__{wildcards.sample_name}"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "PE"))
     conda: CONDA_ENV_RNA
@@ -208,7 +218,9 @@ rule STAR_map_pe:
         fi
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
-        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        rm -rf "{params.outtmpdir}"
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outTmpDir "{params.outtmpdir}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        rm -rf "{params.outtmpdir}"
         mv "{config[output_dir]}/RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         rm -f {config[output_dir]}/RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
@@ -225,7 +237,8 @@ rule STAR_map_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
-        prefix = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_se__{wildcards.sample_name}_"
+        prefix = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_se__{wildcards.sample_name}_",
+        outtmpdir = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_se_tmp__{wildcards.sample_name}"
     log:
         temp(return_log_rna("{sample_name}", "mappingSTAR", "SE"))
     conda: CONDA_ENV_RNA
@@ -234,7 +247,9 @@ rule STAR_map_se:
         {{
         printf "\nMapping {params.sample_name} to {params.ref_genome} with STAR version:\n"
         STAR --version
-        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        rm -rf "{params.outtmpdir}"
+        STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outTmpDir "{params.outtmpdir}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
+        rm -rf "{params.outtmpdir}"
         mv "{config[output_dir]}/RNA/mapped/star_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
         rm -f {config[output_dir]}/RNA/mapped/*"{params.sample_name}_Log"*
         }} 2>&1 | tee -a "{log}"
