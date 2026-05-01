@@ -2,6 +2,7 @@
 
 import csv
 import re
+import shutil
 import subprocess
 import yaml
 import pytest
@@ -95,17 +96,22 @@ def repo_root():
 def snakemake_available():
     """Check if snakemake is available.
 
-    On cold compute nodes Snakemake's import-heavy startup typically
-    takes 7-10s; under NFS load it can spike past that. The fixture is
-    session-scoped, so a single timeout poisons the entire run — give
-    it a generous 60s ceiling rather than racing the cold path.
+    Snakemake's startup is import-heavy; when its conda env lives on an
+    NFS-mounted shared filesystem (typical on HPC), a cold first
+    invocation under load can take well over a minute. The fixture is
+    session-scoped, so a single timeout silently skips every dryrun
+    test in the session — better to wait. Cheap shortcut: shutil.which
+    confirms the binary is present without invoking it; only fall back
+    to the subprocess probe if which fails.
     """
+    if shutil.which("snakemake") is None:
+        return False
     try:
         result = subprocess.run(
             ["snakemake", "--version"],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=300,
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
