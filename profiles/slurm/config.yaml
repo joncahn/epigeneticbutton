@@ -34,11 +34,63 @@ precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLUR
 
 # Per-rule cluster-specific overrides go here if any rule needs different
 # resources/threads on this cluster than profiles/default/config.yaml
-# specifies. Uncomment and adapt as needed:
+# specifies. Uncomment and adapt as needed.
+#
+# slurm_extra:
+#   Forwarded verbatim to sbatch by snakemake-executor-plugin-slurm.
+#   Useful for flags the plugin doesn't manage itself — most importantly
+#   --tmp=N for rules that write large intermediates into TMPDIR.
+#   Without an explicit --tmp request, sbatch lands the job on whatever
+#   node and the local /tmp partition can fill up under concurrent load
+#   (e.g. deeptools bamCompare with --binSize 1 on a plant genome runs
+#   into ENOSPC). Skip these lines if your cluster doesn't configure
+#   TmpDisk= in slurm.conf — the flag is silently ignored in that case.
+#   Sizes are in MB; tune to your nodes' actual scratch capacity.
 #
 # set-resources:
 #   bismark_map_pe:
 #     mem_mb: 48000
+#     slurm_extra: "'--tmp=131072'"   # 128G scratch per job
+#   bismark_map_se:
+#     slurm_extra: "'--tmp=131072'"
+#   filter_bam_pe:
+#     slurm_extra: "'--tmp=65536'"    # 64G
+#   filter_bam_se:
+#     slurm_extra: "'--tmp=65536'"
+#   STAR_map_pe:
+#     slurm_extra: "'--tmp=65536'"
+#   STAR_map_se:
+#     slurm_extra: "'--tmp=65536'"
+#   shortstack_map:
+#     slurm_extra: "'--tmp=65536'"
+#   prepare_modbam_for_pileup:
+#     slurm_extra: "'--tmp=65536'"
+#   make_bigwig_chip:
+#     slurm_extra: "'--tmp=65536'"
+#   make_coverage_chip:
+#     slurm_extra: "'--tmp=65536'"
+#   make_coverage_atac:
+#     slurm_extra: "'--tmp=65536'"
+#   make_fingerprint_plot:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_bam_replicates:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_mc_replicates:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_rna_replicates:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_srna_replicates:
+#     slurm_extra: "'--tmp=16384'"
+#   atac_shift_bam:
+#     slurm_extra: "'--tmp=32768'"
+#   get_fastq_pe:
+#     slurm_extra: "'--tmp=65536'"    # fasterq-dump spools FASTQs through TMPDIR
+#   get_fastq_se:
+#     slurm_extra: "'--tmp=65536'"
+#   call_DMRs_pairwise:
+#     slurm_extra: "'--tmp=32768'"
+#   summarize_tracks_pca:
+#     slurm_extra: "'--tmp=32768'"
 #
 # set-threads:
 #   bismark_map_pe: 16
