@@ -12,6 +12,6 @@ dependencies:
   - macs2
   - seacr
   - epic2
-  - setuptools  # epic2 imports pkg_resources, which lives in setuptools and is no longer auto-installed on Python >=3.12
+  - setuptools<71  # epic2 still imports pkg_resources via the legacy setuptools API; setuptools 71+ unbundled it into a separate PyPI distribution that conda-forge does not yet ship, so pin to the last release that vendors pkg_resources directly.
   - pigz
   - manorm
