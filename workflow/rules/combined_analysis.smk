@@ -996,13 +996,17 @@ rule making_stranded_matrix_on_targetfile:
         bs_mc = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'bs_mc'),
         before = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'before'),
         after = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'after'),
-        middle = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'middle')
+        middle = lambda wildcards: get_heatmap_param(wildcards.matrix_param, 'middle'),
+        dt_tmpdir = lambda wildcards: f"{RESULTS_DIR}/combined/.dt_tmp__matrix__{wildcards.matrix_param}__{wildcards.env}__{wildcards.target_name}__{wildcards.strand}"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "making_matrix_{matrix_param}_{target_name}_{strand}"))
     conda: CONDA_ENV
     shell:
         """
         {{
+        mkdir -p "{params.dt_tmpdir}"
+        trap 'rm -rf "{params.dt_tmpdir}"' EXIT
+        export TMPDIR="{params.dt_tmpdir}"
         header="$(cat {input.header})"
         if [[ "{params.strand}" == "unstranded" ]]; then
             if [[ "${{header}}" == "no" ]]; then
@@ -1553,13 +1557,17 @@ rule summarize_tracks_pca:
     params:
         labels = lambda wildcards: define_input_for_pca(wildcards, "labels"),
         bs = config['pca_bs'],
-        step = config['pca_step']
+        step = config['pca_step'],
+        dt_tmpdir = lambda wildcards: f"{RESULTS_DIR}/combined/.dt_tmp__pca__{wildcards.env}__{wildcards.ref_genome}"
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "summarize_tracks_pca_{env}"))
     conda: CONDA_ENV
     shell:
         """
         {{
+        mkdir -p "{params.dt_tmpdir}"
+        trap 'rm -rf "{params.dt_tmpdir}"' EXIT
+        export TMPDIR="{params.dt_tmpdir}"
         if [[ {wildcards.env} == "mCG" || {wildcards.env} == "mCHG" || {wildcards.env} == "mCHH" ]]; then
             printf "Summarizing bigwigs for {wildcards.analysis_name} {wildcards.ref_genome} for mC samples in {wildcards.env} sequence context\n"
             multiBigwigSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
@@ -1568,7 +1576,7 @@ rule summarize_tracks_pca:
             multiBamSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
         fi
         }} 2>&1 | tee -a "{log}"
-        """    
+        """
 
 rule plot_PCA_correlation:
     input:
