@@ -277,7 +277,7 @@ rule filter_rna_pe:
         STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "{config[output_dir]}/RNA/mapped/star_pe__{params.sample_name}_"
         #### Indexing bam file
         printf "\nSorting bam file\n"
-        samtools sort -@ {threads} "{output.mrkdup}" -o "{output.sorted_file}"
+        samtools sort -@ {threads} -T "{output.sorted_file}.sort" "{output.mrkdup}" -o "{output.sorted_file}"
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "{output.sorted_file}"
         #### Getting stats from bam file
@@ -303,7 +303,7 @@ rule filter_rna_se:
         {{
         #### Sorting bam file
         printf "\nSorting bam file\n"
-        samtools sort -@ {threads} "{input.bamfile}" -o "{output.sorted_file}"
+        samtools sort -@ {threads} -T "{output.sorted_file}.sort" "{input.bamfile}" -o "{output.sorted_file}"
         #### Indexing bam file
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "{output.sorted_file}"
@@ -413,7 +413,7 @@ rule merging_rna_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-        samtools merge -u -@ {threads} - {input.bamfiles} | samtools sort -@ {threads} -o {output.mergefile}
+        samtools merge -u -@ {threads} - {input.bamfiles} | samtools sort -@ {threads} -T {output.mergefile}.sort -o {output.mergefile}
         samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """

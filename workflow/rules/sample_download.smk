@@ -348,10 +348,10 @@ rule get_available_bam:
             cp {params.exist_bam} {output.bam}
         elif ls "{params.bam_path}"/*"{params.seq_id}"*.bam 1> /dev/null 2>&1; then
             printf "\nCopying bam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
-            samtools sort -@ {threads} -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.bam
+            samtools sort -@ {threads} -T "{output.bam}.sort" -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.bam
         elif ls "{params.bam_path}"/*"{params.seq_id}"*.sam 1> /dev/null 2>&1; then
             printf "\nCopying and gzipping sam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
-            samtools sort -@ {threads} -b -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.sam 
+            samtools sort -@ {threads} -T "{output.bam}.sort" -b -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.sam
         else
             printf "Error: No bam or sam file found for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
         fi

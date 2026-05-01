@@ -546,7 +546,7 @@ rule filter_bam_pe:
             | samtools view -@ 2 -bh -F 256 \
             | samtools fixmate -@ 2 -m - - \
             | samtools view -@ 2 -bh -q {params.mapq_filter} \
-            | samtools sort -@ {threads} -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ {threads} -m {params.sort_mem} -T "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.sort" -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -556,7 +556,7 @@ rule filter_bam_pe:
             | samtools view -@ 2 -bh -F 256 \
             | samtools fixmate -@ 2 -m - - \
             | samtools view -@ 2 -bh -q {params.mapq_filter} \
-            | samtools sort -@ 2 -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ 2 -m {params.sort_mem} -T "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.sort" -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
@@ -610,7 +610,7 @@ rule filter_bam_se:
                 -1 "{input.fastq}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools sort -@ {threads} -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ {threads} -m {params.sort_mem} -T "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.sort" -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         else
             bowtie2 --version
             bowtie2 -p {threads} {params.mapping_params} \
@@ -618,7 +618,7 @@ rule filter_bam_se:
                 -U "{input.fastq}" \
                 2> "{output.metrics_map}" \
             | samtools view -@ 2 -bh -q {params.mapq_filter} -F 256 \
-            | samtools sort -@ 2 -m {params.sort_mem} -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
+            | samtools sort -@ 2 -m {params.sort_mem} -T "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.sort" -o "{config[output_dir]}/{params.env}/mapped/sorted_{params.sample_name}.bam"
         fi
 
         samtools markdup -r -s -f "{output.metrics_dup}" -@ {threads} \
@@ -1129,7 +1129,7 @@ rule merging_bam_replicates:
         """
         {{
         printf "\nMerging replicates of {params.sname}\n"
-        samtools merge -u -@ {threads} - {input.bamfiles} | samtools sort -@ {threads} -o {output.mergefile}
+        samtools merge -u -@ {threads} - {input.bamfiles} | samtools sort -@ {threads} -T {output.mergefile}.sort -o {output.mergefile}
         samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
@@ -1157,8 +1157,8 @@ rule making_pseudo_replicates:
         {{
         printf "\nSplitting {params.sname} in two pseudo-replicates\n"
         samtools view -b -h -s 1.5 -@ {threads} -U {output.temp_pseudo2} -o {output.temp_pseudo1} {input.bamfile}
-		samtools sort -@ {threads} -o {output.pseudo1} {output.temp_pseudo1}
-		samtools sort -@ {threads} -o {output.pseudo2} {output.temp_pseudo2}
+		samtools sort -@ {threads} -T {output.pseudo1}.sort -o {output.pseudo1} {output.temp_pseudo1}
+		samtools sort -@ {threads} -T {output.pseudo2}.sort -o {output.pseudo2} {output.temp_pseudo2}
         # Index alongside the BAM so downstream rules (e.g. atac_shift_bam,
         # which calls alignmentSieve) can require a fresh .bai as input.
         samtools index -@ {threads} {output.pseudo1}

@@ -379,7 +379,7 @@ rule merging_srna_replicates:
         {{
         printf "\nMerging replicates of {params.sname} {params.size}\n"
         samtools merge -@ {threads} {output.tempfile} {input.bamfiles}
-        samtools sort -@ {threads} -o {output.mergefile} {output.tempfile}
+        samtools sort -@ {threads} -T {output.mergefile}.sort -o {output.mergefile} {output.tempfile}
         samtools index -@ {threads} {output.mergefile}
         }} 2>&1 | tee -a "{log}"
         """
