@@ -142,6 +142,16 @@ When conda environment YAML files are modified (e.g. after updating the pipeline
 snakemake --sdm conda --conda-cleanup-envs
 ```
 
+#### Pre-building envs before sbatch-wrapped runs
+
+On some clusters, `conda env create --prefix` fails when invoked from inside a SLURM job allocation, while the same command works from a login node. If you launch `epicc run` via `sbatch`, build all rule envs once from a login or dev node first:
+
+```bash
+epicc validate --build-envs --options config/epicc-options.yaml --samples your_samples.tsv
+```
+
+This runs the standard configuration checks and dry-run, then calls `snakemake --conda-create-envs-only` to populate `.snakemake/conda/`. Subsequent sbatch-wrapped runs will reuse the pre-built envs and skip the failing creation step.
+
 ## Sample file configuration
 
 ### Overview
