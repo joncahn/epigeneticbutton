@@ -85,6 +85,7 @@ dev/
         sample-sheet-spec.md  # Sample sheet format specification
         benchmarks.md         # Pipeline benchmarking notes
         TODO.md               # Active roadmap and backlog
+        upstream_blockers.md  # Pins/workarounds tied to upstream constraints
     plans/                    # Archived implementation plans (gitignored)
     profile_snakemake_log.py  # Snakemake run profiler (see above)
 tests/
