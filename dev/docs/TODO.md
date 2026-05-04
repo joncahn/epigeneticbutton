@@ -34,6 +34,10 @@
 
 ### Testing
 
+#### ColCEN
+
+* [ ] colCEN integration test has become too large. Pare down, maybe remove some ChIP libraries that exercise the same code paths.
+
 #### H. sapiens test case
 
 * [ ] Re-examine hg38 chr21 test data quality. The current dataset has limitations:
@@ -43,9 +47,7 @@
 
 ### Known Issues/Bugs
 
-* [ ] Chromap dropping >90% reads from ColCEN PE test data.
-
-* [ ] Chromap SE output not getting properly piped/handled downstream by samtools (see ColCEN test)
+* [ ] Chromap PE rarely sets the `0x2` proper-pair flag on highly repetitive references (observed 0.02% on ColCEN CenH3, 33% on ColCEN ATAC, vs. typical ~80%+ for bowtie2). Read counts and final BAMs are otherwise correct; the issue appears to be chromap mapping the two ends independently and picking repeat paralogs, so mates land on different chromosomes. Doesn't affect our peak callers but downstream tools that key on proper-pair (fragment-length QC, some PE-only tools) may behave differently between aligners. Likely a chromap upstream limitation rather than a pipeline bug — verify with a non-repetitive reference (Spombe ChIP PE) before filing upstream.
 
 ## Deferred
 
@@ -434,3 +436,7 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 ### Known Issues/Bugs
 
 * [x] PlotPCA can fail if no dimensions found. check npz results before starting PCA? **Done**: `plot_PCA_correlation` rule now catches `plotPCA` failures (insufficient data for PCA) and creates a placeholder output instead of failing the pipeline.
+
+* [x] ~~Chromap dropping >90% reads from ColCEN PE test data.~~ **Done** (commit `c78cd8f`): root cause was `samtools view -q` running before `samtools fixmate -m` in the chromap PE pipe. Filtering on MAPQ first dropped one mate of a pair while keeping the other, desyncing the name-collated stream so fixmate then mis-paired adjacent records. Reordered to `view -F → fixmate -m → view -q → sort → markdup`. Confirmed against the colcen run: CenH3 PE 47.4M → 20.4M (57% loss, mostly multi-mappers + duplicates), comparable to bowtie2 on the same data.
+
+* [x] ~~Chromap SE output not getting properly piped/handled downstream by samtools (see ColCEN test).~~ **Done** (commit `c78cd8f`): a stray `samtools fixmate -m` had been added to the SE chromap branch in `5016558` to handle "chromap sets paired flags on some SE reads". `c78cd8f` removed it (PE-only operation; markdup works on coord-sorted SE input directly). Confirmed clean SE flag distribution on the colcen run (50/50 flag 0/16, no paired-flag contamination).
