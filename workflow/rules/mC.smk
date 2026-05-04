@@ -69,78 +69,34 @@ def script_DMRs():
     custom = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs_custom.R")
     return custom if script_dmrs else default
 
-# Cache the resolved methylation_contexts list across the whole run so we
-# emit the deprecation warning at most once. _MC_CONTEXTS_CACHE is set on
-# first call to get_methylation_contexts().
-_MC_CONTEXTS_CACHE = None
-
 def get_methylation_contexts():
     """Return the list of methylation contexts to analyze (subset of CG, CHG, CHH).
 
-    Preferred config key (new): ``methylation_contexts: ["CG", "CHG", "CHH"]``
-    — a list of contexts to generate bigwigs for, call DMRs in, and run
-    PCA on. Animal genomes can pass ``["CG"]`` to skip empty mCHG/mCHH
-    plots. Order is normalized to CG → CHG → CHH on output.
-
-    Legacy config key: ``mC_context: "all"|"CG-only"`` — translated to
-    ``["CG","CHG","CHH"]`` and ``["CG"]`` respectively, with a one-time
-    deprecation warning. If both keys are set, the new key wins.
+    Configured via ``methylation_contexts: ["CG", "CHG", "CHH"]`` — a list
+    of contexts to generate bigwigs for, call DMRs in, and run PCA on.
+    Animal genomes can pass ``["CG"]`` to skip empty mCHG/mCHH plots.
+    Defaults to the full plant set when the key is not set. Output order
+    is normalized to CG → CHG → CHH.
 
     Subcontexts beyond CG/CHG/CHH (CAG, CAA, etc.) are not yet supported
-    and raise an error. The default when neither key is set is the full
-    plant set ``["CG","CHG","CHH"]``.
+    and raise an error.
     """
-    global _MC_CONTEXTS_CACHE
-    if _MC_CONTEXTS_CACHE is not None:
-        return _MC_CONTEXTS_CACHE
-
     valid = ["CG", "CHG", "CHH"]
-    valid_set = set(valid)
-    new = config.get("methylation_contexts")
-    legacy = config.get("mC_context")
-
-    if new is not None:
-        if not isinstance(new, list) or not new:
-            raise ValueError(
-                "methylation_contexts must be a non-empty list, e.g. "
-                "[\"CG\", \"CHG\", \"CHH\"] or [\"CG\"] for animal genomes"
-            )
-        for c in new:
-            if c not in valid_set:
-                raise ValueError(
-                    f"methylation_contexts entry '{c}' not in {valid} "
-                    "(CAG/CAA and other subcontexts are not yet supported; "
-                    "support deferred to a future PR)"
-                )
-        if legacy is not None:
-            sys.stderr.write(
-                "[!] Both methylation_contexts (new) and mC_context (legacy) "
-                "are set in the options file — using methylation_contexts. "
-                "Remove the mC_context line to silence this warning.\n"
-            )
-        # Normalize order
-        contexts = [c for c in valid if c in new]
-    elif legacy is not None:
-        sys.stderr.write(
-            "[!] mC_context is deprecated; replace with the new "
-            "methylation_contexts list, e.g. methylation_contexts: "
-            "[\"CG\", \"CHG\", \"CHH\"] for plants or [\"CG\"] for animals.\n"
+    contexts = config.get("methylation_contexts", valid)
+    if not isinstance(contexts, list) or not contexts:
+        raise ValueError(
+            "methylation_contexts must be a non-empty list, e.g. "
+            "[\"CG\", \"CHG\", \"CHH\"] or [\"CG\"] for animal genomes"
         )
-        if legacy == "all":
-            contexts = ["CG", "CHG", "CHH"]
-        elif legacy == "CG-only":
-            contexts = ["CG"]
-        else:
+    valid_set = set(valid)
+    for c in contexts:
+        if c not in valid_set:
             raise ValueError(
-                f"mC_context value '{legacy}' not recognized; use "
-                "'all' or 'CG-only', or migrate to methylation_contexts."
+                f"methylation_contexts entry '{c}' not in {valid} "
+                "(CAG/CAA and other subcontexts are not yet supported; "
+                "support deferred to a future PR)"
             )
-    else:
-        # No key set — default to the full plant set
-        contexts = ["CG", "CHG", "CHH"]
-
-    _MC_CONTEXTS_CACHE = contexts
-    return contexts
+    return [c for c in valid if c in contexts]
 
 def define_final_mC_output(ref_genome):
     qc_option = config["QC_option"]

@@ -241,8 +241,7 @@ rna_tracks:
 # typically use all three; animal genomes lack substantive non-CpG
 # methylation, so set ["CG"] to skip the empty mCHG/mCHH bigwigs, DMR
 # calls, and PCA plots for animal samples. Subcontexts (CAG, CAA, etc.)
-# are not yet supported. Legacy mC_context "all"/"CG-only" is still
-# accepted with a deprecation warning.
+# are not yet supported.
 methylation_contexts: ["CG", "CHG", "CHH"]
 pca_bs: 1000 # binsize for PCA 
 pca_step: 10000 # step between bins for PCA 

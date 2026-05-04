@@ -198,6 +198,7 @@ def define_key_for_plots(wildcards, string):
     label_to_track = {}
     srna_sizes = config['srna_heatmap_sizes']
     plot_allreps = config['plot_allreps']
+    mc_contexts = get_methylation_contexts()
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     strand = getattr(wildcards, "strand", "unstranded")
@@ -361,7 +362,7 @@ def define_key_for_plots(wildcards, string):
                         
         elif row.env == "mC":
             if not plot_allreps:
-                for context in ["CG","CHG","CHH"]:
+                for context in mc_contexts:
                     bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{context}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{context}.bw"
                     label = f"{row.line}_{row.tissue}_m{context}"
                     grouped_bw[f"m{context}"].append(bw)
@@ -372,7 +373,7 @@ def define_key_for_plots(wildcards, string):
                     label_to_track[label] = f"m{context}"
             else:
                 for sid in rep_ids:
-                    for context in ["CG","CHG","CHH"]:
+                    for context in mc_contexts:
                         bw = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__{context}.bw"
                         rep = parse_sample_name(sid)['replicate']
                         label = f"{row.line}_{row.tissue}_{rep}_m{context}"
@@ -636,16 +637,8 @@ def define_final_combined_output(ref_genome):
 
     mc_rep_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
     if len(mc_rep_samples) >=3:
-        # PCA plots gated on the active methylation_contexts list. CG is
-        # added if requested (typically true); CHG/CHH only if asked for —
-        # animal genomes set methylation_contexts: ["CG"] to skip empty
-        # asymmetric-context PCAs.
-        if "CG" in mc_contexts:
-            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
-        if "CHG" in mc_contexts:
-            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
-        if "CHH" in mc_contexts:
-            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
+        for ctxt in mc_contexts:
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__m{ctxt}__{analysis_name}__{ref_genome}.pdf")
     
     all_chip_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
     if len(all_chip_samples) >=3:
