@@ -204,11 +204,6 @@ rule bismark_map_pe:
     log:
         temp(return_log_mc("{sample_name}", "mapping", "PE"))
     conda: CONDA_ENV_MC
-    resources:
-        # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
-        # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
-        # plus 10 GB headroom, with a 20 GB floor.
-        disk_mb=lambda wildcards, input: max(20000, int(sum(os.path.getsize(f) for f in [input.fastq1, input.fastq2]) / 1024**2 * 7) + 10000)
     shell:
         """
         {{
@@ -253,11 +248,6 @@ rule bismark_map_se:
     log:
         temp(return_log_mc("{sample_name}", "mapping", "SE"))
     conda: CONDA_ENV_MC
-    resources:
-        # Bismark --multicore creates chunks + C→T/G→A conversions in temp_dir;
-        # estimate ~7x compressed input size (decompression ~3.5x, times 2 copies),
-        # plus 10 GB headroom, with a 20 GB floor.
-        disk_mb=lambda wildcards, input: max(20000, int(os.path.getsize(input.fastq0) / 1024**2 * 7) + 10000)
     shell:
         """
         {{
