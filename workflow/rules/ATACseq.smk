@@ -159,17 +159,13 @@ rule make_coverage_atac:
         file_type = "final|merged"
     params:
         binsize = config['atac_tracks']['binsize'],
-        params = config['atac_tracks']['params'],
-        dt_tmpdir = lambda wildcards: f"{RESULTS_DIR}/ATAC/.dt_tmp__coverage__{wildcards.file_type}__{wildcards.sample_name}"
+        params = config['atac_tracks']['params']
     log:
         temp(return_log_chip("ATAC","{sample_name}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV_ATAC
     shell:
         """
         {{
-        mkdir -p "{params.dt_tmpdir}"
-        trap 'rm -rf "{params.dt_tmpdir}"' EXIT
-        export TMPDIR="{params.dt_tmpdir}"
         printf "\nMaking coverage bigwig for ATAC-seq\n"
         bamCoverage -b {input.bamfile} -o {output.bigwig} -bs {params.binsize} -p {threads} {params.params}
         }} 2>&1 | tee -a "{log}"

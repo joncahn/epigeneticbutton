@@ -750,17 +750,10 @@ rule make_coverage_chip:
     wildcard_constraints:
         env = "ChIP"
     params:
-        binsize = config['chip_tracks']['binsize'],
-        # Route deeptools' per-chunk bedGraph fragments off the
-        # cluster's /tmp (which may be a small in-memory tmpfs container)
-        # and onto the project filesystem instead.
-        dt_tmpdir = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/.dt_tmp__coverage__{wildcards.sample_name}"
+        binsize = config['chip_tracks']['binsize']
     conda: CONDA_ENV_CHIP
     shell:
         """
-        mkdir -p "{params.dt_tmpdir}"
-        trap 'rm -rf "{params.dt_tmpdir}"' EXIT
-        export TMPDIR="{params.dt_tmpdir}"
         bamCoverage -b {input.bamfile} -o {output.bigwigcov} -bs {params.binsize} -p {threads}
         """
 
@@ -779,22 +772,13 @@ rule make_bigwig_chip:
         ipname = lambda wildcards: f"{wildcards.file_type}__{wildcards.sample_name}",
         inputname = lambda wildcards: f"{wildcards.file_type}__{assign_chip_input(wildcards)}",
         binsize = config['chip_tracks']['binsize'],
-        params = config['chip_tracks']['params'],
-        # bamCompare with --binSize 1 fans out to many small bedGraph
-        # fragments under TMPDIR via Python multiprocessing; with the
-        # cluster's /tmp possibly a small tmpfs container, the worker
-        # pool overflows it and ENOSPC. Pin TMPDIR to the project
-        # filesystem for this rule.
-        dt_tmpdir = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/.dt_tmp__bigwig__{wildcards.file_type}__{wildcards.sample_name}"
+        params = config['chip_tracks']['params']
     log:
         temp(return_log_chip("{env}","{sample_name}", "making_bigwig_{file_type}", ""))
     conda: CONDA_ENV_CHIP
     shell:
         """
         {{
-        mkdir -p "{params.dt_tmpdir}"
-        trap 'rm -rf "{params.dt_tmpdir}"' EXIT
-        export TMPDIR="{params.dt_tmpdir}"
         printf "\nMaking bigwig files for {params.ipname} (vs {params.inputname}) with deeptools version:\n"
         deeptools --version
         bamCompare -b1 {input.ipfile} -b2 {input.inputfile} -o {output.bigwigfile} -p {threads} --binSize {params.binsize} {params.params}
@@ -815,17 +799,13 @@ rule make_fingerprint_plot:
     params:
         ipname = lambda wildcards: f"final__{wildcards.sample_name}",
         inputname = lambda wildcards: f"final__{assign_chip_input(wildcards)}",
-        n_samples = config.get("fingerprint_samples", "auto"),
-        dt_tmpdir = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/.dt_tmp__fingerprint__{wildcards.sample_name}"
+        n_samples = config.get("fingerprint_samples", "auto")
     log:
         temp(return_log_chip("{env}","{sample_name}", "making_fingerprint_final", ""))
     conda: CONDA_ENV_CHIP
     shell:
         """
         {{
-        mkdir -p "{params.dt_tmpdir}"
-        trap 'rm -rf "{params.dt_tmpdir}"' EXIT
-        export TMPDIR="{params.dt_tmpdir}"
         printf "\nPlotting fingerprint for {params.ipname} (vs {params.inputname}) with deeptools version:\n"
         deeptools --version
 

@@ -130,6 +130,8 @@ def render_graph(args, kind, snakemake_flag, output_path):
         overrides.append(f"output_dir={args.output_dir}")
     if getattr(args, "genome_dir", None):
         overrides.append(f"genome_dir={args.genome_dir}")
+    if getattr(args, "use_node_tmpdir", False):
+        overrides.append("use_node_tmpdir=true")
     if overrides:
         cmd += ["--config"] + overrides
 
@@ -315,6 +317,8 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
         config_overrides.append(f"genome_dir={args.genome_dir}")
     if args.keep_intermediates:
         config_overrides.append(f"keep_intermediates={args.keep_intermediates}")
+    if getattr(args, "use_node_tmpdir", False):
+        config_overrides.append("use_node_tmpdir=true")
     if config_overrides:
         cmd += ["--config"] + config_overrides
 
@@ -891,6 +895,8 @@ def cmd_output(args, extra_args):
         config_overrides.append(f"output_dir={args.output_dir}")
     if args.genome_dir:
         config_overrides.append(f"genome_dir={args.genome_dir}")
+    if getattr(args, "use_node_tmpdir", False):
+        config_overrides.append("use_node_tmpdir=true")
     if config_overrides:
         cmd += ["--config"] + config_overrides
     if not getattr(args, "no_rerun_incomplete", False):
@@ -1051,6 +1057,13 @@ def add_common_options(parser):
         "--keep-intermediates", metavar="TIER",
         choices=["none", "standard", "custom", "all"],
         help="Intermediate file retention tier (none/standard/custom/all)",
+    )
+    parser.add_argument(
+        "--use-node-tmpdir", action="store_true",
+        help="Skip the workflow-level TMPDIR override and inherit the "
+             "cluster's default TMPDIR. By default, every job gets its own "
+             "subdir under <output_dir>/.tmp/ to avoid ENOSPC on sites with "
+             "a small in-memory /tmp tmpfs.",
     )
     verbosity = parser.add_mutually_exclusive_group()
     verbosity.add_argument(

@@ -79,6 +79,30 @@ RESULTS_DIR = config["output_dir"]
 GENOMES_DIR = config["genome_dir"]
 
 # ---------------------------------------------------------------------------
+# Workflow-level TMPDIR routing
+# ---------------------------------------------------------------------------
+# Default: every job gets its own subdirectory under {output_dir}/.tmp/, so
+# tools that spill through TMPDIR (sort, samtools, STAR, fasterq-dump,
+# deeptools, etc.) write to the project filesystem instead of the cluster's
+# /tmp. This avoids ENOSPC on sites where /tmp is a tmpfs sized off the
+# job's RAM allocation (e.g. SLURM JobContainerType=job_container/tmpfs).
+# Per-job subdir uses SLURM_JOB_ID under the cluster, $$ (bash PID) locally,
+# so concurrent jobs never collide; the EXIT trap cleans up on success,
+# failure, or signals other than SIGKILL. Set use_node_tmpdir=true (or pass
+# `epicc run --use-node-tmpdir`) to skip this and inherit whatever TMPDIR
+# the cluster/site provides — useful when /tmp is fast local scratch with
+# adequate capacity.
+if not config.get("use_node_tmpdir", False):
+    # Quadruple braces escape twice: f-string → "{{...}}" → Snakemake .format()
+    # → "{SLURM_JOB_ID:-$$}" in the final bash command.
+    shell.prefix(
+        f'TMPDIR_JOB="{RESULTS_DIR}/.tmp/${{{{SLURM_JOB_ID:-$$}}}}" && '
+        'mkdir -p "$TMPDIR_JOB" && '
+        'trap \'rm -rf "$TMPDIR_JOB"\' EXIT && '
+        'export TMPDIR="$TMPDIR_JOB" && '
+    )
+
+# ---------------------------------------------------------------------------
 # Genome config namespace migration
 # ---------------------------------------------------------------------------
 # New format: genomes are under config["genomes"]. Old format had bare top-level

@@ -97,6 +97,15 @@ keep_shifted_bams: false     # ATAC Tn5-shifted BAMs and indices (consumed by AT
 keep_cx_reports: false       # per-replicate CX methylation reports (consumed by merging; keep if passing per-rep data to DMRcaller)
 keep_dmc_intermediates: false # dmC aligned modBAMs and bedMethyl pileup files (useful for IGV or custom modification analysis)
 
+# TMPDIR routing
+# Default (false): each job gets its own subdir under {output_dir}/.tmp/ and
+# TMPDIR is pointed there, so sort/samtools/STAR/fasterq-dump/deeptools
+# spill onto the project filesystem rather than the cluster's /tmp. Avoids
+# ENOSPC on sites where /tmp is a tmpfs sized off the job's RAM allocation
+# (e.g. SLURM JobContainerType=job_container/tmpfs). Set true to skip the
+# override and inherit whatever TMPDIR the cluster provides.
+use_node_tmpdir: false
+
 # Trimming and processing parameters (fastp):
 quality_threshold: # 3' quality trimming (Phred score)
   ChIP: 10
