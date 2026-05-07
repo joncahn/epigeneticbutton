@@ -9,28 +9,29 @@ args = commandArgs(trailingOnly=TRUE)
 threads<-as.numeric(args[1])
 chromsizes<-read.table(args[2], col.names = c("chr", "length"))
 
-# Wire the allocated threads through every parallel mechanism we might
-# hit. DMRcaller 1.38 uses parallel::mclapply with an explicit
-# mc.cores=cores arg, so passing cores=threads to computeDMRs() below
-# already covers the primary path. The setup below adds belt-and-
-# suspenders for the remaining vectors:
-#   - register(MulticoreParam(workers=threads)) makes bpparam() return
-#     MulticoreParam instead of SerialParam — fixes the explicit
-#     SerialParam observation from
-#     github.com/joncahn/epigeneticbutton/issues/23 and future-proofs
-#     against DMRcaller versions that switch to BiocParallel.
-#   - options(mc.cores) is the default for any mclapply() that doesn't
-#     set mc.cores explicitly.
-#   - OMP_NUM_THREADS prevents any C/Fortran OpenMP region (e.g. in
-#     BLAS-backed calls) from oversubscribing the slot.
-if (threads > 1) {
-    register(MulticoreParam(workers=threads))
-    options(mc.cores=threads)
-    Sys.setenv(OMP_NUM_THREADS=as.character(threads))
+# DMRcaller parallelizes its inner loop across the regions GRanges
+# (one task per chromosome), so spawning more workers than chromosomes
+# wastes memory without buying speed. Cap accordingly.
+n_chrs <- nrow(chromsizes)
+workers <- max(1L, min(threads, n_chrs))
+
+# Use SnowParam (PSOCK) rather than MulticoreParam (fork). The latter
+# triggered the reducer crash in
+# github.com/joncahn/epigeneticbutton/issues/23: a forked worker hit
+# OOM (COW pages of the methylation pool inflate per-worker RSS),
+# parallel::mccollect returned no result for that slot, and
+# BiocParallel's .reducer_add died on an empty index. PSOCK workers
+# are independent R processes with a known baseline footprint and
+# survive sibling deaths cleanly.
+# OMP_NUM_THREADS=1 inside workers prevents BLAS/OpenMP from
+# oversubscribing the slot (each worker inherits this on spawn).
+if (workers > 1) {
+    Sys.setenv(OMP_NUM_THREADS="1")
+    register(SnowParam(workers=workers, type="SOCK"))
 }
 cat("R_call_DMRs.R parallelism setup: threads=", threads,
+    " | n_chrs=", n_chrs, " | workers=", workers,
     " | BiocParallel backend=", class(bpparam())[1],
-    " | options(mc.cores)=", getOption("mc.cores", 1L),
     "\n", sep="")
 # args[3] is a comma-separated list of methylation contexts to call DMRs in,
 # e.g. "CG,CHG,CHH" for plants or "CG" for animal genomes that lack
@@ -77,12 +78,12 @@ call_dmrs_for_context <- function(ctx) {
   # pair when DMRcaller exposes them; fall back to cores= for older
   # versions (1.38 and earlier, which used parallel::mclapply directly).
   fnames <- names(formals(computeDMRs))
-  if (threads > 1 && all(c("parallel", "BPPARAM") %in% fnames)) {
+  if (workers > 1 && all(c("parallel", "BPPARAM") %in% fnames)) {
     base_args$parallel <- TRUE
-    base_args$BPPARAM <- MulticoreParam(workers=threads)
+    base_args$BPPARAM <- SnowParam(workers=workers, type="SOCK")
   }
   if ("cores" %in% fnames) {
-    base_args$cores <- threads
+    base_args$cores <- workers
   }
   do.call(computeDMRs, base_args)
 }
