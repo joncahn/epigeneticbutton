@@ -22,7 +22,7 @@
 
 * [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries. Note: probably we want to select specific settings and explicitly expose them as CLI params through the new epicc CLI wrapper.
 
-#### Provide a front-end CLI executable script
+### Distribution
 
 * [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
 

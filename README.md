@@ -17,12 +17,13 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 
 - **Multiple Data Types Support**:
   - ChIP-seq — histone marks (broad peaks) and transcription factors (narrow peaks)
+  - CUT&RUN / CUT&Tag — broad and narrow peak variants
+  - ATAC-seq
   - RNA-seq
+  - RAMPAGE
   - small RNA-seq
-  - MethylC-seq - Bisulfite sequencing via Bismark (WGBS, EMseq)
-  - Direct Methylation (dmC) - Long-read native methylation (ONT, PacBio)
-  - ATAC-seq *\*in development*
-  - RAMPAGE *\*in development*
+  - MethylC-seq — Bisulfite sequencing via Bismark (WGBS, WGBS_nd, PBAT, EMseq)
+  - Direct Methylation (dmC) — Long-read native methylation (ONT, PacBio)
 
 - **Automated Analysis**:
   - Reference genome preparation
@@ -33,7 +34,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Additional output options such as heatmaps, metaplots and browsers
 
 - **Flexible Configuration**:
-  - [App](https://epicc-builder.streamlit.app/) to validate configuration options
+  - [Web app](https://epicc-builder.streamlit.app/) or self-contained local HTML tool (`tools/epicc-builder.html`) to build sample sheets and options files
   - Customizable mapping parameters
   - Configurable analysis options
   - Resource management
@@ -64,12 +65,13 @@ If you want to run the pipeline on a different platform than locally or slurm, y
 
 ### Configuration
 
-For new users, it is recommended to use the configuration app to validate your sample metadata file and choose analysis options:\
-https://epicc-builder.streamlit.app/
+For new users, it is recommended to use the configuration tools to build and validate your sample metadata file and choose analysis options:
+- **Web app**: https://epicc-builder.streamlit.app/
+- **Local HTML tool**: open `tools/epicc-builder.html` directly in a browser — no internet connection required
 
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
-   - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `CUT_RUN_broad` | `CUT_RUN_narrow` | `CUT_TAG_broad` | `CUT_TAG_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `EMseq` | `dmC`]
+   - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `CUT_RUN_broad` | `CUT_RUN_narrow` | `CUT_TAG_broad` | `CUT_TAG_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`]
    - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
@@ -79,13 +81,13 @@ https://epicc-builder.streamlit.app/
    - `Control`: Sample_ID of the control sample for this IP (e.g. the Input sample's Sample_ID). Required for ChIP and RAMPAGE IP samples. Leave blank for controls and non-ChIP assays.
 
 2. Update `config/epicc-options.yaml` with your paths and parameters:
-   - Sample file: this is the full path to the file detailed above which contain your samples metadata. 
-   - Reference genome files: for each reference genome in the sample file (last column), enter the full path of a fasta file, a gene gff file, and a gene gtf file (See [below](#common-to-all-types-of-samples) for more details)
+   - Sample file: pass via `epicc run --samples` on the command line, or set `sample_file:` in the options file
+   - Reference genome files: define each genome under the `genomes:` namespace (see [below](#common-to-all-types-of-samples) for format details)
    - Analysis parameters / options
    - Species-specific parameters
    - Resources allocation
    
-3. If you are running the pipeline on a different platform than CSHL slurm cluster, you will likely need to adjust the rule-specific resource parameters at the bottom of the `config/epicc-options.yaml` and the config file for your cluster scheduler (`profiles/slurm/config.yaml` for SLURM or create a new profile for your scheduler). In slurm, the default is to start 16 jobs maximum in parallel. Keep in mind that units in the cluster file are in MB.
+3. If you are running the pipeline on a cluster, review and adapt the profile config for your scheduler. Use `profiles/slurm/config.yaml` for SLURM or `profiles/uge/config.yaml` for UGE; copy and edit for a new cluster. The SLURM profile defaults to 16 parallel jobs (`jobs: 16`). Per-rule resource overrides go in `set-resources:` within the profile. Memory units are in MB.
 
 4. Default options: 
    - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the options file ([see below](#main-output-options)).
@@ -99,48 +101,56 @@ https://epicc-builder.streamlit.app/
 
 ### Running the Pipeline
 
+The main entry point is the `epicc` CLI wrapper at the repository root. It handles configuration validation, TMPDIR routing, and cluster profile detection automatically.
+
 1. To run the pipeline locally:
 ```bash
-snakemake --use-conda --conda-frontend conda --cores 12
+epicc run --samples config/my_samples.tsv --cores 12
 ```
 
-2. To run the pipeline on a HPC-slurm (using sbatch):
+2. To run the pipeline on a SLURM cluster:
 ```bash
-snakemake --profile profiles/slurm
+epicc run --samples config/my_samples.tsv --profile profiles/slurm
 ```
 
-If you do not want all the snakemake output (very talkative), instead of using `--quiet` I would recommmend redirecting it to a log and putting the run in the background:
+To reduce terminal output, redirect to a log and run in the background:
 ```bash
-snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
+epicc run --samples config/my_samples.tsv --profile profiles/slurm > epicc.log 2>&1 &
 ```
 
-If you do not want all the snakemake output (very talkative), instead of using `--quiet` I would recommmend redirecting it to a log and putting the run in the background:
+3. To run the pipeline on a UGE cluster (using qsub):
 ```bash
-snakemake --profile profiles/slurm > epigeneticbutton.log 2>&1 &
+epicc run --samples config/my_samples.tsv --profile profiles/uge
 ```
 
-3. Other option: To run the pipeline on a UGE cluster (using qsub):
+*If using a profile, review and adapt the profile config to your cluster before running.*
+
+4. Additional `epicc run` flags:
+   - `--options FILE` — options YAML (default: `config/epicc-options.yaml`)
+   - `--output-dir DIR` — results directory prefix (default: `results`)
+   - `--genome-dir DIR` — genome directory prefix (default: `genomes`)
+   - `--keep-intermediates TIER` — intermediate file retention: `none`, `standard` (default), `custom`, `all`
+   - `--use-node-tmpdir` — skip the workflow's TMPDIR override and use the cluster's default (see TMPDIR routing below)
+   - `--no-rerun-incomplete` — skip re-running Snakemake-flagged incomplete jobs from prior interrupted runs
+   - `--forcerun RULE [RULE ...]` — force re-execution of specific rules
+   - `-- SNAKEMAKE_ARGS` — anything after `--` is forwarded directly to Snakemake
+
+5. Optional: validate configuration and generate a workflow graph before running:
 ```bash
-mkdir hpclogs
-snakemake --profile profiles/uge
+epicc validate --samples config/my_samples.tsv --dag dag.png
+epicc validate --samples config/my_samples.tsv --rulegraph rules.png
 ```
 
-*The commands for the clusters are specific to the CSHL environement. If using a profile, make sure these parameters are adapted to your cluster too or edit accordingly.*
-
-4. Optional: to test the pipeline, consider generating a DAG first to make sure your samplefiles and parameters work:
-```bash
-snakemake --dag | dot -Tpng > dag.png
-```
-
-*Even if snakemake is launched on a cluster with a profile option, the run will output a lot on the terminal. It is recommended to launch the command from a screen, to start it from a script submitted to the cluster, or to put the command in the background (which will still output snakemake commands but allows further action).*\
-*For full understanding of snakemake capabilities and options: https://snakemake.readthedocs.io/en/stable/*
+*For a full list of epicc subcommands run `epicc --help` or `epicc <subcommand> --help`. For Snakemake's own options: https://snakemake.readthedocs.io/en/stable/*
 
 ### Conda environment maintenance
 
-When conda environment YAML files are modified (e.g. after updating the pipeline), orphaned environment directories may accumulate under `.snakemake/conda/`. To clean them up:
+Rule-specific conda environments are defined under `workflow/envs/` and are created automatically on first use by Snakemake. When YAML files are updated (e.g. after a pipeline upgrade), orphaned environment directories may accumulate under `.snakemake/conda/`. To clean them up:
 ```bash
 snakemake --sdm conda --conda-cleanup-envs
 ```
+
+The shipped SLURM profile (`profiles/slurm/config.yaml`) sets `conda-cleanup-pkgs: tarballs`, which frees downloaded package archives after each environment is built without removing the installed environment itself.
 
 #### Pre-building envs before sbatch-wrapped runs
 
@@ -151,6 +161,12 @@ epicc validate --build-envs --options config/epicc-options.yaml --samples your_s
 ```
 
 This runs the standard configuration checks and dry-run, then calls `snakemake --conda-create-envs-only` to populate `.snakemake/conda/`. Subsequent sbatch-wrapped runs will reuse the pre-built envs and skip the failing creation step.
+
+### TMPDIR routing
+
+By default, every pipeline job sets `TMPDIR` to a per-job subdirectory under `{output_dir}/.tmp/` (e.g. `results/.tmp/<SLURM_JOB_ID>`). Tools that spill large temporary data through `TMPDIR` — such as samtools sort, STAR, fasterq-dump, and deeptools — therefore write to the project filesystem rather than the cluster's `/tmp`. This avoids `ENOSPC` errors on sites where `/tmp` is a tmpfs sized to the job's RAM allocation.
+
+To disable this override and inherit whatever `TMPDIR` the cluster provides (e.g. when `/tmp` is fast local NVMe scratch with adequate capacity), pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. The shipped SLURM profile also documents a `precommand` approach for sites that need per-job scratch under a shared path (see `profiles/slurm/config.yaml`).
 
 ## Sample file configuration
 
@@ -178,14 +194,28 @@ python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
   - Local FASTQ path: `/archive/fastq/sample_R1.fq.gz` (SE) or `/archive/fastq/sample_R1.fq.gz,/archive/fastq/sample_R2.fq.gz` (PE, comma-separated)
   - Local BAM path for dmC: `/archive/bams/sample.bam`
 - **Read_layout**: `PE` for paired-end data or `SE` for single-end data.
-- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). For each genome, fasta, gff, and gtf files must be defined in `config/epicc-options.yaml`:
+- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). Each genome is defined under the `genomes:` namespace in `config/epicc-options.yaml`:
 ```yaml
-ColCEN:
-  fasta_file: path/to/ColCEN.fasta   # .fa(.gz) or .fasta(.gz)
-  gff_file: ColCEN.gff               # .gff*(.gz)
-  gtf_file: ColCEN.gtf               # .gtf(.gz)
+genomes:
+  ColCEN:
+    genus: "Arabidopsis"
+    species: "thaliana"
+    fasta_file: "path/to/ColCEN.fa.gz"       # local path or HTTP(S) URL; .fa/.fasta(.gz)
+    gff_file: "path/to/ColCEN_genes.gff3.gz" # local path or HTTP(S) URL; .gff*(.gz)
+    #gtf_file: "path/to/ColCEN.gtf"          # optional; auto-derived from GFF via gffread if omitted
+    te_file: "path/to/ColCEN_TE.gff3.gz"     # optional; .bed(.gz) or .gff3(.gz)
+    gaf_file: "data/ColCEN_infoGO.tab.gz"    # only required when GO: true
+    gene_info_file: "data/ColCEN_genes_info.tab.gz" # only required when GO: true
+    ncbi_taxid: "3702"
+    #genomesize: 1.3e8        # optional; auto-computed from FASTA if omitted
+    #star_index: "--genomeSAindexNbases 12"  # optional; auto-computed if omitted
+    #structural_rna_fafile: "<auto>"         # optional; auto-derived via Infernal/Rfam if omitted
 ```
-The GTF file can be created from a GFF file with `gffread -T <gff_file> -o <gtf_file>`. All files can be gzipped.
+Several fields are auto-derived at runtime and do not need to be specified in most cases: `gtf_file` (generated from GFF via gffread), `genomesize` (total non-N bases in FASTA), `star_index` parameters, `structural_rna_fafile` (fetched from Rfam via Infernal), and `ncbi_taxid` (looked up from NCBI Datasets CLI). Any value provided explicitly in the options file overrides the computed value.
+
+All `*_file` fields accept local paths (absolute or relative to the repo root) or HTTP(S) URLs; gzipped inputs are handled transparently. The `te_file` field accepts `.bed(.gz)` (used as-is) or `.gff3(.gz)` (auto-converted to BED6 using the `ID=` attribute as the name column).
+
+The old bare-key format (genome blocks as top-level keys alongside a separate species block) is still accepted but triggers a deprecation warning at startup; migrate to the `genomes:` namespace format shown above.
 
 ### ChIP-seq (Histones and Transcription Factors)
 
@@ -249,7 +279,11 @@ WT_leaf_IgG_rep1	CUT_TAG_broad	hg38	genotype:WT,tissue:leaf	rep1	SRR12346	SE	IgG
 
 ### Whole Genome Bisulfite Sequencing
 
-- **Assay**: `WGBS` or `EMseq`. These labels identify the conversion method; both are processed through the Bismark pipeline.
+- **Assay**: `WGBS`, `WGBS_nd`, `PBAT`, or `EMseq`. These labels identify the conversion chemistry and inform Bismark alignment parameters:
+  - `WGBS` — standard directional WGBS (e.g. TruSeq, Swift HTP)
+  - `WGBS_nd` — non-directional WGBS (e.g. Zymo Pico Methyl-Seq, Swift Accel-NGS)
+  - `PBAT` — post-bisulfite adapter tagging
+  - `EMseq` — enzymatic methyl-seq (NEB EM-seq kit)
 - **IP_target**: Leave blank.
 - **Control**: Leave blank.
 
@@ -266,17 +300,16 @@ WT_leaf_IgG_rep1	CUT_TAG_broad	hg38	genotype:WT,tissue:leaf	rep1	SRR12346	SE	IgG
 
 ## Configuration Options
 
-More details can be found on the epicc-builder app or commented within the `config/epicc-options.yaml` file:
-https://epicc-builder.streamlit.app/
+More details can be found in the `config/epicc-options.yaml` file (all options are commented inline) or via the epicc-builder tools at https://epicc-builder.streamlit.app/ / `tools/epicc-builder.html`.
 
 ### Main output options
 - `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true` (default), will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP, heatmaps and metaplots on all genes).
-- `te_analysis`: When `true`, small RNA differential expression will be performed (if such data is available), as well as heatmaps and metaplots of all the samples on TEs. The name and path to the TE file in bed format must be filled in the options file for the corresponding reference genome. The name of each TE (4th column of the bed file) must be unique. Default is `false`.
-- `QC_option`: When `true`, runs fastQC on raw and trimmed fastq files. Default is `false`.
+- `te_analysis`: When `true`, generates additional combined-analysis heatmaps and metaplots over the configured `te_file` annotation in addition to the standard gene-centered plots. Requires `te_file` to be set under the corresponding genome block in the options file (BED6 or GFF3, gzipped or not — see Sample file configuration). The name of each feature (4th column of the BED, or the `ID=` attribute for GFF3) must be unique. Default is `false`.
+- `QC_option`: Controls FastQC reporting on raw and trimmed FASTQ files. `"none"` (default) skips FastQC entirely; `"all"` runs FastQC on all samples.
 
 ### Intermediate input formats
 - `trimmed_fastqs`: When `false` (default), the analysis runs from raw, untrimmed fastq files and performs adapter trimming. If you already have trimmed fastqs, you can switch this config entry to `true` and no additional trimming will be performed (still compatible with nextflex_v3 deduplication and structural RNAs filtering for small RNAs).
-- `aligned_bams`: When `true` you can directly provide alignment files for ChIP-seq data (either histone modifications or TF). A single SAM or BAM file must be present in the `fastq_path` folder matching the `seq_id` value in the metadata samplefile (same logic than when providing raw fastq file locally). No mapping stats plot will be available when providing bam files this way. Default is `false`.
+- `aligned_bams`: When `true`, the pipeline expects pre-aligned ChIP-seq BAM/SAM files in the `Read_files` column of the sample sheet rather than FASTQs (still applies pipeline-wide, so all ChIP samples must follow the same convention). No mapping-stats plot is available when starting from BAMs this way. Default is `false`. Currently only supported for ChIP-seq assays.
 - Note: These settings are applied to *all* samples in the analysis. If you have some samples to analyze from scratch and other already in an intermediate file:
 	- 1) run the pipeline once with the samples to run from scratch - potentially switching `full_analysis` to `false` for less output.
 	- 2) add the samples you already have intermediate files for in the samplefile and change the corresponding parameters in the options file.
@@ -297,8 +330,8 @@ https://epicc-builder.streamlit.app/
 - `all`: Relaxed mapping parameters
 
 ### DMRs parameters
-- By default, DNA methylation data will be analyzed in all sequence contexts (CG, CHG and CHH, where H = A, T or C). The option for CG-only is under development.
-- DMRs are called with the R package [DMRcaller](https://www.bioconductor.org/packages/release/bioc/html/DMRcaller.html) (DOI: 10.18129/B9.bioc.DMRcaller) for CG, CHG and CHH and the following (stringent) parameters:
+- By default, DNA methylation data is analyzed in all three sequence contexts (CG, CHG, and CHH, where H = A, T, or C). This is controlled by the `methylation_contexts` list in `config/epicc-options.yaml` (default: `["CG", "CHG", "CHH"]`). For animal genomes where non-CpG methylation is negligible, set `methylation_contexts: ["CG"]` to skip the empty CHG/CHH bigwigs, DMR calls, and PCA plots. Subcontexts (CAG, CAA, etc.) are not currently supported.
+- DMRs are called with the R package [DMRcaller](https://www.bioconductor.org/packages/release/bioc/html/DMRcaller.html) (DOI: 10.18129/B9.bioc.DMRcaller) for each configured context with the following (stringent) parameters:
 	- CG: `method="noise-filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
 	- CHG: `method="noise_filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
 	- CHH: `method="bins", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
@@ -306,160 +339,159 @@ https://epicc-builder.streamlit.app/
 - A deeper analysis is available to try different parameters and methods to call the DMRs. Toggle the `use custom_script_dmrs` on the options file to use it. Feel free to edit it as well for different parameters.
 
 ##  Additional output options
-Below is a list of *cool* outputs that can be generated once whole pipeline ran once. You'll find a basic structure for how to tell snakemake to generate them, feel free to replace the --cores 1 with the HPC profile you would rather use.
+Below is a list of *cool* outputs that can be generated once the whole pipeline has run at least once. Use `epicc output --plot-type TYPE --input-file PATH [options]` to generate them, or pass the raw Snakemake target file directly via `snakemake --cores 1 <target>` for advanced use.
 
 ### **1. Plotting RNAseq expression levels on target genes**
 Given a list of genes (and optional labels), it will plot the expression levels in all the different samples in the samplefile and analysis name defined. Genes uniquely differentially regulated in one sample versus one or more samples are color coded. It is based on a Rdata file created during the Differential Expression analysis.\
-To run it, edit the options file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output pdf) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
+To run it, provide the target gene list file (one column of gene IDs matching the GTF of the reference genome used; an optional second column provides gene labels) and run:
 ```bash
-snakemake --cores 1 results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf
+epicc output --plot-type rnaseq-histogram \
+  --input-file data/target_genes.txt \
+  --plot-label my_genes_of_interest \
+  --ref-genome TAIR10
 ```
-Note that the separators between the variables are two underscores next to each other `__`, except in `plot_expression`.\
-An example where <analysis_name>="test_smk" and <ref_genome>="TAIR10", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
-```bash 
-snakemake --cores 1 results/RNA/plots/plot_expression__test_smk__TAIR10__my_genes_of_interests.pdf --config rnaseq_target_file="data/target_genes.txt" rnaseq_target_file_label="my_genes_of_interests"
-```
-Output is a single pdf file named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.pdf` where each gene of the list is on an individual page.
+Output is a single pdf file named `results/RNA/plots/plot_expression__<analysis_name>__<ref_genome>__<label>.pdf` where each gene of the list is on an individual page. The separator between variables is two underscores `__`.
 
 ### **2. Performing GO analysis on target genes**
 Given a file containing a list of genes to do GO analysis on, and optionally a background file (default to all genes in the reference genome), it will perform Gene Ontology analysis.\
-By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the options file, and the files to make the GO database should be defined in the options file `gaf_file` and `gene_info_file` below the corresponding reference genome. See [Gene_Ontology.md](Help/Gene_Ontology.md) for more details on how to create the GO database.\
-To run it, edit the options file with the target gene list file (`rnaseq_target_file`: 1 column list of genes ID that must match the gtf file of the reference genome used, optional second column for gene labels, additional columns can be present but will not be used) and a corresponding label (`rnaseq_target_file_label`: name which will be included in the name of the output files) and run the following command, replacing <analysis_name>, <ref_genome> and <rnaseq_target_file_label> with wanted values:
-```bash 
-snakemake --cores 1 results/RNA/GO/TopGO__<analysis_name>__<ref_genome>__<rnaseq_target_file_label>.done
+By default, GO is not performed since it requires manual input to build a database. To activate it, `GO` needs to be switched to `true` in the options file, and `gaf_file` and `gene_info_file` must be defined under the corresponding genome block in the options file. See [Gene_Ontology.md](Help/Gene_Ontology.md) for more details on how to create the GO database.\
+To run it, provide the gene list file and run:
+```bash
+epicc output --plot-type go \
+  --input-file data/target_genes.txt \
+  --plot-label my_genes_of_interest \
+  --ref-genome ColCEN
 ```
-Note that the separators between the variables are two underscores next to each other `__`.\
-An example where <analysis_name>="test_smk" and <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
-```bash 
-snakemake --cores 1 results/RNA/GO/TopGO__test_smk__ColCEN__my_genes_of_interests.done --config rnaseq_target_file="data/target_genes.txt" rnaseq_target_file_label="my_genes_of_interests"
-```
-Output are two pdf files, one for the biological process terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_BP_treemap.pdf` and one for the molecular function terms `results/RNA/plots/topGO_<rnaseq_target_file_label>_MF_treemap.pdf`. Corresponding tables listing the terms enriched for each gene of the `rnaseq_target_file` are also generated at `results/RNA/GO/topGO_<rnaseq_target_file_label>_<BP|MF>_<GOs|GIDs>.txt` for a focus on the GO terms or the GIDs, respectively.
+Output includes two pdf treemaps (`topGO_<label>_BP_treemap.pdf` for biological process and `topGO_<label>_MF_treemap.pdf` for molecular function) and corresponding enrichment tables under `results/RNA/GO/`.
 
 ### **3. Finding motifs on target regions**
 Given a bed file containing different regions, it will perform a motifs analysis with meme.\
-By default motifs analysis is only performed on the final selected TF peak files (`motifs: true` in the options file). Edit to `allrep: true` in the options file for motifs analysis to be performed on all replicates and pairwise idr peaks if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the options file `jaspar_db` and change the `motifs_ref_genome` to match the samples.\
+By default motifs analysis is only performed on the final selected TF peak files (`motifs: true` in the options file). Edit to `motifs_allreps: true` in the options file for motifs analysis to be performed on all replicates and pairwise IDR peaks if available. A plant motifs database is used by default for tomtom. Download the appropriate file from JASPAR and replace its name in the options file `jaspar_db` and change the `motif_ref_genome` to match the samples.\
 To run the analysis:
-```bash 
-snakemake --cores 1 results/ChIP/chkpts/motifs__<motif_target_file_label>.done
+```bash
+epicc output --plot-type motifs \
+  --input-file data/target_peaks.bed \
+  --plot-label my_regions_of_interest \
+  --ref-genome ColCEN
 ```
-Note that the separator is two underscores next to each other `__`.\
-An example running the pipeline on a slurm hpc, for regions from <ref_genome>="ColCEN", while setting the target file and its label "my_genes_of_interests" directly in the snakemake command:
-```bash 
-snakemake --profile profiles/slurm results/ChIP/chkpts/motifs__my_regions_of_interests.done --config motifs_target_file="data/target_peaks.txt" motifs_target_file_label="my_regions_of_interests" motifs_ref_genome="ColCEN"
-```
-Output is the folder `results/ChIP/<motif_target_file_label>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html. \
-When setting `motif_ref_genome`, it is safer to use a reference genome that has already been used in a run. Otherwise, it will be treated like the ref_genome of a sample, creating a fasta file in the genomes/<ref_genome> directory if a fasta file is found at ref_path.\
-For the target file chosen `motif_target_file`, if the regions are over 500bp, only the middle 400bp will be used.
+Output is the folder `results/ChIP/<label>` containing a subdirectory called `meme` and potentially one called `tomtom` with all the results, as described in https://meme-suite.org/meme/index.html.\
+Use a reference genome that has already been used in a prior run for the motif analysis. For the target file, if the regions are over 500bp, only the middle 400bp will be used.
 
 ### **4. Performing sRNA differential analysis on regions**
-Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, using all the samples from the sample file but limiting the mapping and counts to the loci in the target file. Edit `srna_target_file` and `srna_target_file_label` in the options file. To run the analysis: 
-```bash 
-snakemake --cores 1 results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt
+Given a bed or gff file, it will perform the small RNA analysis with shortstack followed by differential analysis with edgeR, using all the samples from the sample file but limiting the mapping and counts to the loci in the target file. To run the analysis:
+```bash
+epicc output --plot-type srna-clusters \
+  --input-file data/miRNA.gff \
+  --plot-label miRNAs \
+  --ref-genome ColCEN
 ```
-Note that the separators between the variables are two underscores next to each other `__` except between `on` and `<srna_target_file_label>` where it's only one `_`.\
-An example running the pipeline on a slurm hpc, <analysis_name>="test_smk" and <ref_genome>="ColCEN", while setting the target file and its label "miRNAs" directly in the snakemake command:
-```bash 
-snakemake --profile profiles/slurm results/sRNA/clusters/test_smk__ColCEN__on_miRNAs/Counts.txt --config sRNA_target_file="data/miRNA.gff" sRNA_target_file_label="miRNAs"
-```
-Output is the results folder from Shortstack limited to this loci file, followed by the differential cluster analysis with edgeR.
-
-If you only want the results of Shortstack and not the differential analysis, limit the run to the rule `analyze_all_srna_samples_on_target_file` instead, targeting: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<srna_target_file_label>/Counts.txt`
+Output is the results folder from Shortstack limited to this loci file, followed by the differential cluster analysis with edgeR. Output path: `results/sRNA/clusters/<analysis_name>__<ref_genome>__on_<label>/Counts.txt`.
 
 The bed or gff file of regions **MUST HAVE** a header with a column called "Name" (the 4th column of a bed file or the 9th column of a gff3).
 
 ### **5. Plotting heatmap on regions**
 Given a bed file, it will plot a heatmap using deeptools.
-Edit `heatmap_target_file` and `heatmap_target_file_label` in the options file. To run the analysis:
+Edit `heatmap_target_file` and `heatmap_target_file_label` in the options file, or pass them on the command line. To run the analysis:
 ```bash
-snakemake --cores 1 results/combined/plots/Heatmap__<matrix_param>__<env>__<analysis_name>__<ref_genome>__<target_name>.pdf
+epicc output --plot-type heatmap \
+  --input-file data/target_genes.bed \
+  --plot-label interesting_genes \
+  --ref-genome ColCEN \
+  --matrix regions \
+  --env most
 ```
-- the <matrix_param> can be `regions` for scaled regions, `tss` for reference point on the TSS or `tes` for reference point on the TES.
-- the <env> correspond to the data types to include. Since mC requires different parameters, it has to be done independently. If you have several different data types including mC, and want the order of the regions to be maintained in the mC heatmap based on the other samples, use:
-```bash
-snakemake --cores 1 results/combined/plots/Heatmap_sorted__<matrix_param>__mC__<analysis_name>__<ref_genome>__<target_name>.pdf
-```
-This will generate the heatmap for all the other samples first. If you want the regions sorted based on the mC samples only, use:
-```bash
-snakemake --cores 1 results/combined/plots/Heatmap__<matrix_param>__mC__<analysis_name>__<ref_genome>__<target_name>.pdf
-```
-To make a heatmap will all the samples (excluding mC), use <env>=`most`. If you want to include mC samples (will probbaly *not work*) use <env>=`all`.
+- `--matrix` can be `regions` (scaled features), `tss` (reference point on TSS), or `tes` (reference point on TES).
+- `--env` selects the data types to include: `most` includes all data types except mC; use `mC`, `mCG`, `mCHG`, or `mCHH` for methylation-specific heatmaps; other choices are `ChIP`, `ATAC`, `RNA`, `sRNA`.
 
-An example running the pipeline on a slurm hpc, with <analysis_name>="test_smk", <ref_genome>="ColCEN", <matrix_param>="regions", on all samples but mC <env>="most", while setting the target file and its label "interesting_genes" directly in the snakemake command:
-```bash 
-snakemake --profile profiles/slurm results/combined/plots/Heatmap__regions__most__test_smk__ColCEN__interesting_genes.pdf --config heatmap_target_file="data/target_genes.bed" heatmap_target_file_label="interesting_genes"
-```
+Since mC requires different deeptools parameters it is handled independently. If you want the mC heatmap sorted by the same region order as the other samples, use the `Heatmap_sorted__` raw Snakemake target (see Snakemake docs for advanced usage).
+
 Output is a pdf file, or two if sorted heatmap for mC samples was generated.\
-By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on an appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the options file `heatmaps_scales`.\
-By default, the heatmaps are sorted based on "mean" of all samples accross all regions. This can be changed in the options file `heatmaps_sort_options` to "median" or to "none", keeping the regions in the order of the bedfile.\
-If the given bedfile is stranded, the heatmap will be done by splitting the regions into plus and minus strand for proper stranded data (RNAseq and sRNAs) values. If this is not the wanted behavior, disable `stranded_heatmaps` in the options file.\
-The color scheme of the heatmap is "seismic" for all samples and "Oranges" for mC. This can be changed manually in the options file `heatmaps_plot_params`.
-The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the options file in `heatmaps` for each <matrix_params>.
+By default, heatmaps are scaled by data type (`heatmaps_scales: "type"` in the options file; each ChIP mark, TF, RNA, sRNA size, and mC context on its own scale). Change to `"default"` for a single scale or `"sample"` for per-sample scaling.\
+By default, regions are sorted by mean signal (`heatmaps_sort_options: "mean"`). Change to `"median"` or `"no"` to preserve the bedfile order.\
+If the bedfile is stranded, heatmaps will split plus/minus strand for properly stranded data types (RNAseq, sRNA). Disable with `stranded_heatmaps: false` in the options file.\
+Color scheme defaults: `seismic` for all non-mC samples, `Oranges` for mC. Change via `heatmaps_plot_params` in the options file.
+Window sizes (`before`, `after`, scaled-region `middle`) and bin size (`binsize`) are configurable in `heatmaps` per matrix type in the options file.
 
 ### **6. Plotting metaplot profiles on regions**
 Given a bed file, it will plot a metaplot profile using deeptools.
-Edit `heatmap_target_file` and `heatmap_target_file_label` in the options file. To run the analysis:
+Edit `heatmap_target_file` and `heatmap_target_file_label` in the options file (the same target file fields as heatmap). To run the analysis:
 ```bash
-snakemake --cores 1 results/combined/plots/Profile__<matrix_param>__<env>__<analysis_name>__<ref_genome>__<target_name>.pdf
+epicc output --plot-type metaplot \
+  --input-file data/target_genes.bed \
+  --plot-label interesting_genes \
+  --ref-genome ColCEN \
+  --matrix regions \
+  --env all
 ```
-Similar to heatmap above for the <matrix_param> options.\
-Use <env>="all" to include all samples (mC and others).\
+`--matrix` and `--env` options are identical to the heatmap above. Use `--env all` to include all samples including mC.\
 Output is two pdf files, where the samples are grouped by regions or not.\
-By default, the heatmaps will be scaled by type (i.e. each ChIP mark, each TF, RNAseq, each sRNAseq size and each mC context on their appropriate scale based on the values in the heatmap). It can be changed to "default", where a single scale is used for the whole heatmap, or to "sample" where each sample is scaled individually. This can be changed in the options file `heatmaps_scales`.
-By default, the profiles represent the "mean" accross all regions. This can be changed in the options file `profile_scale` to "median".
-By default, the type of plots are "lines". See deeptools documentation for other options and edit `profiles_plot_params` in the options file.
-The size of the scaled regions `middle` (-m in deeptools), the size of the surrounding regions `before` (-b in deeptools) and `after` (-a in deeptools) and the binsize `binsize` (-bs in deeptools) can be edited in the options file in `heatmaps` for each <matrix_params>.
+By default, profiles are scaled by data type (`heatmaps_scales: "type"`; change to `"default"` or `"sample"`).
+By default, profiles represent the mean across all regions (`profiles_scale: "mean"`; change to `"median"`).
+Plot type defaults to `"lines"`. See deeptools documentation for other options; edit `profiles_plot_params` in the options file.
+Window sizes and bin size are configured in `heatmaps` per matrix type in the options file (same as heatmap).
 
 ### **7. Plotting browser screenshots on regions**
 Given a region file, it will plot a browser screenshot using R packages.
-Edit `browser_target_file` and `browser_target_file_label` in the options file. To run the analysis: 
-```bash 
-snakemake --cores 1 results/combined/plots/Browser_<target_name>__<env>__<analysis_name>__<ref_genome>.pdf
+Edit `browser_target_file` and `browser_target_file_label` in the options file. To run the analysis:
+```bash
+epicc output --plot-type browser \
+  --input-file data/target_loci.bed \
+  --plot-label target_loci \
+  --ref-genome ColCEN \
+  --env all
 ```
-The target file is a bed-like file, with the following columns: Chr Start End ID Binsize Higlight_starts Higlight_widths\
-Each region will be printed individually, and merged into a final PDF.\
-Hightlights columns are optional, and correspond to regions of the browser that will be highlighted for this specific region (boxed). As many highlights can be used in a comma-separated lists, the first highlight will be in blue and all the others in red. For example, if the region to plot is chr1:1000-5000, using col6=3000,4000 col7=50,200 will make a blue box higlighting chr1:3000-3050 and a red one highlighting chr1:4000:4200.\
-Use <env>="all" to include all samples, "most" for all data-types except mC, or any single environment for data type-specific browsers `[all, most, ChIP, ATAC, RNA, sRNA, mC]`.\
-By default, no TE file is used. If you want to add TE annotations, supply a bed-file in the options file `browser_TE_file`.
+The target file is a bed-like file with columns: Chr Start End ID Binsize Highlight_starts Highlight_widths.\
+Each region will be printed individually and merged into a final PDF.\
+Highlight columns are optional; they mark regions of the browser view with colored boxes. As many highlights as needed can be provided as comma-separated lists — the first highlight is blue and all others are red. For example, for a region chr1:1000-5000, col6=3000,4000 and col7=50,200 will produce a blue box at chr1:3000-3050 and a red box at chr1:4000-4200.\
+Use `--env all` to include all samples, `most` for all data types except mC, or any single environment `[ChIP, ATAC, RNA, sRNA, mC]`.\
+By default, no TE file is used. To add TE annotations, supply a bed file in the options file under `browser_TE_file`.
 
 ### **8. Rerunning a specific analysis**
-To rerun a specific analysis, force snakemake to recreate the target file, adding to the snakemake command: `<target_file> --force`
-e.g `snakemake --cores 1 results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force`
-If only the combined analysis is to be performed, and not everything else, delete all the chkpts files in `results/combined/chkpts/` as well as in the chkpt of each relevant environment `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`.
+To force Snakemake to recreate a specific output, use `epicc run -- <target_file> --forcerun <rule>` or pass the target via `epicc run -- --force <target_file>`. For example:
+```bash
+epicc run -- results/combined/plots/srna_sizes_stats_test_snakemake_sRNA.pdf --force
+```
+If only the combined analysis needs to be redone (not the data-type-specific steps), delete the checkpoint files in `results/combined/chkpts/` and in the relevant environment directory `results/<env>/chkpts/<env>_analysis__<analysis_name>__<ref_genome>.done`. Alternatively, use `epicc clean --intermediates` to remove all checkpoints and trigger full reanalysis on the next run.
 
 ## Output Structure
 
 ```
 epigeneticbutton/
-├── config/			# Location for the main options file and recommended location for sample files and target files
-├── data/			# Location for test material and examples (e.g. zm_structural_RNAs.fa.gz)
-├── Help/			# Location for help files (e.g. Structural_RNAs_Rfam.md)
+├── config/			# Main options file and recommended location for sample files and target files
+├── data/			# Test material and examples (e.g. zm_structural_RNAs.fa.gz)
+├── Help/			# Help files (e.g. Structural_RNAs_Rfam.md, Gene_Ontology.md)
 ├── profiles/
-│	├── sge/		# Config file to run snakemake on a cluster managed by SGE
-│	└── slurm/		# Config file to run snakemake on a cluster managed by SLURM
+│	├── default/		# Workflow-level per-rule resource/thread defaults
+│	├── geno/		# Example profile for additional scheduler types
+│	├── slurm/		# Config file to run the pipeline on a SLURM cluster
+│	└── uge/		# Config file to run the pipeline on a UGE cluster (qsub)
+├── tools/
+│	└── epicc-builder.html	# Self-contained HTML5 sample sheet and options builder
 ├── workflow/
-│	├── envs/		# Conda environment file for depencies
-│	├── rules/		# Snakemake files with data type analysis rules
-│	├── scripts/		# R scripts for plots
-│	└── snakefile		# main snakefile
+│	├── envs/		# Conda environment YAML files per analysis type
+│	├── rules/		# Snakemake rule files by data type
+│	├── scripts/		# R and Python scripts for analysis and plotting
+│	└── Snakefile		# Main Snakefile
 ├── genomes/			# Genome directories created upon run
 │	└── {ref_genome}/	# Reference genome directories with sequence, annotation and indexes
 └── results/			# Results directories created upon run
+	├── .tmp/		# Per-job TMPDIR scratch space (auto-cleaned after each job)
 	├── combined/		# Combined analysis results
 	│	├── bedfiles/	# Peak calling results
-	│	├── chkpts/	# Empty checkpoint files used for pipeline logic. Deleting them will trigger rerunning the corresponding analysis
+	│	├── chkpts/	# Checkpoint files; delete to trigger rerunning the corresponding analysis
 	│	├── logs/	# Log files
 	│	├── matrix/	# Data matrices
 	│	├── plots/	# Visualization plots
 	│	└── reports/	# Analysis reports 
-	└── <env>/	# Data type specific directories
-		├── chkpts/	# Empty checkpoint files used for pipeline logic. Deleting them will trigger rerunning the corresponding analysis
+	└── <env>/		# Data type specific directories (ChIP, ATAC, RNA, sRNA, mC)
+		├── chkpts/	# Checkpoint files; delete to trigger rerunning the corresponding analysis
 		├── fastq/	# Processed FASTQ files
 		├── logs/	# Log files
-		├── mapped/	# Mapped reads (bam)
+		├── mapped/	# Mapped reads (BAM)
 		├── plots/	# Data type specific plots
 		├── reports/	# QC reports
 		├── tracks/	# Track files (bigwigs)
-		└── */		# data-specific directories (e.g. 'peaks' for ChIP, 'DEG' for RNA, 'DMRs' and 'methylcall' for mC, 'clusters' for sRNA)
+		└── */		# Data-specific directories (e.g. peaks/ for ChIP, DEG/ for RNA, DMRs/ and methylcall/ for mC, clusters/ for sRNA)
 ```
 
 ## Known potential issues
@@ -473,15 +505,11 @@ Different small RNAseq libraries have different chemistry and might need to be t
 3. idr/numpy version\
 IDR relies on an older version of numpy to work (due to deprecated np.int) and needs to be loaded as a seperate environment. Not best practice, but more portable than patching idr (np.int=int).
 
-4. Quality-Of-Service slurm configuration\
-Due to the time limits on slurm at CSHL, a specific quality of service is used to allow potential long jobs to run for longer. This is likely specific to CSHL cluster. If you want to use slurm and do not have a quality of service setting called "slow_nice" then you can either delete the line `--qos={cluster.qos}` from the `profiles/slurm/config.yaml` file (which might lead to failed runs if you have a time limit), or replace the `qos: "slow_nice"` with another setting that allows longer time limit in the `config/epicc-options.yaml` file.
+4. SLURM wall-time limits\
+The shipped `profiles/slurm/config.yaml` sets a default runtime of 60 minutes per job; individual rules override this with their own `runtime` resource. If your cluster has tighter limits, increase the `default-resources: runtime` value in the profile, or add per-rule overrides under `set-resources`. If some jobs require a specific Quality-of-Service (QoS) setting on your cluster, add `slurm_extra: "'--qos=<your_qos>'"` under the relevant rule in `set-resources`.
 
 5. Help for local fastq files naming convention\
 If using local fastq files for paired-end data, provide comma-separated R1 and R2 paths in the `Read_files` column (e.g. `/path/sample_R1.fq.gz,/path/sample_R2.fq.gz`). Files can use extensions `.fq` or `.fastq` and may be gzipped (`.gz`).
-
-## Features under development
-- RAMPAGE
-- ATAC-seq
 
 ## FAQ
 
