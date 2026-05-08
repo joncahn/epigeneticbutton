@@ -4,7 +4,7 @@
 
 ### Documentation
 
-* [ ] **high priority** Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
+* [x] **high priority** Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
 
 * [ ] **high priority** Update Read the docs page to also reflect all changes on the big-refactor.
 

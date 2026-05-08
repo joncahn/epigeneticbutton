@@ -6,9 +6,18 @@ EPICC (Epigenetic Pipeline for Integrative Chromatin Characterization) — Snake
 
 ```bash
 conda create -n epicc -y --file config/epicc-env.txt && conda activate epicc
-snakemake --use-conda --conda-frontend conda --cores 12      # local
-snakemake --profile profiles/slurm                            # SLURM cluster
+epicc run --samples your_samples.tsv --cores 12              # local
+epicc run --samples your_samples.tsv --profile profiles/slurm # SLURM cluster
+epicc validate --samples your_samples.tsv                     # config check + dry-run
+epicc validate --build-envs --samples your_samples.tsv        # pre-create rule conda envs
+                                                              # (run from a login/dev node
+                                                              # before sbatch-wrapped runs
+                                                              # on clusters where conda
+                                                              # env create fails inside a
+                                                              # SLURM allocation)
 ```
+
+`epicc` is a thin argparse wrapper around snakemake; subcommands are `run`, `validate`, `output`, `unlock`, `perf`, `clean`. Anything after `--` is forwarded verbatim to snakemake. Raw `snakemake ...` invocations still work but bypass `epicc`'s placeholder-detection and TMPDIR routing.
 
 ## Architecture
 
@@ -70,6 +79,8 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
   - GO database name is auto-derived as `org.<G><species>.eg.db` (e.g. `org.Athaliana.eg.db`) — matches AnnotationForge's strict `org.<G><species>.eg.db` package-name format. To keep multiple reference genomes of the same species (e.g. ColCEN + TAIR10) from colliding in the conda env's shared R library, each genome's GO package is installed into and loaded from `genomes/<refgenome>/GO/` via per-call `lib=` / prepended `.libPaths()`.
   - Access pattern in rule files: `config["genomes"][ref_genome][field]`
   - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning
+  - `methylation_contexts` (default `["CG", "CHG", "CHH"]`) gates per-context mC analysis: bigwigs, DMR calls, and PCA plots are produced only for listed contexts. Set to `["CG"]` for animal genomes where non-CpG methylation is negligible. Subcontexts (CAG/CAA/...) not currently supported.
+  - `use_node_tmpdir` (default `false`) toggles TMPDIR routing — see Key Details below.
 - `config/example_samples.tsv` - Documented sample-sheet template (copy and edit; pass to epicc via `--samples`)
 - `profiles/slurm/config.yaml` - SLURM executor settings
 
@@ -105,3 +116,4 @@ scripts/validate_pombe.sh --all
 - Checkpoint files in `{output_dir}/*/chkpts/` control re-running analyses; delete to force rerun.
 - Read_files supports HTTP(S) URLs for FASTQ, BAM, and bedMethyl inputs. Genome config fields (`fasta_file`, `gff_file`, `te_file`) also accept URLs — downloaded automatically via curl at rule execution time.
 - `te_file` accepts `.bed(.gz)` (pass-through) or `.gff3(.gz)` (auto-converted to BED6 using the GFF3 `ID=` attribute as the name column).
+- TMPDIR routing: `workflow/Snakefile` registers a `shell.prefix` that points TMPDIR at `{output_dir}/.tmp/${SLURM_JOB_ID:-$$}/` per job, with a `trap rm` cleanup on EXIT. Tools that spill through TMPDIR (sort, samtools, STAR, fasterq-dump, deeptools) write to the project filesystem instead of cluster `/tmp` — important on sites where `/tmp` is a RAM-tmpfs sized off `mem_mb` (e.g. SLURM `JobContainerType=job_container/tmpfs`). Opt out via `use_node_tmpdir: true` in the options file or `epicc run --use-node-tmpdir`. Bismark is the one mapper with its own `--temp_dir` pointed under `results/mC/mapped/<sample>/`, so it's unaffected by the TMPDIR override either way.
