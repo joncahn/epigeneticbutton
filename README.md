@@ -34,7 +34,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
   - Additional output options such as heatmaps, metaplots and browsers
 
 - **Flexible Configuration**:
-  - [Web app](https://epicc-builder.streamlit.app/) or self-contained local HTML tool (`tools/epicc-builder.html`) to build sample sheets and options files
+  - Self-contained local HTML builder (`tools/epicc-builder.html`) to build and validate sample sheets and options files
   - Customizable mapping parameters
   - Configurable analysis options
   - Resource management
@@ -65,9 +65,7 @@ If you want to run the pipeline on a different platform than locally or slurm, y
 
 ### Configuration
 
-For new users, it is recommended to use the configuration tools to build and validate your sample metadata file and choose analysis options:
-- **Web app**: https://epicc-builder.streamlit.app/
-- **Local HTML tool**: open `tools/epicc-builder.html` directly in a browser — no internet connection required
+For new users, it is recommended to use the local HTML builder at `tools/epicc-builder.html` (open directly in a browser — self-contained, no internet connection required) to build and validate your sample metadata file and choose analysis options.
 
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
@@ -300,7 +298,7 @@ WT_leaf_IgG_rep1	CUT_TAG_broad	hg38	genotype:WT,tissue:leaf	rep1	SRR12346	SE	IgG
 
 ## Configuration Options
 
-More details can be found in the `config/epicc-options.yaml` file (all options are commented inline) or via the epicc-builder tools at https://epicc-builder.streamlit.app/ / `tools/epicc-builder.html`.
+More details can be found in the `config/epicc-options.yaml` file (all options are commented inline) or via the local HTML builder at `tools/epicc-builder.html`.
 
 ### Main output options
 - `full_analysis`: When `false`, only the mapping and the bigwigs will occur. When `true` (default), will also be performed: single-data analyses (e.g. peak calling for ChIP, differential expression for RNAseq, DMRs for mC) and combined analyses (e.g. Upset plots for ChIP, heatmaps and metaplots on all genes).
