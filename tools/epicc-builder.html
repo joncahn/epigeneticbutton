@@ -2136,6 +2136,8 @@ var configState = {
   // Input options
   trimmed_fastqs: false,
   aligned_bams: false,
+  // TMPDIR routing
+  use_node_tmpdir: false,
   // Intermediate file retention
   keep_intermediates: "standard",
   keep_trimmed_fastqs: false,
@@ -2161,6 +2163,10 @@ var configState = {
   chip_tracks_binsize: 1,
   chip_tracks_params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300",
   chip_callpeaks_params: "--keep-dup 'all' --nomodel",
+  // CUT&RUN / CUT&Tag peak callers (defaults differ from ChIP):
+  // broad → epic2, narrow → SEACR; macs2 available as a fallback.
+  cut_callpeaks_broad_caller: "epic2",
+  cut_callpeaks_narrow_caller: "seacr",
   // ATAC advanced
   quality_threshold_ATAC: 10,
   min_read_length_ATAC: 20,
@@ -2185,6 +2191,12 @@ var configState = {
   adapter2_mC: "auto",
   mC_method: "default",
   mC_max_insert: 1000,
+  // methylation_contexts: gates per-context mC analysis (bigwigs, DMRs,
+  // PCA). Toggles below derive the list. Default all three (plants);
+  // set CG only for animal genomes. Must keep at least one enabled.
+  mc_context_CG: true,
+  mc_context_CHG: true,
+  mc_context_CHH: true,
   custom_script_dmrs: false,
   // sRNA advanced
   quality_threshold_sRNA: 10,
@@ -2436,6 +2448,10 @@ function buildConfigForm() {
     customPanel.style.display = this.value === "custom" ? "block" : "none";
   });
 
+  outSec.appendChild(buildToggleRow("Inherit cluster TMPDIR (skip workflow override)", "use_node_tmpdir",
+    "Using cluster default TMPDIR (typically /tmp). Use this when /tmp is fast local scratch.",
+    "TMPDIR routed under {output_dir}/.tmp/<jobid>/ — avoids ENOSPC on RAM-tmpfs /tmp."));
+
   container.appendChild(outSec);
 
   // --- Input Options ---
@@ -2483,6 +2499,10 @@ function buildConfigForm() {
     "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"));
   chipBody.appendChild(buildTextRow("Peak calling parameters:", "chip_callpeaks_params",
     "--keep-dup 'all' --nomodel"));
+  chipBody.appendChild(buildSelectRow("CUT&RUN/CUT&Tag broad caller:", "cut_callpeaks_broad_caller",
+    ["epic2", "seacr", "macs2"]));
+  chipBody.appendChild(buildSelectRow("CUT&RUN/CUT&Tag narrow caller:", "cut_callpeaks_narrow_caller",
+    ["seacr", "macs2"]));
   chipDet.appendChild(chipBody);
   container.appendChild(chipDet);
 
@@ -2528,6 +2548,15 @@ function buildConfigForm() {
   mcBody.appendChild(buildSelectRow("Library prep method:", "mC_method",
     ["default", "WGBS", "WGBS_nd", "PBAT", "EMseq"]));
   mcBody.appendChild(buildNumberRow("Max insert length (PE):", "mC_max_insert", 100, 50000));
+  mcBody.appendChild(buildToggleRow("Analyze CG context", "mc_context_CG",
+    "CG analysis enabled (bigwigs, DMRs, PCA).",
+    "CG analysis disabled — outputs skipped."));
+  mcBody.appendChild(buildToggleRow("Analyze CHG context", "mc_context_CHG",
+    "CHG analysis enabled (plants — the major asymmetric context).",
+    "CHG analysis disabled — skip for animal genomes."));
+  mcBody.appendChild(buildToggleRow("Analyze CHH context", "mc_context_CHH",
+    "CHH analysis enabled (plants — the diffuse asymmetric context).",
+    "CHH analysis disabled — skip for animal genomes."));
   mcBody.appendChild(buildToggleRow("Custom DMR calling script", "custom_script_dmrs",
     "Using custom call_DMRs_custom.R script (more thorough, slower).",
     "Standard DMR calling."));
@@ -2665,6 +2694,9 @@ function configStateToYAML() {
   cfg.trimmed_fastqs = configState.trimmed_fastqs;
   cfg.aligned_bams = configState.aligned_bams;
 
+  // TMPDIR routing
+  cfg.use_node_tmpdir = configState.use_node_tmpdir;
+
   // Intermediate file retention
   cfg.keep_intermediates = configState.keep_intermediates;
   if (configState.keep_intermediates === "custom") {
@@ -2726,6 +2758,10 @@ function configStateToYAML() {
   cfg.chip_callpeaks = {
     params: configState.chip_callpeaks_params
   };
+  cfg.cut_callpeaks = {
+    broad_caller: configState.cut_callpeaks_broad_caller,
+    narrow_caller: configState.cut_callpeaks_narrow_caller
+  };
   cfg.upset_allreps = configState.upset_allreps;
 
   // RNA
@@ -2739,6 +2775,11 @@ function configStateToYAML() {
   };
 
   // mC
+  var mcContexts = [];
+  if (configState.mc_context_CG)  mcContexts.push("CG");
+  if (configState.mc_context_CHG) mcContexts.push("CHG");
+  if (configState.mc_context_CHH) mcContexts.push("CHH");
+  cfg.methylation_contexts = mcContexts;
   cfg.custom_script_dmrs = configState.custom_script_dmrs;
 
   // sRNA
@@ -2803,6 +2844,7 @@ function handleYAMLImport(text) {
   if (cfg.GO != null) configState.GO = !!cfg.GO;
   if (cfg.trimmed_fastqs != null) configState.trimmed_fastqs = !!cfg.trimmed_fastqs;
   if (cfg.aligned_bams != null) configState.aligned_bams = !!cfg.aligned_bams;
+  if (cfg.use_node_tmpdir != null) configState.use_node_tmpdir = !!cfg.use_node_tmpdir;
   if (cfg.keep_intermediates != null) configState.keep_intermediates = String(cfg.keep_intermediates);
   if (cfg.keep_trimmed_fastqs != null) configState.keep_trimmed_fastqs = !!cfg.keep_trimmed_fastqs;
   if (cfg.keep_final_bams != null) configState.keep_final_bams = !!cfg.keep_final_bams;
@@ -2821,6 +2863,12 @@ function handleYAMLImport(text) {
   else if (cfg.chip_mapping_option != null) configState.chip_mapping_strategy = cfg.chip_mapping_option;
   if (cfg.atac_mapping_strategy != null) configState.atac_mapping_strategy = cfg.atac_mapping_strategy;
   else if (cfg.atac_mapping_option != null) configState.atac_mapping_strategy = cfg.atac_mapping_option;
+  if (Array.isArray(cfg.methylation_contexts)) {
+    var mcSet = new Set(cfg.methylation_contexts.map(String));
+    configState.mc_context_CG  = mcSet.has("CG");
+    configState.mc_context_CHG = mcSet.has("CHG");
+    configState.mc_context_CHH = mcSet.has("CHH");
+  }
   if (cfg.custom_script_dmrs != null) configState.custom_script_dmrs = !!cfg.custom_script_dmrs;
   if (cfg.nextflex_v3_deduplication != null) configState.nextflex_v3_deduplication = !!cfg.nextflex_v3_deduplication;
   if (cfg.structural_rna_depletion != null) configState.structural_rna_depletion = !!cfg.structural_rna_depletion;
@@ -2889,6 +2937,10 @@ function handleYAMLImport(text) {
   if (cfg.chip_callpeaks && cfg.chip_callpeaks.params != null) {
     configState.chip_callpeaks_params = cfg.chip_callpeaks.params;
   }
+  if (cfg.cut_callpeaks) {
+    if (cfg.cut_callpeaks.broad_caller != null) configState.cut_callpeaks_broad_caller = String(cfg.cut_callpeaks.broad_caller);
+    if (cfg.cut_callpeaks.narrow_caller != null) configState.cut_callpeaks_narrow_caller = String(cfg.cut_callpeaks.narrow_caller);
+  }
 
   // RNA
   if (cfg.rna_tracks && cfg.rna_tracks.RNAseq) {
@@ -2926,14 +2978,14 @@ function handleYAMLImport(text) {
     // Old format fallback: detect bare genome keys + separate species blocks
     var oldSpecies = {};
     var knownKeys = new Set(["repo_folder","analysis_name","sample_file","full_analysis","te_analysis",
-      "QC_option","GO","trimmed_fastqs","aligned_bams",
+      "QC_option","GO","trimmed_fastqs","aligned_bams","use_node_tmpdir",
       "keep_intermediates","keep_trimmed_fastqs","keep_final_bams","keep_merged_bams",
       "keep_shifted_bams","keep_cx_reports","keep_dmc_intermediates","motifs","jaspar_db","motifs_allreps",
       "quality_threshold","min_read_length","trim_front","adapter1","adapter2",
       "chip_fingerprint_plots","fingerprint_samples",
       "chip_aligner","atac_aligner","chip_mapping_strategy","atac_mapping_strategy",
       "chip_mapping_option","atac_mapping_option",
-      "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","atac_callpeaks",
+      "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","cut_callpeaks","atac_callpeaks",
       "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","methylation_contexts","pca_bs",
       "pca_step","mC_mapping","custom_script_dmrs","dmc_methylation","dmc_dmr_method",
       "nextflex_v3_deduplication","structural_rna_depletion","infernal_threshold","srna_mapping_params","shortstack_dn_mirna",
