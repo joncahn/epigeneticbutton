@@ -217,13 +217,13 @@ The old bare-key format (genome blocks as top-level keys alongside a separate sp
 
 ### ChIP-seq (Histones and Transcription Factors)
 
-- **Assay**: `ChIP_broad` for histone marks with broad peaks (e.g. H3K9me2, H3K27me3) or `ChIP_narrow` for marks with narrow peaks (e.g. H3K4me3) and transcription factors (e.g. TB1, FLC).
+- **Assay**: `ChIP_broad` for histone marks with broad peaks (e.g. H3K9me2, H3K27me3) or `ChIP_narrow` for marks with narrow peaks (e.g. H3K4me3) and transcription factors (e.g. TB1, FLC). The [ENCODE histone ChIP-seq target categorization](https://www.encodeproject.org/chip-seq/histone/) is a good starting point: broad-domain marks (H3K27me3, H3K36me3, H3K9me1/2, H3K79me2/3, H4K20me1, H3K4me1) use `ChIP_broad`; punctate marks and TFs (H3K4me2/3, H3K27ac, H3K9ac, H2AFZ) use `ChIP_narrow`. **Note that H3K27ac is narrow** despite being on the same residue as the broad mark H3K27me3. H3K9me3 is nominally broad but heavily enriched in repeats and benefits from a focused analysis — see ENCODE's note. Some targets profit from running both passes and comparing: RNA Pol II has sharp TSS peaks plus broader gene-body coverage, and H3K27me3 Polycomb domains can contain internal islands.
 - **IP_target**: Required for all ChIP samples including controls. The name of what was pulled down — e.g. `H3K9me2` or `TB1` for IP, or `Input`/`WCE`/`IgG` for controls.
 - **Control**: For IP samples, the Sample_ID of the control sample. Leave blank for control samples themselves. Multiple IP samples can share the same control.
 
 Histone example:
 ```
-WT_leaf_H3K27ac_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12345	PE	H3K27ac	WT_leaf_Input_rep1
+WT_leaf_H3K9me2_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12345	PE	H3K9me2	WT_leaf_Input_rep1
 WT_leaf_Input_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12346	PE	Input
 ```
 
