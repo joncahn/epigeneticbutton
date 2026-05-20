@@ -378,9 +378,10 @@ class TestDmcDMRWorkflow:
         result = run_snakemake_dryrun(repo_root, test_options, DMC_DMR_TARGET, ["--printshellcmds"])
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
         output = result.stdout + result.stderr
-        assert "call_DMRs_pairwise" in output, "Expected DMRcaller rule for dmC samples by default"
+        assert "call_DMRs_for_pair_context" in output, "Expected DMRcaller per-(pair, context) rule for dmC samples by default"
+        assert "cache_mc_replicate_for_context" in output, "Expected per-(replicate, context) cache rule feeding the DMR call"
         assert "convert_bedmethyl_to_cx_report" in output, "Expected bedMethyl conversion for DMRcaller"
-        assert "R_call_DMRs.R" in output, "Expected DMRcaller R script"
+        assert "R_call_DMRs_pair.R" in output, "Expected DMRcaller pair-call R script"
 
 
 # ===========================================================================

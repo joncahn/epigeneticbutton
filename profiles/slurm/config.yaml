@@ -15,6 +15,12 @@ latency-wait: 60
 keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
+# Auto-retry transient cluster glitches: SLURM control-plane hiccups
+# ("Unable to confirm allocation", "Batch job submission failed") and
+# SnowParam PSOCK port collisions in the DMR pair-context rule (random
+# ephemeral-port reuse under high concurrent load; ~1-2 % of jobs on
+# whole-genome plant runs). Real bugs still surface after the retry.
+retries: 1
 
 # Safety-net defaults sent with every sbatch submission.
 #

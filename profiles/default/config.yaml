@@ -108,7 +108,9 @@ set-resources:
   make_mc_stats_se: *low
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
-  call_DMRs_pairwise: *dmr
+  cache_mc_replicate_for_context: *heavy
+  call_DMRs_for_pair_context: *dmr
+  call_DMRs_pairwise: *dmr  # legacy rule, active only when custom_script_dmrs: true
   # dmC
   get_dmc_input: *standard
   copy_bedmethyl_input: *low
@@ -228,7 +230,9 @@ set-threads:
   make_mc_stats_se: 1
   merging_mc_replicates: 4
   make_mc_bigwig_files: 1
-  call_DMRs_pairwise: 16
+  cache_mc_replicate_for_context: 2
+  call_DMRs_for_pair_context: 16
+  call_DMRs_pairwise: 16  # legacy rule, active only when custom_script_dmrs: true
   # dmC
   get_dmc_input: 4
   copy_bedmethyl_input: 1

@@ -44,6 +44,12 @@ def define_cx_report_input(wildcards):
         # Bismark samples: use deduplicated CX_report
         return f"{RESULTS_DIR}/mC/methylcall/{sname}.deduplicated.CX_report.txt.gz"
 
+def cx_report_for_rep_sid(rep_sid):
+    """Per-replicate CX_report path (Bismark deduplicated vs dmC converted)."""
+    if is_dmc_sample(rep_sid):
+        return f"{RESULTS_DIR}/mC/dmc/cx_report__{rep_sid}.CX_report.txt.gz"
+    return f"{RESULTS_DIR}/mC/methylcall/{rep_sid}.deduplicated.CX_report.txt.gz"
+
 def define_DMR_samples(sample_name):
     """Get CX_report files for DMR analysis.
 
@@ -55,19 +61,15 @@ def define_DMR_samples(sample_name):
     if not rep_sids:
         # sample_name is itself a per-replicate name, not an analysis name
         rep_sids = [sample_name]
-    result = []
-    for sid in rep_sids:
-        if is_dmc_sample(sid):
-            result.append(f"{RESULTS_DIR}/mC/dmc/cx_report__{sid}.CX_report.txt.gz")
-        else:
-            result.append(f"{RESULTS_DIR}/mC/methylcall/{sid}.deduplicated.CX_report.txt.gz")
-    return result
+    return [cx_report_for_rep_sid(sid) for sid in rep_sids]
 
-def script_DMRs():
-    script_dmrs = config['custom_script_dmrs']
-    default = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs.R")
-    custom = os.path.join(REPO_FOLDER,"workflow","scripts","R_call_DMRs_custom.R")
-    return custom if script_dmrs else default
+def rep_rds_for_group(group_name, mc_context):
+    """Per-(replicate, context) RDS cache paths for one analysis group."""
+    rep_sids = get_replicate_sample_ids(group_name, samples)
+    if not rep_sids:
+        rep_sids = [group_name]
+    return [f"{RESULTS_DIR}/mC/pools/per_rep/{sid}__{mc_context}.rds" for sid in rep_sids]
+
 
 def get_methylation_contexts():
     """Return the list of methylation contexts to analyze (subset of CG, CHG, CHH).
@@ -520,39 +522,115 @@ rule make_mc_bigwig_files:
         }} 2>&1 | tee -a "{log}"
         """
 
-rule call_DMRs_pairwise:
-    """Call DMRs between two samples using DMRcaller.
+if config.get('custom_script_dmrs', False):
+    # Custom parameter-sweep mode — keep the single-job rule that
+    # iterates parameter combinations inside R_call_DMRs_custom.R.
+    rule call_DMRs_pairwise:
+        """Call DMRs between two samples using DMRcaller's custom-sweep script."""
+        input:
+            sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
+            sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
+            chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+        output:
+            dmr_summary = f"{RESULTS_DIR}/mC/DMRs/summary__{{sample1}}__vs__{{sample2}}__DMRs.txt"
+        params:
+            script = os.path.join(REPO_FOLDER, "workflow", "scripts", "R_call_DMRs_custom.R"),
+            contexts = ",".join(get_methylation_contexts()),
+            sample1 = lambda wildcards: wildcards.sample1,
+            sample2 = lambda wildcards: wildcards.sample2,
+            nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
+            nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
+        log:
+            temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
+        conda: CONDA_ENV_MC
+        shell:
+            """
+            {{
+            printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
+            Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" {input.sample1} {input.sample2}
+            }} 2>&1 | tee -a "{log}"
+            """
+else:
+    # Two-stage default: per-(replicate, context) caches keep replicates
+    # separate so the per-pair rule can call computeDMRsReplicates with a
+    # proper condition vector (beta-regression test with biological
+    # variance). Pairs where either group has N<2 fall back to pooled
+    # computeDMRs inside the R script. Adding a replicate to an existing
+    # group creates 3 new caches and invalidates the ~9 pair rows that
+    # involve that group (correct: the variance estimate changes);
+    # adding a new group leaves the existing 45 pair outputs valid.
+    rule cache_mc_replicate_for_context:
+        """Cache one replicate's CX report filtered to one methylation
+        context as an RDS, for the per-(pair, context) DMR rule."""
+        input:
+            cx_report = lambda wildcards: cx_report_for_rep_sid(wildcards.rep_sid)
+        output:
+            rds = f"{RESULTS_DIR}/mC/pools/per_rep/{{rep_sid}}__{{mc_context}}.rds"
+        wildcard_constraints:
+            mc_context = "CG|CHG|CHH"
+        params:
+            script = os.path.join(REPO_FOLDER, "workflow", "scripts", "R_cache_mc_replicate_for_context.R")
+        log:
+            temp(return_log_mc("{rep_sid}", "cache_mc", "{mc_context}"))
+        conda: CONDA_ENV_MC
+        shell:
+            """
+            {{
+            printf "Caching %s for context %s\n" "{wildcards.rep_sid}" "{wildcards.mc_context}"
+            Rscript "{params.script}" "{wildcards.mc_context}" "{output.rds}" "{input.cx_report}"
+            }} 2>&1 | tee -a "{log}"
+            """
 
-    Works with both Bismark and dmC (direct methylation) samples:
-    - Bismark: uses CX_report files from bismark_methylation_extractor
-    - dmC: uses CX_report files converted from bedMethyl format
-    """
-    input:
-        sample1 = lambda wildcards: define_DMR_samples(wildcards.sample1),
-        sample2 = lambda wildcards: define_DMR_samples(wildcards.sample2),
-        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
-    output:
-        dmr_summary = f"{RESULTS_DIR}/mC/DMRs/summary__{{sample1}}__vs__{{sample2}}__DMRs.txt"
-    params:
-        script = script_DMRs(),
-        # R script accepts a comma-separated context list, e.g. "CG,CHG,CHH"
-        # for plants or "CG" for animals. Replaces the legacy "all"/"CG-only"
-        # string the script used to receive.
-        contexts = ",".join(get_methylation_contexts()),
-        sample1 = lambda wildcards: wildcards.sample1,
-        sample2 = lambda wildcards: wildcards.sample2,
-        nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
-        nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
-    log:
-        temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
-    conda: CONDA_ENV_MC
-    shell:
-        """
-        {{
-        printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
-        Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" {input.sample1} {input.sample2}
-        }} 2>&1 | tee -a "{log}"
-        """
+    rule call_DMRs_for_pair_context:
+        """Call DMRs between two groups for one methylation context using
+        computeDMRsReplicates (beta-regression with replicate variance).
+        Falls back to pooled computeDMRs when either group has N<2.
+        Per-replicate RDS inputs come from cache_mc_replicate_for_context."""
+        input:
+            reps1 = lambda wildcards: rep_rds_for_group(wildcards.sample1, wildcards.mc_context),
+            reps2 = lambda wildcards: rep_rds_for_group(wildcards.sample2, wildcards.mc_context),
+            chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+        output:
+            dmrs   = f"{RESULTS_DIR}/mC/DMRs/{{sample1}}__vs__{{sample2}}__{{mc_context}}_DMRs.txt",
+            counts = temp(f"{RESULTS_DIR}/mC/DMRs/.counts__{{sample1}}__vs__{{sample2}}__{{mc_context}}.tsv")
+        wildcard_constraints:
+            mc_context = "CG|CHG|CHH"
+        params:
+            script = os.path.join(REPO_FOLDER, "workflow", "scripts", "R_call_DMRs_pair.R"),
+            n1 = lambda wildcards: len(rep_rds_for_group(wildcards.sample1, wildcards.mc_context))
+        log:
+            temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", "{mc_context}"))
+        conda: CONDA_ENV_MC
+        shell:
+            """
+            {{
+            printf "running DMRcaller for %s vs %s (%s)\n" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
+            Rscript "{params.script}" "{threads}" "{wildcards.mc_context}" "{input.chrom_sizes}" "{output.dmrs}" "{output.counts}" "{params.n1}" {input.reps1} {input.reps2}
+            }} 2>&1 | tee -a "{log}"
+            """
+
+    rule aggregate_DMR_summaries:
+        """Merge the per-context hyper/hypo counts into the per-pair
+        summary file the downstream pipeline expects."""
+        input:
+            counts = lambda wildcards: [
+                f"{RESULTS_DIR}/mC/DMRs/.counts__{wildcards.sample1}__vs__{wildcards.sample2}__{ctx}.tsv"
+                for ctx in get_methylation_contexts()
+            ]
+        output:
+            summary = f"{RESULTS_DIR}/mC/DMRs/summary__{{sample1}}__vs__{{sample2}}__DMRs.txt"
+        localrule: True
+        run:
+            import pandas as pd
+            sname = f"{wildcards.sample1}_vs_{wildcards.sample2}"
+            merged = None
+            for path in input.counts:
+                df = pd.read_csv(path, sep='\t')
+                merged = df if merged is None else merged.merge(df, on='Type')
+            if merged is None:
+                merged = pd.DataFrame({'Type': ['hyper', 'hypo']})
+            merged.insert(0, 'Sample', sname)
+            merged.to_csv(output.summary, sep='\t', index=False)
 
 rule all_mc:
     input:

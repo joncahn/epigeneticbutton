@@ -6,15 +6,18 @@
 
 * [x] **high priority** Update README (and CLAUDE.md) with full functionality, especially about how to run epicc CLI, making sure to capture all changes on the big-refactor branch.
 
-* [ ] **high priority** Update Read the docs page to also reflect all changes on the big-refactor.
+* [x] **high priority** Update Read the docs page to also reflect all changes on the big-refactor.
 
-* [ ] **high priority** Integrate README + Read the docs + epicc-builder for concerted changes
+* [x] **high priority** Integrate README + Read the docs + epicc-builder (local HTML) for concerted changes
 
-* [ ] We should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark, and/or refer users to a discussion of this distinction elsewhere (perhaps in the MACS documentation).
+* [x] We should add a list of recommendations for which of ChIP_broad/narrow to use based on the histone mark, and/or refer users to a discussion of this distinction elsewhere (perhaps in the MACS documentation).
 
 ### Analysis
 
-(no pending items — see Complete > CUT&RUN/CUT&Tag support)
+* [ ] Expose DMR-call thresholds as `config/epicc-options.yaml` options. Current per-context `minProportionDifference` (CG=0.3, CHG=0.2, CHH=0.1) is hard-coded in `R_call_DMRs_pair.R` (inherited unchanged from pre-refactor `R_call_DMRs.R`) and is Arabidopsis-leaf-tuned. Cross-species/cross-tissue methylation varies widely (maize and duckweeds have very low somatic CHH; pollen/endosperm differ from leaf), so static thresholds will under- or over-call DMRs outside the default regime. Two-phase plan:
+   - **Phase 1**: lift the per-context `min_diff` / `minCytosinesCount` / `minGap` / `minSize` etc. into a `dmr_thresholds:` block in the options YAML. Document in README + RTD `configuration.rst` (the docs sync surface from the memory note). Plant-typical defaults preserve current behavior.
+   - **Phase 2**: add a `dmr_thresholds: auto` mode that computes per-context per-pair thresholds from the genome-wide methylation distribution (e.g. `k × (Q95 − Q05)` of per-position methylation, or Nσ above per-position binomial noise). Implementation likely a small calibration rule that writes a per-(pair, context) JSON consumed by `R_call_DMRs_pair.R`. Eliminates the "user doesn't know what threshold to use" problem for new species.
+   - Applies equally to any future metilene migration (`-d`, `-v`, `-m` would be the analog metilene flags).
 
 ### UI/UX
 
