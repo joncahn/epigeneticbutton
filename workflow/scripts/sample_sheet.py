@@ -255,6 +255,22 @@ def build_analysis_name(row):
     return "__".join(part for part in key if part)
 
 
+def build_control_merge_key(row):
+    """Build a merge-key for control samples that ignores Assay.
+
+    Returns a tuple: (levels_label, IP_target, Genome). Used to group
+    control-sample rows (Input/WCE/IgG) into one merged-replicate group
+    when they represent the same biological control material, regardless
+    of which Assay the rows happen to be labeled with. A single Input
+    that serves as control for both broad and narrow ChIP IPs merges
+    correctly as long as Levels, IP_target, and Genome match — even if
+    rep1 is labeled ChIP_broad and rep2 ChIP_narrow.
+    """
+    levels_label = levels_to_label(row["Levels"])
+    ip_target = row.get("IP_target", "") or ""
+    return (levels_label, ip_target, row["Genome"])
+
+
 def build_analysis_to_replicates(df):
     """Build a dict mapping analysis_key → list of Replicate_IDs.
 
@@ -289,14 +305,18 @@ def get_replicate_sample_ids(analysis_name, df):
         return result
 
     # If no match, check if analysis_name is a control Sample_ID
-    # and find all controls in the same analysis group
+    # and find all controls in the same analysis group. Control merging
+    # uses build_control_merge_key (Assay-agnostic) so a single biological
+    # Input/IgG/WCE merges across all reps whose Levels/IP_target/Genome
+    # match, even if individual rep rows are labeled with different Assay
+    # values (e.g. one rep ChIP_broad, another ChIP_narrow).
     if analysis_name in set(controls):
         control_df = df[df["Sample_ID"].isin(controls)]
         match = control_df[control_df["Sample_ID"] == analysis_name]
         if not match.empty:
-            ctrl_key = build_analysis_key(match.iloc[0])
+            ctrl_key = build_control_merge_key(match.iloc[0])
             for _, row in control_df.iterrows():
-                if build_analysis_key(row) == ctrl_key:
+                if build_control_merge_key(row) == ctrl_key:
                     result.append(row["Sample_ID"])
 
     return result

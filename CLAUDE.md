@@ -52,6 +52,8 @@ Sample metadata is defined in a TSV file with 9 columns:
 - **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
 - **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). No chaining.
 
+Control-row replicate merging keys on `(Levels, IP_target, Genome)` only — the `Assay` value on a control row is decorative for merging purposes, so a single biological Input/IgG/WCE serving multiple IP types (broad + narrow, ChIP + CUT&RUN) merges correctly regardless of how individual rep rows are labeled. See `build_control_merge_key` in `workflow/scripts/sample_sheet.py`.
+
 Per-replicate files use `Sample_ID` directly (e.g. `final__WT_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`).
 
 Peak type is determined by Assay: `ChIP_broad`/`CUT_RUN_broad`/`CUT_TAG_broad` → broad peaks (histone marks), `ChIP_narrow`/`CUT_RUN_narrow`/`CUT_TAG_narrow` → narrow peaks (transcription factors, H3K4me3, etc.). All six "IP-with-peaks" assays share the `ChIP` env (`results/ChIP/`). Default peak callers: ChIP* → MACS2; CUT&* `_broad` → epic2; CUT&* `_narrow` → SEACR. Override via `cut_callpeaks.{broad,narrow}_caller` (`epic2`, `seacr`, `macs2`).

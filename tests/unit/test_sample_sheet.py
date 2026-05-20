@@ -21,7 +21,9 @@ from sample_sheet import (
     get_seq_id_and_path,
     build_analysis_key,
     build_analysis_name,
+    build_control_merge_key,
     build_analysis_to_replicates,
+    get_replicate_sample_ids,
     identify_control_samples,
     get_control_sample_id,
     get_analysis_samples,
@@ -303,6 +305,86 @@ class TestGetControlSampleId:
     def test_is_control(self, pombe_df):
         ctrl = get_control_sample_id("WT_WCE_rep1", pombe_df)
         assert ctrl is None
+
+
+class TestControlMergeAcrossAssay:
+    """Control rows that represent the same biological material (Input/WCE/IgG)
+    should merge into one replicate group even if individual rep rows are
+    labeled with different Assay values (e.g. one ChIP_broad, one ChIP_narrow).
+    See build_control_merge_key — Assay is intentionally not part of the key.
+    """
+
+    @pytest.fixture
+    def mixed_assay_df(self):
+        # rep1 Input labeled ChIP_broad, rep2 Input labeled ChIP_narrow —
+        # biologically the same Input pool. Two IPs (one of each Assay) each
+        # point at one of the Input reps via the Control column.
+        return pd.DataFrame({
+            "Sample_ID": [
+                "WT_leaf_H3K9me2_rep1", "WT_leaf_H3K4me3_rep1",
+                "WT_leaf_Input_rep1", "WT_leaf_Input_rep2",
+            ],
+            "Assay": [
+                "ChIP_broad", "ChIP_narrow",
+                "ChIP_broad", "ChIP_narrow",
+            ],
+            "Genome": ["ColCEN"] * 4,
+            "Levels": ["genotype:WT,tissue:leaf"] * 4,
+            "Replicate_ID": ["rep1", "rep1", "rep1", "rep2"],
+            "Read_files": ["SRR1", "SRR2", "SRR3", "SRR4"],
+            "Read_layout": ["PE"] * 4,
+            "IP_target": ["H3K9me2", "H3K4me3", "Input", "Input"],
+            "Control": [
+                "WT_leaf_Input_rep1", "WT_leaf_Input_rep2",
+                "", "",
+            ],
+        })
+
+    def test_merge_key_drops_assay(self, mixed_assay_df):
+        rep1_key = build_control_merge_key(mixed_assay_df.iloc[2])
+        rep2_key = build_control_merge_key(mixed_assay_df.iloc[3])
+        assert rep1_key == rep2_key == ("WT_leaf", "Input", "ColCEN")
+
+    def test_merge_key_differs_from_full_analysis_key(self, mixed_assay_df):
+        # build_analysis_key still distinguishes Assay — only the
+        # control-merge variant strips it.
+        rep1_full = build_analysis_key(mixed_assay_df.iloc[2])
+        rep2_full = build_analysis_key(mixed_assay_df.iloc[3])
+        assert rep1_full != rep2_full
+
+    def test_get_replicate_sample_ids_merges_across_assay(self, mixed_assay_df):
+        # Asking for replicates of EITHER Input rep returns BOTH — they
+        # share the biological-control merge group.
+        for ctrl in ("WT_leaf_Input_rep1", "WT_leaf_Input_rep2"):
+            reps = get_replicate_sample_ids(ctrl, mixed_assay_df)
+            assert set(reps) == {"WT_leaf_Input_rep1", "WT_leaf_Input_rep2"}, (
+                f"Expected both Input reps in the merge group for {ctrl}, got {reps}"
+            )
+
+    def test_different_ip_target_does_not_merge(self, mixed_assay_df):
+        # A separate IgG control with the same Levels/Genome but different
+        # IP_target must NOT merge with the Input group.
+        igg_row = pd.DataFrame({
+            "Sample_ID": ["WT_leaf_IgG_rep1"], "Assay": ["ChIP_broad"],
+            "Genome": ["ColCEN"], "Levels": ["genotype:WT,tissue:leaf"],
+            "Replicate_ID": ["rep1"], "Read_files": ["SRR5"],
+            "Read_layout": ["PE"], "IP_target": ["IgG"],
+            "Control": [""],
+        })
+        df_extended = pd.concat([mixed_assay_df, igg_row], ignore_index=True)
+        # Add an IP that references the IgG so it shows up in identify_control_samples
+        df_extended = pd.concat([df_extended, pd.DataFrame({
+            "Sample_ID": ["WT_leaf_TF_rep1"], "Assay": ["ChIP_narrow"],
+            "Genome": ["ColCEN"], "Levels": ["genotype:WT,tissue:leaf"],
+            "Replicate_ID": ["rep1"], "Read_files": ["SRR6"],
+            "Read_layout": ["PE"], "IP_target": ["TF1"],
+            "Control": ["WT_leaf_IgG_rep1"],
+        })], ignore_index=True)
+
+        input_reps = get_replicate_sample_ids("WT_leaf_Input_rep1", df_extended)
+        igg_reps = get_replicate_sample_ids("WT_leaf_IgG_rep1", df_extended)
+        assert "WT_leaf_IgG_rep1" not in input_reps
+        assert "WT_leaf_Input_rep1" not in igg_reps
 
 
 # ---------------------------------------------------------------------------
