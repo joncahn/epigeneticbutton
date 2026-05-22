@@ -70,21 +70,6 @@ def rep_rds_for_group(group_name, mc_context):
         rep_sids = [group_name]
     return [f"{RESULTS_DIR}/mC/pools/per_rep/{sid}__{mc_context}.rds" for sid in rep_sids]
 
-def call_dmrs_pair_script():
-    """Resolve the per-(pair, context) DMR-call script based on dmr_caller config.
-
-    Both scripts share the same CLI signature, so the rule's shell line
-    is identical regardless of caller — only the script path differs.
-    """
-    caller = config.get('dmr_caller', 'metilene')
-    if caller == 'metilene':
-        return os.path.join(REPO_FOLDER, "workflow", "scripts", "R_call_DMRs_pair_metilene.R")
-    if caller == 'dmrcaller':
-        return os.path.join(REPO_FOLDER, "workflow", "scripts", "R_call_DMRs_pair.R")
-    raise ValueError(
-        f"Unknown dmr_caller: {caller!r}. Expected 'metilene' or 'dmrcaller'."
-    )
-
 
 def get_methylation_contexts():
     """Return the list of methylation contexts to analyze (subset of CG, CHG, CHH).
@@ -597,28 +582,10 @@ else:
             """
 
     rule call_DMRs_for_pair_context:
-        """Call DMRs between two groups for one methylation context.
-
-        Caller is selected by the `dmr_caller` config key (default
-        "metilene"); the per-replicate RDS inputs from
-        cache_mc_replicate_for_context are the same regardless. The
-        metilene driver writes a TSV, calls the metilene binary, and
-        parses its output; the dmrcaller driver uses
-        computeDMRsReplicates (beta-regression with replicate variance,
-        with pooled computeDMRs fallback when either group has N<2).
-        Both scripts emit the same per-pair-context DMR table + counts
-        tsv format, so the aggregator below is caller-agnostic.
-
-        metilene packaging note: the metilene binary is provided by
-        the `- metilene` dep in workflow/envs/epibutton_mc.yaml. Building
-        this env requires the **mamba** conda frontend; classic conda
-        hits an Errno 5 link-step failure against the new `r45*` build
-        cohort that metilene's bioconductor deps pull in (reproducible
-        across retries, on a random `r45*` package each time). The
-        shipped profiles (profiles/slurm, profiles/elzar, profiles/geno,
-        profiles/uge) and the epicc CLI both set `conda-frontend: mamba`
-        accordingly, and mamba is in config/epicc-env.txt.
-        """
+        """Call DMRs between two groups for one methylation context using
+        computeDMRsReplicates (beta-regression with replicate variance).
+        Falls back to pooled computeDMRs when either group has N<2.
+        Per-replicate RDS inputs come from cache_mc_replicate_for_context."""
         input:
             reps1 = lambda wildcards: rep_rds_for_group(wildcards.sample1, wildcards.mc_context),
             reps2 = lambda wildcards: rep_rds_for_group(wildcards.sample2, wildcards.mc_context),
@@ -629,8 +596,7 @@ else:
         wildcard_constraints:
             mc_context = "CG|CHG|CHH"
         params:
-            script = call_dmrs_pair_script(),
-            caller = config.get('dmr_caller', 'metilene'),
+            script = os.path.join(REPO_FOLDER, "workflow", "scripts", "R_call_DMRs_pair.R"),
             n1 = lambda wildcards: len(rep_rds_for_group(wildcards.sample1, wildcards.mc_context))
         log:
             temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", "{mc_context}"))
@@ -638,7 +604,7 @@ else:
         shell:
             """
             {{
-            printf "running %s for %s vs %s (%s)\n" "{params.caller}" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
+            printf "running DMRcaller for %s vs %s (%s)\n" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
             Rscript "{params.script}" "{threads}" "{wildcards.mc_context}" "{input.chrom_sizes}" "{output.dmrs}" "{output.counts}" "{params.n1}" {input.reps1} {input.reps2}
             }} 2>&1 | tee -a "{log}"
             """

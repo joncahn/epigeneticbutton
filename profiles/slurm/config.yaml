@@ -9,7 +9,7 @@
 executor: slurm
 jobs: 16
 use-conda: true
-conda-frontend: mamba
+conda-frontend: conda
 conda-cleanup-pkgs: tarballs
 latency-wait: 60
 keep-going: true

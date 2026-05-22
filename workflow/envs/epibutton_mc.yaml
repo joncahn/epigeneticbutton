@@ -20,5 +20,4 @@ dependencies:
   - r-dplyr
   - bioconductor-dmrcaller
   - bioconductor-biocparallel
-  - bioconductor-genomicranges
-  - metilene
+

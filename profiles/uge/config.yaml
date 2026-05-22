@@ -2,7 +2,7 @@
 executor: cluster-generic
 jobs: 16
 use-conda: true
-conda-frontend: mamba
+conda-frontend: conda
 latency-wait: 60
 default-resources: []
 cluster-generic-submit-cmd: "qsub -V -cwd -pe threads {threads} -l m_mem_free={resources.mem_mb}M -l tmp_free={resources.tmp_mb}M -N smk_{rule}_{jobid} -o hpclogs/{rule}/smk_{jobid}.log -e hpclogs/{rule}/smk_{jobid}.log"

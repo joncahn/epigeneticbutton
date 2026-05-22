@@ -59,8 +59,6 @@ cd epigeneticbutton
 conda create -n epicc -y --file config/epicc-env.txt
 conda activate epicc
 ```
-This installs `mamba` alongside snakemake. EPICC uses mamba as snakemake's `--conda-frontend` because classic conda's link step has been observed to fail with `[Errno 5] Input/output error` on the R 4.5 (`r45*`) package cohort that the mC rule env pulls in — reproducibly, on a random `r45*` package per attempt. Mamba's transaction execution is unaffected.
-
 If you want to run the pipeline on a different platform than locally or slurm, you will need to also install the corresponding snakemake-executor-plugin
 
 ## Usage

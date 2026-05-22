@@ -282,18 +282,6 @@ mC_mapping:
     process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
     process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
 
-# DMR caller selection (Bismark-aligned samples only — dmC samples honor
-# the dmc_dmr_method setting below). Choices:
-#   "metilene" (default): C++ binary segmentation, multi-threaded,
-#     significantly faster than DMRcaller on high-coverage replicate data.
-#     Plant-tuned per-context parameters are hard-coded in
-#     workflow/scripts/R_call_DMRs_pair_metilene.R (see TODO for
-#     exposing these as config in a future Phase 1).
-#   "dmrcaller": R/Bioconductor DMRcaller via computeDMRsReplicates
-#     (beta regression with replicate variance). Slower on real data;
-#     useful when you want the betareg statistical model.
-dmr_caller: "metilene"
-
 # Whether to use the custom version of the script to call DMRs
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
 
