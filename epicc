@@ -713,7 +713,7 @@ OUTPUT_TYPES = {
     },
 }
 
-VALID_OUTPUT_ENVS = ("ChIP", "ATAC", "RNA", "sRNA", "mC", "mCG", "mCHG", "mCHH")
+VALID_OUTPUT_ENVS = ("all", "most", "ChIP", "ATAC", "RNA", "sRNA", "mC", "mCG", "mCHG", "mCHH")
 VALID_OUTPUT_MATRICES = ("regions", "tss", "tes")
 
 
