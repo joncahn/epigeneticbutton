@@ -31,10 +31,22 @@ n2 <- length(reps2_paths)
 # ---------------------------------------------------------------------------
 # Per-context metilene parameters
 # ---------------------------------------------------------------------------
+# G is metilene's --maxseg flag: caps the maximum continuous segment
+# length to bound per-segment memory. Default -1 (no cap) works for CG
+# and CHG. CHH on dense-coverage long chromosomes (e.g. ColCEN Chr1)
+# produces single segments of ~8 million CpGs that drive metilene RSS to
+# 400-700 GB and OOM-kill the job, so we cap CHH. The downside of
+# capping is that DMRs straddling a chunk boundary may get split or
+# (if the pieces fall below -m) missed. With -M 300, the per-DMR split
+# risk is roughly M/G — 3% at G=10000. Larger G is also slightly faster
+# (per-chunk overhead dominates per EpiDiverse), so the only cost of
+# going larger is RSS. -G 10000 measured ~33 GB / 50 min on ColCEN CHH
+# dmC pairs. -G 50000 fit those dmC pairs but OOM-killed PBAT/WGBS CHH
+# pairs at 200-300 GB (denser CX input than dmC), so we stay at 10000.
 metilene_params <- list(
-  CG  = list(d = 0.3, m = 5L, M = 300L, v = 0.7),
-  CHG = list(d = 0.2, m = 5L, M = 300L, v = 0.7),
-  CHH = list(d = 0.1, m = 5L, M = 300L, v = 0.3)
+  CG  = list(d = 0.3, m = 5L, M = 300L, v = 0.7, G = -1L),
+  CHG = list(d = 0.2, m = 5L, M = 300L, v = 0.7, G = -1L),
+  CHH = list(d = 0.1, m = 5L, M = 300L, v = 0.3, G = 10000L)
 )
 p <- metilene_params[[context]]
 if (is.null(p)) stop(sprintf("Unknown context '%s'", context))
@@ -82,25 +94,36 @@ if (n1 < 2 || n2 < 2) {
 # only contains positions with coverage — so different replicates have
 # different position sets. Take the union and pad missing positions with
 # NA, which metilene reads as "." (missing).
-all_keys <- unique(unlist(lapply(all_reps, function(gr)
-  paste0(as.character(seqnames(gr)), ":", start(gr))
-)))
-split_keys <- do.call(rbind, strsplit(all_keys, ":", fixed = TRUE))
-union_chr <- split_keys[, 1]
-union_pos <- as.integer(split_keys[, 2])
+#
+# Keep chr and pos as parallel vectors and dedupe via a packed numeric
+# key (chr_idx * 1e10 + pos). The earlier paste/strsplit/do.call(rbind)
+# pattern aborted R with SIGBUS on ~35M-key CHH inputs because rbind on
+# a list of millions of length-2 char vectors blows up internally. 1e10
+# is well above any plant chromosome length (<2e8) and well under 2^53,
+# so the packed keys remain exact in double precision.
+chr_list <- lapply(all_reps, function(gr) as.character(seqnames(gr)))
+pos_list <- lapply(all_reps, function(gr) start(gr))
+all_chr <- unlist(chr_list, use.names = FALSE)
+all_pos <- unlist(pos_list, use.names = FALSE)
+chr_levels <- unique(all_chr)
+all_keys_num <- match(all_chr, chr_levels) * 1e10 + all_pos
+keep <- !duplicated(all_keys_num)
+union_chr <- all_chr[keep]
+union_pos <- all_pos[keep]
+union_keys_num <- all_keys_num[keep]
 ord <- order(union_chr, union_pos)
 union_chr <- union_chr[ord]
 union_pos <- union_pos[ord]
-union_keys <- paste0(union_chr, ":", union_pos)
-n_pos <- length(union_keys)
+union_keys_num <- union_keys_num[ord]
+n_pos <- length(union_chr)
 
 # Per-replicate methylation rates aligned to the union of positions.
 rates <- lapply(all_reps, function(gr) {
+  rep_keys_num <- match(as.character(seqnames(gr)), chr_levels) * 1e10 + start(gr)
   m <- mcols(gr)
-  rep_keys <- paste0(as.character(seqnames(gr)), ":", start(gr))
   rep_rate <- m$readsM / m$readsN
   rep_rate[m$readsN == 0] <- NA
-  rep_rate[match(union_keys, rep_keys)]
+  rep_rate[match(union_keys_num, rep_keys_num)]
 })
 
 # ---------------------------------------------------------------------------
@@ -144,6 +167,11 @@ metilene_args <- c(
   "-d", as.character(p$d),
   "-m", as.character(p$m),
   "-M", as.character(p$M),
+  # -G only when capping segment length. Passing `-G -1` as a "no cap"
+  # sentinel breaks metilene's argparser (it reads `-1` as another flag);
+  # metilene's internal default for --maxseg is already -1 (no cap), so
+  # omitting -G is the correct way to express "no cap".
+  if (p$G > 0L) c("-G", as.character(p$G)) else character(0),
   "-v", as.character(p$v),
   "-t", as.character(max(1L, threads)),
   "-X", "1",
