@@ -43,6 +43,24 @@ genomes_*/
 # Test logs and data
 tests/integration/*.log
 test-data-prep/
+# Consolidated scratch dir for local test/integration runs (results,
+# genomes, and run logs). Point test invocations here via
+# --output-dir/--genome-dir and redirect logs into it so a single
+# ignore rule keeps the working tree clean.
+test_runs/
+# Stray run logs that predate the test_runs/ convention.
+.test_logs/
+*.test-*.log
+subset-*.log
+# Empty Read_files placeholders that conftest.py's stage_mock_inputs()
+# autouse fixture regenerates before each integration run. The real
+# binary fixtures in this dir (genome, GFF/GTF, ONT BAMs, bedMethyl)
+# are already tracked; add any new real fixture with `git add -f`.
+tests/integration/data/mock_inputs/
+
+# Site-specific SLURM profile (CSHL Elzar); not shipped — profiles/slurm
+# is the example. Other profiles/* are tracked.
+profiles/elzar/
 
 # Temporary files
 *.tmp

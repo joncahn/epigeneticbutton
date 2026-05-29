@@ -26,7 +26,6 @@ _DRYRUN_SAMPLE_SHEETS = (
     "test_samples_RNA.tsv",
     "test_samples_sRNA.tsv",
     "test_samples_mC.tsv",
-    "test_samples_dmc.tsv",
 )
 _SRA_RE = re.compile(r"^[SDE]RR\d+$")
 
