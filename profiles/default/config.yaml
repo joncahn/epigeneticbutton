@@ -109,6 +109,7 @@ set-resources:
   merging_mc_replicates: *heavy
   make_mc_bigwig_files: *single
   cache_mc_replicate_for_context: *heavy
+  calibrate_dmr_min_diff: *heavy
   call_DMRs_for_pair_context: *dmr
   call_DMRs_pairwise: *dmr  # legacy rule, active only when custom_script_dmrs: true
   # dmC
@@ -231,6 +232,7 @@ set-threads:
   merging_mc_replicates: 4
   make_mc_bigwig_files: 1
   cache_mc_replicate_for_context: 2
+  calibrate_dmr_min_diff: 2
   call_DMRs_for_pair_context: 16
   call_DMRs_pairwise: 16  # legacy rule, active only when custom_script_dmrs: true
   # dmC

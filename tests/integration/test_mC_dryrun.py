@@ -383,6 +383,22 @@ class TestDmcDMRWorkflow:
         assert "convert_bedmethyl_to_cx_report" in output, "Expected bedMethyl conversion"
         assert "R_call_DMRs_pair_metilene.R" in output, "Expected metilene pair-call R script (default dmr_caller)"
 
+    def test_dmr_auto_calibration_adds_calibrate_rule(self, snakemake_available, repo_root, test_options):
+        """Test that min_diff: auto inserts the calibration rule before DMR calling."""
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+        extra_config = ["--config", "dmr_thresholds={'min_diff':'auto','sigma_n':3.0}"]
+        result = run_snakemake_dryrun(repo_root, test_options, DMC_DMR_TARGET,
+                                      ["--printshellcmds"] + extra_config)
+        assert result.returncode == 0, f"Dry-run failed:\n{result.stdout}\n{result.stderr}"
+        output = result.stdout + result.stderr
+        assert "calibrate_dmr_min_diff" in output, \
+            "Expected calibrate_dmr_min_diff rule when min_diff: auto"
+        assert "R_calibrate_dmr_min_diff.R" in output, \
+            "Expected calibration R script in shell commands"
+        assert "call_DMRs_for_pair_context" in output, \
+            "Expected DMR calling rule to still be present"
+
 
 # ===========================================================================
 # TestDAGStructure

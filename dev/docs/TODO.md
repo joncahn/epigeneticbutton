@@ -14,10 +14,8 @@
 
 ### Analysis
 
-* [ ] Expose DMR-call thresholds as `config/epicc-options.yaml` options. Current per-context `minProportionDifference` (CG=0.3, CHG=0.2, CHH=0.1) is hard-coded in `R_call_DMRs_pair.R` (inherited unchanged from pre-refactor `R_call_DMRs.R`) and is Arabidopsis-leaf-tuned. Cross-species/cross-tissue methylation varies widely (maize and duckweeds have very low somatic CHH; pollen/endosperm differ from leaf), so static thresholds will under- or over-call DMRs outside the default regime. Two-phase plan:
-   - **Phase 1**: lift the per-context `min_diff` / `minCytosinesCount` / `minGap` / `minSize` etc. into a `dmr_thresholds:` block in the options YAML. Document in README + RTD `configuration.rst` (the docs sync surface from the memory note). Plant-typical defaults preserve current behavior.
-   - **Phase 2**: add a `dmr_thresholds: auto` mode that computes per-context per-pair thresholds from the genome-wide methylation distribution (e.g. `k × (Q95 − Q05)` of per-position methylation, or Nσ above per-position binomial noise). Implementation likely a small calibration rule that writes a per-(pair, context) JSON consumed by `R_call_DMRs_pair.R`. Eliminates the "user doesn't know what threshold to use" problem for new species.
-   - Applies equally to any future metilene migration (`-d`, `-v`, `-m` would be the analog metilene flags).
+* [x] Expose DMR-call thresholds as `config/epicc-options.yaml` options. **Phase 1 done**: `dmr_thresholds:` block in options YAML exposes all per-context and per-caller parameters for both metilene and DMRcaller. Shared: `min_diff` (per-context), `min_cytosines`. DMRcaller-only: `bin_size`, `p_value`, `min_gap`, `min_size`, `min_reads`. Metilene-only: `max_cpgs`, `valley` (per-context), `maxseg` (per-context). Defaults preserve Arabidopsis-leaf-tuned behavior. Both R scripts read from CLI args; Snakemake rule passes all 10 args to both. Documented in README + CLAUDE.md.
+   - **Phase 2** (deferred): add a `dmr_thresholds: auto` mode that computes per-context per-pair thresholds from the genome-wide methylation distribution (e.g. `k × (Q95 − Q05)` of per-position methylation, or Nσ above per-position binomial noise). Implementation likely a small calibration rule that writes a per-(pair, context) JSON consumed by `R_call_DMRs_pair.R`. Eliminates the "user doesn't know what threshold to use" problem for new species.
 
 ### UI/UX
 

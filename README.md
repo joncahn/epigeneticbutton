@@ -344,6 +344,7 @@ More details can be found in the `config/epicc-options.yaml` file (all options a
     maxseg:         {CG: -1, CHG: -1, CHH: 10000}   # metilene: max segment cap (-G)
   ```
   `min_diff` and `min_cytosines` apply to both callers; the remaining keys are caller-specific and ignored by the other.
+- To let the pipeline estimate `min_diff` automatically from the data, set `min_diff: "auto"` (string). For each comparison pair and context a short calibration step runs first and computes `sigma_n × σ`, where σ is the SD of per-position between-group methylation differences (noise-floor dominated at most genome positions). This scales naturally with baseline methylation: CG positions are typically highly methylated (high σ → higher threshold) while CHH positions are near zero (low σ → lower threshold), so per-context differentiation emerges without hard-coded values. A floor of 0.05 prevents pathological values at extreme coverage. Tune `sigma_n` (default 3.0) to tighten or relax sensitivity. `auto` is recommended when working outside Arabidopsis leaf tissue — maize or duckweed somatic CHH methylation is far lower than Arabidopsis, and pollen/endosperm methylation landscapes differ substantially from leaf.
 - A deeper analysis is available to try different parameters and methods to call the DMRs. Toggle the `use custom_script_dmrs` on the options file to use it. Feel free to edit it as well for different parameters.
 
 ##  Additional output options

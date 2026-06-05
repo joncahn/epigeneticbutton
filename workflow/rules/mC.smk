@@ -1,3 +1,5 @@
+import json as _json
+
 CONDA_ENV_MC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_mc.yaml")
 
 # Build wildcard constraint patterns for dmC vs bisulfite rule routing.
@@ -108,6 +110,12 @@ def get_dmr_threshold(key, context=None):
         default_per_ctx = _DMR_THRESHOLD_DEFAULTS[key]
         return val.get(context, default_per_ctx.get(context)) if context else val
     return val
+
+
+# True when the user has requested data-driven min_diff calibration.
+_dmr_min_diff_auto = (
+    str(config.get('dmr_thresholds', {}).get('min_diff', '')).lower() == 'auto'
+)
 
 
 def get_methylation_contexts():
@@ -620,6 +628,37 @@ else:
             }} 2>&1 | tee -a "{log}"
             """
 
+    rule calibrate_dmr_min_diff:
+        """Estimate the noise-floor sigma for the auto min_diff calibration.
+
+        Computes the SD of per-position between-group methylation differences.
+        At most positions no real DMR exists, so the SD is measurement-noise
+        dominated and naturally scales with the context's baseline methylation
+        (CG > CHG > CHH). Threshold = sigma_n * sigma, floored at 0.05.
+        Only triggered when dmr_thresholds.min_diff: "auto".
+        """
+        input:
+            reps1 = lambda wildcards: rep_rds_for_group(wildcards.sample1, wildcards.mc_context),
+            reps2 = lambda wildcards: rep_rds_for_group(wildcards.sample2, wildcards.mc_context),
+        output:
+            json = temp(f"{RESULTS_DIR}/mC/DMRs/.calib__{{sample1}}__vs__{{sample2}}__{{mc_context}}.json")
+        wildcard_constraints:
+            mc_context = "CG|CHG|CHH"
+        params:
+            script  = os.path.join(REPO_FOLDER, "workflow", "scripts", "R_calibrate_dmr_min_diff.R"),
+            sigma_n = config.get('dmr_thresholds', {}).get('sigma_n', 3.0),
+            n1      = lambda wildcards: len(rep_rds_for_group(wildcards.sample1, wildcards.mc_context)),
+        log:
+            temp(return_log_mc("{sample1}__vs__{sample2}", "DMR_calib", "{mc_context}"))
+        conda: CONDA_ENV_MC
+        shell:
+            """
+            {{
+            printf "Calibrating min_diff for %s vs %s (%s)\n" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
+            Rscript "{params.script}" "{wildcards.mc_context}" "{output.json}" "{params.sigma_n}" "{params.n1}" {input.reps1} {input.reps2}
+            }} 2>&1 | tee -a "{log}"
+            """
+
     rule call_DMRs_for_pair_context:
         """Call DMRs between two groups for one methylation context.
 
@@ -632,11 +671,17 @@ else:
         with pooled computeDMRs fallback when either group has N<2).
         Both scripts emit the same per-pair-context DMR table + counts
         tsv format, so the aggregator below is caller-agnostic.
+        When dmr_thresholds.min_diff: "auto", the calibrate_dmr_min_diff
+        rule runs first and its JSON output is read to set min_diff.
         """
         input:
             reps1 = lambda wildcards: rep_rds_for_group(wildcards.sample1, wildcards.mc_context),
             reps2 = lambda wildcards: rep_rds_for_group(wildcards.sample2, wildcards.mc_context),
-            chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes"
+            chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{get_sample_info_from_name(wildcards.sample1, analysis_samples, 'ref_genome')}/chrom.sizes",
+            calib_json = lambda wildcards: (
+                f"{RESULTS_DIR}/mC/DMRs/.calib__{wildcards.sample1}__vs__{wildcards.sample2}__{wildcards.mc_context}.json"
+                if _dmr_min_diff_auto else []
+            ),
         output:
             dmrs   = f"{RESULTS_DIR}/mC/DMRs/{{sample1}}__vs__{{sample2}}__{{mc_context}}_DMRs.txt",
             counts = temp(f"{RESULTS_DIR}/mC/DMRs/.counts__{{sample1}}__vs__{{sample2}}__{{mc_context}}.tsv")
@@ -646,7 +691,11 @@ else:
             script         = call_dmrs_pair_script(),
             caller         = config.get('dmr_caller', 'metilene'),
             n1             = lambda wildcards: len(rep_rds_for_group(wildcards.sample1, wildcards.mc_context)),
-            min_diff       = lambda wildcards: get_dmr_threshold('min_diff',      wildcards.mc_context),
+            min_diff       = lambda wildcards, input: (
+                _json.load(open(str(input.calib_json)))['min_diff']
+                if _dmr_min_diff_auto
+                else get_dmr_threshold('min_diff', wildcards.mc_context)
+            ),
             min_cytosines  = get_dmr_threshold('min_cytosines'),
             bin_size       = get_dmr_threshold('bin_size'),
             p_value        = get_dmr_threshold('p_value'),

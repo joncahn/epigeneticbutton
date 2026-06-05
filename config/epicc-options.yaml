@@ -298,10 +298,19 @@ dmr_caller: "metilene"
 dmr_thresholds:
   # Minimum mean methylation difference to call a DMR (per context).
   # Applies to: metilene -d, DMRcaller minProportionDifference.
+  # Set to "auto" (string) to let the pipeline estimate per-pair, per-context
+  # thresholds from the data (sigma_n * noise-floor sigma; see sigma_n below).
+  # "auto" is recommended when working outside Arabidopsis leaf tissue.
   min_diff:
     CG:  0.3
     CHG: 0.2
     CHH: 0.1
+  # min_diff: "auto"   # data-driven alternative — uncomment to use
+
+  # Multiplier applied to the noise-floor sigma when min_diff: "auto".
+  # threshold = sigma_n * SD(per-position between-group diff), floored at 0.05.
+  # Only used when min_diff is "auto"; ignored otherwise.
+  sigma_n: 3.0
 
   # Minimum cytosine/CpG count per DMR window.
   # Applies to: metilene -m, DMRcaller minCytosinesCount.
