@@ -15,7 +15,7 @@
 ### Analysis
 
 * [x] Expose DMR-call thresholds as `config/epicc-options.yaml` options. **Phase 1 done**: `dmr_thresholds:` block in options YAML exposes all per-context and per-caller parameters for both metilene and DMRcaller. Shared: `min_diff` (per-context), `min_cytosines`. DMRcaller-only: `bin_size`, `p_value`, `min_gap`, `min_size`, `min_reads`. Metilene-only: `max_cpgs`, `valley` (per-context), `maxseg` (per-context). Defaults preserve Arabidopsis-leaf-tuned behavior. Both R scripts read from CLI args; Snakemake rule passes all 10 args to both. Documented in README + CLAUDE.md.
-   - **Phase 2** (deferred): add a `dmr_thresholds: auto` mode that computes per-context per-pair thresholds from the genome-wide methylation distribution (e.g. `k × (Q95 − Q05)` of per-position methylation, or Nσ above per-position binomial noise). Implementation likely a small calibration rule that writes a per-(pair, context) JSON consumed by `R_call_DMRs_pair.R`. Eliminates the "user doesn't know what threshold to use" problem for new species.
+   - **Phase 2 done**: `min_diff: "auto"` triggers a `calibrate_dmr_min_diff` rule that estimates `threshold = max(0.05, sigma_n × σ)` per-(pair, context), where σ = SD of per-position between-group methylation differences (noise-floor dominated; naturally scales CG > CHG > CHH with organism methylation levels). Writes a JSON consumed by `call_DMRs_for_pair_context`. Not the default — opt-in. `sigma_n` (default 3.0) is tunable.
 
 ### UI/UX
 
