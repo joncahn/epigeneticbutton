@@ -203,17 +203,43 @@ def maybe_clear_stale_lock(args, repo):
 _PLACEHOLDER_RE = __import__("re").compile(r"<your-[a-z0-9-]+>", __import__("re").IGNORECASE)
 
 
+def _strip_yaml_comment(line):
+    """Return `line` with any trailing YAML comment removed.
+
+    A `#` starts a comment unless it sits inside a quoted scalar. We don't
+    need a full YAML parser here — just enough quote awareness to avoid
+    chopping a value that legitimately contains `#`. Lines that are entirely
+    a comment (the common `#- slurm_account=...` case) collapse to empty.
+    """
+    in_single = in_double = False
+    for i, ch in enumerate(line):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "#" and not in_single and not in_double:
+            return line[:i]
+    return line
+
+
 def check_profile_placeholders(profile_arg):
     """Fail fast if the user's profile still ships an unedited placeholder.
 
     profiles/slurm/config.yaml ships `slurm_account="<your-slurm-account>"`
-    as the default. Without this check, sbatch silently rejects every job
-    submitted under that account name and the run hangs at
-    "Select jobs to execute..." with nothing visible in `squeue` — a
-    debugging trap (see e.g. github.com/joncahn/epigeneticbutton/issues/...
-    for the original report). Surface the unedited value upfront with a
-    pointer back at the offending file so the user knows exactly what to
-    fix.
+    as a *commented-out* example. Without this check, an account left at
+    that placeholder value (once uncommented but not edited) makes sbatch
+    silently reject every job and the run hangs at "Select jobs to
+    execute..." with nothing visible in `squeue` — a debugging trap (see
+    e.g. github.com/joncahn/epigeneticbutton/issues/... for the original
+    report). Surface the unedited value upfront with a pointer back at the
+    offending file so the user knows exactly what to fix.
+
+    We only scan *active* (non-comment) config: a placeholder that lives
+    in a commented-out line is an example the user hasn't opted into — most
+    notably the shipped `#- slurm_account="<your-slurm-account>"`, which a
+    user can simply leave alone to let SLURM assign its default account.
+    Flagging that would force users to specify an account that their
+    cluster doesn't actually require.
 
     `profile_arg` is whatever the user passed to --profile (a directory
     or a config.yaml path); this resolves either to the actual config
@@ -231,8 +257,10 @@ def check_profile_placeholders(profile_arg):
         config_path = candidate
     if not config_path.exists():
         return  # snakemake will report the missing-profile error itself
-    text = config_path.read_text()
-    placeholders = sorted(set(_PLACEHOLDER_RE.findall(text)))
+    active = "\n".join(
+        _strip_yaml_comment(line) for line in config_path.read_text().splitlines()
+    )
+    placeholders = sorted(set(_PLACEHOLDER_RE.findall(active)))
     if not placeholders:
         return
     print(
