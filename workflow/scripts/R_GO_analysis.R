@@ -19,21 +19,19 @@ targetname<-args[6]
 output_dir<-args[7]
 genome_dir<-args[8]
 
-original_wd<-getwd()
-db<-paste0("./",genome_dir,"/",refgenome,"/GO/")
-setwd(db)
+godir <- normalizePath(paste0("./",genome_dir,"/",refgenome,"/GO"), mustWork=FALSE)
 # Prepend the per-genome GO directory to .libPaths() so requireNamespace,
 # library, and rrvgo's orgdb-driven calls below all resolve dbname against
 # this genome's installed package -- not whichever same-named package
 # happens to be in the conda env's R library from an earlier run with
 # a different reference genome of the same species.
-.libPaths(c(getwd(), .libPaths()))
+.libPaths(c(godir, .libPaths()))
 if (!requireNamespace(dbname, quietly = TRUE)) {
-	install.packages(dbname, repos=NULL, type="source", lib=getwd())
+	stop(paste0("GO database package '", dbname, "' not found in ", godir,
+	            ". Run epicc with GO: true so the create_GO_database rule builds it first."))
 }
 library(dbname, character.only = TRUE)
-info<-read.delim(paste0(dbname,"_gaf_file.tab"), header=FALSE)
-setwd(original_wd)
+info<-read.delim(file.path(godir, paste0(dbname,"_gaf_file.tab")), header=FALSE)
 
 fGO<-info[,c(1,6,10)]
 colnames(fGO)<-c("GID","GO","EVIDENCE")

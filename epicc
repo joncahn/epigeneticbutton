@@ -332,7 +332,11 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
     else:
         cmd += ["--use-conda", "--conda-frontend", "conda", "--cores", str(cores)]
 
-    # Config overrides via --config key=value
+    # Config overrides via --config key=value — collected here, emitted below
+    # after merging any --config values from extra_args (the -- passthrough).
+    # Snakemake with multiple --config flags uses the LAST one, silently
+    # dropping keys from earlier blocks (empirically confirmed; see issue #31).
+    # Merging into a single block avoids that.
     config_overrides = []
     if args.samples:
         if not Path(args.samples).exists():
@@ -347,8 +351,6 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
         config_overrides.append(f"keep_intermediates={args.keep_intermediates}")
     if getattr(args, "use_node_tmpdir", False):
         config_overrides.append("use_node_tmpdir=true")
-    if config_overrides:
-        cmd += ["--config"] + config_overrides
 
     # Dry-run
     if dry_run:
@@ -376,9 +378,30 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
     if hasattr(args, 'forcerun') and args.forcerun:
         cmd += ["--forcerun"] + args.forcerun
 
-    # Passthrough arguments (everything after --)
-    if extra_args:
-        cmd += extra_args
+    # Passthrough arguments (everything after --).
+    # Extract any --config key=value tokens and merge into config_overrides so
+    # the entire config lives in a single --config block. Snakemake's last
+    # --config wins, so if we emitted ours first and the user's --config
+    # follows in the passthrough, keys like sample_file get silently dropped.
+    filtered_extra = []
+    i = 0
+    while i < len(extra_args):
+        if extra_args[i] == "--config":
+            i += 1
+            while i < len(extra_args) and "=" in extra_args[i] and not extra_args[i].startswith("-"):
+                config_overrides.append(extra_args[i])
+                i += 1
+        elif extra_args[i].startswith("--config="):
+            config_overrides.append(extra_args[i][len("--config="):])
+            i += 1
+        else:
+            filtered_extra.append(extra_args[i])
+            i += 1
+
+    if config_overrides:
+        cmd += ["--config"] + config_overrides
+    if filtered_extra:
+        cmd += filtered_extra
 
     return cmd
 
