@@ -246,8 +246,8 @@ rule prep_region_file:
         """
         {{
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
-        awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
-        awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
+        awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | iconv -f UTF-8 -t ASCII//TRANSLIT | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
+        awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | iconv -f UTF-8 -t ASCII//TRANSLIT | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -460,6 +460,11 @@ rule check_te_file:
             printf "\nExtension of TE file unknown, should be .bed(.gz) or .gff3(.gz):\n $te_src\n"
             exit 1
         fi
+
+        # Transliterate non-ASCII characters (e.g. Greek letters in TE names)
+        # to avoid deeptools computeMatrix assertion errors on region files.
+        iconv -f UTF-8 -t ASCII//TRANSLIT {output.te_file} > {output.te_file}.tmp \
+            && mv {output.te_file}.tmp {output.te_file}
 
         # Validate uniqueness of TE names (column 4)
         tot=$(cat {output.te_file} | wc -l)
