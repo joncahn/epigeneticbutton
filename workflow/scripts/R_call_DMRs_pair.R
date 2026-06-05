@@ -10,9 +10,18 @@ context         <- args[2]
 chromsizes_path <- args[3]
 dmrs_out        <- args[4]
 counts_out      <- args[5]
-n1              <- as.integer(args[6])
-reps1_paths     <- args[7:(6 + n1)]
-reps2_paths     <- args[(7 + n1):length(args)]
+# Threshold args[6:15] — shared (min_diff, min_cytosines) + caller-specific
+min_diff        <- as.numeric(args[6])   # minProportionDifference
+min_cytosines   <- as.integer(args[7])   # minCytosinesCount
+bin_size        <- as.integer(args[8])
+p_value         <- as.numeric(args[9])   # pValueThreshold
+min_gap         <- as.integer(args[10])  # minGap
+min_size        <- as.integer(args[11])  # minSize
+min_reads       <- as.integer(args[12])  # minReadsPerCytosine
+# args[13:15] are metilene-specific (max_cpgs, valley, maxseg) — ignored here
+n1              <- as.integer(args[16])
+reps1_paths     <- args[17:(16 + n1)]
+reps2_paths     <- args[(17 + n1):length(args)]
 n2 <- length(reps2_paths)
 
 chromsizes <- read.table(chromsizes_path, col.names = c("chr", "length"))
@@ -44,21 +53,12 @@ cat(sprintf("R_call_DMRs_pair.R: n1=%d n2=%d context=%s threads=%d workers=%d ba
 # modeling that's the whole point of computeDMRsReplicates. Pooled
 # fallback for N<2 uses the original noise_filter (CG/CHG) / bins (CHH)
 # pair with the score test that the pre-refactor pipeline was tuned for.
-context_params_replicates <- list(
-  CG  = list(method = "bins", minProportionDifference = 0.3),
-  CHG = list(method = "bins", minProportionDifference = 0.2),
-  CHH = list(method = "bins", minProportionDifference = 0.1)
-)
-context_params_pooled <- list(
-  CG  = list(method = "noise_filter", minProportionDifference = 0.3),
-  CHG = list(method = "noise_filter", minProportionDifference = 0.2),
-  CHH = list(method = "bins",          minProportionDifference = 0.1)
-)
+method_replicates <- "bins"
+method_pooled <- if (context == "CHH") "bins" else "noise_filter"
 
 use_replicates <- (n1 >= 2 && n2 >= 2)
 
 if (use_replicates) {
-    p <- context_params_replicates[[context]]
     joined <- Reduce(joinReplicates, c(reps1, reps2))
     condition <- c(rep("sample1", n1), rep("sample2", n2))
 
@@ -67,15 +67,15 @@ if (use_replicates) {
       condition       = condition,
       regions         = chrs,
       context         = context,
-      method          = p$method,
-      binSize         = 200,
+      method          = method_replicates,
+      binSize         = bin_size,
       test            = "betareg",
-      pValueThreshold = 0.01,
-      minCytosinesCount = 5,
-      minProportionDifference = p$minProportionDifference,
-      minGap          = 200,
-      minSize         = 50,
-      minReadsPerCytosine = 3
+      pValueThreshold = p_value,
+      minCytosinesCount = min_cytosines,
+      minProportionDifference = min_diff,
+      minGap          = min_gap,
+      minSize         = min_size,
+      minReadsPerCytosine = min_reads
     )
     # parallel=FALSE: computeDMRsReplicates's SnowParam path has a
     # reducer bug (DMRcaller 1.42) that masks worker R errors as
@@ -94,17 +94,16 @@ if (use_replicates) {
 } else {
     warning(sprintf("Pair has insufficient replicates (n1=%d, n2=%d) for the betareg replicate model; falling back to pooled computeDMRs",
                     n1, n2))
-    p <- context_params_pooled[[context]]
     pool1 <- if (length(reps1) > 1) Reduce(poolTwoMethylationDatasets, reps1) else reps1[[1]]
     pool2 <- if (length(reps2) > 1) Reduce(poolTwoMethylationDatasets, reps2) else reps2[[1]]
 
     base_args <- list(
       pool1, pool2,
       regions = chrs, context = context,
-      method = p$method, binSize = 200, test = "score",
-      pValueThreshold = 0.01, minCytosinesCount = 5,
-      minProportionDifference = p$minProportionDifference,
-      minGap = 200, minSize = 50, minReadsPerCytosine = 3
+      method = method_pooled, binSize = bin_size, test = "score",
+      pValueThreshold = p_value, minCytosinesCount = min_cytosines,
+      minProportionDifference = min_diff,
+      minGap = min_gap, minSize = min_size, minReadsPerCytosine = min_reads
     )
     fnames <- names(formals(computeDMRs))
     if (workers > 1 && all(c("parallel", "BPPARAM") %in% fnames)) {

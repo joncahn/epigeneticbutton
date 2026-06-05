@@ -7,11 +7,10 @@
 # binary, parses its BED-like output, and writes our standard DMR
 # table + per-context hyper/hypo counts file.
 #
-# Per-context parameters are plant-tuned: -d (mean methylation
-# difference threshold) matches DMRcaller's minProportionDifference
-# (CG=0.3, CHG=0.2, CHH=0.1); -v (per-position valley filter) is
-# lowered for CHH because CHH per-site signal is intrinsically noisy
-# at the low-methylation baseline plants typically have there.
+# Per-context thresholds are passed as command-line args from the Snakemake
+# rule and are configurable via dmr_thresholds: in epicc-options.yaml.
+# Plant-tuned defaults: -d CG=0.3, CHG=0.2, CHH=0.1; -v CG/CHG=0.7, CHH=0.3
+# (valley lowered for CHH because per-site CHH signal is intrinsically noisy).
 
 suppressPackageStartupMessages({
   library(GenomicRanges)
@@ -23,33 +22,29 @@ context         <- args[2]
 chromsizes_path <- args[3]  # unused (kept for arg-order parity with DMRcaller path)
 dmrs_out        <- args[4]
 counts_out      <- args[5]
-n1              <- as.integer(args[6])
-reps1_paths     <- args[7:(6 + n1)]
-reps2_paths     <- args[(7 + n1):length(args)]
+# Threshold args[6:15] — shared (min_diff, min_cytosines) + caller-specific
+min_diff        <- as.numeric(args[6])   # -d: mean methylation difference threshold
+min_cytosines   <- as.integer(args[7])   # -m: minimum CpGs per DMR
+# args[8:12] are dmrcaller-specific (bin_size, p_value, min_gap, min_size, min_reads) — ignored
+max_cpgs        <- as.integer(args[13])  # -M: maximum CpGs per segment
+valley          <- as.numeric(args[14])  # -v: per-position valley filter
+maxseg          <- as.integer(args[15])  # -G: max segment length (-1 = no cap)
+n1              <- as.integer(args[16])
+reps1_paths     <- args[17:(16 + n1)]
+reps2_paths     <- args[(17 + n1):length(args)]
 n2 <- length(reps2_paths)
 
 # ---------------------------------------------------------------------------
-# Per-context metilene parameters
+# Per-context metilene parameters (read from command-line args, configured
+# via dmr_thresholds: in epicc-options.yaml)
 # ---------------------------------------------------------------------------
-# G is metilene's --maxseg flag: caps the maximum continuous segment
-# length to bound per-segment memory. Default -1 (no cap) works for CG
-# and CHG. CHH on dense-coverage long chromosomes (e.g. ColCEN Chr1)
-# produces single segments of ~8 million CpGs that drive metilene RSS to
-# 400-700 GB and OOM-kill the job, so we cap CHH. The downside of
-# capping is that DMRs straddling a chunk boundary may get split or
-# (if the pieces fall below -m) missed. With -M 300, the per-DMR split
-# risk is roughly M/G — 3% at G=10000. Larger G is also slightly faster
-# (per-chunk overhead dominates per EpiDiverse), so the only cost of
-# going larger is RSS. -G 10000 measured ~33 GB / 50 min on ColCEN CHH
-# dmC pairs. -G 50000 fit those dmC pairs but OOM-killed PBAT/WGBS CHH
-# pairs at 200-300 GB (denser CX input than dmC), so we stay at 10000.
-metilene_params <- list(
-  CG  = list(d = 0.3, m = 5L, M = 300L, v = 0.7, G = -1L),
-  CHG = list(d = 0.2, m = 5L, M = 300L, v = 0.7, G = -1L),
-  CHH = list(d = 0.1, m = 5L, M = 300L, v = 0.3, G = 10000L)
-)
-p <- metilene_params[[context]]
-if (is.null(p)) stop(sprintf("Unknown context '%s'", context))
+# maxseg (-G) caps the maximum continuous segment length to bound per-segment
+# memory. Default -1 (no cap) works for CG and CHG. CHH on dense-coverage
+# long chromosomes (e.g. ColCEN Chr1) produces single segments of ~8 million
+# CpGs that drive metilene RSS to 400-700 GB and OOM-kill the job, so the
+# default config caps CHH at 10000. See epicc-options.yaml for rationale.
+p <- list(d = min_diff, m = min_cytosines, M = max_cpgs, v = valley, G = maxseg)
+if (is.null(p$d)) stop(sprintf("Unknown context '%s'", context))
 
 # ---------------------------------------------------------------------------
 # Load per-replicate RDS caches and compute methylation rate per position

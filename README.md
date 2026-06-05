@@ -329,11 +329,21 @@ More details can be found in the `config/epicc-options.yaml` file (all options a
 
 ### DMRs parameters
 - By default, DNA methylation data is analyzed in all three sequence contexts (CG, CHG, and CHH, where H = A, T, or C). This is controlled by the `methylation_contexts` list in `config/epicc-options.yaml` (default: `["CG", "CHG", "CHH"]`). For animal genomes where non-CpG methylation is negligible, set `methylation_contexts: ["CG"]` to skip the empty CHG/CHH bigwigs, DMR calls, and PCA plots. Subcontexts (CAG, CAA, etc.) are not currently supported.
-- DMRs are called with the R package [DMRcaller](https://www.bioconductor.org/packages/release/bioc/html/DMRcaller.html) (DOI: 10.18129/B9.bioc.DMRcaller) for each configured context with the following (stringent) parameters:
-	- CG: `method="noise-filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.3, minGap=200, minSize=50, minReadsPerCytosine=3`
-	- CHG: `method="noise_filter", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.2, minGap=200, minSize=50, minReadsPerCytosine=3`
-	- CHH: `method="bins", binSize=200, test="score", pValueThreshold=0.01, minCytosinesCount=5, minProportionDifference=0.1, minGap=200, minSize=50, minReadsPerCytosine=3`
-	These parameters were selected based on the most optimal results obtained by the authors [Catoni et al. 2018](https://academic.oup.com/nar/article/46/19/e114/5050634).
+- DMR calling thresholds are configured via the `dmr_thresholds:` block in `config/epicc-options.yaml`. Defaults are tuned for Arabidopsis leaves ([Catoni et al. 2018](https://academic.oup.com/nar/article/46/19/e114/5050634)); cross-species and cross-tissue methylation varies widely (e.g. maize CHH is very low; pollen differs from leaf), so adjust as needed:
+  ```yaml
+  dmr_thresholds:
+    min_diff:       {CG: 0.3, CHG: 0.2, CHH: 0.1}  # min mean methylation difference
+    min_cytosines:  5      # min CpG/cytosine count per DMR window
+    bin_size:       200    # DMRcaller: window size (bp)
+    p_value:        0.01   # DMRcaller: p-value threshold
+    min_gap:        200    # DMRcaller: min gap between DMRs (bp)
+    min_size:       50     # DMRcaller: min DMR size (bp)
+    min_reads:      3      # DMRcaller: min reads per cytosine
+    max_cpgs:       300    # metilene: max CpGs per segment (-M)
+    valley:         {CG: 0.7, CHG: 0.7, CHH: 0.3}  # metilene: valley filter (-v)
+    maxseg:         {CG: -1, CHG: -1, CHH: 10000}   # metilene: max segment cap (-G)
+  ```
+  `min_diff` and `min_cytosines` apply to both callers; the remaining keys are caller-specific and ignored by the other.
 - A deeper analysis is available to try different parameters and methods to call the DMRs. Toggle the `use custom_script_dmrs` on the options file to use it. Feel free to edit it as well for different parameters.
 
 ##  Additional output options

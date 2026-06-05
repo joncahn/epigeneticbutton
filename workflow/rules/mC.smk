@@ -87,6 +87,29 @@ def call_dmrs_pair_script():
     )
 
 
+_DMR_THRESHOLD_DEFAULTS = {
+    'min_diff':      {'CG': 0.3, 'CHG': 0.2, 'CHH': 0.1},
+    'min_cytosines': 5,
+    'bin_size':      200,
+    'p_value':       0.01,
+    'min_gap':       200,
+    'min_size':      50,
+    'min_reads':     3,
+    'max_cpgs':      300,
+    'valley':        {'CG': 0.7, 'CHG': 0.7, 'CHH': 0.3},
+    'maxseg':        {'CG': -1,  'CHG': -1,  'CHH': 10000},
+}
+
+def get_dmr_threshold(key, context=None):
+    """Return a DMR threshold from config, falling back to plant-tuned defaults."""
+    thresholds = config.get('dmr_thresholds', {})
+    val = thresholds.get(key, _DMR_THRESHOLD_DEFAULTS[key])
+    if isinstance(val, dict):
+        default_per_ctx = _DMR_THRESHOLD_DEFAULTS[key]
+        return val.get(context, default_per_ctx.get(context)) if context else val
+    return val
+
+
 def get_methylation_contexts():
     """Return the list of methylation contexts to analyze (subset of CG, CHG, CHH).
 
@@ -620,9 +643,19 @@ else:
         wildcard_constraints:
             mc_context = "CG|CHG|CHH"
         params:
-            script = call_dmrs_pair_script(),
-            caller = config.get('dmr_caller', 'metilene'),
-            n1 = lambda wildcards: len(rep_rds_for_group(wildcards.sample1, wildcards.mc_context))
+            script         = call_dmrs_pair_script(),
+            caller         = config.get('dmr_caller', 'metilene'),
+            n1             = lambda wildcards: len(rep_rds_for_group(wildcards.sample1, wildcards.mc_context)),
+            min_diff       = lambda wildcards: get_dmr_threshold('min_diff',      wildcards.mc_context),
+            min_cytosines  = get_dmr_threshold('min_cytosines'),
+            bin_size       = get_dmr_threshold('bin_size'),
+            p_value        = get_dmr_threshold('p_value'),
+            min_gap        = get_dmr_threshold('min_gap'),
+            min_size       = get_dmr_threshold('min_size'),
+            min_reads      = get_dmr_threshold('min_reads'),
+            max_cpgs       = get_dmr_threshold('max_cpgs'),
+            valley         = lambda wildcards: get_dmr_threshold('valley',        wildcards.mc_context),
+            maxseg         = lambda wildcards: get_dmr_threshold('maxseg',        wildcards.mc_context),
         log:
             temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", "{mc_context}"))
         conda: CONDA_ENV_MC
@@ -630,7 +663,10 @@ else:
             """
             {{
             printf "running %s for %s vs %s (%s)\n" "{params.caller}" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
-            Rscript "{params.script}" "{threads}" "{wildcards.mc_context}" "{input.chrom_sizes}" "{output.dmrs}" "{output.counts}" "{params.n1}" {input.reps1} {input.reps2}
+            Rscript "{params.script}" "{threads}" "{wildcards.mc_context}" "{input.chrom_sizes}" "{output.dmrs}" "{output.counts}" \
+              "{params.min_diff}" "{params.min_cytosines}" "{params.bin_size}" "{params.p_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" \
+              "{params.max_cpgs}" "{params.valley}" "{params.maxseg}" \
+              "{params.n1}" {input.reps1} {input.reps2}
             }} 2>&1 | tee -a "{log}"
             """
 

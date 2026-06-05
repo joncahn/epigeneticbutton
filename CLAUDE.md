@@ -82,6 +82,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
   - Access pattern in rule files: `config["genomes"][ref_genome][field]`
   - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning
   - `methylation_contexts` (default `["CG", "CHG", "CHH"]`) gates per-context mC analysis: bigwigs, DMR calls, and PCA plots are produced only for listed contexts. Set to `["CG"]` for animal genomes where non-CpG methylation is negligible. Subcontexts (CAG/CAA/...) not currently supported.
+  - `dmr_thresholds:` block configures DMR calling parameters for both callers. Shared: `min_diff` (per-context, default CG=0.3/CHG=0.2/CHH=0.1), `min_cytosines` (default 5). DMRcaller-only: `bin_size`, `p_value`, `min_gap`, `min_size`, `min_reads`. Metilene-only: `max_cpgs`, `valley` (per-context), `maxseg` (per-context). Defaults are Arabidopsis-leaf-tuned; adjust for other organisms/tissues.
   - `use_node_tmpdir` (default `false`) toggles TMPDIR routing — see Key Details below.
 - `config/example_samples.tsv` - Documented sample-sheet template (copy and edit; pass to epicc via `--samples`)
 - `profiles/slurm/config.yaml` - SLURM executor settings

@@ -286,12 +286,44 @@ mC_mapping:
 # the dmc_dmr_method setting below). Choices:
 #   "metilene" (default): C++ binary segmentation, multi-threaded,
 #     significantly faster than DMRcaller on high-coverage replicate data.
-#     Plant-tuned per-context parameters are hard-coded in
-#     workflow/scripts/R_call_DMRs_pair_metilene.R.
 #   "dmrcaller": R/Bioconductor DMRcaller via computeDMRsReplicates
 #     (beta regression with replicate variance). Slower on real data;
 #     useful when you want the betareg statistical model.
 dmr_caller: "metilene"
+
+# DMR calling thresholds. Defaults are tuned for Arabidopsis leaves
+# (Catoni et al. 2018 NAR). Cross-species/cross-tissue methylation varies
+# widely — adjust for your organism (e.g. maize CHH is very low; pollen
+# differs from leaf). Omit any key to use the default.
+dmr_thresholds:
+  # Minimum mean methylation difference to call a DMR (per context).
+  # Applies to: metilene -d, DMRcaller minProportionDifference.
+  min_diff:
+    CG:  0.3
+    CHG: 0.2
+    CHH: 0.1
+
+  # Minimum cytosine/CpG count per DMR window.
+  # Applies to: metilene -m, DMRcaller minCytosinesCount.
+  min_cytosines: 5
+
+  # DMRcaller-specific parameters (ignored when dmr_caller: metilene)
+  bin_size: 200   # window size for bins method (bp)
+  p_value:  0.01  # p-value threshold
+  min_gap:  200   # minimum gap between adjacent DMRs (bp)
+  min_size: 50    # minimum DMR size (bp)
+  min_reads: 3    # minimum reads per cytosine
+
+  # Metilene-specific parameters (ignored when dmr_caller: dmrcaller)
+  max_cpgs: 300   # -M: maximum CpGs per DMR segment
+  valley:         # -v: per-position valley filter (higher = more stringent)
+    CG:  0.7
+    CHG: 0.7
+    CHH: 0.3
+  maxseg:         # -G: max segment length cap in CpGs (-1 = no cap)
+    CG:  -1       # no cap needed for CG/CHG (manageable memory)
+    CHG: -1
+    CHH: 10000    # cap CHH to avoid OOM on dense plant data
 
 # Whether to use the custom version of the script to call DMRs
 custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)

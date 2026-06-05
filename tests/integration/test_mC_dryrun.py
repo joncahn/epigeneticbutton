@@ -371,17 +371,17 @@ class TestDmcDMRWorkflow:
         result = run_snakemake_dryrun(repo_root, test_options, DMC_DMR_TARGET)
         assert result.returncode == 0, f"Dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_dmr_uses_dmrcaller_by_default(self, snakemake_available, repo_root, test_options):
-        """Test that DMR workflow uses DMRcaller for dmC samples by default."""
+    def test_dmr_uses_metilene_by_default(self, snakemake_available, repo_root, test_options):
+        """Test that DMR workflow uses metilene (default dmr_caller) for dmC samples."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
         result = run_snakemake_dryrun(repo_root, test_options, DMC_DMR_TARGET, ["--printshellcmds"])
         assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
         output = result.stdout + result.stderr
-        assert "call_DMRs_for_pair_context" in output, "Expected DMRcaller per-(pair, context) rule for dmC samples by default"
+        assert "call_DMRs_for_pair_context" in output, "Expected per-(pair, context) DMR rule"
         assert "cache_mc_replicate_for_context" in output, "Expected per-(replicate, context) cache rule feeding the DMR call"
-        assert "convert_bedmethyl_to_cx_report" in output, "Expected bedMethyl conversion for DMRcaller"
-        assert "R_call_DMRs_pair.R" in output, "Expected DMRcaller pair-call R script"
+        assert "convert_bedmethyl_to_cx_report" in output, "Expected bedMethyl conversion"
+        assert "R_call_DMRs_pair_metilene.R" in output, "Expected metilene pair-call R script (default dmr_caller)"
 
 
 # ===========================================================================
@@ -584,8 +584,8 @@ class TestMixedAssayDMRs:
         result = run_snakemake_dryrun(repo_root, test_options, DMC_DMR_TARGET)
         assert result.returncode == 0, f"dmC DMR dry-run failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
-    def test_dmr_rules_include_call_DMRs_pairwise(self, snakemake_available, repo_root, test_options):
-        """Test that all DMR targets use call_DMRs_pairwise."""
+    def test_dmr_rules_include_call_DMRs_for_pair_context(self, snakemake_available, repo_root, test_options):
+        """Test that all DMR targets use the two-stage call_DMRs_for_pair_context rule (default)."""
         if not snakemake_available:
             pytest.skip("Snakemake not installed")
         for label, target in [
@@ -596,8 +596,8 @@ class TestMixedAssayDMRs:
             result = run_snakemake_dryrun(repo_root, test_options, target, ["--printshellcmds"])
             assert result.returncode == 0, f"{label} DMR dry-run failed: {result.stderr}"
             output = result.stdout + result.stderr
-            assert "call_DMRs_pairwise" in output, \
-                f"{label} DMR should include call_DMRs_pairwise rule"
+            assert "call_DMRs_for_pair_context" in output, \
+                f"{label} DMR should include call_DMRs_for_pair_context rule"
 
 
 # ===========================================================================
