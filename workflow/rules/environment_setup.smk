@@ -238,7 +238,8 @@ rule prep_region_file:
         region_file1 = f"{RESULTS_DIR}/combined/bedfiles/{{ref_genome}}__protein_coding_genes.bed",
         region_file2 = f"{RESULTS_DIR}/combined/bedfiles/{{ref_genome}}__all_genes.bed"
     params:
-        ref_genome = lambda wildcards: wildcards.ref_genome
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        to_ascii   = os.path.join(REPO_FOLDER, "workflow", "scripts", "to_ascii.py")
     log:
         temp(return_log_env("{ref_genome}", "region_file"))
     conda: CONDA_ENV
@@ -246,8 +247,8 @@ rule prep_region_file:
         """
         {{
         printf "\nMaking a bed file with gene coordinates from {params.ref_genome}\n" >> {log} 2>&1
-        awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | iconv -f UTF-8 -t ASCII//TRANSLIT | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
-        awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | iconv -f UTF-8 -t ASCII//TRANSLIT | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
+        awk -v OFS="\t" '$3=="gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | python {params.to_ascii} | bedtools sort -g {input.chrom_sizes} > {output.region_file1}
+        awk -v OFS="\t" '$3~"gene" {{print $1,$4-1,$5,$9,".",$7}}' {input.gff} | python {params.to_ascii} | bedtools sort -g {input.chrom_sizes} > {output.region_file2}
         }} 2>&1 | tee -a "{log}"
         """
         
@@ -399,8 +400,9 @@ rule check_te_file:
     output:
         te_file = f"{GENOMES_DIR}/{{ref_genome}}/{{ref_genome}}__TE_file.bed"
     params:
-        te_file = lambda wildcards: config["genomes"][wildcards.ref_genome]['te_file'],
-        ref_genome = lambda wildcards: wildcards.ref_genome
+        te_file    = lambda wildcards: config["genomes"][wildcards.ref_genome]['te_file'],
+        ref_genome = lambda wildcards: wildcards.ref_genome,
+        to_ascii   = os.path.join(REPO_FOLDER, "workflow", "scripts", "to_ascii.py")
     log:
         temp(return_log_env("{ref_genome}", "TEs"))
     conda: CONDA_ENV
@@ -463,7 +465,7 @@ rule check_te_file:
 
         # Transliterate non-ASCII characters (e.g. Greek letters in TE names)
         # to avoid deeptools computeMatrix assertion errors on region files.
-        iconv -f UTF-8 -t ASCII//TRANSLIT {output.te_file} > {output.te_file}.tmp \
+        python {params.to_ascii} < {output.te_file} > {output.te_file}.tmp \
             && mv {output.te_file}.tmp {output.te_file}
 
         # Validate uniqueness of TE names (column 4)
