@@ -37,7 +37,7 @@
 
 #### ColCEN
 
-* [ ] colCEN integration test has become too large. Pare down, maybe remove some ChIP libraries that exercise the same code paths.
+* [x] colCEN integration test has become too large. Pare down, maybe remove some ChIP libraries that exercise the same code paths. **Done** (2026-05-29): removed rdr126ddm1hp5 CenH3/H3K9me2 (duplicate genotype), 3 extra dmC groups, rdr6 EMseq, tarp1tarp2 PBAT, and nrpd1 ATAC. Active sheet is 41 samples; removed rows commented out at bottom of TSV for reference.
 
 #### H. sapiens test case
 
@@ -48,7 +48,7 @@
 
 ### Known Issues/Bugs
 
-* [ ] Chromap PE rarely sets the `0x2` proper-pair flag on highly repetitive references (observed 0.02% on ColCEN CenH3, 33% on ColCEN ATAC, vs. typical ~80%+ for bowtie2). Read counts and final BAMs are otherwise correct; the issue appears to be chromap mapping the two ends independently and picking repeat paralogs, so mates land on different chromosomes. Doesn't affect our peak callers but downstream tools that key on proper-pair (fragment-length QC, some PE-only tools) may behave differently between aligners. Likely a chromap upstream limitation rather than a pipeline bug — verify with a non-repetitive reference (Spombe ChIP PE) before filing upstream.
+* [x] Chromap PE rarely sets the `0x2` proper-pair flag on highly repetitive references (observed 0.02% on ColCEN CenH3, 33% on ColCEN ATAC, vs. typical ~80%+ for bowtie2). **Resolved**: A/B test on S. pombe PE ChIP confirmed root cause — chromap maps ends independently; when one mate multi-maps (MAPQ 0) and the other maps uniquely, `samtools view -q 10` keeps only the unique mate, producing orphan reads with no proper-pair flag. bowtie2 99.4–99.8% vs chromap 11–28% properly paired on non-repetitive pombe data. Fix: switched default aligner to bowtie2 (`chip_aligner: "bowtie2"`, `atac_aligner: "bowtie2"`). chromap remains available as a speed-optimized option for SE-only datasets.
 
 ## Deferred
 

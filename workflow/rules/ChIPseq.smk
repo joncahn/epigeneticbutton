@@ -516,7 +516,8 @@ rule filter_bam_pe:
         map_option = lambda wildcards: get_mapping_strategy(wildcards.env),
         mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_mapping_strategy(wildcards.env)]['map_pe'],
         mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env),
-        sort_mem = lambda wildcards, resources, threads: f"{max(768, int(resources.mem_mb * 0.75 / threads))}M"
+        sort_mem = lambda wildcards, resources, threads: f"{max(768, int(resources.mem_mb * 0.75 / threads))}M",
+        chromap_extra = config.get('chromap_extra_flags', '')
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "PE"))
     conda: CONDA_ENV_CHIP
@@ -540,6 +541,7 @@ rule filter_bam_pe:
             chromap --version
             chromap -t {threads} \
                 -l 2000 --SAM -q 0 \
+                {params.chromap_extra} \
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq1}" -2 "{input.fastq2}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \
@@ -587,7 +589,8 @@ rule filter_bam_se:
         map_option = lambda wildcards: get_mapping_strategy(wildcards.env),
         mapping_params = lambda wildcards: config['bt2_mapping_strategy'][get_mapping_strategy(wildcards.env)]['map_se'],
         mapq_filter = lambda wildcards: get_mapq_filter(wildcards.env),
-        sort_mem = lambda wildcards, resources, threads: f"{max(768, int(resources.mem_mb * 0.75 / threads))}M"
+        sort_mem = lambda wildcards, resources, threads: f"{max(768, int(resources.mem_mb * 0.75 / threads))}M",
+        chromap_extra = config.get('chromap_extra_flags', '')
     log:
         temp(return_log_chip("{env}","{sample_name}", "map_filter", "SE"))
     conda: CONDA_ENV_CHIP
@@ -606,6 +609,7 @@ rule filter_bam_se:
             # no mates). markdup works on coord-sorted SE input directly.
             chromap -t {threads} \
                 --SAM -q 0 \
+                {params.chromap_extra} \
                 -r "{input.fasta}" -x "{input.index}" \
                 -1 "{input.fastq}" \
                 -o /dev/stdout 2> "{output.metrics_map}" \

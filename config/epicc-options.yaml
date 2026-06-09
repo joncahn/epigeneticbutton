@@ -149,11 +149,15 @@ adapter2:
 chip_fingerprint_plots: true
 fingerprint_samples: "auto" # "auto" or integer (e.g. 100000)
 
-# Aligner for ChIP/ATAC: "chromap" (default, ~10x faster) or "bowtie2"
-# When chromap is selected but mapping_strategy is repeat/repeatall,
+# Aligner for ChIP/ATAC: "bowtie2" (default) or "chromap" (~10x faster but
+# poor PE proper-pair concordance: 11-28% vs 99%+ for bowtie2, because
+# chromap maps paired ends independently and the MAPQ filter removes one
+# mate from each discordant pair). chromap is appropriate for SE-only
+# datasets where speed is the priority.
+# When chromap is selected and mapping_strategy is repeat/repeatall,
 # bowtie2 is used automatically (chromap lacks multi-mapping support).
-chip_aligner: "chromap"
-atac_aligner: "chromap"
+chip_aligner: "bowtie2"
+atac_aligner: "bowtie2"
 
 # Mapping strategy
 chip_mapping_strategy: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]

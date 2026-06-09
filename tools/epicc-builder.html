@@ -2158,7 +2158,7 @@ var configState = {
   adapter2_ChIP: "auto",
   chip_fingerprint_plots: true,
   fingerprint_samples: "auto",
-  chip_aligner: "chromap",
+  chip_aligner: "bowtie2",
   chip_mapping_strategy: "default",
   chip_tracks_binsize: 1,
   chip_tracks_params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300",
@@ -2173,7 +2173,7 @@ var configState = {
   trim_front_ATAC: 0,
   adapter1_ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG",
   adapter2_ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG",
-  atac_aligner: "chromap",
+  atac_aligner: "bowtie2",
   atac_mapping_strategy: "default",
   // RNA advanced
   quality_threshold_RNA: 10,
@@ -2491,7 +2491,7 @@ function buildConfigForm() {
     "Fingerprint QC plots will be generated", "Fingerprint plots skipped (saves time)"));
   chipBody.appendChild(buildTextRow("Fingerprint samples (auto or integer):", "fingerprint_samples", "auto"));
   chipBody.appendChild(buildSelectRow("Aligner:", "chip_aligner",
-    ["chromap", "bowtie2"]));
+    ["bowtie2", "chromap"]));
   chipBody.appendChild(buildSelectRow("Mapping strategy:", "chip_mapping_strategy",
     ["default", "repeat", "repeatall", "all"]));
   chipBody.appendChild(buildNumberRow("Bigwig bin size:", "chip_tracks_binsize", 1, 1000000));
@@ -2516,7 +2516,7 @@ function buildConfigForm() {
   atacBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ATAC", "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG"));
   atacBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ATAC", "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"));
   atacBody.appendChild(buildSelectRow("Aligner:", "atac_aligner",
-    ["chromap", "bowtie2"]));
+    ["bowtie2", "chromap"]));
   atacBody.appendChild(buildSelectRow("Mapping strategy:", "atac_mapping_strategy",
     ["default", "repeat", "repeatall", "all"]));
   atacDet.appendChild(atacBody);
