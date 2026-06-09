@@ -74,8 +74,8 @@ adapter2:
   ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"
 
 # Aligner
-chip_aligner: "chromap"
-atac_aligner: "chromap"
+chip_aligner: "bowtie2"
+atac_aligner: "bowtie2"
 chip_mapping_strategy: "default"
 atac_mapping_strategy: "default"
 
