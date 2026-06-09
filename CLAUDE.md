@@ -57,7 +57,7 @@ Sample metadata is defined in a TSV file with 9 columns:
 - **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`)
 - **Levels**: Comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:root`). All samples must have the same factors.
 - **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
-- **Read_files**: SRA accession (`SRR12345`), local path, HTTP(S) URL, or `+`-separated for merging multiple inputs
+- **Read_files**: SRA accession (`SRR12345`), local path, HTTP(S) URL, or `+`-separated for merging multiple inputs (merging via `+` is supported only for SRA accessions; concatenate URL/local inputs beforehand)
 - **Read_layout**: `SE` or `PE`
 - **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
 - **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). No chaining.

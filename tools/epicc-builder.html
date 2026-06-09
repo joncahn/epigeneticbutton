@@ -732,7 +732,7 @@ const COLUMN_DESCRIPTIONS = {
   Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
-  Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated for merging. PE: comma-separated R1,R2 pair.",
+  Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated SRA accessions for merging (SRA only). PE: comma-separated R1,R2 pair.",
   Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
   IP_target: "What was immunoprecipitated. Required for ChIP and CUT&RUN/CUT&Tag assays (e.g. H3K9me2, Input, WCE, IgG). Must be blank for non-IP assays.",
   Control: "Sample_ID of the control sample (e.g. Input/WCE for ChIP, IgG for CUT&RUN/CUT&Tag, RNAseq for RAMPAGE). No chaining allowed."
@@ -1366,6 +1366,13 @@ function runValidation() {
       addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_files is required");
     } else {
       var components = readFiles.split("+").map(function(s) { return s.trim(); });
+      if (components.length > 1) {
+        // '+'-merge is only wired through the SRA download path; URL/local
+        // merges would silently fetch only the first component.
+        var nonSra = components.filter(function(c) { return !SRA_REGEX.test(c.split(",")[0].trim()); });
+        if (nonSra.length)
+          addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': '+'-merge of multiple inputs is only supported for SRA accessions; concatenate URL/local inputs before the run");
+      }
       for (var ci = 0; ci < components.length; ci++) {
         var files = components[ci].split(",").map(function(s) { return s.trim(); });
         var first = files[0];

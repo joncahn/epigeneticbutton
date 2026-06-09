@@ -135,13 +135,18 @@ Path(s) to input data files or SRA accession(s). Must be non-empty.
 | Local FASTQ (PE) | `/path/r1.fq.gz,/path/r2.fq.gz` | `/data/S1_R1.fq.gz,/data/S1_R2.fq.gz` |
 | Local BAM | `/path/to/file.bam` | `/data/aligned.bam` |
 | bedMethyl (dmC) | `/path/to/file.bed.gz` | `/data/methylation.bed.gz` |
-| Multi-file merge | components joined with `+` | `/data/L1.fq.gz+/data/L2.fq.gz` |
+
+`+`-merge is supported **only for SRA accessions** (`SRR111+SRR222`); the
+download path concatenates them after fetching. For URL or local-path
+inputs, concatenate the files yourself before the run — a `+`-merge whose
+components are not all SRA accessions is rejected by validation.
 
 | Rule | Detail |
 |------|--------|
 | Required | Must be non-empty |
 | SRA regex | SRA accessions must match `^[SDE]RR\d+$` |
 | No mixing | Within a single `+`-separated component, all entries must be the same type (all SRA or all paths) |
+| SRA-only merge | A multi-component `+`-merge must be **all** SRA accessions; non-SRA `+`-merges (URL/local) are rejected (only the first would be fetched) |
 | PE comma pair | For PE local FASTQs, each component should have a comma-separated R1,R2 pair |
 
 | Rule | Detail |
