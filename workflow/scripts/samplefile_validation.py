@@ -148,6 +148,17 @@ def check_table(tab, check_paths=True):
             continue
 
         components = [c.strip() for c in read_files.split("+")]
+        if len(components) > 1:
+            # '+'-merge is only wired through the SRA download path; for URL or
+            # local-path inputs only the first component would be fetched
+            # (silent data loss), so reject any non-all-SRA multi-merge.
+            non_sra = [c for c in components if not _SRA_REGEX.match(c.split(",")[0])]
+            if non_sra:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': '+'-merge of multiple inputs is only "
+                    f"supported for SRA accessions; got non-SRA component(s) "
+                    f"{non_sra}. Concatenate URL/local inputs before the run."
+                )
         for comp in components:
             # Each component is either an SRA ID or file path(s)
             files_in_comp = [f.strip() for f in comp.split(",")]
