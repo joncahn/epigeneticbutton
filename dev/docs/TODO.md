@@ -31,7 +31,13 @@
 
 #### Full code review of snakemake rules
 
-* [ ] Do a full code review of the complete workflow with parallel subagents, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis.
+* [~] Do a full code review of the complete workflow with parallel subagents, and identify any potential inefficiencies for all sample type analysis rules and the combined analysis. **Bug-fix pass done** (2026-06-09): 6 parallel review agents over the rule modules + scripts; findings validated against the ColCEN run and the pombe dry-run. Fixed confirmed bugs: SAM-input `samtools sort -b` flag; SE `trimmed_fastqs` shortcut pointing at its own output; fail-loud on missing download inputs; ChIP peak-stats header/column misalignment (confirmed in ColCEN output); STAR cleanup glob deleting concurrent samples' files; bowtie2 aligner default fallback; `#`-truncation of sample-sheet fields; PE small-RNA guard; methylation calls on reference-absent chromosomes miscounted as CG; browser placeholder chrom substring match; empty-safe `seq_len()` loops; factor-consistency error row numbers. Design decisions implemented: N-factor RNA DEG grouping (was line+tissue only); custom-DMR sweep now honors `dmr_thresholds` + all contexts; non-SRA `+`-merge rejected; prominent auto-unlock warning. Switched ColCEN test config to the bowtie2 default.
+  - **Deferred follow-ups (need real-run verification / are perf not bugs):**
+    - Substring-matching cluster: UpSet `grep(type, colnames)` in `R_Upset_plot_{peaks,TSS,clusters}.R` and the `multiBigwigSummary` column-pick `$i~t` in `combined_analysis.smk` — column names embed the type as a substring, so the match is load-bearing; needs a real run to verify the exact (quoted) header format before anchoring. Bites only when one mark/label name is a substring of another.
+    - Perf (out of scope for this bug pass): CX report re-read 3x per replicate (`R_cache_mc_replicate_for_context.R` — see the existing mC-bigwig TODO); bowtie2 sort hardcoded `-@ 2` while chromap uses `{threads}` (`ChIPseq.smk`); structural-RNA cmscan thread math underutilizes cores (`environment_setup.smk`); `dispatch_final_bam` cp vs hardlink.
+    - RPKM: `R_gene_expression_rpkm.R` reports reads/kb without library-depth normalization while labeling the column RPKM — decide normalize vs rename.
+    - Conversion-control chromosomes hardcoded to plastid names in `mC.smk` (no lambda/pUC spike-in support) — make a config key.
+    - Snakemake `--dag`/`--rulegraph` (and thus `epicc validate --dag`) crash with this snakemake version on checkpoint DAGs (`AttributeError: 'NoneType'.edit_notebook` in `printdag`); pre-existing, unrelated to pipeline content. The 3 failing pombe-dryrun `TestDAGStructure` tests are this.
 
 ### Testing
 
