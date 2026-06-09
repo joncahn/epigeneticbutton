@@ -103,21 +103,24 @@ def check_table(tab, check_paths=True):
                         f"empty factor name or level in Levels"
                     )
                 factor_names.append(factor.strip())
-        all_factors.append(factor_names)
+        # Store the sheet row number alongside the factors: rows with blank
+        # Levels are skipped above, so a positional index would misreport
+        # which row mismatched.
+        all_factors.append((i, factor_names))
 
     # Check consistent factor count and names
     if all_factors:
-        ref_factors = all_factors[0]
-        for i, factors in enumerate(all_factors[1:], start=2):
+        ref_row, ref_factors = all_factors[0]
+        for row_num, factors in all_factors[1:]:
             if len(factors) != len(ref_factors):
                 errors.append(
-                    f"[X] Row #{i}: Levels has {len(factors)} factors, "
-                    f"expected {len(ref_factors)} (matching row 1)"
+                    f"[X] Row #{row_num}: Levels has {len(factors)} factors, "
+                    f"expected {len(ref_factors)} (matching row {ref_row})"
                 )
             elif factors != ref_factors:
                 errors.append(
-                    f"[X] Row #{i}: Levels factor names {factors} "
-                    f"don't match row 1 {ref_factors}"
+                    f"[X] Row #{row_num}: Levels factor names {factors} "
+                    f"don't match row {ref_row} {ref_factors}"
                 )
 
     # --- Replicate_ID: required ---
