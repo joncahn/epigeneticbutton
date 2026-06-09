@@ -1367,11 +1367,25 @@ function runValidation() {
     } else {
       var components = readFiles.split("+").map(function(s) { return s.trim(); });
       if (components.length > 1) {
-        // '+'-merge is only wired through the SRA download path; URL/local
-        // merges would silently fetch only the first component.
-        var nonSra = components.filter(function(c) { return !SRA_REGEX.test(c.split(",")[0].trim()); });
-        if (nonSra.length)
-          addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': '+'-merge of multiple inputs is only supported for SRA accessions; concatenate URL/local inputs before the run");
+        // '+'-merge concatenates after download: OK for SRA and FASTQ; BAM
+        // (needs samtools merge) and bedMethyl (counts must be summed) are
+        // not, and mixing component types is rejected.
+        var kindOf = function(c) {
+          var f = c.split(",")[0].trim();
+          var b = f.split("?")[0].split("#")[0].toLowerCase();
+          if (SRA_REGEX.test(f)) return "sra";
+          if (b.endsWith(".bam")) return "bam";
+          if (b.endsWith(".bed.gz") || b.endsWith(".bedmethyl.gz")) return "bedmethyl";
+          if (/\.(fastq|fq)(\.gz)?$/.test(b)) return "fastq";
+          return "other";
+        };
+        var kinds = components.map(kindOf);
+        var uniqKinds = kinds.filter(function(v, ix) { return kinds.indexOf(v) === ix; });
+        var bad = uniqKinds.filter(function(k) { return k === "bam" || k === "bedmethyl" || k === "other"; });
+        if (uniqKinds.length > 1)
+          addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': '+'-merge components must all be the same type");
+        else if (bad.length)
+          addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': '+'-merge is not supported for " + bad[0] + " inputs (only SRA accessions and FASTQ files); merge upstream instead");
       }
       for (var ci = 0; ci < components.length; ci++) {
         var files = components[ci].split(",").map(function(s) { return s.trim(); });

@@ -73,7 +73,7 @@ For new users, it is recommended to use the local HTML builder at `tools/epicc-b
    - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
-   - `Read_files`: Path to FASTQ/BAM files, or SRA accession (e.g. `SRR12345678`). For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple SRA accessions (e.g. `SRR111+SRR222`); for URL/local inputs, concatenate beforehand.
+   - `Read_files`: Path to FASTQ/BAM files, or SRA accession (e.g. `SRR12345678`). For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple SRA accessions or FASTQ files (e.g. `SRR111+SRR222`, or `a.fq.gz+b.fq.gz`); BAM/bedMethyl inputs must be merged upstream.
    - `Read_layout`: [`PE` | `SE`]
    - `IP_target`: Required for ChIP assays — the IP target (e.g. `H3K9me2`) or control type (e.g. `Input`, `WCE`). Leave blank for other assays.
    - `Control`: Sample_ID of the control sample for this IP (e.g. the Input sample's Sample_ID). Required for ChIP and RAMPAGE IP samples. Leave blank for controls and non-ChIP assays.

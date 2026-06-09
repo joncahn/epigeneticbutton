@@ -135,18 +135,22 @@ Path(s) to input data files or SRA accession(s). Must be non-empty.
 | Local FASTQ (PE) | `/path/r1.fq.gz,/path/r2.fq.gz` | `/data/S1_R1.fq.gz,/data/S1_R2.fq.gz` |
 | Local BAM | `/path/to/file.bam` | `/data/aligned.bam` |
 | bedMethyl (dmC) | `/path/to/file.bed.gz` | `/data/methylation.bed.gz` |
+| FASTQ merge (SE) | `f1.fq.gz+f2.fq.gz` | `/data/L1.fq.gz+/data/L2.fq.gz` |
+| FASTQ merge (PE) | `a_R1,a_R2+b_R1,b_R2` | `/d/A_R1.fq.gz,/d/A_R2.fq.gz+/d/B_R1.fq.gz,/d/B_R2.fq.gz` |
 
-`+`-merge is supported **only for SRA accessions** (`SRR111+SRR222`); the
-download path concatenates them after fetching. For URL or local-path
-inputs, concatenate the files yourself before the run — a `+`-merge whose
-components are not all SRA accessions is rejected by validation.
+`+`-merge concatenates components after download. Supported for **SRA
+accessions** and **FASTQ files** (SE or PE; local or URL) — the components
+are fetched/copied and concatenated (gzip members concatenate cleanly).
+**BAM** (would need `samtools merge`) and **bedMethyl** (per-position
+counts must be summed, not concatenated) cannot be `+`-merged; merge those
+upstream. All components of a merge must be the same type.
 
 | Rule | Detail |
 |------|--------|
 | Required | Must be non-empty |
 | SRA regex | SRA accessions must match `^[SDE]RR\d+$` |
 | No mixing | Within a single `+`-separated component, all entries must be the same type (all SRA or all paths) |
-| SRA-only merge | A multi-component `+`-merge must be **all** SRA accessions; non-SRA `+`-merges (URL/local) are rejected (only the first would be fetched) |
+| Mergeable types | A multi-component `+`-merge must be all the same type and either all SRA accessions or all FASTQ files; BAM/bedMethyl/mixed `+`-merges are rejected (merge those upstream) |
 | PE comma pair | For PE local FASTQs, each component should have a comma-separated R1,R2 pair |
 
 | Rule | Detail |
