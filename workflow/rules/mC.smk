@@ -586,7 +586,19 @@ if config.get('custom_script_dmrs', False):
             sample1 = lambda wildcards: wildcards.sample1,
             sample2 = lambda wildcards: wildcards.sample2,
             nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
-            nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2))
+            nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2)),
+            min_cytosines = get_dmr_threshold('min_cytosines'),
+            p_value = get_dmr_threshold('p_value'),
+            min_gap = get_dmr_threshold('min_gap'),
+            min_size = get_dmr_threshold('min_size'),
+            min_reads = get_dmr_threshold('min_reads'),
+            # Per-context minProportionDifference. The custom sweep does not
+            # support "auto" calibration (that lives in the default path), so
+            # fall back to the plant-tuned defaults when min_diff is "auto".
+            min_diff_spec = ",".join(
+                f"{ctx}={_DMR_THRESHOLD_DEFAULTS['min_diff'][ctx] if _dmr_min_diff_auto else get_dmr_threshold('min_diff', ctx)}"
+                for ctx in get_methylation_contexts()
+            )
         log:
             temp(return_log_mc("{sample1}__vs__{sample2}", "DMRs", ""))
         conda: CONDA_ENV_MC
@@ -594,7 +606,7 @@ if config.get('custom_script_dmrs', False):
             """
             {{
             printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
-            Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" {input.sample1} {input.sample2}
+            Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" "{params.min_cytosines}" "{params.p_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" "{params.min_diff_spec}" {input.sample1} {input.sample2}
             }} 2>&1 | tee -a "{log}"
             """
 else:
