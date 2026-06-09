@@ -25,7 +25,7 @@
 
 ### Distribution
 
-* [ ] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster.
+* [x] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster. **Done**: Added `epicc init-profile TYPE [NAME]` subcommand (copies bundled profile template to `~/.config/snakemake/<name>/config.yaml`, the XDG path Snakemake searches when `--profile <name>` is used). `find_repo_root()` now detects conda-installed layout (`$PREFIX/share/epicc/`); all command handlers skip `os.chdir(repo)` in installed mode and inject `--snakefile` so Snakemake finds the workflow without needing CWD = repo root. `check_profile_placeholders()` resolves XDG-named profiles. README cluster-setup section updated with both setup paths (init-profile and in-place edit). Packaging infrastructure: `pyproject.toml` (metadata + note on pip-install gap), `conda-recipe/meta.yaml` (Bioconda-ready recipe skeleton). Remaining gap: pip wheel install requires renaming `epicc` → `epicc.py` for `console_scripts`; deferred until Bioconda submission is confirmed working.
 
 ### Performance/Resource Usage
 

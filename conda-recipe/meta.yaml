@@ -1,0 +1,57 @@
+{% set name = "epicc" %}
+{% set version = "1.0.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/joncahn/epigeneticbutton/archive/refs/tags/v{{ version }}.tar.gz
+  # sha256: fill in after tagging the first release (run `conda-build --output-folder ...`
+  # once to get the hash, then commit here before submitting to Bioconda)
+
+build:
+  number: 0
+  noarch: generic
+  script: |
+    mkdir -p "${PREFIX}/bin" "${PREFIX}/share/epicc"
+    install -m 755 epicc "${PREFIX}/bin/epicc"
+    cp -r workflow config profiles scripts dev "${PREFIX}/share/epicc/"
+    # tools/ (epicc-builder.html) is optional but useful
+    cp -r tools "${PREFIX}/share/epicc/"
+
+requirements:
+  host:
+    - python >=3.9
+  run:
+    - python >=3.9
+    - snakemake >=9.0
+    - pyyaml
+    # Bioinformatics tools are managed via per-rule conda environments
+    # declared in workflow/envs/. Snakemake creates them on first use.
+    # To pre-build all envs before submitting cluster jobs, run:
+    #   epicc validate --build-envs --samples your_samples.tsv
+
+test:
+  commands:
+    - epicc --help
+    - epicc run --help
+    - epicc validate --help
+    - epicc init-profile --help
+
+about:
+  home: https://github.com/joncahn/epigeneticbutton
+  summary: "EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization"
+  description: |
+    A Snakemake-based pipeline for ChIP-seq, CUT&RUN, CUT&Tag, ATAC-seq,
+    RNA-seq, RAMPAGE, small RNA-seq, bisulfite methylC-seq (WGBS, PBAT,
+    EMseq), and direct methylation from long-read sequencing (ONT/PacBio).
+    Provides an automated workflow from raw reads to analysis plots with
+    integrated quality control and cross-datatype comparison.
+  license: MIT
+  license_file: LICENSE
+  doc_url: https://epicc-documentation.readthedocs.io
+
+extra:
+  recipe-maintainers:
+    - joncahn

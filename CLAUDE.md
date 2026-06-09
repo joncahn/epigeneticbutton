@@ -17,7 +17,9 @@ epicc validate --build-envs --samples your_samples.tsv        # pre-create rule 
                                                               # SLURM allocation)
 ```
 
-`epicc` is a thin argparse wrapper around snakemake; subcommands are `run`, `validate`, `output`, `unlock`, `perf`, `clean`. Anything after `--` is forwarded verbatim to snakemake. Raw `snakemake ...` invocations still work but bypass `epicc`'s placeholder-detection and TMPDIR routing.
+`epicc` is a thin argparse wrapper around snakemake; subcommands are `run`, `validate`, `output`, `unlock`, `perf`, `clean`, `init-profile`. Anything after `--` is forwarded verbatim to snakemake. Raw `snakemake ...` invocations still work but bypass `epicc`'s placeholder-detection and TMPDIR routing.
+
+`epicc init-profile TYPE [NAME]` copies a bundled cluster profile template (`slurm` or `uge`) to `~/.config/snakemake/NAME/config.yaml` — the XDG path Snakemake searches when `--profile NAME` is used. Recommended setup for conda-install users and the standard path when sharing a profile across multiple projects. Use `--force` to overwrite an existing profile.
 
 `run` and `validate` accept named overrides for commonly-tuned settings (all override the options YAML):
 - `--chip-aligner {bowtie2,chromap}`, `--atac-aligner`, `--chip/atac-mapping-strategy`

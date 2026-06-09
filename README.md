@@ -85,7 +85,19 @@ For new users, it is recommended to use the local HTML builder at `tools/epicc-b
    - Species-specific parameters
    - Resources allocation
    
-3. If you are running the pipeline on a cluster, review and adapt the profile config for your scheduler. Use `profiles/slurm/config.yaml` for SLURM or `profiles/uge/config.yaml` for UGE; copy and edit for a new cluster. The SLURM profile defaults to 16 parallel jobs (`jobs: 16`). Per-rule resource overrides go in `set-resources:` within the profile. Memory units are in MB.
+3. If you are running the pipeline on a cluster, set up a cluster execution profile. EPICC ships templates for SLURM (`profiles/slurm/config.yaml`) and UGE/SGE (`profiles/uge/config.yaml`). Two setup paths:
+
+   **Option A — `epicc init-profile` (recommended; works for both git-clone and conda-install):**
+   ```bash
+   epicc init-profile slurm my-cluster    # SLURM
+   epicc init-profile uge my-cluster      # UGE/SGE
+   ```
+   This copies the template to `~/.config/snakemake/my-cluster/config.yaml`. Open that file and edit every line marked `EDIT:` for your site (SLURM account, TMPDIR routing, per-rule resource overrides). Then run the pipeline with `--profile my-cluster`.
+
+   **Option B — edit the bundled template in place (git-clone only):**
+   Edit `profiles/slurm/config.yaml` directly and pass `--profile profiles/slurm` to `epicc run`. Convenient for single-user setups; not portable across conda-installed instances.
+
+   The SLURM profile defaults to 16 parallel jobs (`jobs: 16`). Per-rule resource overrides go in `set-resources:` within the profile. Memory units are in MB.
 
 4. Default options: 
    - Full analysis: By default, a full analysis is performed form raw data to analysis plots. Change `full_analysis` in the options file ([see below](#main-output-options)).

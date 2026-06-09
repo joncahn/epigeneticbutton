@@ -1,0 +1,31 @@
+[project]
+name = "epicc"
+version = "1.0.0"
+description = "EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization"
+readme = "README.md"
+requires-python = ">=3.9"
+# Runtime Python dependencies only. Bioinformatics tools (bowtie2, STAR,
+# bismark, etc.) are managed via per-rule conda environments in workflow/envs/.
+# The snakemake conda environment is bootstrapped from config/epicc-env.txt.
+dependencies = [
+    "snakemake>=9.0",
+    "pyyaml",
+]
+
+[project.urls]
+Homepage = "https://github.com/joncahn/epigeneticbutton"
+Documentation = "https://epicc-documentation.readthedocs.io"
+
+# ----------------------------------------------------------------------------
+# Conda/Bioconda packaging
+# ----------------------------------------------------------------------------
+# The conda recipe (conda-recipe/meta.yaml) is the primary distribution path.
+# It installs the `epicc` script to $PREFIX/bin/ and workflow files to
+# $PREFIX/share/epicc/. The epicc script detects this layout at runtime via
+# find_repo_root() and _is_installed_mode() and adjusts snakemake invocations
+# (--snakefile, no os.chdir to the share dir, etc.) accordingly.
+#
+# Pip/wheel install is not yet wired: the `epicc` script has no .py extension
+# so it cannot be declared as a console_scripts entry point without a shim.
+# Until that is addressed (rename epicc → epicc.py + shim), use the conda
+# recipe or run from a git clone.

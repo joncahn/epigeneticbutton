@@ -9,6 +9,7 @@ Usage:
     epicc output --plot-type TYPE --input-file PATH [options]
     epicc perf [--single | LOGFILE] [--html FILE]
     epicc clean [--intermediates] [--conda-envs] [--logs] [--all]
+    epicc init-profile TYPE [NAME] [--force]
 
 For a dry-run, prefer ``epicc validate`` (parses the config + sample sheet
 and surfaces a concise summary) or pass --dry-run through to snakemake
@@ -41,10 +42,14 @@ DEFAULT_WORKFLOW_PROFILE = "profiles/default"
 
 def find_repo_root():
     """Find the repository root (directory containing workflow/Snakefile)."""
-    # Start from the script's own location
+    # Start from the script's own location (git-clone install)
     script_dir = Path(__file__).resolve().parent
     if (script_dir / "workflow" / "Snakefile").exists():
         return script_dir
+    # Conda/pip install: workflow files at $PREFIX/share/epicc/
+    share = Path(sys.prefix) / "share" / "epicc"
+    if (share / "workflow" / "Snakefile").exists():
+        return share
     # Fall back to cwd
     cwd = Path.cwd()
     if (cwd / "workflow" / "Snakefile").exists():
@@ -54,6 +59,22 @@ def find_repo_root():
         "Run this command from the pipeline directory, or ensure the epicc "
         "script is located at the repository root."
     )
+
+
+def _is_installed_mode():
+    """True when epicc is running from a conda/pip install, not a git clone.
+
+    Git-clone mode: the epicc script sits in the repository root, adjacent to
+    workflow/Snakefile. Installed mode: the script is in $PREFIX/bin/ and the
+    workflow lives in $PREFIX/share/epicc/. Also returns False when the user
+    runs epicc from the repo's CWD (supports running the script by path from
+    a different location during development).
+    """
+    if (Path(__file__).resolve().parent / "workflow" / "Snakefile").exists():
+        return False
+    if (Path.cwd() / "workflow" / "Snakefile").exists():
+        return False
+    return True
 
 
 def is_url(path):
@@ -114,11 +135,13 @@ def render_graph(args, kind, snakemake_flag, output_path):
     fmt = out.suffix.lstrip(".").lower() or "png"
 
     options_file = _prepare_options_file(args)
+    repo = find_repo_root()
     cmd = ["snakemake", snakemake_flag,
            "--configfile", options_file,
            "--cores", "1", "--quiet", "all"]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
     # Honor the same workflow profile and config overrides as the run.
-    repo = find_repo_root()
     workflow_profile = getattr(args, "workflow_profile", None) or str(
         repo / DEFAULT_WORKFLOW_PROFILE
     )
@@ -185,15 +208,17 @@ def maybe_clear_stale_lock(args, repo):
     """
     if getattr(args, "no_auto_unlock", False):
         return
-    locks = repo / ".snakemake" / "locks"
+    # Installed mode: .snakemake/ is in the user's project CWD, not the repo.
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    locks = run_dir / ".snakemake" / "locks"
     if not locks.exists() or not any(locks.iterdir()):
         return
     print("EPICC: Detected stale Snakemake lock from a prior run; unlocking.",
           file=sys.stderr)
-    subprocess.run(
-        ["snakemake", "--unlock", "--configfile", args.options],
-        cwd=str(repo), check=False,
-    )
+    cmd = ["snakemake", "--unlock", "--configfile", args.options]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+    subprocess.run(cmd, cwd=str(run_dir), check=False)
 
 
 _PLACEHOLDER_RE = __import__("re").compile(r"<your-[a-z0-9-]+>", __import__("re").IGNORECASE)
@@ -246,7 +271,15 @@ def check_profile_placeholders(profile_arg):
     repo = find_repo_root()
     candidate = Path(profile_arg)
     if not candidate.is_absolute():
-        candidate = (repo / candidate).resolve()
+        # Try repo-relative first, then XDG Snakemake config dir.
+        repo_rel = (repo / candidate).resolve()
+        if repo_rel.exists():
+            candidate = repo_rel
+        else:
+            xdg = os.environ.get("XDG_CONFIG_HOME")
+            smk_cfg = Path(xdg) / "snakemake" if xdg else Path.home() / ".config" / "snakemake"
+            xdg_profile = smk_cfg / candidate
+            candidate = xdg_profile if xdg_profile.exists() else repo_rel
     if candidate.is_dir():
         config_path = candidate / "config.yaml"
     else:
@@ -288,13 +321,15 @@ def detect_execution_mode(args):
 
     # Auto-detect: SLURM if sbatch is available
     if shutil.which("sbatch"):
-        profile = DEFAULT_PROFILE
         repo = find_repo_root()
-        if not (repo / profile / "config.yaml").exists():
-            print(f"Warning: sbatch found but {profile}/config.yaml missing; "
+        if not (repo / DEFAULT_PROFILE / "config.yaml").exists():
+            print(f"Warning: sbatch found but {DEFAULT_PROFILE}/config.yaml missing; "
                   f"falling back to local execution.", file=sys.stderr)
             cores = max(1, os.cpu_count() // 2)
             return None, cores
+        # Installed mode: return absolute path; git-clone: relative (resolves
+        # after os.chdir(repo) in cmd_run).
+        profile = str(repo / DEFAULT_PROFILE) if _is_installed_mode() else DEFAULT_PROFILE
         return profile, None
 
     cores = max(1, os.cpu_count() // 2)
@@ -463,6 +498,10 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
     repo = find_repo_root()
 
     cmd = ["snakemake"]
+    # Installed mode (conda/pip): must point snakemake at the installed
+    # Snakefile explicitly since we don't os.chdir to the repo.
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
 
     # Options file — may be replaced by a temp merged file when nested CLI
     # overrides (--dmr-min-diff, --chip-callpeaks-params, etc.) are present.
@@ -560,7 +599,8 @@ def _scan_log_for_env_failure(repo):
     """Return True if the most recent .snakemake/log entry shows a conda env
     creation failure. Used to surface a targeted recovery hint after cmd_run.
     """
-    log_dir = repo / ".snakemake" / "log"
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    log_dir = run_dir / ".snakemake" / "log"
     try:
         latest = max(log_dir.glob("*.snakemake.log"), key=lambda p: p.stat().st_mtime)
     except (FileNotFoundError, ValueError):
@@ -575,7 +615,8 @@ def _scan_log_for_env_failure(repo):
 def cmd_run(args, extra_args):
     """Execute the pipeline."""
     repo = find_repo_root()
-    os.chdir(repo)
+    if not _is_installed_mode():
+        os.chdir(repo)
 
     maybe_clear_stale_lock(args, repo)
 
@@ -642,7 +683,8 @@ def _run_build_envs(args, extra_args):
 def cmd_validate(args, extra_args):
     """Validate configuration without running the pipeline."""
     repo = find_repo_root()
-    os.chdir(repo)
+    if not _is_installed_mode():
+        os.chdir(repo)
 
     options_file = Path(args.options)
     if not options_file.exists():
@@ -997,7 +1039,8 @@ def validate_output_input(input_path, fmt):
 def cmd_output(args, extra_args):
     """Run snakemake on a single user-targeted plot/output."""
     repo = find_repo_root()
-    os.chdir(repo)
+    if not _is_installed_mode():
+        os.chdir(repo)
 
     spec = OUTPUT_TYPES[args.plot_type]
 
@@ -1071,6 +1114,8 @@ def cmd_output(args, extra_args):
 
     # --- Build snakemake command (re-uses the same execution-mode logic)
     cmd = ["snakemake"]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
     if not Path(args.options).exists():
         sys.exit(f"Error: Options file not found: {args.options}")
     cmd += ["--configfile", args.options]
@@ -1121,7 +1166,8 @@ def cmd_output(args, extra_args):
 def cmd_perf(args, extra_args):
     """Generate an execution timing report from a pipeline run's logs."""
     repo = find_repo_root()
-    os.chdir(repo)
+    if not _is_installed_mode():
+        os.chdir(repo)
 
     profiler = repo / "dev" / "profile_snakemake_log.py"
     if not profiler.exists():
@@ -1147,10 +1193,14 @@ def cmd_perf(args, extra_args):
 def cmd_unlock(args, extra_args):
     """Unlock the working directory after a failed or interrupted run."""
     repo = find_repo_root()
-    os.chdir(repo)
+    if not _is_installed_mode():
+        os.chdir(repo)
 
     print("EPICC: Unlocking working directory...", file=sys.stderr)
-    result = subprocess.run(["snakemake", "--unlock"])
+    cmd = ["snakemake", "--unlock"]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+    result = subprocess.run(cmd)
     if result.returncode == 0:
         print("EPICC: Unlock complete.", file=sys.stderr)
     else:
@@ -1162,7 +1212,11 @@ def cmd_unlock(args, extra_args):
 def cmd_clean(args, extra_args):
     """Selective cleanup of pipeline artifacts."""
     repo = find_repo_root()
-    os.chdir(repo)
+    # Installed mode: pipeline artifacts (.snakemake/, results/, etc.) live
+    # in the user's project CWD, not in the installed share directory.
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    if not _is_installed_mode():
+        os.chdir(repo)
 
     if not any([args.intermediates, args.conda_envs, args.logs, args.all]):
         print("Nothing to clean. Specify --intermediates, --conda-envs, "
@@ -1170,7 +1224,7 @@ def cmd_clean(args, extra_args):
         return 1
 
     if args.logs or args.all:
-        log_dir = repo / ".snakemake" / "log"
+        log_dir = run_dir / ".snakemake" / "log"
         if log_dir.exists():
             logs = list(log_dir.glob("*.snakemake.log"))
             if len(logs) > 1:
@@ -1198,7 +1252,7 @@ def cmd_clean(args, extra_args):
     if args.intermediates or args.all:
         # Delete checkpoint files to force reanalysis
         output_dir = args.output_dir or "results"
-        chkpt_dirs = list(repo.glob(f"{output_dir}/*/chkpts"))
+        chkpt_dirs = list(run_dir.glob(f"{output_dir}/*/chkpts"))
         if chkpt_dirs:
             print(f"Removing checkpoint files from {len(chkpt_dirs)} "
                   f"environment(s)...", file=sys.stderr)
@@ -1210,6 +1264,46 @@ def cmd_clean(args, extra_args):
         else:
             print("No checkpoint files found.", file=sys.stderr)
 
+    return 0
+
+
+def cmd_init_profile(args, extra_args):
+    """Install a cluster execution profile template to the Snakemake config dir."""
+    repo = find_repo_root()
+    template_dir = repo / "profiles" / args.profile_type
+    if not (template_dir / "config.yaml").exists():
+        available = sorted(
+            p.name for p in (repo / "profiles").iterdir()
+            if p.is_dir() and (p / "config.yaml").exists() and p.name != "default"
+        )
+        sys.exit(
+            f"Error: No profile template for '{args.profile_type}'. "
+            f"Available: {', '.join(available)}."
+        )
+
+    profile_name = args.name or args.profile_type
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    smk_config = (Path(xdg) / "snakemake") if xdg else (Path.home() / ".config" / "snakemake")
+    dest = smk_config / profile_name
+
+    if dest.exists() and not args.force:
+        sys.exit(
+            f"Error: Profile '{profile_name}' already exists at {dest}.\n"
+            f"  Use --force to overwrite, or choose a different name."
+        )
+
+    dest.mkdir(parents=True, exist_ok=True)
+    for src in template_dir.iterdir():
+        import shutil as _shutil
+        _shutil.copy2(src, dest / src.name)
+
+    print(f"EPICC: Profile '{args.profile_type}' installed to {dest}/config.yaml",
+          file=sys.stderr)
+    print(f"  Edit the EDIT: markers in that file for your cluster (account,",
+          file=sys.stderr)
+    print(f"  TMPDIR path, per-rule resource overrides).", file=sys.stderr)
+    print(f"  Then run:  epicc run --samples <file.tsv> --profile {profile_name}",
+          file=sys.stderr)
     return 0
 
 
@@ -1569,6 +1663,34 @@ def build_parser():
                     "interrupted run. Equivalent to 'snakemake --unlock'.",
     )
 
+    # --- init-profile ---
+    p_init = subparsers.add_parser(
+        "init-profile",
+        help="Install a cluster execution profile to ~/.config/snakemake/",
+        description=(
+            "Copy a bundled cluster profile template to the Snakemake user "
+            "configuration directory (~/.config/snakemake/NAME/config.yaml). "
+            "After installation, edit the EDIT: markers in that file, then use "
+            "'epicc run --profile NAME'. Useful when EPICC is installed via "
+            "conda and the bundled profiles/ directory is not in the project tree."
+        ),
+    )
+    p_init.add_argument(
+        "profile_type", choices=["slurm", "uge"],
+        metavar="TYPE",
+        help="Cluster scheduler type: 'slurm' (Slurm Workload Manager) or "
+             "'uge' (Univa/Open Grid Engine, qsub-based).",
+    )
+    p_init.add_argument(
+        "name", nargs="?",
+        metavar="NAME",
+        help="Profile name (used with --profile NAME). Defaults to TYPE.",
+    )
+    p_init.add_argument(
+        "--force", action="store_true",
+        help="Overwrite an existing profile with the same name.",
+    )
+
     # --- clean ---
     p_clean = subparsers.add_parser(
         "clean", help="Clean pipeline artifacts",
@@ -1621,6 +1743,7 @@ def main():
         "unlock": cmd_unlock,
         "perf": cmd_perf,
         "clean": cmd_clean,
+        "init-profile": cmd_init_profile,
     }
 
     handler = dispatch.get(args.command)
