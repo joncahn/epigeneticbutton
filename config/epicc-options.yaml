@@ -249,6 +249,14 @@ rna_tracks:
     strandedness: "forward" # default for stranded RAMPAGE libraries. Use "unstranded" if libraries do not keep strand information
     multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
 
+# Mark/remove duplicate reads for mRNA-seq (RNAseq assay). Default false:
+# without UMIs, PCR and optical duplicates are indistinguishable from
+# genuine high-expression reads, so deduplicating biases quantification.
+# Only enable for quantitative protocols that carry UMIs (UMI-aware
+# deduplication is not yet implemented — see TODO). RAMPAGE is always
+# deduplicated regardless of this setting (5'-end collapsing for TSS calling).
+rna_deduplicate: false
+
 # WGBS parameters
 # Methylation contexts to analyze (subset of CG, CHG, CHH). Plants
 # typically use all three; animal genomes lack substantive non-CpG

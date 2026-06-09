@@ -260,25 +260,41 @@ rule filter_rna_pe:
     input:
         bamfile = f"{RESULTS_DIR}/RNA/mapped/star_pe__{{sample_name}}_Aligned.out.bam"
     output:
-        mrkdup=temp(f"{RESULTS_DIR}/RNA/mapped/star_pe__{{sample_name}}_Processed.out.bam"),
         sorted_file=temp(f"{RESULTS_DIR}/RNA/mapped/star_pe__{{sample_name}}_Processed.sorted.out.bam"),
         metrics_flag = f"{RESULTS_DIR}/RNA/reports/flagstat_pe__{{sample_name}}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        # Deduplicate RAMPAGE always (5'-tag TSS libraries), mRNA-seq only when
+        # the user opts in (no UMI handling yet — see rna_deduplicate).
+        deduplicate = lambda wildcards: (parse_sample_name(wildcards.sample_name)['data_type'] == 'RAMPAGE') or bool(config.get('rna_deduplicate', False)),
+        # ENCODE RAMPAGE folds 15 bases of mate 2 (the 5' tag region) into the
+        # duplicate signature; plain mRNA-seq dedup does not.
+        dedup_extra = lambda wildcards: "--bamRemoveDuplicatesMate2basesN 15" if parse_sample_name(wildcards.sample_name)['data_type'] == 'RAMPAGE' else "",
+        mrkdup = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_pe__{wildcards.sample_name}_Processed.out.bam"
     log:
         temp(return_log_rna("{sample_name}", "filteringRNA", "PE"))
     conda: CONDA_ENV_RNA
     shell:
         """
         {{
-        ### Marking duplicates
-        ## Errors can happen because of limitBAMsortRAM, which seem to happen when bam files are sorted by coordinates (now removed from mapping step). Might want parameters from sorting duplicates too.
-        printf "\nMarking duplicates\n"
-        STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "{config[output_dir]}/RNA/mapped/star_pe__{params.sample_name}_"
-        #### Indexing bam file
+        ## Read deduplication is OFF by default for mRNA-seq: without UMIs, PCR/optical
+        ## duplicates are indistinguishable from genuine high-expression reads, so
+        ## deduplicating biases quantification. RAMPAGE is deduplicated following ENCODE
+        ## (UniqueIdentical + Mate2basesN 15). Errors can happen because of limitBAMsortRAM,
+        ## which seem to happen when bam files are sorted by coordinates (now removed from
+        ## mapping step).
+        if [[ "{params.deduplicate}" == "True" ]]; then
+            printf "\nMarking duplicates\n"
+            STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical {params.dedup_extra} --outFileNamePrefix "{config[output_dir]}/RNA/mapped/star_pe__{params.sample_name}_"
+            to_sort="{params.mrkdup}"
+        else
+            printf "\nDeduplication disabled; sorting aligned reads as-is\n"
+            to_sort="{input.bamfile}"
+        fi
         printf "\nSorting bam file\n"
-        samtools sort -@ {threads} -T "{output.sorted_file}.sort" "{output.mrkdup}" -o "{output.sorted_file}"
+        samtools sort -@ {threads} -T "{output.sorted_file}.sort" "${{to_sort}}" -o "{output.sorted_file}"
+        [[ "{params.deduplicate}" == "True" ]] && rm -f "{params.mrkdup}"
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "{output.sorted_file}"
         #### Getting stats from bam file
@@ -295,16 +311,30 @@ rule filter_rna_se:
         metrics_flag = f"{RESULTS_DIR}/RNA/reports/flagstat_se__{{sample_name}}.txt"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
+        ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
+        # SE deduplication only on explicit opt-in (no UMI handling yet). ENCODE
+        # RAMPAGE dedup is paired-end (needs mate 2), so RAMPAGE SE — an unusual
+        # case — keeps its prior no-dedup behavior.
+        deduplicate = lambda wildcards: bool(config.get('rna_deduplicate', False)),
+        mrkdup = lambda wildcards: f"{RESULTS_DIR}/RNA/mapped/star_se__{wildcards.sample_name}_Processed.out.bam"
     log:
         temp(return_log_rna("{sample_name}", "filteringRNA", "SE"))
     conda: CONDA_ENV_RNA
     shell:
         """
         {{
+        if [[ "{params.deduplicate}" == "True" ]]; then
+            printf "\nMarking duplicates\n"
+            STAR --runMode inputAlignmentsFromBAM --inputBAMfile "{input.bamfile}" --bamRemoveDuplicatesType UniqueIdentical --outFileNamePrefix "{config[output_dir]}/RNA/mapped/star_se__{params.sample_name}_"
+            to_sort="{params.mrkdup}"
+        else
+            printf "\nDeduplication disabled; sorting aligned reads as-is\n"
+            to_sort="{input.bamfile}"
+        fi
         #### Sorting bam file
         printf "\nSorting bam file\n"
-        samtools sort -@ {threads} -T "{output.sorted_file}.sort" "{input.bamfile}" -o "{output.sorted_file}"
+        samtools sort -@ {threads} -T "{output.sorted_file}.sort" "${{to_sort}}" -o "{output.sorted_file}"
+        [[ "{params.deduplicate}" == "True" ]] && rm -f "{params.mrkdup}"
         #### Indexing bam file
         printf "\nIndexing bam file\n"
         samtools index -@ {threads} "{output.sorted_file}"

@@ -23,7 +23,7 @@ epicc validate --build-envs --samples your_samples.tsv        # pre-create rule 
 
 `run` and `validate` accept named overrides for commonly-tuned settings (all override the options YAML):
 - `--chip-aligner {bowtie2,chromap}`, `--atac-aligner`, `--chip/atac-mapping-strategy`
-- `--[no-]full-analysis`, `--[no-]te-analysis`, `--[no-]go`, `--methylation-contexts CG,CHG,CHH`
+- `--[no-]full-analysis`, `--[no-]te-analysis`, `--[no-]go`, `--[no-]rna-deduplicate`, `--methylation-contexts CG,CHG,CHH`
 - `--dmr-caller {metilene,dmrcaller}`, `--dmr-min-diff SPEC` (`auto` / float / `CG=f,CHG=f`), `--dmr-min-cytosines`, `--dmr-p-value`, `--dmr-sigma-n`
 - `--chip-callpeaks-params STR`, `--cut-broad-caller {epic2,seacr,macs2}`, `--cut-narrow-caller {seacr,macs2}`
 

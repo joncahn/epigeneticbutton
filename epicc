@@ -415,6 +415,8 @@ def _collect_config_overrides(args):
         ov.append(f"te_analysis={'true' if args.te_analysis else 'false'}")
     if getattr(args, "GO", None) is not None:
         ov.append(f"GO={'true' if args.GO else 'false'}")
+    if getattr(args, "rna_deduplicate", None) is not None:
+        ov.append(f"rna_deduplicate={'true' if args.rna_deduplicate else 'false'}")
     # Methylation / DMR (top-level keys)
     if getattr(args, "methylation_contexts", None):
         ov.append(f"methylation_contexts=[{','.join(args.methylation_contexts)}]")
@@ -1490,6 +1492,19 @@ def add_analysis_options(parser):
         help="Disable GO enrichment analysis.",
     )
     parser.set_defaults(GO=None)
+
+    _dedup = parser.add_mutually_exclusive_group()
+    _dedup.add_argument(
+        "--rna-deduplicate", dest="rna_deduplicate", action="store_true",
+        help="Mark/remove duplicate reads for mRNA-seq (overrides rna_deduplicate "
+             "in options). Only meaningful with UMIs, which are not yet handled. "
+             "RAMPAGE is deduplicated regardless.",
+    )
+    _dedup.add_argument(
+        "--no-rna-deduplicate", dest="rna_deduplicate", action="store_false",
+        help="Disable mRNA-seq read deduplication (the default).",
+    )
+    parser.set_defaults(rna_deduplicate=None)
 
     # --- Methylation contexts ---
     parser.add_argument(

@@ -2154,6 +2154,7 @@ var configState = {
   te_analysis: false,
   QC_option: "none",
   GO: false,
+  rna_deduplicate: false,
   // Input options
   trimmed_fastqs: false,
   aligned_bams: false,
@@ -2424,6 +2425,9 @@ function buildConfigForm() {
   outSec.appendChild(buildToggleRow("Analysis on transposable elements", "te_analysis",
     "TE analysis is ON! You know where it's at! \uD83D\uDC4F",
     "TE analysis is deactivated. It's only junk DNA afterall... \uD83D\uDC40"));
+  outSec.appendChild(buildToggleRow("Deduplicate mRNA-seq reads", "rna_deduplicate",
+    "mRNA-seq dedup ON \u2014 only do this if your reads carry UMIs! \uD83E\uDDEC",
+    "mRNA-seq dedup OFF (default) \u2014 no UMIs, no dedup. RAMPAGE is deduped regardless. \uD83D\uDC4D"));
   var qcRow = buildSelectRow("FastQC option:", "QC_option", ["none", "all"]);
   var qcMsg = el("div", { className: "cfg-msg" });
   qcMsg.textContent = configState.QC_option === "all" ? "How good is that raw data, hum? \uD83E\uDDD0" : "";
@@ -2710,6 +2714,7 @@ function configStateToYAML() {
   cfg.te_analysis = configState.te_analysis;
   cfg.QC_option = configState.QC_option;
   cfg.GO = configState.GO;
+  cfg.rna_deduplicate = configState.rna_deduplicate;
 
   // Input options
   cfg.trimmed_fastqs = configState.trimmed_fastqs;
@@ -2863,6 +2868,7 @@ function handleYAMLImport(text) {
   if (cfg.te_analysis != null) configState.te_analysis = !!cfg.te_analysis;
   if (cfg.QC_option != null) configState.QC_option = String(cfg.QC_option);
   if (cfg.GO != null) configState.GO = !!cfg.GO;
+  if (cfg.rna_deduplicate != null) configState.rna_deduplicate = !!cfg.rna_deduplicate;
   if (cfg.trimmed_fastqs != null) configState.trimmed_fastqs = !!cfg.trimmed_fastqs;
   if (cfg.aligned_bams != null) configState.aligned_bams = !!cfg.aligned_bams;
   if (cfg.use_node_tmpdir != null) configState.use_node_tmpdir = !!cfg.use_node_tmpdir;
@@ -2999,7 +3005,7 @@ function handleYAMLImport(text) {
     // Old format fallback: detect bare genome keys + separate species blocks
     var oldSpecies = {};
     var knownKeys = new Set(["repo_folder","analysis_name","sample_file","full_analysis","te_analysis",
-      "QC_option","GO","trimmed_fastqs","aligned_bams","use_node_tmpdir",
+      "QC_option","GO","rna_deduplicate","trimmed_fastqs","aligned_bams","use_node_tmpdir",
       "keep_intermediates","keep_trimmed_fastqs","keep_final_bams","keep_merged_bams",
       "keep_shifted_bams","keep_cx_reports","keep_dmc_intermediates","motifs","jaspar_db","motifs_allreps",
       "quality_threshold","min_read_length","trim_front","adapter1","adapter2",
