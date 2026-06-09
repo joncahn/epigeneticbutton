@@ -21,7 +21,7 @@
 
 #### Configuration fileset
 
-* [ ] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. So for things that people might want to customize on the fly to try different things (plots mostly, but parameters for peak calling and DMRs for example), it could be good to have them as single entries. Note: probably we want to select specific settings and explicitly expose them as CLI params through the new epicc CLI wrapper.
+* [x] Parameters in the options file that are sub-settings in the yaml cannot be fed directly into snakemake command line. **Done**: `epicc run`/`validate` now accept named flags for the most commonly-tuned settings. Top-level keys go through `--config` directly; nested keys (`dmr_thresholds.*`, `chip_callpeaks.params`, `cut_callpeaks.*`) are applied via a temporary merged config (dot-path merge, sibling keys preserved). New flags: `--chip/atac-aligner`, `--chip/atac-mapping-strategy`, `--[no-]full-analysis`, `--[no-]te-analysis`, `--[no-]go`, `--methylation-contexts`, `--dmr-caller`, `--dmr-min-diff` (supports `auto`/single-float/`CG=f,CHG=f,CHH=f`), `--dmr-min-cytosines`, `--dmr-p-value`, `--dmr-sigma-n`, `--chip-callpeaks-params`, `--cut-broad-caller`, `--cut-narrow-caller`.
 
 ### Distribution
 

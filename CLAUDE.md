@@ -19,6 +19,14 @@ epicc validate --build-envs --samples your_samples.tsv        # pre-create rule 
 
 `epicc` is a thin argparse wrapper around snakemake; subcommands are `run`, `validate`, `output`, `unlock`, `perf`, `clean`. Anything after `--` is forwarded verbatim to snakemake. Raw `snakemake ...` invocations still work but bypass `epicc`'s placeholder-detection and TMPDIR routing.
 
+`run` and `validate` accept named overrides for commonly-tuned settings (all override the options YAML):
+- `--chip-aligner {bowtie2,chromap}`, `--atac-aligner`, `--chip/atac-mapping-strategy`
+- `--[no-]full-analysis`, `--[no-]te-analysis`, `--[no-]go`, `--methylation-contexts CG,CHG,CHH`
+- `--dmr-caller {metilene,dmrcaller}`, `--dmr-min-diff SPEC` (`auto` / float / `CG=f,CHG=f`), `--dmr-min-cytosines`, `--dmr-p-value`, `--dmr-sigma-n`
+- `--chip-callpeaks-params STR`, `--cut-broad-caller {epic2,seacr,macs2}`, `--cut-narrow-caller {seacr,macs2}`
+
+Nested settings (`dmr_thresholds.*`, `chip_callpeaks.params`, `cut_callpeaks.*`) are applied via a temp merged config file; sibling keys not specified on the CLI are preserved from the options YAML.
+
 ## Architecture
 
 ### Snakemake Structure

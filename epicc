@@ -113,8 +113,9 @@ def render_graph(args, kind, snakemake_flag, output_path):
     out = Path(output_path)
     fmt = out.suffix.lstrip(".").lower() or "png"
 
+    options_file = _prepare_options_file(args)
     cmd = ["snakemake", snakemake_flag,
-           "--configfile", args.options,
+           "--configfile", options_file,
            "--cores", "1", "--quiet", "all"]
     # Honor the same workflow profile and config overrides as the run.
     repo = find_repo_root()
@@ -126,12 +127,7 @@ def render_graph(args, kind, snakemake_flag, output_path):
     overrides = []
     if getattr(args, "samples", None):
         overrides.append(f"sample_file={args.samples}")
-    if getattr(args, "output_dir", None):
-        overrides.append(f"output_dir={args.output_dir}")
-    if getattr(args, "genome_dir", None):
-        overrides.append(f"genome_dir={args.genome_dir}")
-    if getattr(args, "use_node_tmpdir", False):
-        overrides.append("use_node_tmpdir=true")
+    overrides.extend(_collect_config_overrides(args))
     if overrides:
         cmd += ["--config"] + overrides
 
@@ -305,14 +301,172 @@ def detect_execution_mode(args):
     return None, cores
 
 
+def _parse_dmr_min_diff(s):
+    """Argument type for --dmr-min-diff.
+
+    Accepted forms:
+      auto                    → data-driven calibration
+      0.3                     → apply the same threshold to all three contexts
+      CG=0.3,CHG=0.2,CHH=0.1 → per-context values (any subset is valid)
+    """
+    if s.lower() == "auto":
+        return "auto"
+    if "=" not in s:
+        try:
+            return float(s)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"--dmr-min-diff: expected 'auto', a float, or 'CG=F,CHG=F,CHH=F'; got {s!r}"
+            )
+    result = {}
+    for pair in s.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        k, _, v = pair.partition("=")
+        k = k.strip().upper()
+        if k not in ("CG", "CHG", "CHH"):
+            raise argparse.ArgumentTypeError(
+                f"--dmr-min-diff: unknown context {k!r}; expected CG, CHG, or CHH"
+            )
+        try:
+            result[k] = float(v.strip())
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"--dmr-min-diff: invalid value for {k}: {v!r}"
+            )
+    if not result:
+        raise argparse.ArgumentTypeError("--dmr-min-diff: no valid context=value pairs")
+    return result
+
+
+def _collect_config_overrides(args):
+    """Collect --config key=value pairs from epicc CLI flags (excluding sample_file).
+
+    Covers only top-level config keys that Snakemake can receive directly via
+    --config. Used by both build_snakemake_cmd and render_graph.
+    """
+    ov = []
+    if getattr(args, "output_dir", None):
+        ov.append(f"output_dir={args.output_dir}")
+    if getattr(args, "genome_dir", None):
+        ov.append(f"genome_dir={args.genome_dir}")
+    if getattr(args, "keep_intermediates", None):
+        ov.append(f"keep_intermediates={args.keep_intermediates}")
+    if getattr(args, "use_node_tmpdir", False):
+        ov.append("use_node_tmpdir=true")
+    # Aligner / mapping strategy
+    if getattr(args, "chip_aligner", None):
+        ov.append(f"chip_aligner={args.chip_aligner}")
+    if getattr(args, "atac_aligner", None):
+        ov.append(f"atac_aligner={args.atac_aligner}")
+    if getattr(args, "chip_mapping_strategy", None):
+        ov.append(f"chip_mapping_strategy={args.chip_mapping_strategy}")
+    if getattr(args, "atac_mapping_strategy", None):
+        ov.append(f"atac_mapping_strategy={args.atac_mapping_strategy}")
+    # Analysis toggles
+    if getattr(args, "full_analysis", None) is not None:
+        ov.append(f"full_analysis={'true' if args.full_analysis else 'false'}")
+    if getattr(args, "te_analysis", None) is not None:
+        ov.append(f"te_analysis={'true' if args.te_analysis else 'false'}")
+    if getattr(args, "GO", None) is not None:
+        ov.append(f"GO={'true' if args.GO else 'false'}")
+    # Methylation / DMR (top-level keys)
+    if getattr(args, "methylation_contexts", None):
+        ov.append(f"methylation_contexts=[{','.join(args.methylation_contexts)}]")
+    if getattr(args, "dmr_caller", None):
+        ov.append(f"dmr_caller={args.dmr_caller}")
+    return ov
+
+
+def _collect_nested_overrides(args):
+    """Collect dot-path overrides for nested config keys.
+
+    Returns a list of (dotpath, value) tuples for settings that live inside
+    nested YAML blocks (e.g. dmr_thresholds.min_diff.CG) and therefore cannot
+    be passed directly as Snakemake --config key=val — Snakemake's shallow merge
+    would drop sibling keys in the same block.
+    """
+    nested = []
+
+    # DMR thresholds
+    dmr_min_diff = getattr(args, "dmr_min_diff", None)
+    if dmr_min_diff is not None:
+        if dmr_min_diff == "auto":
+            nested.append(("dmr_thresholds.min_diff", "auto"))
+        elif isinstance(dmr_min_diff, float):
+            for ctx in ("CG", "CHG", "CHH"):
+                nested.append((f"dmr_thresholds.min_diff.{ctx}", dmr_min_diff))
+        else:  # dict from per-context form
+            for ctx, val in dmr_min_diff.items():
+                nested.append((f"dmr_thresholds.min_diff.{ctx}", val))
+    if getattr(args, "dmr_min_cytosines", None) is not None:
+        nested.append(("dmr_thresholds.min_cytosines", args.dmr_min_cytosines))
+    if getattr(args, "dmr_p_value", None) is not None:
+        nested.append(("dmr_thresholds.p_value", args.dmr_p_value))
+    if getattr(args, "dmr_sigma_n", None) is not None:
+        nested.append(("dmr_thresholds.sigma_n", args.dmr_sigma_n))
+
+    # Peak calling
+    if getattr(args, "chip_callpeaks_params", None) is not None:
+        nested.append(("chip_callpeaks.params", args.chip_callpeaks_params))
+    if getattr(args, "cut_broad_caller", None) is not None:
+        nested.append(("cut_callpeaks.broad_caller", args.cut_broad_caller))
+    if getattr(args, "cut_narrow_caller", None) is not None:
+        nested.append(("cut_callpeaks.narrow_caller", args.cut_narrow_caller))
+
+    return nested
+
+
+def _prepare_options_file(args):
+    """Return the options file path to use for snakemake.
+
+    When nested CLI overrides (e.g. --dmr-min-diff-cg) are present, writes
+    a temporary merged config that incorporates those overrides and returns
+    its path. The temp file is registered for cleanup via atexit. When no
+    nested overrides are set, returns args.options unchanged.
+    """
+    nested = _collect_nested_overrides(args)
+    if not nested:
+        return args.options
+
+    try:
+        import yaml
+    except ImportError:
+        sys.exit("Error: PyYAML not available. Activate the epicc conda environment.")
+    import tempfile
+    import atexit
+
+    with open(args.options) as f:
+        config = yaml.safe_load(f) or {}
+
+    for dotpath, value in nested:
+        parts = dotpath.split(".")
+        d = config
+        for part in parts[:-1]:
+            if not isinstance(d.get(part), dict):
+                d[part] = {}
+            d = d[part]
+        d[parts[-1]] = value
+
+    tmp = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="epicc_merged_", delete=False
+    )
+    yaml.dump(config, tmp, default_flow_style=False, allow_unicode=True)
+    tmp.close()
+    atexit.register(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
+    return tmp.name
+
+
 def build_snakemake_cmd(args, extra_args, *, dry_run=False):
     """Construct the snakemake command line from parsed arguments."""
     repo = find_repo_root()
 
     cmd = ["snakemake"]
 
-    # Options file
-    options_file = args.options
+    # Options file — may be replaced by a temp merged file when nested CLI
+    # overrides (--dmr-min-diff, --chip-callpeaks-params, etc.) are present.
+    options_file = _prepare_options_file(args)
     if not Path(options_file).exists():
         sys.exit(f"Error: Options file not found: {options_file}")
     cmd += ["--configfile", options_file]
@@ -342,15 +496,7 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
         if not Path(args.samples).exists():
             sys.exit(f"Error: Sample file not found: {args.samples}")
         config_overrides.append(f"sample_file={args.samples}")
-    # Common options (always present via add_common_options)
-    if args.output_dir:
-        config_overrides.append(f"output_dir={args.output_dir}")
-    if args.genome_dir:
-        config_overrides.append(f"genome_dir={args.genome_dir}")
-    if args.keep_intermediates:
-        config_overrides.append(f"keep_intermediates={args.keep_intermediates}")
-    if getattr(args, "use_node_tmpdir", False):
-        config_overrides.append("use_node_tmpdir=true")
+    config_overrides.extend(_collect_config_overrides(args))
 
     # Dry-run
     if dry_run:
@@ -1173,6 +1319,141 @@ def add_graph_options(parser):
     )
 
 
+def add_analysis_options(parser):
+    """Add analysis configuration overrides for run/validate.
+
+    All flags override the corresponding setting in the options YAML file.
+    Omitting a flag leaves the options file value unchanged.
+    Top-level settings go through --config directly; nested settings
+    (dmr_thresholds.*, chip_callpeaks.params, cut_callpeaks.*) are applied
+    via a temporary merged config file written by _prepare_options_file.
+    """
+    # --- Aligners and mapping ---
+    parser.add_argument(
+        "--chip-aligner", dest="chip_aligner", choices=["bowtie2", "chromap"],
+        metavar="{bowtie2,chromap}",
+        help="ChIP/CUT&RUN/CUT&Tag aligner (overrides chip_aligner). "
+             "bowtie2 (default) is recommended for PE data; chromap is ~10x "
+             "faster but yields low proper-pair rates on PE libraries.",
+    )
+    parser.add_argument(
+        "--atac-aligner", dest="atac_aligner", choices=["bowtie2", "chromap"],
+        metavar="{bowtie2,chromap}",
+        help="ATAC-seq aligner (overrides atac_aligner). "
+             "Same speed/quality trade-offs as --chip-aligner.",
+    )
+    parser.add_argument(
+        "--chip-mapping-strategy", dest="chip_mapping_strategy",
+        choices=["default", "repeat", "repeatall", "all"], metavar="STRATEGY",
+        help="ChIP/CUT&RUN/CUT&Tag mapping strategy (overrides chip_mapping_strategy): "
+             "default, repeat, repeatall, or all.",
+    )
+    parser.add_argument(
+        "--atac-mapping-strategy", dest="atac_mapping_strategy",
+        choices=["default", "repeat", "repeatall", "all"], metavar="STRATEGY",
+        help="ATAC-seq mapping strategy (overrides atac_mapping_strategy).",
+    )
+
+    # --- Analysis toggles ---
+    _fa = parser.add_mutually_exclusive_group()
+    _fa.add_argument(
+        "--full-analysis", dest="full_analysis", action="store_true",
+        help="Enable full downstream analysis (overrides full_analysis in options).",
+    )
+    _fa.add_argument(
+        "--no-full-analysis", dest="full_analysis", action="store_false",
+        help="Skip downstream analysis; mapping and peak-calling only.",
+    )
+    parser.set_defaults(full_analysis=None)
+
+    _te = parser.add_mutually_exclusive_group()
+    _te.add_argument(
+        "--te-analysis", dest="te_analysis", action="store_true",
+        help="Enable TE-annotation analysis (overrides te_analysis in options).",
+    )
+    _te.add_argument(
+        "--no-te-analysis", dest="te_analysis", action="store_false",
+        help="Disable TE-annotation analysis.",
+    )
+    parser.set_defaults(te_analysis=None)
+
+    _go = parser.add_mutually_exclusive_group()
+    _go.add_argument(
+        "--go", dest="GO", action="store_true",
+        help="Enable GO enrichment analysis (overrides GO in options).",
+    )
+    _go.add_argument(
+        "--no-go", dest="GO", action="store_false",
+        help="Disable GO enrichment analysis.",
+    )
+    parser.set_defaults(GO=None)
+
+    # --- Methylation contexts ---
+    parser.add_argument(
+        "--methylation-contexts", dest="methylation_contexts",
+        type=lambda s: [c.strip().upper() for c in s.split(",")],
+        metavar="CONTEXTS",
+        help="Comma-separated methylation contexts to analyze "
+             "(overrides methylation_contexts). E.g. 'CG' for animal genomes "
+             "where non-CpG methylation is negligible (default: CG,CHG,CHH).",
+    )
+
+    # --- DMR settings ---
+    parser.add_argument(
+        "--dmr-caller", dest="dmr_caller", choices=["metilene", "dmrcaller"],
+        metavar="{metilene,dmrcaller}",
+        help="DMR caller for Bismark-aligned samples (overrides dmr_caller). "
+             "metilene (default) is multi-threaded and faster; "
+             "dmrcaller uses beta-regression statistics.",
+    )
+    parser.add_argument(
+        "--dmr-min-diff", dest="dmr_min_diff", type=_parse_dmr_min_diff,
+        metavar="SPEC",
+        help="Minimum mean methylation difference to call a DMR "
+             "(overrides dmr_thresholds.min_diff). "
+             "SPEC: 'auto' (data-driven per-pair calibration), "
+             "a single float applied to all contexts (e.g. 0.2), "
+             "or per-context values 'CG=0.3,CHG=0.2,CHH=0.1'.",
+    )
+    parser.add_argument(
+        "--dmr-min-cytosines", dest="dmr_min_cytosines", type=int, metavar="N",
+        help="Minimum cytosine/CpG count per DMR window "
+             "(overrides dmr_thresholds.min_cytosines; default: 5).",
+    )
+    parser.add_argument(
+        "--dmr-p-value", dest="dmr_p_value", type=float, metavar="P",
+        help="p-value threshold for DMRcaller "
+             "(overrides dmr_thresholds.p_value; default: 0.01; "
+             "ignored when --dmr-caller metilene).",
+    )
+    parser.add_argument(
+        "--dmr-sigma-n", dest="dmr_sigma_n", type=float, metavar="N",
+        help="Noise-floor sigma multiplier for data-driven min_diff calibration "
+             "(overrides dmr_thresholds.sigma_n; default: 3.0; "
+             "only used when --dmr-min-diff auto).",
+    )
+
+    # --- Peak calling ---
+    parser.add_argument(
+        "--chip-callpeaks-params", dest="chip_callpeaks_params", metavar="STR",
+        help="MACS2 parameters for ChIP peak calling "
+             "(overrides chip_callpeaks.params; "
+             "default: '--keep-dup all --nomodel').",
+    )
+    parser.add_argument(
+        "--cut-broad-caller", dest="cut_broad_caller",
+        choices=["epic2", "seacr", "macs2"], metavar="{epic2,seacr,macs2}",
+        help="Peak caller for CUT&RUN/CUT&Tag broad marks "
+             "(overrides cut_callpeaks.broad_caller; default: epic2).",
+    )
+    parser.add_argument(
+        "--cut-narrow-caller", dest="cut_narrow_caller",
+        choices=["seacr", "macs2"], metavar="{seacr,macs2}",
+        help="Peak caller for CUT&RUN/CUT&Tag narrow marks/TFs "
+             "(overrides cut_callpeaks.narrow_caller; default: seacr).",
+    )
+
+
 def build_parser():
     """Build the argument parser with subcommands."""
     parser = argparse.ArgumentParser(
@@ -1190,6 +1471,7 @@ def build_parser():
     )
     add_common_options(p_run)
     add_run_options(p_run)
+    add_analysis_options(p_run)
 
     # --- validate ---
     p_val = subparsers.add_parser(
@@ -1199,6 +1481,7 @@ def build_parser():
     )
     add_common_options(p_val)
     add_graph_options(p_val)
+    add_analysis_options(p_val)
     p_val.add_argument(
         "--build-envs", action="store_true",
         help="After validation passes, pre-build all rule conda envs "
