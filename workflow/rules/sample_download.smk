@@ -124,8 +124,10 @@ rule get_fastq_pe:
             pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*_2.f*q -c > "{output.fastq2}"
         elif [[ $(ls -1 "{params.fastq_path}"/*"{params.seq_id}"*1*f*q 2>/dev/null | wc -l) -gt 1 ]]; then
             printf "Error: Too many fastqs found for {params.sample_name} ({params.seq_id} in {params.fastq_path})\nThe seq_id used {params.seq_id} is likely not unique.\n"
+            exit 1
         else
             printf "Error: No PE fastqs found for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
+            exit 1
         fi
         }} 2>&1 | tee -a "{log}"
         """
@@ -139,7 +141,7 @@ rule get_fastq_se:
         sample_name = lambda wildcards: wildcards.sample_name,
         data_type = lambda wildcards: wildcards.data_type,
         trimmed_fastqs = config['trimmed_fastqs'],
-        exist_fastq0 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.data_type}/fastq/raw__{wildcards.sample_name}__R0.fastq.gz",
+        exist_fastq0 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.data_type}/fastq/trim__{wildcards.sample_name}__R0.fastq.gz",
         ena_script = os.path.join(REPO_FOLDER, "workflow", "scripts", "ena_download.sh")
     log:
         temp(return_log_sample("{data_type}","{sample_name}", "downloading", "SE"))
@@ -210,6 +212,7 @@ rule get_fastq_se:
             pigz -p {threads} "{params.fastq_path}"/*"{params.seq_id}"*q -c > "{output.fastq0}"
         else
             printf "Error: No SE fastq found for {params.sample_name} ({params.seq_id} in {params.fastq_path})\n"
+            exit 1
         fi
         }} 2>&1 | tee -a "{log}"
         """
@@ -350,10 +353,11 @@ rule get_available_bam:
             printf "\nCopying bam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
             samtools sort -@ {threads} -T "{output.bam}.sort" -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.bam
         elif ls "{params.bam_path}"/*"{params.seq_id}"*.sam 1> /dev/null 2>&1; then
-            printf "\nCopying and gzipping sam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
-            samtools sort -@ {threads} -T "{output.bam}.sort" -b -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.sam
+            printf "\nSorting and converting sam file for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
+            samtools sort -@ {threads} -T "{output.bam}.sort" -o "{output.bam}" "{params.bam_path}"/*"{params.seq_id}"*.sam
         else
             printf "Error: No bam or sam file found for {params.sample_name} ({params.seq_id} in {params.bam_path})\n"
+            exit 1
         fi
         }} 2>&1 | tee -a "{log}"
         """
