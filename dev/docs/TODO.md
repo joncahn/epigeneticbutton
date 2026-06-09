@@ -65,6 +65,10 @@
 
 ### Analysis
 
+#### UMI handling (quantitative sequencing)
+
+* [ ] **Defer** (important functionality gap; can close big-refactor without it) The pipeline does not extract or use UMIs (unique molecular identifiers). This matters for any quantitative protocol that carries them — UMI-based RNA-seq/RAMPAGE, and dedup-dependent assays — where PCR/optical duplicates should be collapsed *by UMI*, not by coordinate. Until this lands, mRNA-seq read deduplication is OFF by default (`rna_deduplicate: false`), because coordinate-based dedup without UMIs biases quantification (drops genuine high-expression reads). Scope: an optional sample-sheet UMI spec (location/length, or a separate index read), UMI extraction at the trimming step (e.g. `umi_tools extract` / fastp `--umi`), and UMI-aware dedup post-alignment (e.g. `umi_tools dedup` or `picard UmiAwareMarkDuplicatesWithMateCigar`). RAMPAGE currently follows ENCODE coordinate+Mate2basesN dedup (no true UMI), which would also be revisited.
+
 #### (Differential) splicing analysis for RNAseq
 
 * [ ] **deferred for future PR** heavy pipeline. Here is what was used in my MBD paper:
