@@ -91,7 +91,7 @@ create.DEG.table<-function(sample1, sample2, y) {
 #### Applying above function to all possible pairs of samples, and creating temp files for unique DEGs
 
 allDEG<-data.frame()
-for (i in 1:(length(genotypes)-1)) {
+for (i in seq_len(length(genotypes)-1)) {
   sample1<-genotypes[i]
   for (j in (i+1):length(genotypes)) {
 	sample2<-genotypes[j]
