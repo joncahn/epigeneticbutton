@@ -135,6 +135,7 @@ def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
     n_kept = 0
     n_skipped_mod = 0
     n_skipped_strand = 0
+    n_skipped_no_ref = 0
 
     with ExitStack() as stack:
         # Handle gzipped or plain input
@@ -185,21 +186,23 @@ def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
                     chrom_len = 0
                     current_chrom = chrom
 
+            # Skip positions on chromosomes absent from the reference: their
+            # context cannot be determined, and emitting a placeholder "CNN"
+            # leaks into the bigwig demux (mC.smk), where the catch-all branch
+            # would miscount them as CG methylation.
+            if chrom_len == 0:
+                n_skipped_no_ref += 1
+                continue
+
             # Infer strand from reference when bedMethyl has combined strands
             if strand == '.':
-                if chrom_len > 0:
-                    strand = infer_strand_from_reference(chrom_seq, start)
-                    if strand is None:
-                        n_skipped_strand += 1
-                        continue
-                else:
-                    strand = '+'
+                strand = infer_strand_from_reference(chrom_seq, start)
+                if strand is None:
+                    n_skipped_strand += 1
+                    continue
 
             # Get context and trinucleotide from cached sequence
-            if chrom_len == 0:
-                context, trinuc = ("CNN", "CNN")
-            else:
-                context, trinuc = get_context_and_trinuc_from_seq(chrom_seq, chrom_len, start, strand)
+            context, trinuc = get_context_and_trinuc_from_seq(chrom_seq, chrom_len, start, strand)
 
             # Convert to 1-based position for CX_report
             position = start + 1
@@ -215,6 +218,8 @@ def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
         print(f"Skipped {n_skipped_mod:,} non-5mC rows (e.g. 5hmC)", file=sys.stderr)
     if n_skipped_strand:
         print(f"Skipped {n_skipped_strand:,} positions where reference base was neither C nor G", file=sys.stderr)
+    if n_skipped_no_ref:
+        print(f"Skipped {n_skipped_no_ref:,} positions on chromosomes absent from the reference", file=sys.stderr)
 
 
 def main():

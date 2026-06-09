@@ -511,7 +511,7 @@ rule make_mc_bigwig_files:
         # awk output redirection writes each line to the matching context
         # file. Cheap to do unconditionally — empty bedGraphs are dropped
         # below for inactive contexts.
-        zcat {input.cx_report} | awk -v OFS="\t" -v s=$sname '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHG.bedGraph"; else print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CG.bedGraph"}}'
+        zcat {input.cx_report} | awk -v OFS="\t" -v s=$sname '($4+$5)>0 {{a=$4+$5; if ($6=="CHH") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHH.bedGraph"; else if ($6=="CHG") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CHG.bedGraph"; else if ($6=="CG") print $1,$2-1,$2,$4/a*100 >> "'"$outdir"'/"s"__CG.bedGraph"}}'
         for strand in plus minus; do
             case "$strand" in
                 plus)  sign="+";;
