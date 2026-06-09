@@ -213,8 +213,17 @@ def maybe_clear_stale_lock(args, repo):
     locks = run_dir / ".snakemake" / "locks"
     if not locks.exists() or not any(locks.iterdir()):
         return
-    print("EPICC: Detected stale Snakemake lock from a prior run; unlocking.",
+    print("=" * 72, file=sys.stderr)
+    print("EPICC WARNING: a Snakemake lock was found in this directory.",
           file=sys.stderr)
+    print("  Assuming it is stale (a prior run was killed) and auto-unlocking.",
+          file=sys.stderr)
+    print("  If another epicc/snakemake run is ACTIVE on this same directory,",
+          file=sys.stderr)
+    print("  unlocking will corrupt its state. Re-run with --no-auto-unlock",
+          file=sys.stderr)
+    print("  to leave the lock in place.", file=sys.stderr)
+    print("=" * 72, file=sys.stderr)
     cmd = ["snakemake", "--unlock", "--configfile", args.options]
     if _is_installed_mode():
         cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
