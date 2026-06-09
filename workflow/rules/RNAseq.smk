@@ -222,7 +222,7 @@ rule STAR_map_pe:
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn ${{input}} --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outTmpDir "{params.outtmpdir}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --alignIntronMin 20 --alignIntronMax 1000000 --alignMatesGapMax 1000000 --outFilterMultimapNmax 20 --quantMode GeneCounts
         rm -rf "{params.outtmpdir}"
         mv "{config[output_dir]}/RNA/mapped/star_pe__{params.sample_name}_Log.final.out" "{output.metrics_map}"
-        rm -f {config[output_dir]}/RNA/mapped/*"{params.sample_name}_Log"*
+        rm -f {params.prefix}Log*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -251,7 +251,7 @@ rule STAR_map_se:
         STAR --runMode alignReads --genomeDir "{input.indices}" --readFilesIn "{input.fastq0}" --readFilesCommand zcat --runThreadN {threads} --genomeLoad NoSharedMemory --outMultimapperOrder Random --outFileNamePrefix "{params.prefix}" --outTmpDir "{params.outtmpdir}" --outSAMtype BAM Unsorted --alignSJoverhangMin 8 --alignSJDBoverhangMin 1 --outFilterMismatchNmax 999 --outFilterMismatchNoverReadLmax 0.04 --outFilterMultimapNmax 20 --quantMode GeneCounts
         rm -rf "{params.outtmpdir}"
         mv "{config[output_dir]}/RNA/mapped/star_se__{params.sample_name}_Log.final.out" "{output.metrics_map}"
-        rm -f {config[output_dir]}/RNA/mapped/*"{params.sample_name}_Log"*
+        rm -f {params.prefix}Log*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -458,8 +458,7 @@ rule make_rna_stranded_bigwigs:
             bedGraphToBigWig "{config[output_dir]}/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_minus}"
             bedGraphToBigWig "{config[output_dir]}/RNA/tracks/{params.sample_name}_Signal.sorted.str2.out.bg" "{input.chrom_sizes}" "{output.bw_plus}"
         fi
-        rm -f {config[output_dir]}/RNA/tracks/*"{params.sample_name}_Signal"*
-        rm -f {config[output_dir]}/RNA/tracks/*"{params.sample_name}_Log"*
+        rm -f {config[output_dir]}/RNA/tracks/bg_{params.sample_name}_* {config[output_dir]}/RNA/tracks/{params.sample_name}_Signal*
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -492,8 +491,7 @@ rule make_rna_unstranded_bigwigs:
         fi
         bedSort ${{bed1}} "{config[output_dir]}/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg"
         bedGraphToBigWig "{config[output_dir]}/RNA/tracks/{params.sample_name}_Signal.sorted.str1.out.bg" "{input.chrom_sizes}" "{output.bw_unstranded}"
-        rm -f {config[output_dir]}/RNA/tracks/*"{params.sample_name}_Signal"*
-        rm -f {config[output_dir]}/RNA/tracks/*"{params.sample_name}_Log"*
+        rm -f {config[output_dir]}/RNA/tracks/bg_{params.sample_name}_* {config[output_dir]}/RNA/tracks/{params.sample_name}_Signal*
         }} 2>&1 | tee -a "{log}"
         """
 
