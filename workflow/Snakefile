@@ -232,6 +232,7 @@ def parse_sample_name(sample_name):
             "sample_type": row["sample_type"],
             "replicate": row["replicate"],
             "ref_genome": row["ref_genome"],
+            "levels_label": row["levels_label"],
         }
     # Fallback: try analysis_samples (always returns "merged" for replicate)
     match2 = analysis_samples.loc[analysis_samples["sample_name"] == sample_name]
@@ -244,6 +245,7 @@ def parse_sample_name(sample_name):
             "sample_type": row["sample_type"],
             "replicate": "merged",
             "ref_genome": row["ref_genome"],
+            "levels_label": row["levels_label"],
         }
     raise ValueError(f"Sample '{sample_name}' not found in samples or analysis_samples")
 

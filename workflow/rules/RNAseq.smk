@@ -39,7 +39,7 @@ def assign_rna_input(wildcards):
     """Find the RNA control bam for a RAMPAGE sample.
 
     Uses the Control column when available, otherwise falls back to
-    matching by line+tissue among RNAseq samples.
+    matching by the full factor-level combination among RNAseq samples.
     """
     sname = wildcards.sample_name
     # Check if there is an explicit control in the Control column
@@ -50,21 +50,20 @@ def assign_rna_input(wildcards):
             return f"merged__{ctrl}"
         else:
             return f"final__{ctrl}"
-    # Fallback: find matching RNAseq sample by line+tissue
+    # Fallback: find matching RNAseq sample by the full factor-level combination
     parsed = parse_sample_name(sname)
     same_name = samples[
         (samples['Assay'] == 'RNAseq') &
         (samples['Genome'] == parsed['ref_genome']) &
-        (samples['line'] == parsed['line']) &
-        (samples['tissue'] == parsed['tissue'])
+        (samples['levels_label'] == parsed['levels_label'])
     ]
     if len(same_name) == 1:
         return f"final__{same_name.iloc[0]['sample_name']}"
     elif len(same_name) >= 2:
         # Multiple replicates: find the merged analysis_name for this group
         for _, r in analysis_samples.iterrows():
-            if (r['Assay'] == 'RNAseq' and r['line'] == parsed['line'] and
-                r['tissue'] == parsed['tissue'] and r['Genome'] == parsed['ref_genome']):
+            if (r['Assay'] == 'RNAseq' and r['levels_label'] == parsed['levels_label'] and
+                r['Genome'] == parsed['ref_genome']):
                 return f"merged__{r['sample_name']}"
     raise ValueError(f"\nSample '{sname}' does not have corresponding RNA control for calling TSS")
 
@@ -117,7 +116,9 @@ def define_final_rna_output(ref_genome):
                 bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{aname}__minus.bw")
 
     filtered_samples2 = samples[(samples['Assay'] == 'RNAseq') & (samples['Genome'] == ref_genome)].copy()
-    filtered_samples2['Sample'] = filtered_samples2['line'] + "__" + filtered_samples2['tissue']
+    # Group by the full factor-level combination (all factors), not just the
+    # first two — a 3+-factor design must not collapse distinct groups.
+    filtered_samples2['Sample'] = filtered_samples2['levels_label']
     if len(filtered_samples2['Sample'].drop_duplicates()) >= 2:
         deg_files.append(f"{RESULTS_DIR}/RNA/chkpts/calling_DEGs__{analysis_name}__{ref_genome}.done")
         deg_files.append(f"{RESULTS_DIR}/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
@@ -130,14 +131,14 @@ def define_final_rna_output(ref_genome):
         deg_files.append(f"{RESULTS_DIR}/RNA/DEG/genes_rpkm__{analysis_name}__{ref_genome}.txt")
 
     filtered_samples3 = samples[(samples['Assay'] == 'RAMPAGE') & (samples['Genome'] == ref_genome)].copy()
-    filtered_samples3['Sample'] = filtered_samples3['line'] + "__" + filtered_samples3['tissue']
+    filtered_samples3['Sample'] = filtered_samples3['levels_label']
     valid_samples = set(filtered_samples2['Sample'])
     for _, row in filtered_samples3.iterrows():
         if row['Sample'] in valid_samples:
             tss_files.append(f"{RESULTS_DIR}/RNA/TSS/TSS__final__{row['sample_name']}_peaks.narrowPeak")
 
     filtered_analysis_samples2 = analysis_samples[(analysis_samples['Assay'] == 'RAMPAGE') & (analysis_samples['Genome'] == ref_genome)].copy()
-    filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['line'] + "__" + filtered_analysis_samples2['tissue']
+    filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['levels_label']
     for _, row in filtered_analysis_samples2.iterrows():
         if row['Sample'] in valid_samples:
             tss_files.append(f"{RESULTS_DIR}/RNA/TSS/TSS__merged__{row['sample_name']}_peaks.narrowPeak")
@@ -508,7 +509,8 @@ rule prep_files_for_DEGs:
         temp(return_log_rna("{ref_genome}", "prep_for_DEGs", "{analysis_name}"))
     run:
         filtered_samples = samples[(samples['Assay'] == 'RNAseq') & (samples['Genome'] == params.ref_genome)].copy()
-        filtered_samples['Sample'] = filtered_samples['line'] + "__" + filtered_samples['tissue']
+        # Group by the full factor-level combination (see define_rnaseq_outputs).
+        filtered_samples['Sample'] = filtered_samples['levels_label']
         filtered_samples['Replicate'] = filtered_samples['Sample'] + "__" + filtered_samples['replicate'].astype(str)
 
         RNA_samples = filtered_samples[['Replicate','Sample']].drop_duplicates()
