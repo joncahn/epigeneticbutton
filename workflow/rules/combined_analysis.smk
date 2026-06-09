@@ -1438,7 +1438,7 @@ rule prep_browser_on_region:
                 filelist2+=("${{bw}}")
             else
                 printf "${{lab}} is empty on ${{chr}}:${{start}}-${{end}}\n"
-                grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
+                awk -v OFS="\t" -v c="${{chr}}" '$1==c {{print $1,"1",$2,"0"}}' {input.chrom_sizes} | bedtools sort -i - > "${{path}}.bg"
                 bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
                 filelist2+=("${{path}}.bw")
             fi
