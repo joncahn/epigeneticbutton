@@ -5,6 +5,7 @@ with a single importable module. All sample-sheet column names, assay
 vocabularies, environment mappings, and helper functions live here.
 """
 
+import io
 import re
 from collections import OrderedDict
 import pandas as pd
@@ -201,13 +202,18 @@ def get_seq_id_and_path(read_files_str, read_layout):
 def read_sample_sheet(filepath):
     """Read and validate a new-format sample sheet TSV.
 
-    Lines starting with '#' (and any '# ...' tail of a non-comment line)
-    are skipped as comments — useful for parking samples without deleting
-    their rows.
+    Full-line comments (lines whose first non-whitespace character is '#')
+    are skipped — useful for parking samples without deleting their rows.
+    A '#' *within* a field (e.g. a URL fragment or a path) is preserved.
 
     Returns a DataFrame sorted by [Genome, Assay, Levels, Sample_ID].
     """
-    df = pd.read_csv(filepath, sep="\t", header=0, dtype=str, comment="#")
+    # Drop full-line comments before parsing. Note: we deliberately do NOT
+    # use pandas' comment="#", which truncates every line at the first '#'
+    # and would corrupt any Read_files URL/path containing one.
+    with open(filepath) as fh:
+        lines = [ln for ln in fh if not ln.lstrip().startswith("#")]
+    df = pd.read_csv(io.StringIO("".join(lines)), sep="\t", header=0, dtype=str)
     df.columns = df.columns.str.strip()
 
     # Fill optional columns with empty strings

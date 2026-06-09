@@ -8,6 +8,12 @@ def define_input_file_for_structural(sample_name):
     nextflex_v3 = config['nextflex_v3_deduplication']
     if paired == "SE":
         return "deduplicated__{sample_name}__R0" if nextflex_v3 else "trim__{sample_name}__R0"
+    elif paired == "PE":
+        raise ValueError(
+            "Small RNA libraries are single-end by nature (inserts are "
+            "shorter than a single read), so paired-end is not supported. "
+            f"{sample_name} is marked PE — set its Read_layout to SE."
+        )
 
 def get_bt1_indices(wildcards):
     ref_genome = parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -32,8 +38,9 @@ def define_input_file_for_shortstack(sample_name):
             return "trim__{sample_name}__R0"
     elif paired == "PE":
         raise ValueError(
-            "Paired-end small RNA is not yet a feature."
-            f"{wildcards.sample_name} is set to be PE."
+            "Small RNA libraries are single-end by nature (inserts are "
+            "shorter than a single read), so paired-end is not supported. "
+            f"{sample_name} is marked PE — set its Read_layout to SE."
         )
 
 def define_input_for_grouped_analysis(ref_genome):
