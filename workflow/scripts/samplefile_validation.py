@@ -12,6 +12,26 @@ _UNSAFE_CHARS = re.compile(r'[/\\\s\'\";&|<>$`!{}()\[\]?*~#]')
 _DOUBLE_UNDERSCORE = re.compile(r'__')
 _SRA_REGEX = re.compile(r'^[SDE]RR\d+$')
 
+
+def _merge_component_kind(comp):
+    """Classify one '+'-merge component for merge-compatibility checks.
+
+    Returns 'sra', 'fastq', 'bam', 'bedmethyl', or 'other'. SRA accessions
+    and FASTQ files can be '+'-merged (concatenated after download); BAM
+    (needs samtools merge) and bedMethyl (counts must be summed) cannot.
+    """
+    first = comp.split(",")[0].strip()
+    base = first.split("?")[0].split("#")[0].lower()
+    if _SRA_REGEX.match(first):
+        return "sra"
+    if base.endswith(".bam"):
+        return "bam"
+    if base.endswith(".bed.gz") or base.endswith(".bedmethyl.gz"):
+        return "bedmethyl"
+    if any(base.endswith(e) for e in (".fastq.gz", ".fq.gz", ".fastq", ".fq")):
+        return "fastq"
+    return "other"
+
 # Assays that may declare a Control sample. RAMPAGE is normalized against
 # an RNA-seq Control rather than an IP-style Input/IgG, but the Control
 # field semantics (Sample_ID reference, no chaining) are the same.
@@ -149,15 +169,22 @@ def check_table(tab, check_paths=True):
 
         components = [c.strip() for c in read_files.split("+")]
         if len(components) > 1:
-            # '+'-merge is only wired through the SRA download path; for URL or
-            # local-path inputs only the first component would be fetched
-            # (silent data loss), so reject any non-all-SRA multi-merge.
-            non_sra = [c for c in components if not _SRA_REGEX.match(c.split(",")[0])]
-            if non_sra:
+            # '+'-merge concatenates components after download. Supported for
+            # SRA accessions and FASTQ files; BAM (needs samtools merge) and
+            # bedMethyl (counts must be summed, not concatenated) are not, and
+            # components of different types may not be mixed.
+            kinds = {_merge_component_kind(c) for c in components}
+            unmergeable = kinds & {"bam", "bedmethyl", "other"}
+            if len(kinds) > 1:
                 errors.append(
-                    f"[X] Row #{i} '{sid}': '+'-merge of multiple inputs is only "
-                    f"supported for SRA accessions; got non-SRA component(s) "
-                    f"{non_sra}. Concatenate URL/local inputs before the run."
+                    f"[X] Row #{i} '{sid}': '+'-merge components must all be the "
+                    f"same type (got {sorted(kinds)})"
+                )
+            elif unmergeable:
+                bad = sorted(unmergeable)[0]
+                errors.append(
+                    f"[X] Row #{i} '{sid}': '+'-merge is not supported for {bad} "
+                    f"inputs (only SRA accessions and FASTQ files); merge upstream instead"
                 )
         for comp in components:
             # Each component is either an SRA ID or file path(s)

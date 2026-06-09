@@ -100,6 +100,49 @@ class TestReadFilesPathExistence:
 
 
 # ---------------------------------------------------------------------------
+# Read_files: '+'-merge type compatibility (SRA + FASTQ mergeable; BAM,
+# bedMethyl, and mixed-type merges rejected)
+# ---------------------------------------------------------------------------
+
+class TestMergeTypeCompatibility:
+    def test_sra_merge_ok(self):
+        df = pd.DataFrame([_row("s1", "RNAseq", "SRR111+SRR222")])
+        check_table(df, check_paths=False)  # no raise
+
+    def test_fastq_se_merge_ok(self):
+        df = pd.DataFrame([_row("s1", "RNAseq", "/d/a.fq.gz+/d/b.fq.gz")])
+        check_table(df, check_paths=False)  # no raise
+
+    def test_fastq_pe_merge_ok(self):
+        rf = "/d/a_R1.fq.gz,/d/a_R2.fq.gz+/d/b_R1.fq.gz,/d/b_R2.fq.gz"
+        df = pd.DataFrame([_row("s1", "RNAseq", rf, layout="PE")])
+        check_table(df, check_paths=False)  # no raise
+
+    def test_fastq_url_merge_ok(self):
+        rf = "https://h/a.fq.gz+https://h/b.fq.gz"
+        df = pd.DataFrame([_row("s1", "RNAseq", rf)])
+        check_table(df, check_paths=False)  # no raise
+
+    def test_bam_merge_rejected(self):
+        df = pd.DataFrame([_row("s1", "RNAseq", "/d/a.bam+/d/b.bam")])
+        with pytest.raises(ValueError) as e:
+            check_table(df, check_paths=False)
+        assert "not supported for bam" in str(e.value)
+
+    def test_bedmethyl_merge_rejected(self):
+        df = pd.DataFrame([_row("s1", "dmC", "/d/a.bed.gz+/d/b.bed.gz")])
+        with pytest.raises(ValueError) as e:
+            check_table(df, check_paths=False)
+        assert "not supported for bedmethyl" in str(e.value)
+
+    def test_mixed_type_merge_rejected(self):
+        df = pd.DataFrame([_row("s1", "RNAseq", "SRR111+/d/b.fq.gz")])
+        with pytest.raises(ValueError) as e:
+            check_table(df, check_paths=False)
+        assert "same type" in str(e.value)
+
+
+# ---------------------------------------------------------------------------
 # Genome config: file existence
 # ---------------------------------------------------------------------------
 

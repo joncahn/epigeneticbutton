@@ -181,12 +181,14 @@ def get_seq_id_and_path(read_files_str, read_layout):
                     break
             return seq_id, first_file
         elif any(check_name.endswith(ext) for ext in _FASTQ_EXTENSIONS):
+            # Carry ALL '+'-components so the download rules can merge them
+            # (each component is one SE file or a comma-separated R1,R2 pair).
             if _is_url(first_file):
                 # FASTQ URL(s): use "URL" sentinel so download rules can dispatch
-                return "URL", parts[0]
+                return "URL", "+".join(parts)
             else:
                 # Explicit FASTQ path(s): pass through the full Read_files string
-                return "EXPLICIT", parts[0]
+                return "EXPLICIT", "+".join(parts)
         else:
             raise ValueError(
                 f"Unrecognized Read_files format: '{read_files_str}'. "
