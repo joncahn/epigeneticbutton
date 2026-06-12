@@ -67,6 +67,23 @@ ASSAY_TO_PEAKTYPE = {
 }
 
 # ---------------------------------------------------------------------------
+# Small helpers
+# ---------------------------------------------------------------------------
+
+def _row_apply(df, func):
+    """Like ``df.apply(func, axis=1)`` but safe on an empty DataFrame.
+
+    ``DataFrame.apply(..., axis=1)`` returns an empty *DataFrame* (not a
+    Series) when there are no rows, which cannot be assigned back to a single
+    column. An empty sheet is a legitimate input (e.g. ``snakemake --unlock``
+    parses the workflow without a real sample sheet), so guard against it.
+    """
+    if len(df) == 0:
+        return pd.Series(dtype=object)
+    return df.apply(func, axis=1)
+
+
+# ---------------------------------------------------------------------------
 # Levels helpers
 # ---------------------------------------------------------------------------
 
@@ -375,8 +392,8 @@ def get_analysis_samples(df):
     non_control = df[~df["Sample_ID"].isin(controls)].copy()
 
     # Deduplicate by analysis key
-    non_control["_analysis_key"] = non_control.apply(
-        lambda row: build_analysis_key(row), axis=1
+    non_control["_analysis_key"] = _row_apply(
+        non_control, lambda row: build_analysis_key(row)
     )
 
     # Detect mixed PE/SE within analysis groups before deduplication
@@ -493,7 +510,7 @@ def add_compat_columns(df):
             return row["IP_target"] if row["IP_target"] else row["Assay"]
         return row["Assay"]
 
-    df["sample_type"] = df.apply(_derive_sample_type, axis=1)
+    df["sample_type"] = _row_apply(df, _derive_sample_type)
 
     # extra_info: IP_target or "N/A"
     df["extra_info"] = df["IP_target"].apply(
@@ -518,7 +535,7 @@ def add_compat_columns(df):
         _, fq_path = get_seq_id_and_path(row["Read_files"], row["Read_layout"])
         return fq_path
 
-    df["seq_id"] = df.apply(_derive_seq_id, axis=1)
-    df["fastq_path"] = df.apply(_derive_fastq_path, axis=1)
+    df["seq_id"] = _row_apply(df, _derive_seq_id)
+    df["fastq_path"] = _row_apply(df, _derive_fastq_path)
 
     return df

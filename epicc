@@ -197,16 +197,17 @@ def maybe_render_graphs(args):
 
 
 def maybe_clear_stale_lock(args, repo):
-    """Auto-unlock the working directory if a stale Snakemake lock is found.
+    """Clear a stale Snakemake lock before running, but only if opted in.
 
     Killed runs (SLURM timeouts, Ctrl-C, node failures) leave files in
-    `.snakemake/locks/` that block subsequent invocations until manually
-    cleared. We can't reliably detect a *live* concurrent coordinator in a
-    cluster environment (it could be on any node, and the lock files contain
-    no PID/host info), so we just clear non-empty locks with a visible notice.
-    Pass --no-auto-unlock to disable this behavior.
+    `.snakemake/locks/` that block subsequent invocations until cleared. By
+    default we mirror snakemake and leave the lock in place — a lock can also
+    mean another run is genuinely active, and we can't reliably detect a live
+    concurrent coordinator in a cluster environment (it could be on any node,
+    and the lock files contain no PID/host info). Pass --auto-unlock to clear
+    it automatically; otherwise the user is directed to 'epicc unlock'.
     """
-    if getattr(args, "no_auto_unlock", False):
+    if not getattr(args, "auto_unlock", False):
         return
     # Installed mode: .snakemake/ is in the user's project CWD, not the repo.
     run_dir = Path.cwd() if _is_installed_mode() else repo
@@ -214,15 +215,12 @@ def maybe_clear_stale_lock(args, repo):
     if not locks.exists() or not any(locks.iterdir()):
         return
     print("=" * 72, file=sys.stderr)
-    print("EPICC WARNING: a Snakemake lock was found in this directory.",
+    print("EPICC WARNING: a Snakemake lock was found; --auto-unlock is set,",
           file=sys.stderr)
-    print("  Assuming it is stale (a prior run was killed) and auto-unlocking.",
+    print("  so it is being cleared. If another epicc/snakemake run is ACTIVE",
           file=sys.stderr)
-    print("  If another epicc/snakemake run is ACTIVE on this same directory,",
+    print("  on this same directory, unlocking will corrupt its state.",
           file=sys.stderr)
-    print("  unlocking will corrupt its state. Re-run with --no-auto-unlock",
-          file=sys.stderr)
-    print("  to leave the lock in place.", file=sys.stderr)
     print("=" * 72, file=sys.stderr)
     cmd = ["snakemake", "--unlock", "--configfile", args.options]
     if _is_installed_mode():
@@ -1393,9 +1391,11 @@ def add_run_options(parser):
         help="Force re-execution of specific rules",
     )
     parser.add_argument(
-        "--no-auto-unlock", action="store_true",
-        help="Don't auto-unlock the working directory if a stale Snakemake "
-             "lock is detected at startup (default: auto-unlock with notice)",
+        "--auto-unlock", action="store_true",
+        help="If a stale Snakemake lock is detected at startup, clear it and "
+             "continue (default: halt and report the lock, like snakemake). "
+             "Only use when you are sure no other run is active on this "
+             "directory; run 'epicc unlock' to clear a lock manually",
     )
     parser.add_argument(
         "--no-rerun-incomplete", action="store_true",

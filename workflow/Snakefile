@@ -14,6 +14,7 @@ from scripts.samplefile_validation import (
     check_table, check_genome_config, check_extra_output_files,
 )
 from scripts.sample_sheet import (
+    NEW_COLNAMES,
     VALID_ASSAYS, ASSAY_TO_ENV, ASSAY_TO_PEAKTYPE,
     parse_levels, levels_to_label, levels_to_factors,
     parse_read_files, get_seq_id_and_path,
@@ -165,19 +166,31 @@ analysis_name = config["analysis_name"]
 # ---------------------------------------------------------------------------
 # Read and validate sample sheet (new format)
 # ---------------------------------------------------------------------------
-if not config.get("sample_file"):
-    sys.exit(
-        "Error: No sample sheet specified. Set `sample_file:` in your options "
-        "YAML or pass --config sample_file=PATH (or use `epicc run --samples "
-        "PATH`). See config/example_samples.tsv for a documented template."
-    )
-samples = read_sample_sheet(config["sample_file"])
-check_table(samples)
-check_genome_config(samples, config)
-check_extra_output_files(config)
+# `snakemake --unlock` only removes lock files, but it still parses the whole
+# workflow first — so it would otherwise trip the no-sample-sheet guard below.
+# Unlocking needs no sample sheet, so when unlocking we build an empty one,
+# which lets the rule modules parse (their module-level sample lookups are
+# empty-safe) and skip sample validation entirely.
+UNLOCKING = "--unlock" in sys.argv
 
-# Add backward-compatible columns derived from new-format fields
-samples = add_compat_columns(samples)
+if not config.get("sample_file"):
+    if not UNLOCKING:
+        sys.exit(
+            "Error: No sample sheet specified. Set `sample_file:` in your options "
+            "YAML or pass --config sample_file=PATH (or use `epicc run --samples "
+            "PATH`). See config/example_samples.tsv for a documented template."
+        )
+    samples = add_compat_columns(
+        pd.DataFrame({c: pd.Series(dtype=str) for c in NEW_COLNAMES})
+    )
+else:
+    samples = read_sample_sheet(config["sample_file"])
+    check_table(samples)
+    check_genome_config(samples, config)
+    check_extra_output_files(config)
+
+    # Add backward-compatible columns derived from new-format fields
+    samples = add_compat_columns(samples)
 
 # Check for unknown envs
 unknowns = samples.loc[samples["env"].isna(), "Assay"].unique()
@@ -209,9 +222,10 @@ analysis_samples = get_analysis_samples(samples)
 analysis_samples = add_compat_columns(analysis_samples)
 
 # Build analysis_samples with sample_name = analysis name (for backward compat)
-analysis_samples["sample_name"] = analysis_samples.apply(
-    lambda row: build_analysis_name(row), axis=1
-)
+if not analysis_samples.empty:
+    analysis_samples["sample_name"] = analysis_samples.apply(
+        lambda row: build_analysis_name(row), axis=1
+    )
 
 pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
 analysis_samples[["Assay", "Genome", "Levels", "IP_target", "env", "sample_name"]].to_csv(pathtoanalysisfile, sep="\t", index=False)
