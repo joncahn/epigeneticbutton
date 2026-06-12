@@ -196,6 +196,20 @@ def maybe_render_graphs(args):
     return written
 
 
+def _lock_present(repo):
+    """Return True if Snakemake's lock directory holds any lock files.
+
+    Snakemake releases its lock on a clean exit and on most in-run failures,
+    so a non-empty lock dir means either a run was killed (SLURM timeout,
+    Ctrl-C, node/power loss) or a run was just refused because the lock was
+    already there — exactly the cases where 'epicc unlock' is the fix.
+    """
+    # Installed mode: .snakemake/ is in the user's project CWD, not the repo.
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    locks = run_dir / ".snakemake" / "locks"
+    return locks.exists() and any(locks.iterdir())
+
+
 def maybe_clear_stale_lock(args, repo):
     """Clear a stale Snakemake lock before running, but only if opted in.
 
@@ -209,11 +223,9 @@ def maybe_clear_stale_lock(args, repo):
     """
     if not getattr(args, "auto_unlock", False):
         return
-    # Installed mode: .snakemake/ is in the user's project CWD, not the repo.
-    run_dir = Path.cwd() if _is_installed_mode() else repo
-    locks = run_dir / ".snakemake" / "locks"
-    if not locks.exists() or not any(locks.iterdir()):
+    if not _lock_present(repo):
         return
+    run_dir = Path.cwd() if _is_installed_mode() else repo
     print("=" * 72, file=sys.stderr)
     print("EPICC WARNING: a Snakemake lock was found; --auto-unlock is set,",
           file=sys.stderr)
@@ -650,6 +662,17 @@ def cmd_run(args, extra_args):
     else:
         print(f"EPICC: Pipeline failed after {fmt_duration(elapsed)} "
               f"(exit code {result.returncode}).", file=sys.stderr)
+        # A leftover lock means a prior run was killed, or this run was
+        # refused because the directory is already locked. Point users at the
+        # epicc subcommand rather than snakemake's raw `--unlock` suggestion.
+        if _lock_present(repo):
+            print(
+                "\n  The working directory is locked. If no other epicc run is "
+                "active here, a\n  prior run was likely killed — clear the lock "
+                "with:\n      epicc unlock\n  or re-run with 'epicc run "
+                "--auto-unlock' to clear it automatically.",
+                file=sys.stderr,
+            )
         # Some clusters reject `conda env create --prefix` from inside a
         # SLURM job allocation, while the same install works from a login
         # node (issue #25). Detect the symptom in the snakemake log and
