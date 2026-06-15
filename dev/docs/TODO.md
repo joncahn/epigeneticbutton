@@ -25,7 +25,7 @@
 
 ### Distribution
 
-* [x] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster. **Done**: Added `epicc init-profile TYPE [NAME]` subcommand (copies bundled profile template to `~/.config/snakemake/<name>/config.yaml`, the XDG path Snakemake searches when `--profile <name>` is used). `find_repo_root()` now detects conda-installed layout (`$PREFIX/share/epicc/`); all command handlers skip `os.chdir(repo)` in installed mode and inject `--snakefile` so Snakemake finds the workflow without needing CWD = repo root. `check_profile_placeholders()` resolves XDG-named profiles. README cluster-setup section updated with both setup paths (init-profile and in-place edit). Packaging infrastructure: `pyproject.toml` (metadata + note on pip-install gap), `conda-recipe/meta.yaml` (Bioconda-ready recipe skeleton). Remaining gap: pip wheel install requires renaming `epicc` → `epicc.py` for `console_scripts`; deferred until Bioconda submission is confirmed working.
+* [~] **High priority** Prepare for bioconda distribution - sticking point: snakemake execution profiles, investigate snakemake default search paths for these profiles, update README with information on how users can adapt to their cluster. **Done**: Added `epicc init-profile TYPE [NAME]` subcommand (copies bundled profile template to `~/.config/snakemake/<name>/config.yaml`, the XDG path Snakemake searches when `--profile <name>` is used). `find_repo_root()` now detects conda-installed layout (`$PREFIX/share/epicc/`); all command handlers skip `os.chdir(repo)` in installed mode and inject `--snakefile` so Snakemake finds the workflow without needing CWD = repo root. `check_profile_placeholders()` resolves XDG-named profiles. README cluster-setup section updated with both setup paths (init-profile and in-place edit). Packaging infrastructure: `pyproject.toml` (metadata + note on pip-install gap), `conda-recipe/meta.yaml` (Bioconda-ready recipe skeleton). Remaining gap: pip wheel install requires renaming `epicc` → `epicc.py` for `console_scripts`; deferred until Bioconda submission is confirmed working.
 
 ### Performance/Resource Usage
 
@@ -36,7 +36,7 @@
     - BAM input handling: `get_available_bam` globs the file path as a directory (`ls "$bam_path"/*"$seq_id"*.bam` with `bam_path` = the full file path) and has no URL-download branch — so local/URL BAM inputs through this rule look broken (untested; no test exercises it). Fix that before adding BAM `+`-merge (the reason BAM merge was left out of the FASTQ-merge feature).
     - Substring-matching cluster: UpSet `grep(type, colnames)` in `R_Upset_plot_{peaks,TSS,clusters}.R` and the `multiBigwigSummary` column-pick `$i~t` in `combined_analysis.smk` — column names embed the type as a substring, so the match is load-bearing; needs a real run to verify the exact (quoted) header format before anchoring. Bites only when one mark/label name is a substring of another.
     - Perf (out of scope for this bug pass): CX report re-read 3x per replicate (`R_cache_mc_replicate_for_context.R` — see the existing mC-bigwig TODO); bowtie2 sort hardcoded `-@ 2` while chromap uses `{threads}` (`ChIPseq.smk`); structural-RNA cmscan thread math underutilizes cores (`environment_setup.smk`); `dispatch_final_bam` cp vs hardlink.
-    - RPKM: `R_gene_expression_rpkm.R` reports reads/kb without library-depth normalization while labeling the column RPKM — decide normalize vs rename.
+    - RPKM: `R_gene_expression_rpkm.R` reports reads/kb without library-depth normalization while labeling the column RPKM — decide normalize vs rename. Decicion: Normalize.
     - Conversion-control chromosomes hardcoded to plastid names in `mC.smk` (no lambda/pUC spike-in support) — make a config key.
     - Snakemake `--dag`/`--rulegraph` (and thus `epicc validate --dag`) crash with this snakemake version on checkpoint DAGs (`AttributeError: 'NoneType'.edit_notebook` in `printdag`); pre-existing, unrelated to pipeline content. The 3 failing pombe-dryrun `TestDAGStructure` tests are this.
 
@@ -56,6 +56,20 @@
 ### Known Issues/Bugs
 
 * [x] Chromap PE rarely sets the `0x2` proper-pair flag on highly repetitive references (observed 0.02% on ColCEN CenH3, 33% on ColCEN ATAC, vs. typical ~80%+ for bowtie2). **Resolved**: A/B test on S. pombe PE ChIP confirmed root cause — chromap maps ends independently; when one mate multi-maps (MAPQ 0) and the other maps uniquely, `samtools view -q 10` keeps only the unique mate, producing orphan reads with no proper-pair flag. bowtie2 99.4–99.8% vs chromap 11–28% properly paired on non-repetitive pombe data. Fix: switched default aligner to bowtie2 (`chip_aligner: "bowtie2"`, `atac_aligner: "bowtie2"`). chromap remains available as a speed-optimized option for SE-only datasets.
+
+## Epic-builder
+
+* [ ] Can deletion of rows require confirmation, or is there a way to have a "undo" arrow? (deleting a row or the whole table can be very quick - 1 misclick between duplicate and delete)
+
+* [ ] Remove tabs and white spaces from all columns before exporting sample sheet (can trigger column misalignement and errors in sample sheet loading if invisble tab present from copying SRR number for example)
+
+* [ ] When duplicating multiple rows, can the rows be as one block at the bottom of the table rather than each copied row under it's original? Easier to modifiy by sample type this way.
+
+* [ ] Could an export option be a code block (i.e. printf "..." > sample_sheet.tsv) that can be pasted directly on cluster? with the sample file label chosen on top which automatically populates the epicc-options field? (not sure if it is that useful since it could still be pasted in a wrong directory)
+
+* [ ] Motifs analysis can be merged with the other output options
+
+* [ ] Some details/explanations would be useful when selecting some parameters (WGBS directionality, RNAseq strandedness, ...)
 
 ## Deferred
 
@@ -116,6 +130,8 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 N.B. we'll work on plotting improvements in a separate branch after the Big Refactor is complete
 
 * [ ] **Defer** See if we can improve browser plot sample label readability
+
+* [ ] **Defer** In Plot Expression script, DOWN/UP color coding is based on "unique DEGS", i.e. genes differentially expressed in one sample vs all others, but does not show pairwise comparisons. Could be good to implement pairwise t-test with p-value/significance showing between all pairs of samples instead (or as a toggle option).
 
 * [ ] **Defer** In plotting peak stats, for now only the first 2 reps are used (empty if not, and idr only between these 2). Would be best to allow for a flexible output where all reps are shown, and all pairwise idr too. Need refactoring the way stats are compiled.
 
