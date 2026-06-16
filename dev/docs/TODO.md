@@ -40,6 +40,8 @@
     - Conversion-control chromosomes hardcoded to plastid names in `mC.smk` (no lambda/pUC spike-in support) — make a config key.
     - Snakemake `--dag`/`--rulegraph` (and thus `epicc validate --dag`) crash with this snakemake version on checkpoint DAGs (`AttributeError: 'NoneType'.edit_notebook` in `printdag`); pre-existing, unrelated to pipeline content. The 3 failing pombe-dryrun `TestDAGStructure` tests are this.
 
+* [ ] Remove all functions/scripts used for backward compatibility with previous config. 
+
 ### Testing
 
 #### ColCEN
