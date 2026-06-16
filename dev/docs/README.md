@@ -73,6 +73,7 @@ timing, phase summaries, slowest individual jobs, and parallelism stats.
 python dev/profile_snakemake_log.py --latest                # markdown to stdout
 python dev/profile_snakemake_log.py --latest --html r.html  # self-contained HTML with Gantt chart
 python dev/profile_snakemake_log.py .snakemake/log/<file>.snakemake.log
+python dev/profile_snakemake_log.py results/                # aggregate a run by its output_dir
 ```
 
 ## Project layout (dev-relevant)

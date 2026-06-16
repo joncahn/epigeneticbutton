@@ -73,12 +73,13 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 ### Tools
 
 - `tools/epicc-builder.html` - Self-contained HTML5 app for building sample sheets and options files. Tabulator-based editor with validation, dynamic factor columns, per-cell examples, and YAML options export. Open directly in a browser.
-- `dev/profile_snakemake_log.py` - Snakemake log profiler. Parses `.snakemake/log/*.snakemake.log` files and reports per-rule timing, phase summary, slowest jobs, and parallelism stats. Supports markdown (stdout) and self-contained HTML with Gantt timeline chart. Default mode auto-aggregates all logs from the same resumed run, identified by `output_dir` + `analysis_name` wildcards extracted from log content (not timestamps).
+- `dev/profile_snakemake_log.py` - Snakemake log profiler. Parses `.snakemake/log/*.snakemake.log` files and reports per-rule timing, phase summary, slowest jobs, and parallelism stats. Supports markdown (stdout) and self-contained HTML with Gantt timeline chart. Default mode auto-aggregates all logs from the same resumed run, identified by `output_dir` + `analysis_name` wildcards extracted from log content (not timestamps). The positional argument accepts either a single `.snakemake.log` file or a run's results directory (`output_dir`) — passing a directory aggregates every log matching that `output_dir` signature.
   ```bash
   python dev/profile_snakemake_log.py                       # aggregate latest run
   python dev/profile_snakemake_log.py --html r.html         # HTML report
   python dev/profile_snakemake_log.py --single              # newest log only
   python dev/profile_snakemake_log.py path/to/log.snakemake.log
+  python dev/profile_snakemake_log.py results/              # aggregate a run by its output_dir
   ```
 - `scripts/subset_test_data.sh` - SLURM-based test data preparation. Downloads SRA data, aligns to a full reference, and subsets reads mapping to a target region (e.g. chr21) for use as integration test fixtures. Self-resubmitting controller with three phases (index, per-sample, gather).
 

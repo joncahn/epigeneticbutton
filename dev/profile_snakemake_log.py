@@ -665,13 +665,17 @@ def extract_run_signature(path, max_hits=200):
     return (output_dir, frozenset(analysis_names))
 
 
-def find_run_logs():
+def find_run_logs(output_dir=None):
     """Return (logs_in_run, signature) for the most recently active resumed run.
 
     Walks logs newest-first to find the most recent log with an extractable
     signature, then collects all logs sharing the same output_dir and either
     overlapping or empty analysis_name sets. Falls back to the newest log alone
     if no signature can be extracted.
+
+    If ``output_dir`` is given, anchor on that output_dir instead of the most
+    recent run: collect every log whose captured output_dir matches it. This is
+    how a run is selected by its results directory (``epicc perf RESULTS_DIR``).
     """
     log_dir = Path(".snakemake/log")
     if not log_dir.exists():
@@ -679,6 +683,27 @@ def find_run_logs():
     logs = sorted(log_dir.glob("*.snakemake.log"))
     if not logs:
         sys.exit("No Snakemake log files found.")
+
+    if output_dir is not None:
+        want = str(Path(output_dir))
+        matched = []
+        names_seen = set()
+        available = set()
+        for p in logs:
+            sig = extract_run_signature(p)
+            if sig is None:
+                continue
+            out_dir, names = sig
+            available.add(out_dir)
+            if str(Path(out_dir)) != want:
+                continue
+            matched.append(p)
+            names_seen |= names
+        if not matched:
+            hint = ("\nOutput dirs seen in .snakemake/log: "
+                    + ", ".join(sorted(available))) if available else ""
+            sys.exit(f"No logs found for output_dir '{output_dir}'.{hint}")
+        return matched, (want, frozenset(names_seen))
 
     target_sig = None
     for p in reversed(logs):
@@ -707,7 +732,10 @@ def find_run_logs():
 
 def main():
     parser = argparse.ArgumentParser(description="Profile a Snakemake run from its log file.")
-    parser.add_argument("logfile", nargs="?", help="Path to a specific .snakemake.log file")
+    parser.add_argument("logfile", nargs="?",
+                        help="Path to a specific .snakemake.log file, or a run's "
+                             "results directory (output_dir) to aggregate all of "
+                             "that run's logs")
     parser.add_argument("--latest", action="store_true",
                         help="(Default) Aggregate logs from the most recent resumed run")
     parser.add_argument("--single", action="store_true",
@@ -744,7 +772,12 @@ def main():
         logpath = Path(args.logfile)
         if not logpath.exists():
             sys.exit(f"Log file not found: {logpath}")
-        logs_to_parse = [logpath]
+        if logpath.is_dir():
+            # A run's results directory (output_dir) was given — select every
+            # log belonging to that run rather than treating it as a logfile.
+            logs_to_parse, signature = find_run_logs(output_dir=logpath)
+        else:
+            logs_to_parse = [logpath]
     elif args.single:
         logs_to_parse = [find_latest_log()]
     else:

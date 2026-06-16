@@ -1687,7 +1687,8 @@ def build_parser():
     )
     p_perf.add_argument(
         "logfile", nargs="?",
-        help="Path to a specific .snakemake.log file "
+        help="Path to a specific .snakemake.log file, or a run's results "
+             "directory (output_dir) to aggregate that run's logs "
              "(default: aggregate latest run)",
     )
     p_perf.add_argument(
