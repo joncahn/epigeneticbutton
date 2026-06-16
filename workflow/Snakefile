@@ -61,11 +61,12 @@ def print_banner():
     for line in banner_lines:
         print_to_tty_or_stdout(line, color="green")
 
-try:
-    with open("/dev/tty", "w") as tty:
-        print_banner()
-except OSError:
-    pass
+# The banner ("you pushed the epigenetic button") is printed from the
+# `onstart` handler below, not here at parse time. Snakemake only fires
+# `onstart` when a run actually begins executing jobs — never on dry-run,
+# unlock, --dag, --list, env pre-build, and the like. That keeps the banner
+# tied to a genuine run without having to enumerate every administrative
+# invocation that merely parses the workflow.
 
 # Configuration
 configfile: "config/epicc-options.yaml"
@@ -339,6 +340,11 @@ rule combined_analysis:
         """
         touch {output.chkpt}
         """ 
+
+# Start message — fires only when a run actually begins executing jobs, so the
+# banner never appears on dry-run/unlock/--dag/--list/env-build invocations.
+onstart:
+    print_banner()
 
 # Exit message
 onsuccess:
