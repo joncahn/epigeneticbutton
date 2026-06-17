@@ -149,6 +149,8 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [ ] **Defer** Add helper script, epicc command or a specific argument in epicc ouput to help generate input files for the different plot-type of epicc output from different output files of epicc run. For example, to make a files for --plot-type browser (bed-like with optional highlights) of the 24nt clusters DEG in one sample. Might be tricky to fully generalize, but should be relatively easy to do from main output (DMRs, peaks, RNAseq DEGs, sRNA clusters).
 
+* [ ]  **Defer** Improve cutomization of plots (colors, number of metaplots per line, tick labels, etc..) through CLI parameters; maybe exclusively for epicc output; mimicking all/most/some deeptools options (colors may be done through exisitng define_key_for_plots), adding options to pass deeptools parameters directly to epicc command (e.g. epicc output --plot-type metaplot --deeptools startLabel=Start endLabel="")
+
 ### Codebase Hygiene
 
 * [ ] **Defer** Improve logging system (naming, concatenating, and cleaning if chosen) - currently lots of redundancy.
