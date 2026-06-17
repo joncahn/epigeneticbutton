@@ -14,7 +14,7 @@ genome_dir: "genomes_test_colcen"
 full_analysis: true
 te_analysis: true
 QC_option: "none"
-GO: false
+GO: true   # exercises create_GO_database (org.Athaliana.eg.db build + install); see test_colcen_postrun.py
 trimmed_fastqs: false
 aligned_bams: false
 structural_rna_depletion: false

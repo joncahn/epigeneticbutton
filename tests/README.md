@@ -124,6 +124,16 @@ snakemake --configfile tests/integration/data/test_options_colcen.yaml --dry-run
     -- results_test_colcen/combined/chkpts/ref__ColCEN.done
 ```
 
+This config sets `GO: true`, so a full run builds and installs the per-genome
+GO package `genomes_test_colcen/ColCEN/GO/org.Athaliana.eg.db` (the
+`create_GO_database` -> `makeOrgPackage` -> `install.packages` path — the only
+integration coverage of it; see issue #33). After a completed run, validate the
+GO database with the post-run tests:
+
+```bash
+pytest tests/integration/test_colcen_postrun.py -v -m slow
+```
+
 ## Running Tests
 
 ```bash

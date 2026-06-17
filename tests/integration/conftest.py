@@ -81,6 +81,13 @@ def load_output_dir(options_filename):
         return yaml.safe_load(f).get("output_dir", "results")
 
 
+def load_genome_dir(options_filename):
+    """Load genome_dir from a test options YAML file."""
+    options_path = DATA_DIR / options_filename
+    with open(options_path) as f:
+        return yaml.safe_load(f).get("genome_dir", "genomes")
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
