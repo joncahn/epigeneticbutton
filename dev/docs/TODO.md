@@ -118,6 +118,13 @@ To look for novel splicing changes that occurred within the mC reader mutants, t
 
 * [ ] **defer** Related to the configuration fileset above, the parameters for DMR analysis should be more easily customizable, to allow for different . While the custom script allows this, being able to pass the DMR parameters more explicitly could be useful, including as a list of different combinations of values to try (e.g. 50, 100, 150bp windows; min_c cutoff: 3,5,10; diff_cutoff: 0.1, 0.2). To do this, these parameters should either be top-levels in epicc-options (and allow for lists of parameters), or potentially managed through a specific CLI argument --DMR_parameters.
 
+
+#### Differential peaks
+
+* [ ] **defer** Summaries differential peaks from MA norm.
+
+* [ ] **defer** Replace MAnorm with more recent approaches (DiffBind) which can incorporate replicates and adapt the code to use them appropriately. Provide a toggle to choose beteen using selected peaks, idr peaks or replicated peaks for differential analysis.
+
 ### UI/UX
 
 #### custom adapter handling
