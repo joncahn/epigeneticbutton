@@ -1299,7 +1299,7 @@ rule find_motifs_in_file:
         printf "\nGetting motifs for {params.peak_file} with meme version:\n"
         meme -version
         meme-chip -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
-        if [[ -s {config[output_dir]}/{params.env}/{params.peak_file}/meme/combined.meme ]]; then
+        if [[ -s {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme ]]; then
             printf "\nLooking for similar motifs in JASPAR database with tomtom\n"
             tomtom -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/tomtom/ {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme {params.jaspar_db}
         fi
