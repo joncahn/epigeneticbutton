@@ -442,9 +442,11 @@ heat_mcg: 100
 heat_mchg: 60
 heat_mchh: 40
 
-# For TF motifs analysis using meme
-motifs: true # change to false for motifs on final selected peaks
-motifs_allreps: false # change to true for motifs analysis on all replicates for TF ChIP-seq
+# Motif discovery (meme-chip + tomtom) for narrow-peak assays: ChIP_narrow,
+# CUT_RUN_narrow, CUT_TAG_narrow, and ATAC (when called narrow). Runs on each
+# analysis sample's selected peaks (and IDR peaks when >=2 reps).
+motifs: true # set false to disable motif discovery
+motifs_allreps: false # set true to also run motifs on every individual replicate
 jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
 
 ## optional targets for extra output

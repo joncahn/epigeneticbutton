@@ -429,8 +429,34 @@ def define_final_chip_output(ref_genome):
             bigwig_files.append(f"{RESULTS_DIR}/{env}/tracks/FC__merged__{aname}.bw")
             stat_files.append(f"{RESULTS_DIR}/{env}/chkpts/idr__{aname}.done")
 
-    # Motif analysis for TF (now subsumed under ChIP env - only if data contains TF-like samples)
-    # Note: TF env is eliminated; motif_files only apply if explicitly configured
+    # Motif discovery for narrow-peak (TF-like) IP assays. The pre-refactor
+    # pipeline keyed this on a dedicated "TF" env; that env is gone, so we now
+    # select narrow assays (ChIP_narrow / CUT_RUN_narrow / CUT_TAG_narrow) via
+    # ASSAY_TO_PEAKTYPE. Motif-around-summit is meaningful for narrow
+    # (point-source) peaks, not broad histone domains.
+    def _is_narrow(assay):
+        return ASSAY_TO_PEAKTYPE.get(assay, "broad") == "narrow"
+
+    narrow_analysis = filtered_analysis_samples[
+        filtered_analysis_samples['Assay'].map(_is_narrow)
+    ]
+    for _, row in narrow_analysis.iterrows():
+        aname = row['sample_name']
+        env = row['env']
+        motif_files.append(f"{RESULTS_DIR}/{env}/chkpts/motifs__selected_peaks__{aname}.done")
+        if len(get_replicate_sample_ids(aname, samples)) >= 2:
+            motif_files.append(f"{RESULTS_DIR}/{env}/chkpts/motifs__idr_peaks__{aname}.done")
+
+    # Per-replicate motif discovery (allreps path) for narrow rep samples.
+    narrow_rep_samples = filtered_rep_samples_no_input[
+        filtered_rep_samples_no_input['Assay'].map(_is_narrow)
+    ]
+    for _, row in narrow_rep_samples.iterrows():
+        sname = row['sample_name']
+        env = row['env']
+        pe = "pe" if row['paired'] == "PE" else "se"
+        allrep_files.append(f"{RESULTS_DIR}/{env}/chkpts/motifs__peaks_{pe}__final__{sname}_peaks.done")
+
     # Pairwise differential peaks (MAnorm) for ChIP
     chip_analysis_samples = analysis_samples[(analysis_samples["env"] == "ChIP") & (analysis_samples["ref_genome"] == ref_genome)].copy()
     for ip_target, group in chip_analysis_samples.groupby("sample_type"):
@@ -1267,7 +1293,7 @@ rule find_motifs_in_file:
         temp_fa = temp(f"{RESULTS_DIR}/{{env}}/motifs/temp_regions_{{peak_file}}.fa"),
         touch = f"{RESULTS_DIR}/{{env}}/chkpts/motifs__{{peak_file}}.done"
     wildcard_constraints:
-        env = "ChIP"
+        env = "ChIP|ATAC"
     params:
         env = lambda wildcards: wildcards.env,
         peak_file = lambda wildcards: wildcards.peak_file,

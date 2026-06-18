@@ -5,11 +5,15 @@ def define_final_atac_output(ref_genome):
     analysis = config['full_analysis']
     trimmed_fastqs = config['trimmed_fastqs']
     aligned_bams = config['aligned_bams']
+    motifs = config['motifs']
+    motifs_allreps = config['motifs_allreps']
     map_files = []
     stat_files = []
     qc_files = []
     peak_files = []
     bigwig_files = []
+    motif_files = []
+    allrep_files = []
 
     filtered_rep_samples = samples[ (samples['env'] == 'ATAC') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
@@ -51,6 +55,19 @@ def define_final_atac_output(ref_genome):
         sample2 = b._asdict()['sample_name']
         peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
 
+    # Motif discovery. ATAC peaks are point-source (open-chromatin summits), so
+    # motif-around-summit is meaningful when peaks are called narrow. The
+    # shared find_motifs_in_file rule (ChIPseq.smk) handles env=ATAC.
+    if peaktype == "narrow":
+        for _, row in filtered_analysis_samples.iterrows():
+            spname = row['sample_name']
+            motif_files.append(f"{RESULTS_DIR}/ATAC/chkpts/motifs__selected_peaks__{spname}.done")
+            if len(get_replicate_sample_ids(spname, samples)) >= 2:
+                motif_files.append(f"{RESULTS_DIR}/ATAC/chkpts/motifs__idr_peaks__{spname}.done")
+        for _, row in filtered_rep_samples.iterrows():
+            sname = row['sample_name']
+            allrep_files.append(f"{RESULTS_DIR}/ATAC/chkpts/motifs__peaks_atac__final__{sname}_peaks.done")
+
     results = map_files + bigwig_files
 
     if qc_option == "all":
@@ -58,6 +75,12 @@ def define_final_atac_output(ref_genome):
 
     if analysis:
         results += peak_files + stat_files
+
+    if motifs:
+        results += motif_files
+
+    if motifs_allreps:
+        results += allrep_files
 
     return results
 
