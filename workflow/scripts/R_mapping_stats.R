@@ -14,14 +14,14 @@ outputfile<-args[3]
 
 plot.mapping.stats<-function(stattable, name) {
 	  table<-read.delim(stattable, header = TRUE, sep="\t") %>%  
-    mutate(Label=paste(Tissue,Sample,Rep)) %>% 
+    mutate(Label=paste(Levels,Sample,Rep)) %>%
     separate(Passing_filtering, into=c("filt","temp1"), sep=" ") %>%
     separate(All_mapped_reads, into=c("all","temp2"), sep=" ") %>%
     separate(Uniquely_mapped_reads, into=c("unique","temp3"), sep=" ") %>%
     select(-Reference_genome, -temp1, -temp2, -temp3)
   
-  table$Line<-as.factor(table$Line)
-  table$Tissue<-as.factor(table$Tissue)
+  table$Group<-as.factor(table$Group)
+  table$Levels<-as.factor(table$Levels)
   table$Sample<-as.factor(table$Sample)
   table$Rep<-as.factor(table$Rep)
   table$filt<-as.numeric(table$filt)
@@ -39,13 +39,13 @@ plot.mapping.stats<-function(stattable, name) {
   table<-table %>% mutate(Filtered=Total_reads-filt, unmapped=Total_reads-all, multi=all-unique) %>%
     select(-filt, -all) %>%
     gather(key="Read_type",value="Count", Filtered, unmapped, multi, unique) %>%
-    group_by(Line,Tissue,Sample,Rep,Read_type)
+    group_by(Group,Levels,Sample,Rep,Read_type)
   
   table$Count<-as.numeric(table$Count)
   table$Read_type<-factor(table$Read_type, 
                           levels = rev(c("unique","multi","unmapped","Filtered")),
                           labels = rev(c("Uniquely mapped","Multi-mapping","Unmapped","Filtered")))
-  table<-arrange(table, desc(Line), desc(Tissue), desc(Sample), desc(Rep))
+  table<-arrange(table, desc(Group), desc(Levels), desc(Sample), desc(Rep))
   order<-unique(table$Label)
   table$Label<-factor(table$Label, levels=rev(order))
   
@@ -54,7 +54,7 @@ plot.mapping.stats<-function(stattable, name) {
     labs(title="", x="",y="", fill="Reads") +
     scale_fill_manual(values = brewer.pal(4,"Paired")) +
     scale_y_continuous("Percentage", labels=c(0,25,50,75,100)) +
-    facet_grid(~Line, scales = "free_x") +
+    facet_grid(~Group, scales = "free_x") +
     theme(axis.text.x=element_blank(), 
           panel.grid=element_blank(),
           panel.grid.major.y = element_line(colour="grey"),
@@ -81,7 +81,7 @@ plot.mapping.stats<-function(stattable, name) {
                        sec.axis = dup_axis(name = "", breaks=sbreaks, labels=slabels)) +
     geom_hline(yintercept=smin, color="red", linetype="dashed") + 
     geom_hline(yintercept=smax, color="red", linetype="dashed") +
-    facet_grid(~Line, scales = "free_x") +
+    facet_grid(~Group, scales = "free_x") +
     theme(axis.text.x=element_text(color="black", size=10, angle=90, vjust=0.5, hjust = 1),
           axis.ticks.x=element_blank(), 
           panel.grid.major.x=element_blank(),

@@ -364,8 +364,8 @@ rule make_mc_stats_pe:
         reportfile = f"{RESULTS_DIR}/mC/reports/final_report_pe__{{sample_name}}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
-        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        group = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        levels = lambda wildcards: parse_sample_name(wildcards.sample_name)['levels_label'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -387,9 +387,9 @@ rule make_mc_stats_pe:
         single=$(grep "Number of paired-end alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
         uniq=$(grep "Total count of deduplicated leftover sequences" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
+        printf "Group\tLevels\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
         ## Can change the name of the plastid chromosome to calculate non-conversion rate
-        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
+        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_pe__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {config[output_dir]}/mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report {config[output_dir]}/mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
@@ -411,8 +411,8 @@ rule make_mc_stats_se:
         reportfile = f"{RESULTS_DIR}/mC/reports/final_report_se__{{sample_name}}.html"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
-        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        group = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        levels = lambda wildcards: parse_sample_name(wildcards.sample_name)['levels_label'],
         sample_type = lambda wildcards: parse_sample_name(wildcards.sample_name)['sample_type'],
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome'],
@@ -434,9 +434,9 @@ rule make_mc_stats_se:
         single=$(grep "Number of alignments with a unique best hit" "{input.metrics_map}" | awk '{{print $NF}}')
         uniq=$(grep "Total count of deduplicated leftover sequences" {input.metrics_dedup} | awk -v FS=":" 'END {{print $2}}' | awk '{{print $1}}')
         allmap=$((single+multi))
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
+        printf "Group\tLevels\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\tPercentage_covered\tPercentage_covered_min3reads\tAverage_coverage_all\tAverage_coverage_covered\tNon_conversion_rate(Pt/Lambda)\n" > {output.stat_file}
         ## Can change the name of the plastid chromosome to calculate non-conversion rate
-        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
+        zcat {input.cx_report} | awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
         bismark2report -o "final_report_se__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {config[output_dir]}/mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report {config[output_dir]}/mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
@@ -1213,8 +1213,8 @@ rule make_mc_stats_dmc:
         sample_name = _DMC_WC
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
-        line = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
-        tissue = lambda wildcards: parse_sample_name(wildcards.sample_name)['tissue'],
+        group = lambda wildcards: parse_sample_name(wildcards.sample_name)['line'],
+        levels = lambda wildcards: parse_sample_name(wildcards.sample_name)['levels_label'],
         sample_type = "dmC",
         replicate = lambda wildcards: parse_sample_name(wildcards.sample_name)['replicate'],
         ref_genome = lambda wildcards: parse_sample_name(wildcards.sample_name)['ref_genome']
@@ -1257,7 +1257,7 @@ rule make_mc_stats_dmc:
         avg_cov_covered=$(echo "$cov_stats" | cut -f4)
 
         # Write header
-        printf "Line\\tTissue\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
+        printf "Group\\tLevels\\tSample\\tRep\\tReference_genome\\tTotal_reads\\tPassing_filtering\\tAll_mapped_reads\\tUniquely_mapped_reads\\tPercentage_covered\\tPercentage_covered_min3reads\\tAverage_coverage_all\\tAverage_coverage_covered\\tNon_conversion_rate(Pt/Lambda)\\n" > {output.stat_file}
 
         # For modBAM input, we can get read counts from the aligned BAM
         if [[ "$input_type" == "modBAM" ]]; then
@@ -1274,13 +1274,13 @@ rule make_mc_stats_dmc:
                     pct_mapped="0.00"
                     pct_uniq="0.00"
                 fi
-                printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\t$tot\\t$tot (${{pct_mapped}}%%)\\t$mapped (${{pct_mapped}}%%)\\t$uniq (${{pct_uniq}}%%)\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
+                printf "{params.group}\\t{params.levels}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\t$tot\\t$tot (${{pct_mapped}}%%)\\t$mapped (${{pct_mapped}}%%)\\t$uniq (${{pct_uniq}}%%)\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
             else
-                printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
+                printf "{params.group}\\t{params.levels}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
             fi
         else
             # For bedMethyl input, no BAM stats available
-            printf "{params.line}\\t{params.tissue}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
+            printf "{params.group}\\t{params.levels}\\t{params.sample_type}\\t{params.replicate}\\t{params.ref_genome}\\tNA\\tNA\\tNA\\tNA\\t$pct_cov\\t$pct_cov_3x\\t$avg_cov_all\\t$avg_cov_covered\\tNA\\n" >> {output.stat_file}
         fi
 
         printf "\ndmC stats complete\\n"

@@ -670,8 +670,8 @@ rule make_mapping_stats_pe:
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
-        line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
-        tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
+        group = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
+        levels = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'levels_label'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
@@ -703,8 +703,8 @@ rule make_mapping_stats_pe:
             single=$((mapped - multi))
         fi
         allmap=$((multi+single))
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
+        printf "Group\tLevels\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         rm -f {input.logs}
         """
@@ -720,8 +720,8 @@ rule make_mapping_stats_se:
     wildcard_constraints:
         env = "ChIP|ATAC"
     params:
-        line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
-        tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'tissue'),
+        group = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'line'),
+        levels = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'levels_label'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'sample_type'),
         replicate = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'replicate'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, samples, 'ref_genome'),
@@ -749,8 +749,8 @@ rule make_mapping_stats_se:
             single=$((mapped - multi))
         fi
         allmap=$((multi+single))
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
+        printf "Group\tLevels\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v m={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v a=${{tot}} -v b=${{filt}} -v c=${{allmap}} -v d=${{single}} 'BEGIN {{print l,t,m,r,g,a,b" ("b/a*100"%)",c" ("c/a*100"%)",d" ("d/a*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         """
 
@@ -1260,8 +1260,8 @@ rule make_peak_stats:
         sname = lambda wildcards: wildcards.sample_name,
         paired = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'paired'),
         peaktype = lambda wildcards: get_peaktype_for_env(_resolve_assay(wildcards.sample_name), wildcards.env),
-        line = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'line'),
-        tissue = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'tissue'),
+        group = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'line'),
+        levels = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'levels_label'),
         sample_type = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'sample_type'),
         ref_genome = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'ref_genome'),
         env = lambda wildcards: get_sample_info_from_name(wildcards.sample_name, analysis_samples, 'env'),
@@ -1280,8 +1280,8 @@ rule make_peak_stats:
         pseudos=$(grep "Pseudos" {input.stats_pseudoreps} | cut -d"=" -f2)
         idr=$(grep "IDR" {input.stats_pseudoreps} | cut -d"=" -f2)
         selected=$(grep "Selected" {input.stats_pseudoreps} | cut -d"=" -f2)
-        printf "Line\tTissue\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > {output.stat_file}
-        awk -v OFS="\t" -v l={params.line} -v t={params.tissue} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{idr}} -v f=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; if (x==0) print l,t,m,r,a,b,c,d,e,f" (no%)"; else print l,t,m,r,a,b,c,d,e,f" ("f/x*100"%)"}}' >> "{output.stat_file}"
+        printf "Group\tLevels\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > {output.stat_file}
+        awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v m={params.sample_type} -v r={params.ref_genome} -v a=${{nrep1}} -v b=${{nrep2}} -v c=${{merged}} -v d=${{pseudos}} -v e=${{idr}} -v f=${{selected}} 'BEGIN {{if (c==0) {{x=a}} else {{x=c}}; if (x==0) print l,t,m,r,a,b,c,d,e,f" (no%)"; else print l,t,m,r,a,b,c,d,e,f" ("f/x*100"%)"}}' >> "{output.stat_file}"
         cat {input.logs} > "{output.log}"
         """
 
