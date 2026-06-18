@@ -24,7 +24,7 @@ epicc validate --build-envs --samples your_samples.tsv        # pre-create rule 
 `run` and `validate` accept named overrides for commonly-tuned settings (all override the options YAML):
 - `--chip-aligner {bowtie2,chromap}`, `--atac-aligner`, `--chip/atac-mapping-strategy`
 - `--[no-]full-analysis`, `--[no-]te-analysis`, `--[no-]go`, `--[no-]rna-deduplicate`, `--methylation-contexts CG,CHG,CHH`
-- `--dmr-caller {metilene,dmrcaller}`, `--dmr-min-diff SPEC` (`auto` / float / `CG=f,CHG=f`), `--dmr-min-cytosines`, `--dmr-p-value`, `--dmr-sigma-n`
+- `--dmr-caller {metilene,dmrcaller}`, `--dmr-min-diff SPEC` (`auto` / float / `CG=f,CHG=f`), `--dmr-min-cytosines`, `--dmr-q-value`, `--dmr-sigma-n`
 - `--chip-callpeaks-params STR`, `--cut-broad-caller {epic2,seacr,macs2}`, `--cut-narrow-caller {seacr,macs2}`
 
 Nested settings (`dmr_thresholds.*`, `chip_callpeaks.params`, `cut_callpeaks.*`) are applied via a temp merged config file; sibling keys not specified on the CLI are preserved from the options YAML.
@@ -93,7 +93,7 @@ Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
   - Access pattern in rule files: `config["genomes"][ref_genome][field]`
   - Old bare-key format (genome blocks as top-level keys + separate species blocks) is auto-migrated at startup with a deprecation warning
   - `methylation_contexts` (default `["CG", "CHG", "CHH"]`) gates per-context mC analysis: bigwigs, DMR calls, and PCA plots are produced only for listed contexts. Set to `["CG"]` for animal genomes where non-CpG methylation is negligible. Subcontexts (CAG/CAA/...) not currently supported.
-  - `dmr_thresholds:` block configures DMR calling parameters for both callers. Shared: `min_diff` (per-context, default CG=0.3/CHG=0.2/CHH=0.1), `min_cytosines` (default 5). DMRcaller-only: `bin_size`, `p_value`, `min_gap`, `min_size`, `min_reads`. Metilene-only: `max_cpgs`, `valley` (per-context), `maxseg` (per-context). Defaults are Arabidopsis-leaf-tuned; adjust for other organisms/tissues.
+  - `dmr_thresholds:` block configures DMR calling parameters for both callers. Shared: `min_diff` (per-context, default CG=0.3/CHG=0.2/CHH=0.1), `min_cytosines` (default 5), `q_value` (FDR significance cutoff, default 0.01 — DMRcaller filters internally on its BH-adjusted pValue; metilene's driver filters its q-value column to match). DMRcaller-only: `bin_size`, `min_gap`, `min_size`, `min_reads`. Metilene-only: `max_cpgs`, `valley` (per-context), `maxseg` (per-context). Defaults are Arabidopsis-leaf-tuned; adjust for other organisms/tissues. (Legacy `p_value` key is honored with a deprecation warning.)
   - `chip_aligner` / `atac_aligner` (default `"bowtie2"`) — set to `"chromap"` for ~10x faster mapping. chromap is appropriate for SE-only datasets; PE data shows only 11–28% properly-paired reads with chromap vs 99%+ with bowtie2 (chromap maps ends independently, so one mate is MAPQ-filtered when repeat paralogs are present). When `chip_mapping_strategy` / `atac_mapping_strategy` is `repeat` or `repeatall`, bowtie2 is used automatically regardless of the aligner setting.
   - `use_node_tmpdir` (default `false`) toggles TMPDIR routing — see Key Details below.
 - `config/example_samples.tsv` - Documented sample-sheet template (copy and edit; pass to epicc via `--samples`)

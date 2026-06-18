@@ -328,9 +328,13 @@ dmr_thresholds:
   # Applies to: metilene -m, DMRcaller minCytosinesCount.
   min_cytosines: 5
 
+  # Significance cutoff applied to the FDR-adjusted q-value (both callers).
+  # DMRcaller filters internally on its BH-adjusted pValue; metilene filters
+  # on its q-value column (col 4). Regions with q-value >= this are dropped.
+  q_value: 0.01
+
   # DMRcaller-specific parameters (ignored when dmr_caller: metilene)
   bin_size: 200   # window size for bins method (bp)
-  p_value:  0.01  # p-value threshold
   min_gap:  200   # minimum gap between adjacent DMRs (bp)
   min_size: 50    # minimum DMR size (bp)
   min_reads: 3    # minimum reads per cytosine

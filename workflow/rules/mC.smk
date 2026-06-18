@@ -93,7 +93,7 @@ _DMR_THRESHOLD_DEFAULTS = {
     'min_diff':      {'CG': 0.3, 'CHG': 0.2, 'CHH': 0.1},
     'min_cytosines': 5,
     'bin_size':      200,
-    'p_value':       0.01,
+    'q_value':       0.01,
     'min_gap':       200,
     'min_size':      50,
     'min_reads':     3,
@@ -105,6 +105,15 @@ _DMR_THRESHOLD_DEFAULTS = {
 def get_dmr_threshold(key, context=None):
     """Return a DMR threshold from config, falling back to plant-tuned defaults."""
     thresholds = config.get('dmr_thresholds', {})
+    # Backward compat: the significance cutoff was renamed p_value -> q_value
+    # (it is applied to an FDR-adjusted value for both callers). Honor a legacy
+    # dmr_thresholds.p_value when q_value is absent, with a deprecation warning.
+    if key == 'q_value' and 'q_value' not in thresholds and 'p_value' in thresholds:
+        sys.stderr.write(
+            "WARNING: dmr_thresholds.p_value is deprecated; rename it to "
+            "dmr_thresholds.q_value (the cutoff applies to an FDR q-value).\n"
+        )
+        return thresholds['p_value']
     val = thresholds.get(key, _DMR_THRESHOLD_DEFAULTS[key])
     if isinstance(val, dict):
         default_per_ctx = _DMR_THRESHOLD_DEFAULTS[key]
@@ -588,7 +597,7 @@ if config.get('custom_script_dmrs', False):
             nb_sample1 = lambda wildcards: len(define_DMR_samples(wildcards.sample1)),
             nb_sample2 = lambda wildcards: len(define_DMR_samples(wildcards.sample2)),
             min_cytosines = get_dmr_threshold('min_cytosines'),
-            p_value = get_dmr_threshold('p_value'),
+            q_value = get_dmr_threshold('q_value'),
             min_gap = get_dmr_threshold('min_gap'),
             min_size = get_dmr_threshold('min_size'),
             min_reads = get_dmr_threshold('min_reads'),
@@ -606,7 +615,7 @@ if config.get('custom_script_dmrs', False):
             """
             {{
             printf "running DMRcaller for {params.sample1} vs {params.sample2}\n"
-            Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" "{params.min_cytosines}" "{params.p_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" "{params.min_diff_spec}" {input.sample1} {input.sample2}
+            Rscript "{params.script}" "{threads}" "{input.chrom_sizes}" "{params.contexts}" "{params.sample1}" "{params.sample2}" "{params.nb_sample1}" "{params.nb_sample2}" "{config[output_dir]}" "{params.min_cytosines}" "{params.q_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" "{params.min_diff_spec}" {input.sample1} {input.sample2}
             }} 2>&1 | tee -a "{log}"
             """
 else:
@@ -710,7 +719,7 @@ else:
             ),
             min_cytosines  = get_dmr_threshold('min_cytosines'),
             bin_size       = get_dmr_threshold('bin_size'),
-            p_value        = get_dmr_threshold('p_value'),
+            q_value        = get_dmr_threshold('q_value'),
             min_gap        = get_dmr_threshold('min_gap'),
             min_size       = get_dmr_threshold('min_size'),
             min_reads      = get_dmr_threshold('min_reads'),
@@ -725,7 +734,7 @@ else:
             {{
             printf "running %s for %s vs %s (%s)\n" "{params.caller}" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
             Rscript "{params.script}" "{threads}" "{wildcards.mc_context}" "{input.chrom_sizes}" "{output.dmrs}" "{output.counts}" \
-              "{params.min_diff}" "{params.min_cytosines}" "{params.bin_size}" "{params.p_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" \
+              "{params.min_diff}" "{params.min_cytosines}" "{params.bin_size}" "{params.q_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" \
               "{params.max_cpgs}" "{params.valley}" "{params.maxseg}" \
               "{params.n1}" {input.reps1} {input.reps2}
             }} 2>&1 | tee -a "{log}"

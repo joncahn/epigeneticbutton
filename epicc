@@ -458,8 +458,8 @@ def _collect_nested_overrides(args):
                 nested.append((f"dmr_thresholds.min_diff.{ctx}", val))
     if getattr(args, "dmr_min_cytosines", None) is not None:
         nested.append(("dmr_thresholds.min_cytosines", args.dmr_min_cytosines))
-    if getattr(args, "dmr_p_value", None) is not None:
-        nested.append(("dmr_thresholds.p_value", args.dmr_p_value))
+    if getattr(args, "dmr_q_value", None) is not None:
+        nested.append(("dmr_thresholds.q_value", args.dmr_q_value))
     if getattr(args, "dmr_sigma_n", None) is not None:
         nested.append(("dmr_thresholds.sigma_n", args.dmr_sigma_n))
 
@@ -1562,10 +1562,11 @@ def add_analysis_options(parser):
              "(overrides dmr_thresholds.min_cytosines; default: 5).",
     )
     parser.add_argument(
-        "--dmr-p-value", dest="dmr_p_value", type=float, metavar="P",
-        help="p-value threshold for DMRcaller "
-             "(overrides dmr_thresholds.p_value; default: 0.01; "
-             "ignored when --dmr-caller metilene).",
+        "--dmr-q-value", dest="dmr_q_value", type=float, metavar="Q",
+        help="FDR q-value (adjusted p-value) threshold for DMR significance "
+             "(overrides dmr_thresholds.q_value; default: 0.01). Applies to "
+             "both callers: DMRcaller filters internally on its BH-adjusted "
+             "pValue, metilene filters on its q-value column.",
     )
     parser.add_argument(
         "--dmr-sigma-n", dest="dmr_sigma_n", type=float, metavar="N",

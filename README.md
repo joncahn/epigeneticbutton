@@ -346,8 +346,8 @@ More details can be found in the `config/epicc-options.yaml` file (all options a
   dmr_thresholds:
     min_diff:       {CG: 0.3, CHG: 0.2, CHH: 0.1}  # min mean methylation difference
     min_cytosines:  5      # min CpG/cytosine count per DMR window
+    q_value:        0.01   # FDR q-value significance cutoff (both callers)
     bin_size:       200    # DMRcaller: window size (bp)
-    p_value:        0.01   # DMRcaller: p-value threshold
     min_gap:        200    # DMRcaller: min gap between DMRs (bp)
     min_size:       50     # DMRcaller: min DMR size (bp)
     min_reads:      3      # DMRcaller: min reads per cytosine

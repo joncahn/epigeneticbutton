@@ -22,10 +22,13 @@ context         <- args[2]
 chromsizes_path <- args[3]  # unused (kept for arg-order parity with DMRcaller path)
 dmrs_out        <- args[4]
 counts_out      <- args[5]
-# Threshold args[6:15] — shared (min_diff, min_cytosines) + caller-specific
+# Threshold args[6:15] — shared (min_diff, min_cytosines, q_value) + caller-specific
 min_diff        <- as.numeric(args[6])   # -d: mean methylation difference threshold
 min_cytosines   <- as.integer(args[7])   # -m: minimum CpGs per DMR
-# args[8:12] are dmrcaller-specific (bin_size, p_value, min_gap, min_size, min_reads) — ignored
+# args[8] (bin_size), args[10:12] (min_gap, min_size, min_reads) are
+# dmrcaller-specific — ignored here.
+q_value         <- as.numeric(args[9])   # significance cutoff applied to metilene's
+                                         # FDR q-value (col 4); see filtering below
 max_cpgs        <- as.integer(args[13])  # -M: maximum CpGs per segment
 valley          <- as.numeric(args[14])  # -v: per-position valley filter
 maxseg          <- as.integer(args[15])  # -G: max segment length (-1 = no cap)
@@ -197,6 +200,20 @@ res <- tryCatch(
   }
 )
 
+# Significance filter. metilene emits every candidate segment that clears the
+# segmentation-stage effect-size/CpG filters (-d/-m), but does NOT apply a
+# significance cutoff — that is the job of the second-stage metilene_output
+# tool (`-q`), which we replicate here. DMRcaller applies its q-value cutoff
+# (pValueThreshold; its returned pValue is BH-adjusted) internally and returns
+# only passing regions, so filtering here brings the two callers into
+# concordance: both _DMRs.txt tables are significance-filtered at `q_value`.
+n_called <- nrow(res)
+if (n_called > 0) {
+  res <- res[!is.na(res$qValue) & res$qValue < q_value, , drop = FALSE]
+  cat(sprintf("metilene: %d candidate segments, %d pass qValue < %g\n",
+              n_called, nrow(res), q_value))
+}
+
 if (nrow(res) > 0) {
   df_out <- data.frame(
     Chr          = res$Chr,
@@ -204,7 +221,7 @@ if (nrow(res) > 0) {
     End          = res$End,
     firstsample  = res$mean_g1,
     secondsample = res$mean_g2,
-    Pvalue       = res$qValue,
+    qValue       = res$qValue,
     Delta        = res$mean_g1 - res$mean_g2
   )
   write.table(df_out, dmrs_out, sep = "\t",
@@ -216,7 +233,7 @@ if (nrow(res) > 0) {
 } else {
   write.table(data.frame(Chr = character(), Start = integer(), End = integer(),
                          firstsample = numeric(), secondsample = numeric(),
-                         Pvalue = numeric(), Delta = numeric()),
+                         qValue = numeric(), Delta = numeric()),
               dmrs_out, sep = "\t",
               row.names = FALSE, col.names = TRUE, quote = FALSE)
   n_hyper <- 0L; n_hypo <- 0L

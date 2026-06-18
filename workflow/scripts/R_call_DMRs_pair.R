@@ -14,7 +14,8 @@ counts_out      <- args[5]
 min_diff        <- as.numeric(args[6])   # minProportionDifference
 min_cytosines   <- as.integer(args[7])   # minCytosinesCount
 bin_size        <- as.integer(args[8])
-p_value         <- as.numeric(args[9])   # pValueThreshold
+q_value         <- as.numeric(args[9])   # pValueThreshold (DMRcaller's returned
+                                         # pValue is BH-adjusted, i.e. a q-value)
 min_gap         <- as.integer(args[10])  # minGap
 min_size        <- as.integer(args[11])  # minSize
 min_reads       <- as.integer(args[12])  # minReadsPerCytosine
@@ -70,7 +71,7 @@ if (use_replicates) {
       method          = method_replicates,
       binSize         = bin_size,
       test            = "betareg",
-      pValueThreshold = p_value,
+      pValueThreshold = q_value,
       minCytosinesCount = min_cytosines,
       minProportionDifference = min_diff,
       minGap          = min_gap,
@@ -101,7 +102,7 @@ if (use_replicates) {
       pool1, pool2,
       regions = chrs, context = context,
       method = method_pooled, binSize = bin_size, test = "score",
-      pValueThreshold = p_value, minCytosinesCount = min_cytosines,
+      pValueThreshold = q_value, minCytosinesCount = min_cytosines,
       minProportionDifference = min_diff,
       minGap = min_gap, minSize = min_size, minReadsPerCytosine = min_reads
     )
@@ -115,8 +116,11 @@ if (use_replicates) {
 }
 
 # Both functions return GRanges with proportion1, proportion2, pValue —
-# the columns we use downstream. computeDMRsReplicates also adds
-# direction/regionType, which we ignore (Delta sign derives Type below).
+# the columns we use downstream. DMRcaller's pValue is BH-adjusted (a
+# q-value), and the regions returned are already filtered to those below
+# pValueThreshold, so we surface it as `qValue` to match the metilene path.
+# computeDMRsReplicates also adds direction/regionType, which we ignore
+# (Delta sign derives Type below).
 if (length(dmrs) > 0) {
     df <- data.frame(
       Chr          = seqnames(dmrs),
@@ -124,7 +128,7 @@ if (length(dmrs) > 0) {
       End          = end(dmrs),
       firstsample  = mcols(dmrs)$proportion1,
       secondsample = mcols(dmrs)$proportion2,
-      Pvalue       = mcols(dmrs)$pValue
+      qValue       = mcols(dmrs)$pValue
     )
     df$Delta <- df$firstsample - df$secondsample
     write.table(df, dmrs_out, sep = "\t",
@@ -134,7 +138,7 @@ if (length(dmrs) > 0) {
 } else {
     write.table(data.frame(Chr = character(), Start = integer(), End = integer(),
                            firstsample = numeric(), secondsample = numeric(),
-                           Pvalue = numeric(), Delta = numeric()),
+                           qValue = numeric(), Delta = numeric()),
                 dmrs_out, sep = "\t",
                 row.names = FALSE, col.names = TRUE, quote = FALSE)
     n_hyper <- 0L; n_hypo <- 0L

@@ -19,7 +19,7 @@ nb_sample1<-as.numeric(args[6])
 nb_sample2<-as.numeric(args[7])
 output_dir<-args[8]
 min_cytosines<-as.numeric(args[9])
-p_value<-as.numeric(args[10])
+q_value<-as.numeric(args[10])   # DMRcaller pValueThreshold (returned pValue is BH-adjusted)
 min_gap<-as.numeric(args[11])
 min_size<-as.numeric(args[12])
 min_reads<-as.numeric(args[13])
@@ -47,11 +47,11 @@ for ( meth in c("noise_filter", "bins") ) {
 		summary_combo <- NULL
 		for ( ctx in contexts ) {
 
-			DMRs<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context=ctx, method=meth, binSize=bs, test="score", pValueThreshold=p_value, minCytosinesCount=min_cytosines, minProportionDifference=min_diff[[ctx]], minGap=min_gap, minSize=min_size, minReadsPerCytosine=min_reads, cores=threads)
+			DMRs<-computeDMRs(methylationDatasample1pool, methylationDatasample2pool, regions=chrs, context=ctx, method=meth, binSize=bs, test="score", pValueThreshold=q_value, minCytosinesCount=min_cytosines, minProportionDifference=min_diff[[ctx]], minGap=min_gap, minSize=min_size, minReadsPerCytosine=min_reads, cores=threads)
 
 			colname<-paste0(ctx, "_DMRs")
 			if ( length(DMRs) > 0 ) {
-				df<-data.frame(Chr=seqnames(DMRs),Start=start(DMRs)-1,End=end(DMRs),firstsample=mcols(DMRs)$proportion1,secondsample=mcols(DMRs)$proportion2, Pvalue=mcols(DMRs)$pValue) %>%
+				df<-data.frame(Chr=seqnames(DMRs),Start=start(DMRs)-1,End=end(DMRs),firstsample=mcols(DMRs)$proportion1,secondsample=mcols(DMRs)$proportion2, qValue=mcols(DMRs)$pValue) %>%
 					mutate(Delta=firstsample-secondsample)
 
 				write.table(df,paste0(output_dir,"/mC/DMRs/",sample1,"__vs__",sample2,"__",ctx,"_DMRs_",meth,"_",bs,".txt"),sep="\t",row.names=FALSE,col.names=TRUE,quote=FALSE)
