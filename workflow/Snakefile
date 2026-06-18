@@ -95,10 +95,20 @@ GENOMES_DIR = config["genome_dir"]
 # the cluster/site provides — useful when /tmp is fast local scratch with
 # adequate capacity.
 if not config.get("use_node_tmpdir", False):
+    # TMPDIR must be ABSOLUTE. RESULTS_DIR is relative whenever output_dir is
+    # (the default "results", and e.g. the integration tests' test_runs/...).
+    # Some tools run sub-steps in a child process that chdir's into a staging
+    # area before touching TMPDIR -- most notably `R CMD INSTALL`'s
+    # byte-compile/lazy-load phase (the GO database build, create_GO_database).
+    # A relative TMPDIR then resolves against the wrong CWD, the staged path
+    # doesn't exist, and the install dies with "Error in file(con, "w") :
+    # cannot open the connection". Anchoring to an absolute path fixes it;
+    # jobs run from the snakemake workdir, which is this abspath's base.
+    _tmpdir_base = os.path.abspath(RESULTS_DIR)
     # Quadruple braces escape twice: f-string → "{{...}}" → Snakemake .format()
     # → "{SLURM_JOB_ID:-$$}" in the final bash command.
     shell.prefix(
-        f'TMPDIR_JOB="{RESULTS_DIR}/.tmp/${{{{SLURM_JOB_ID:-$$}}}}" && '
+        f'TMPDIR_JOB="{_tmpdir_base}/.tmp/${{{{SLURM_JOB_ID:-$$}}}}" && '
         'mkdir -p "$TMPDIR_JOB" && '
         'trap \'rm -rf "$TMPDIR_JOB"\' EXIT && '
         'export TMPDIR="$TMPDIR_JOB" && '
