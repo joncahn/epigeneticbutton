@@ -31,7 +31,14 @@ fSym$ENTREZID<-paste0("ent",fSym$GID)
 
 fChr<-unique(select(genes, GID, Chr))
 
-godir <- normalizePath(paste0("./genomes/",refgenome,"/GO"), mustWork=FALSE)
+# Derive the GO directory from the gaf path the rule passes in (args[1] =
+# <genome_dir>/<refgenome>/GO/<dbname>_gaf_file.tab) rather than reconstructing
+# "./genomes/<refgenome>/GO". The genome_dir is configurable (genome_dir
+# config key / --genome-dir, and the test suite uses genomes_test_*), so a
+# hardcoded ./genomes/ installed the package into the wrong tree -- failing
+# with "cannot open the connection" and never producing the rule's declared
+# output -- on any run with a non-default genome_dir.
+godir <- normalizePath(dirname(args[1]), mustWork=FALSE)
 dir.create(godir, showWarnings=FALSE, recursive=TRUE)
 
 # makeOrgPackage writes a source package directory; install.packages with
