@@ -1,9 +1,11 @@
 """Shared fixtures and helpers for integration tests."""
 
 import csv
+import os
 import re
 import shutil
 import subprocess
+import tempfile
 import yaml
 import pytest
 from pathlib import Path
@@ -127,53 +129,118 @@ def snakemake_available():
 # ---------------------------------------------------------------------------
 # Snakemake helpers
 # ---------------------------------------------------------------------------
+#
+# Dry-run and DAG-build are pure *planning* operations, but Snakemake keeps
+# its persistence (.snakemake/) under the working directory (the repo root),
+# shared across every run. A real run that is interrupted leaves stale
+# .snakemake/incomplete/ markers there; if one matches an output the planned
+# DAG would produce, the planning step fails:
+#   - dry-run raises IncompleteFilesException;
+#   - --dag additionally trips a Snakemake checkpoint-postprocess crash
+#     (`'NoneType' object has no attribute 'edit_notebook'`, because no-exec
+#     modes never initialise workflow.execution_settings).
+# Neither failure reflects a problem with the workflow under test. We make
+# both helpers hermetic by redirecting output_dir/genome_dir to an ephemeral
+# temp tree: the planned DAG then targets fresh paths that no stale marker
+# can match, while its rule structure (what the tests assert on) is identical.
+# The requested target is rewritten into the temp output_dir so it resolves.
+
+
+def _config_dirs(options_file):
+    """Return (output_dir, genome_dir) declared in a Snakemake options YAML."""
+    with open(options_file) as fh:
+        cfg = yaml.safe_load(fh) or {}
+    return cfg.get("output_dir", "results"), cfg.get("genome_dir", "genomes")
+
+
+def _retarget(target, real_out, tmp_out):
+    """Rewrite a path target's output_dir prefix to the hermetic temp dir.
+
+    Phony targets (rule names like ``map_only``) and any target not under the
+    configured output_dir pass through unchanged.
+    """
+    if not target:
+        return target
+    prefix = real_out.rstrip("/")
+    if target == prefix or target.startswith(prefix + "/"):
+        return tmp_out + target[len(prefix):]
+    return target
+
+
+def _split_config(extra_args):
+    """Split extra_args into (config KEY=VALUE assignments, remaining args).
+
+    Snakemake honors a single ``--config`` group; a second one would override
+    the first. Since we inject our own output_dir/genome_dir assignments, any
+    caller-supplied ``--config`` entries must be merged into one group rather
+    than passed as a competing flag.
+    """
+    config_pairs = []
+    other = []
+    it = iter(extra_args or [])
+    for arg in it:
+        if arg == "--config":
+            for nxt in it:  # collect KEY=VALUE tokens until the next flag
+                if nxt.startswith("-"):
+                    other.append(nxt)
+                    break
+                config_pairs.append(nxt)
+        else:
+            other.append(arg)
+    return config_pairs, other
+
+
+def _run_planning(mode_args, repo_root, options_file, target,
+                  extra_args=None, timeout=120):
+    """Run a no-exec Snakemake planning command in a hermetic output tree."""
+    real_out, _ = _config_dirs(options_file)
+    config_pairs, other = _split_config(extra_args)
+    with tempfile.TemporaryDirectory(prefix="epicc_plan_") as tmp:
+        tmp_out = os.path.join(tmp, "results")
+        tmp_genomes = os.path.join(tmp, "genomes")
+        cmd = [
+            "snakemake",
+            *mode_args,
+            # No-exec planning needs no working-dir lock; --nolock avoids
+            # spurious LockExceptions when many planning runs hit the shared
+            # repo-root .snakemake/ back-to-back (e.g. NFS lock-release lag).
+            "--nolock",
+            "--configfile", options_file,
+            "--config", f"output_dir={tmp_out}", f"genome_dir={tmp_genomes}",
+            *config_pairs,
+            "--cores", "1",
+        ]
+
+        cmd.extend(other)
+
+        # Use -- separator to prevent Snakemake 9 from interpreting targets as options
+        if target:
+            cmd.append("--")
+            cmd.append(_retarget(target, real_out, tmp_out))
+
+        return subprocess.run(
+            cmd,
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
 
 def run_snakemake_dryrun(repo_root, options_file, target=None,
                          extra_args=None, timeout=120):
     """Run snakemake in dry-run mode with the given config."""
-    cmd = [
-        "snakemake",
-        "--dry-run",
-        "--configfile", options_file,
-        "--cores", "1",
-        "--quiet", "progress",
-    ]
-
-    if extra_args:
-        cmd.extend(extra_args)
-
-    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
-    if target:
-        cmd.append("--")
-        cmd.append(target)
-
-    return subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-        timeout=timeout,
+    return _run_planning(
+        ["--dry-run", "--quiet", "progress"],
+        repo_root, options_file, target,
+        extra_args=extra_args, timeout=timeout,
     )
 
 
 def run_snakemake_dag(repo_root, options_file, target=None, timeout=120):
     """Generate the Snakemake DAG."""
-    cmd = [
-        "snakemake",
-        "--dag",
-        "--configfile", options_file,
-        "--cores", "1",
-    ]
-
-    # Use -- separator to prevent Snakemake 9 from interpreting targets as options
-    if target:
-        cmd.append("--")
-        cmd.append(target)
-
-    return subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
+    return _run_planning(
+        ["--dag"],
+        repo_root, options_file, target,
         timeout=timeout,
     )
