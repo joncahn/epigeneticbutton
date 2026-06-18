@@ -345,13 +345,13 @@ More details can be found in the `config/epicc-options.yaml` file (all options a
   ```yaml
   dmr_thresholds:
     min_diff:       {CG: 0.3, CHG: 0.2, CHH: 0.1}  # min mean methylation difference
-    min_cytosines:  5      # min CpG/cytosine count per DMR window
+    min_cytosines:  5      # min CpG/cytosine count per DMR window (both callers)
     q_value:        0.01   # FDR q-value significance cutoff (both callers)
+    min_size:       50     # min DMR length in bp (both callers)
     bin_size:       200    # DMRcaller: window size (bp)
     min_gap:        200    # DMRcaller: min gap between DMRs (bp)
-    min_size:       50     # DMRcaller: min DMR size (bp)
     min_reads:      3      # DMRcaller: min reads per cytosine
-    max_cpgs:       300    # metilene: max CpGs per segment (-M)
+    maxdist:        300    # metilene: max distance between CpGs in a segment, nt (-M)
     valley:         {CG: 0.7, CHG: 0.7, CHH: 0.3}  # metilene: valley filter (-v)
     maxseg:         {CG: -1, CHG: -1, CHH: 10000}   # metilene: max segment cap (-G)
   ```

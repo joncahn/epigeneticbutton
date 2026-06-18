@@ -333,14 +333,18 @@ dmr_thresholds:
   # on its q-value column (col 4). Regions with q-value >= this are dropped.
   q_value: 0.01
 
+  # Minimum DMR length in bp (both callers). DMRcaller: minSize. metilene: a
+  # post-hoc (end-start) >= min_size filter applied to the called segments,
+  # equivalent to metilene_output.pl's -l.
+  min_size: 50
+
   # DMRcaller-specific parameters (ignored when dmr_caller: metilene)
   bin_size: 200   # window size for bins method (bp)
-  min_gap:  200   # minimum gap between adjacent DMRs (bp)
-  min_size: 50    # minimum DMR size (bp)
-  min_reads: 3    # minimum reads per cytosine
+  min_gap:  200   # minimum gap between adjacent DMRs (bp); no metilene equivalent
+  min_reads: 3    # minimum reads per cytosine; no metilene equivalent (rates only)
 
   # Metilene-specific parameters (ignored when dmr_caller: dmrcaller)
-  max_cpgs: 300   # -M: maximum CpGs per DMR segment
+  maxdist: 300    # -M/--maxdist: max distance (nt) between adjacent CpGs in a segment
   valley:         # -v: per-position valley filter (higher = more stringent)
     CG:  0.7
     CHG: 0.7

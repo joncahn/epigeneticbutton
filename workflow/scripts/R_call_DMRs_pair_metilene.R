@@ -25,11 +25,16 @@ counts_out      <- args[5]
 # Threshold args[6:15] — shared (min_diff, min_cytosines, q_value) + caller-specific
 min_diff        <- as.numeric(args[6])   # -d: mean methylation difference threshold
 min_cytosines   <- as.integer(args[7])   # -m: minimum CpGs per DMR
-# args[8] (bin_size), args[10:12] (min_gap, min_size, min_reads) are
-# dmrcaller-specific — ignored here.
+# args[8] (bin_size), args[10] (min_gap), args[12] (min_reads) are
+# dmrcaller-specific with no metilene equivalent — ignored here. (metilene
+# has no between-DMR merge step and consumes per-position rates, not coverage.)
 q_value         <- as.numeric(args[9])   # significance cutoff applied to metilene's
                                          # FDR q-value (col 4); see filtering below
-max_cpgs        <- as.integer(args[13])  # -M: maximum CpGs per segment
+min_size        <- as.integer(args[11])  # minimum DMR length (nt); post-hoc filter,
+                                         # equivalent to DMRcaller minSize and to
+                                         # metilene_output.pl's -l (end-start >= length)
+maxdist         <- as.integer(args[13])  # -M/--maxdist: maximum distance (nt) between
+                                         # adjacent CpGs joinable into one segment
 valley          <- as.numeric(args[14])  # -v: per-position valley filter
 maxseg          <- as.integer(args[15])  # -G: max segment length (-1 = no cap)
 n1              <- as.integer(args[16])
@@ -46,7 +51,7 @@ n2 <- length(reps2_paths)
 # long chromosomes (e.g. ColCEN Chr1) produces single segments of ~8 million
 # CpGs that drive metilene RSS to 400-700 GB and OOM-kill the job, so the
 # default config caps CHH at 10000. See epicc-options.yaml for rationale.
-p <- list(d = min_diff, m = min_cytosines, M = max_cpgs, v = valley, G = maxseg)
+p <- list(d = min_diff, m = min_cytosines, M = maxdist, v = valley, G = maxseg)
 if (is.null(p$d)) stop(sprintf("Unknown context '%s'", context))
 
 # ---------------------------------------------------------------------------
@@ -200,18 +205,21 @@ res <- tryCatch(
   }
 )
 
-# Significance filter. metilene emits every candidate segment that clears the
+# Post-hoc filters. metilene emits every candidate segment that clears the
 # segmentation-stage effect-size/CpG filters (-d/-m), but does NOT apply a
-# significance cutoff — that is the job of the second-stage metilene_output
-# tool (`-q`), which we replicate here. DMRcaller applies its q-value cutoff
-# (pValueThreshold; its returned pValue is BH-adjusted) internally and returns
-# only passing regions, so filtering here brings the two callers into
-# concordance: both _DMRs.txt tables are significance-filtered at `q_value`.
+# significance or DMR-length cutoff — that is the job of the second-stage
+# metilene_output tool (`-q`/`-l`), which we replicate here. DMRcaller applies
+# both internally (pValueThreshold on its BH-adjusted pValue, and minSize) and
+# returns only passing regions, so filtering here brings the two callers into
+# concordance: both _DMRs.txt tables are filtered at `q_value` and `min_size`.
+# The strict `<` on qValue and `>=` on length match metilene_output.pl exactly.
 n_called <- nrow(res)
 if (n_called > 0) {
-  res <- res[!is.na(res$qValue) & res$qValue < q_value, , drop = FALSE]
-  cat(sprintf("metilene: %d candidate segments, %d pass qValue < %g\n",
-              n_called, nrow(res), q_value))
+  res <- res[!is.na(res$qValue) &
+               res$qValue < q_value &
+               (res$End - res$Start) >= min_size, , drop = FALSE]
+  cat(sprintf("metilene: %d candidate segments, %d pass qValue < %g & length >= %d\n",
+              n_called, nrow(res), q_value, min_size))
 }
 
 if (nrow(res) > 0) {

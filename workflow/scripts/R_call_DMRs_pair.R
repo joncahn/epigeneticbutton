@@ -19,7 +19,7 @@ q_value         <- as.numeric(args[9])   # pValueThreshold (DMRcaller's returned
 min_gap         <- as.integer(args[10])  # minGap
 min_size        <- as.integer(args[11])  # minSize
 min_reads       <- as.integer(args[12])  # minReadsPerCytosine
-# args[13:15] are metilene-specific (max_cpgs, valley, maxseg) — ignored here
+# args[13:15] are metilene-specific (maxdist, valley, maxseg) — ignored here
 n1              <- as.integer(args[16])
 reps1_paths     <- args[17:(16 + n1)]
 reps2_paths     <- args[(17 + n1):length(args)]

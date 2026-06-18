@@ -97,23 +97,32 @@ _DMR_THRESHOLD_DEFAULTS = {
     'min_gap':       200,
     'min_size':      50,
     'min_reads':     3,
-    'max_cpgs':      300,
+    'maxdist':       300,
     'valley':        {'CG': 0.7, 'CHG': 0.7, 'CHH': 0.3},
     'maxseg':        {'CG': -1,  'CHG': -1,  'CHH': 10000},
+}
+
+# Renamed dmr_thresholds keys: new -> (legacy, reason). Legacy keys are honored
+# with a deprecation warning so existing options files keep working.
+#   p_value -> q_value:  the cutoff is applied to an FDR-adjusted value (q-value).
+#   max_cpgs -> maxdist: the value is passed to metilene -M/--maxdist (max distance
+#                        in nt between CpGs), never a CpG count -- the old name was
+#                        a mislabel.
+_DMR_THRESHOLD_RENAMES = {
+    'q_value': 'p_value',
+    'maxdist': 'max_cpgs',
 }
 
 def get_dmr_threshold(key, context=None):
     """Return a DMR threshold from config, falling back to plant-tuned defaults."""
     thresholds = config.get('dmr_thresholds', {})
-    # Backward compat: the significance cutoff was renamed p_value -> q_value
-    # (it is applied to an FDR-adjusted value for both callers). Honor a legacy
-    # dmr_thresholds.p_value when q_value is absent, with a deprecation warning.
-    if key == 'q_value' and 'q_value' not in thresholds and 'p_value' in thresholds:
+    legacy = _DMR_THRESHOLD_RENAMES.get(key)
+    if legacy and key not in thresholds and legacy in thresholds:
         sys.stderr.write(
-            "WARNING: dmr_thresholds.p_value is deprecated; rename it to "
-            "dmr_thresholds.q_value (the cutoff applies to an FDR q-value).\n"
+            f"WARNING: dmr_thresholds.{legacy} is deprecated; rename it to "
+            f"dmr_thresholds.{key}.\n"
         )
-        return thresholds['p_value']
+        return thresholds[legacy]
     val = thresholds.get(key, _DMR_THRESHOLD_DEFAULTS[key])
     if isinstance(val, dict):
         default_per_ctx = _DMR_THRESHOLD_DEFAULTS[key]
@@ -723,7 +732,7 @@ else:
             min_gap        = get_dmr_threshold('min_gap'),
             min_size       = get_dmr_threshold('min_size'),
             min_reads      = get_dmr_threshold('min_reads'),
-            max_cpgs       = get_dmr_threshold('max_cpgs'),
+            maxdist        = get_dmr_threshold('maxdist'),
             valley         = lambda wildcards: get_dmr_threshold('valley',        wildcards.mc_context),
             maxseg         = lambda wildcards: get_dmr_threshold('maxseg',        wildcards.mc_context),
         log:
@@ -735,7 +744,7 @@ else:
             printf "running %s for %s vs %s (%s)\n" "{params.caller}" "{wildcards.sample1}" "{wildcards.sample2}" "{wildcards.mc_context}"
             Rscript "{params.script}" "{threads}" "{wildcards.mc_context}" "{input.chrom_sizes}" "{output.dmrs}" "{output.counts}" \
               "{params.min_diff}" "{params.min_cytosines}" "{params.bin_size}" "{params.q_value}" "{params.min_gap}" "{params.min_size}" "{params.min_reads}" \
-              "{params.max_cpgs}" "{params.valley}" "{params.maxseg}" \
+              "{params.maxdist}" "{params.valley}" "{params.maxseg}" \
               "{params.n1}" {input.reps1} {input.reps2}
             }} 2>&1 | tee -a "{log}"
             """
