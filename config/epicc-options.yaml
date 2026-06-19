@@ -453,6 +453,15 @@ motifs: true # set false to disable motif discovery
 motifs_allreps: false # set true to also run motifs on every individual replicate
 jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
 
+# meme-chip / motif-discovery parameters
+motif_params:
+  min_region_size: 8   # drop input regions shorter than this (bp); regions below
+                       # the motif width make meme-chip error. Negative starts
+                       # (peaks near a contig edge) are clamped to 0 first.
+  n_motifs: 10         # number of motifs to report (meme -meme-nmotifs / streme -streme-nmotifs)
+  min_width: 6         # minimum motif width (meme-chip -minw)
+  max_width: 20        # maximum motif width (meme-chip -maxw)
+
 ## optional targets for extra output
 # motifs analysis
 motif_target_file_label: "target_motifs" # This name will be used for the name of the results files and should used in the rule target

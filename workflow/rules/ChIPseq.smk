@@ -1295,7 +1295,11 @@ rule find_motifs_in_file:
     params:
         env = lambda wildcards: wildcards.env,
         peak_file = lambda wildcards: wildcards.peak_file,
-        jaspar_db = config['jaspar_db']
+        jaspar_db = config['jaspar_db'],
+        min_region_size = config.get('motif_params', {}).get('min_region_size', 8),
+        n_motifs = config.get('motif_params', {}).get('n_motifs', 10),
+        min_width = config.get('motif_params', {}).get('min_width', 6),
+        max_width = config.get('motif_params', {}).get('max_width', 20)
     log:
         temp(return_log_chip("{env}","{peak_file}", "motifs", ""))
     conda: CONDA_ENV_IDR
@@ -1318,14 +1322,27 @@ rule find_motifs_in_file:
             cat ${{peakfile}} | awk -v OFS="\t" '{{s=int(($2+$3)/2); t=($3-$2); if (t<500) print $1,$2,$3,$4; else print $1,s-200,s+200,$4}}' > {output.temp_bed}
         fi
         head {output.temp_bed}
+        # Clamp negative starts (peaks near a contig edge) and drop regions
+        # below the configured minimum size. meme-chip errors when sequences
+        # are shorter than the motif width, so filter degenerate regions up front.
+        awk -v OFS="\t" -v min={params.min_region_size} '{{ if ($2<0) $2=0; if (($3-$2) >= min) print }}' {output.temp_bed} > {output.temp_bed}.filt
+        mv {output.temp_bed}.filt {output.temp_bed}
+        nregions=$(wc -l < {output.temp_bed})
+        printf "\n%s input regions >= {params.min_region_size}bp for {params.peak_file}\n" "$nregions"
         bedtools getfasta -name -fi {input[1]} -bed {output.temp_bed} > {output.temp_fa}
         head {output.temp_fa}
-        printf "\nGetting motifs for {params.peak_file} with meme version:\n"
-        meme -version
-        meme-chip -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme -meme-p {threads} -meme-nmotifs 10 -streme-nmotifs 10 {output.temp_fa}
-        if [[ -s {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme ]]; then
-            printf "\nLooking for similar motifs in JASPAR database with tomtom\n"
-            tomtom -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/tomtom/ {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme {params.jaspar_db}
+        if [[ -s {output.temp_fa} ]]; then
+            printf "\nGetting motifs for {params.peak_file} with meme version:\n"
+            meme -version
+            meme-chip -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme -meme-p {threads} \
+                -meme-nmotifs {params.n_motifs} -streme-nmotifs {params.n_motifs} \
+                -minw {params.min_width} -maxw {params.max_width} {output.temp_fa}
+            if [[ -s {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme ]]; then
+                printf "\nLooking for similar motifs in JASPAR database with tomtom\n"
+                tomtom -oc {config[output_dir]}/{params.env}/motifs/{params.peak_file}/tomtom/ {config[output_dir]}/{params.env}/motifs/{params.peak_file}/meme/combined.meme {params.jaspar_db}
+            fi
+        else
+            printf "\nWARNING: no input regions >= {params.min_region_size}bp for {params.peak_file}; skipping motif discovery.\n"
         fi
         touch {output.touch}
         }} 2>&1 | tee -a "{log}"
