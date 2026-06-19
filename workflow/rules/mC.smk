@@ -102,27 +102,9 @@ _DMR_THRESHOLD_DEFAULTS = {
     'maxseg':        {'CG': -1,  'CHG': -1,  'CHH': 10000},
 }
 
-# Renamed dmr_thresholds keys: new -> (legacy, reason). Legacy keys are honored
-# with a deprecation warning so existing options files keep working.
-#   p_value -> q_value:  the cutoff is applied to an FDR-adjusted value (q-value).
-#   max_cpgs -> maxdist: the value is passed to metilene -M/--maxdist (max distance
-#                        in nt between CpGs), never a CpG count -- the old name was
-#                        a mislabel.
-_DMR_THRESHOLD_RENAMES = {
-    'q_value': 'p_value',
-    'maxdist': 'max_cpgs',
-}
-
 def get_dmr_threshold(key, context=None):
     """Return a DMR threshold from config, falling back to plant-tuned defaults."""
     thresholds = config.get('dmr_thresholds', {})
-    legacy = _DMR_THRESHOLD_RENAMES.get(key)
-    if legacy and key not in thresholds and legacy in thresholds:
-        sys.stderr.write(
-            f"WARNING: dmr_thresholds.{legacy} is deprecated; rename it to "
-            f"dmr_thresholds.{key}.\n"
-        )
-        return thresholds[legacy]
     val = thresholds.get(key, _DMR_THRESHOLD_DEFAULTS[key])
     if isinstance(val, dict):
         default_per_ctx = _DMR_THRESHOLD_DEFAULTS[key]
