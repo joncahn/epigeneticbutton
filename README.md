@@ -225,7 +225,7 @@ Several fields are auto-derived at runtime and do not need to be specified in mo
 
 All `*_file` fields accept local paths (absolute or relative to the repo root) or HTTP(S) URLs; gzipped inputs are handled transparently. The `te_file` field accepts `.bed(.gz)` (used as-is) or `.gff3(.gz)` (auto-converted to BED6 using the `ID=` attribute as the name column).
 
-The old bare-key format (genome blocks as top-level keys alongside a separate species block) is still accepted but triggers a deprecation warning at startup; migrate to the `genomes:` namespace format shown above.
+Reference genomes must be defined under the `genomes:` namespace shown above.
 
 ### ChIP-seq (Histones and Transcription Factors)
 

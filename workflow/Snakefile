@@ -115,31 +115,14 @@ if not config.get("use_node_tmpdir", False):
     )
 
 # ---------------------------------------------------------------------------
-# Genome config namespace migration
+# Genome config
 # ---------------------------------------------------------------------------
-# New format: genomes are under config["genomes"]. Old format had bare top-level
-# keys with a 'fasta_file' field plus separate species blocks.
+# Reference genomes are defined under the config["genomes"] namespace.
 if "genomes" not in config:
-    config["genomes"] = {}
-    _bare_genome_keys = [
-        k for k, v in config.items()
-        if isinstance(v, dict) and "fasta_file" in v
-    ]
-    if _bare_genome_keys:
-        import warnings
-        warnings.warn(
-            "Genome config uses old bare-key format. "
-            "Please migrate to 'genomes:' namespace in your options file.",
-            FutureWarning,
-        )
-        for _gk in _bare_genome_keys:
-            _gblock = dict(config[_gk])
-            # Inline species params from the separate species block
-            _sp = _gblock.get("species")
-            if _sp and _sp in config and isinstance(config[_sp], dict):
-                for _sk, _sv in config[_sp].items():
-                    _gblock.setdefault(_sk, _sv)
-            config["genomes"][_gk] = _gblock
+    sys.exit(
+        "ERROR: no 'genomes:' section in the options file. Define reference "
+        "genomes under the 'genomes:' namespace (see config/epicc-options.yaml)."
+    )
 
 # ---------------------------------------------------------------------------
 # Intermediate file retention
@@ -217,16 +200,7 @@ UNIQUE_ENVS = samples["env"].unique().tolist()
 
 # Build analysis_to_replicates mapping
 # Key: (Assay, levels_label, IP_target, Genome) tuple
-# Also maintain compat key: (data_type, line, tissue, sample_type, ref_genome) tuple
 analysis_to_replicates = build_analysis_to_replicates(samples)
-
-# Compat: also index by old-style tuple for rules that still use it
-_compat_a2r = {}
-controls = identify_control_samples(samples)
-for _, row in samples[~samples["Sample_ID"].isin(controls)].iterrows():
-    compat_key = (row["data_type"], row["line"], row["tissue"], row["sample_type"], row["ref_genome"])
-    _compat_a2r.setdefault(compat_key, []).append(row["replicate"])
-analysis_to_replicates.update(_compat_a2r)
 
 # Build analysis_samples: non-control samples, deduplicated by analysis key
 analysis_samples = get_analysis_samples(samples)

@@ -433,11 +433,7 @@ def get_sample_field(sample_id, df, field):
     """Look up a single field value for a sample by Sample_ID."""
     match = df.loc[df["Sample_ID"] == sample_id]
     if match.empty:
-        # Also try sample_name column (backward compatibility bridge)
-        if "sample_name" in df.columns:
-            match = df.loc[df["sample_name"] == sample_id]
-        if match.empty:
-            return None
+        return None
     return match[field].iloc[0]
 
 

@@ -7,10 +7,8 @@ def return_log_chip(env, sample_name, step, paired):
 def get_mapping_strategy(env):
     """Select mapping strategy based on environment."""
     if env == "ATAC":
-        return config.get('atac_mapping_strategy', config.get('atac_mapping_option', 'default'))
-    return config.get('chip_mapping_strategy', config.get('chip_mapping_option', 'default'))
-
-get_bt2_option = get_mapping_strategy  # backward compat
+        return config.get('atac_mapping_strategy', 'default')
+    return config.get('chip_mapping_strategy', 'default')
 
 def get_chip_aligner(env):
     """Get configured aligner for ChIP or ATAC."""
