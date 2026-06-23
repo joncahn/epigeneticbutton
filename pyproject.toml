@@ -9,6 +9,8 @@ requires-python = ">=3.9"
 # The snakemake conda environment is bootstrapped from config/epicc-env.txt.
 dependencies = [
     "snakemake>=9.0",
+    "snakemake-executor-plugin-slurm",
+    "snakemake-executor-plugin-cluster-generic",
     "pyyaml",
 ]
 

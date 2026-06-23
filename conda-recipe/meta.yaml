@@ -16,7 +16,9 @@ build:
   script: |
     mkdir -p "${PREFIX}/bin" "${PREFIX}/share/epicc"
     install -m 755 epicc "${PREFIX}/bin/epicc"
-    cp -r workflow config profiles scripts dev "${PREFIX}/share/epicc/"
+    # Whole directories are copied recursively, so any file added under data/
+    # (bundled reference data) is included automatically — no per-file listing.
+    cp -r workflow config profiles data scripts dev "${PREFIX}/share/epicc/"
     # tools/ (epicc-builder.html) is optional but useful
     cp -r tools "${PREFIX}/share/epicc/"
 
@@ -27,6 +29,8 @@ requirements:
     - python >=3.9
     - snakemake >=9.0
     - pyyaml
+    - snakemake-executor-plugin-slurm
+    - snakemake-executor-plugin-cluster-generic
     # Bioinformatics tools are managed via per-rule conda environments
     # declared in workflow/envs/. Snakemake creates them on first use.
     # To pre-build all envs before submitting cluster jobs, run:
