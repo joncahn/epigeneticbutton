@@ -1295,7 +1295,7 @@ rule find_motifs_in_file:
     params:
         env = lambda wildcards: wildcards.env,
         peak_file = lambda wildcards: wildcards.peak_file,
-        jaspar_db = config['jaspar_db'],
+        jaspar_db = resolve_repo_data(config['jaspar_db']),
         min_region_size = config.get('motif_params', {}).get('min_region_size', 8),
         n_motifs = config.get('motif_params', {}).get('n_motifs', 10),
         min_width = config.get('motif_params', {}).get('min_width', 6),

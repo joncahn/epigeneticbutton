@@ -11,7 +11,7 @@ import time
 import atexit
 import traceback
 from scripts.samplefile_validation import (
-    check_table, check_genome_config, check_extra_output_files,
+    check_table, check_genome_config, check_extra_output_files, resolve_data_path,
 )
 from scripts.sample_sheet import (
     NEW_COLNAMES,
@@ -53,7 +53,7 @@ def print_banner():
     ]
     
     try:
-        with open("data/banner.txt") as f:
+        with open(resolve_repo_data("data/banner.txt")) as f:
             banner_lines.extend(f.read().splitlines())
     except FileNotFoundError:
         pass
@@ -68,8 +68,11 @@ def print_banner():
 # tied to a genuine run without having to enumerate every administrative
 # invocation that merely parses the workflow.
 
-# Configuration
-configfile: "config/epicc-options.yaml"
+# Configuration — default options ship alongside the workflow. Anchor to
+# workflow.basedir (the Snakefile's dir) rather than the CWD so the base
+# config loads in both git-clone (<repo>/config/) and installed
+# ($PREFIX/share/epicc/config/) layouts. A user --configfile overrides it.
+configfile: os.path.join(workflow.basedir, "..", "config", "epicc-options.yaml")
 analysis = config['full_analysis']
 
 # ---------------------------------------------------------------------------
@@ -151,6 +154,17 @@ REPO_FOLDER = os.path.abspath(config.get("repo_folder", os.path.join(workflow.ba
 if not os.path.isdir(REPO_FOLDER):
     raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the options file!")
 
+
+def resolve_repo_data(path):
+    """Resolve a bundled-data path against REPO_FOLDER (installed-mode aware).
+
+    Thin wrapper over samplefile_validation.resolve_data_path so the workflow
+    and the config validators share one resolution rule. See that function for
+    semantics. Generic by design: any path under REPO_FOLDER resolves, so new
+    files dropped into ``data/`` need no special-casing.
+    """
+    return resolve_data_path(path, REPO_FOLDER)
+
 # Define the conda environment to build
 CONDA_ENV = os.path.join(REPO_FOLDER,"workflow","envs","epibutton.yaml")
 
@@ -180,8 +194,8 @@ if not config.get("sample_file"):
 else:
     samples = read_sample_sheet(config["sample_file"])
     check_table(samples)
-    check_genome_config(samples, config)
-    check_extra_output_files(config)
+    check_genome_config(samples, config, repo_folder=REPO_FOLDER)
+    check_extra_output_files(config, repo_folder=REPO_FOLDER)
 
     # Add backward-compatible columns derived from new-format fields
     samples = add_compat_columns(samples)

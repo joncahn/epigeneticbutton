@@ -43,6 +43,31 @@ def _is_url(path):
     return path.startswith("http://") or path.startswith("https://")
 
 
+def resolve_data_path(path, repo_folder=None):
+    """Resolve a possibly-relative path to a bundled data file.
+
+    Absolute paths, URLs, and paths that already exist relative to the working
+    directory are returned unchanged (git-clone runs and user-supplied files).
+    Otherwise, when ``repo_folder`` is given and the path exists under it,
+    return that — this is how bundled defaults (e.g. ``data/...``) are found in
+    installed mode, where the pipeline ships at ``$PREFIX/share/epicc/`` and
+    jobs do not run from the repo root. Generic by design: any path under
+    ``repo_folder`` resolves, so new files dropped into ``data/`` need no
+    special-casing. Falls back to the original path so a missing file reports
+    what the user actually set.
+    """
+    if not path:
+        return path
+    p = str(path)
+    if _is_url(p) or os.path.isabs(p) or os.path.exists(p):
+        return p
+    if repo_folder:
+        bundled = os.path.join(repo_folder, p)
+        if os.path.exists(bundled):
+            return bundled
+    return p
+
+
 def _is_local_path(token):
     """True if a Read_files component entry is a local filesystem path.
 
@@ -308,13 +333,16 @@ def check_table(tab, check_paths=True):
 # (kept for reference; genomesize and star_index are no longer validated as required)
 
 
-def check_genome_config(tab, config, check_paths=True):
+def check_genome_config(tab, config, check_paths=True, repo_folder=None):
     """Validate that config['genomes'] has required fields for all genomes in the sample sheet.
 
     When ``check_paths`` is True (default), local genome-config file paths
     (``fasta_file``, ``gff_file``, ``gtf_file``, ``te_file``,
     ``structural_rna_fafile``, ``gaf_file``, ``gene_info_file``) are checked
     for existence on disk. URLs and the ``<auto>`` sentinel are skipped.
+    ``repo_folder``, when given, lets relative paths resolve against the
+    install tree (bundled data) the same way the workflow resolves them at
+    run time — so installed-mode defaults like ``data/...`` validate correctly.
 
     Raises ValueError with all collected error messages if validation fails.
     """
@@ -354,7 +382,8 @@ def check_genome_config(tab, config, check_paths=True):
         if check_paths:
             for field in ("fasta_file", "gff_file", "gtf_file", "te_file"):
                 val = gcfg.get(field)
-                if val and val != "<auto>" and not _is_url(val) and not os.path.exists(val):
+                if val and val != "<auto>" and not _is_url(val) \
+                        and not os.path.exists(resolve_data_path(val, repo_folder)):
                     errors.append(
                         f"[X] Genome '{genome}': {field} '{val}' does not exist"
                     )
@@ -367,7 +396,7 @@ def check_genome_config(tab, config, check_paths=True):
             srna_fa = gcfg.get("structural_rna_fafile", "<auto>")
             if (srna_fa and srna_fa != "<auto>"
                     and not _is_url(srna_fa)
-                    and not os.path.exists(srna_fa)):
+                    and not os.path.exists(resolve_data_path(srna_fa, repo_folder))):
                 errors.append(
                     f"[X] Genome '{genome}': structural_rna_fafile '{srna_fa}' "
                     f"does not exist"
@@ -384,7 +413,8 @@ def check_genome_config(tab, config, check_paths=True):
             if check_paths:
                 for field in ("gaf_file", "gene_info_file"):
                     val = gcfg.get(field)
-                    if val and not _is_url(val) and not os.path.exists(val):
+                    if val and not _is_url(val) \
+                            and not os.path.exists(resolve_data_path(val, repo_folder)):
                         errors.append(
                             f"[X] Genome '{genome}': {field} '{val}' does not exist"
                         )
@@ -571,7 +601,7 @@ def _validate_geneid_target_file(path, key, errors):
         errors.append(f"[X] {key} '{path}' has no data rows")
 
 
-def check_extra_output_files(config, check_paths=True):
+def check_extra_output_files(config, check_paths=True, repo_folder=None):
     """Validate optional 'extra output' target files referenced in the options.
 
     The pipeline supports several optional inputs that drive add-on outputs
@@ -608,7 +638,8 @@ def check_extra_output_files(config, check_paths=True):
             continue
         if not check_paths:
             continue
-        if not os.path.exists(val):
+        rpath = resolve_data_path(val, repo_folder)
+        if not os.path.exists(rpath):
             # Skip default placeholder paths that the user clearly hasn't
             # touched; warn loudly otherwise. The default values shipped
             # in epicc-options.yaml all live under "data/" and end with
@@ -626,13 +657,13 @@ def check_extra_output_files(config, check_paths=True):
             errors.append(f"[X] {key}: '{val}' does not exist")
             continue
         if validator is not None:
-            validator(val, errors)
+            validator(rpath, errors)
 
     # Background file for GO enrichment is optional; "default" is a sentinel
     if go_on:
         bg = config.get("rnaseq_background_file", "")
         if bg and bg != "default":
-            if check_paths and not os.path.exists(bg):
+            if check_paths and not os.path.exists(resolve_data_path(bg, repo_folder)):
                 errors.append(
                     f"[X] rnaseq_background_file: '{bg}' does not exist"
                 )

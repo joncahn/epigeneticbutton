@@ -168,7 +168,7 @@ def get_structural_rna_fasta(wildcards):
     """Resolve structural RNA FASTA: user-provided file or auto-derived via Infernal."""
     override = config["genomes"][wildcards.ref_genome].get("structural_rna_fafile", "<auto>")
     if override and override != "<auto>":
-        return override
+        return resolve_repo_data(override)
     return f"{GENOMES_DIR}/structural_RNAs/{wildcards.ref_genome}/structural_rnas.fa"
 
 rule make_bt2_indices_for_structural_RNAs:

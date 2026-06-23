@@ -657,8 +657,8 @@ rule create_GO_database:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         species = lambda wildcards: config["genomes"][wildcards.ref_genome]['species'],
         genus = lambda wildcards: config["genomes"][wildcards.ref_genome]['genus'],
-        gaffile = lambda wildcards: config["genomes"][wildcards.ref_genome]['gaf_file'],
-        geneinfofile = lambda wildcards: config["genomes"][wildcards.ref_genome]['gene_info_file']
+        gaffile = lambda wildcards: resolve_repo_data(config["genomes"][wildcards.ref_genome]['gaf_file']),
+        geneinfofile = lambda wildcards: resolve_repo_data(config["genomes"][wildcards.ref_genome]['gene_info_file'])
     log:
         temp(return_log_rna("{ref_genome}", "build_GO", "{dbname}"))
     conda: CONDA_ENV_RNA
