@@ -73,7 +73,7 @@ if ( length(htcol) > 0 ) {
 	dev.off()
 } else {
 	tracks<-append(list(axistrack, genetrack, tetrack), tracklist)
-	pdf(pdfname, paper="a4", width = 12, height = tot)
+	pdf(pdfname, width = 12, height = tot)
 	plotTracks(tracks, sizes=tracksize, main=plotname, cex.main = 1)
 	dev.off()
 }
