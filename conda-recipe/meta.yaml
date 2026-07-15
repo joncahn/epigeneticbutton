@@ -7,8 +7,7 @@ package:
 
 source:
   url: https://github.com/joncahn/epigeneticbutton/archive/refs/tags/v{{ version }}.tar.gz
-  # sha256: fill in after tagging the first release (run `conda-build --output-folder ...`
-  # once to get the hash, then commit here before submitting to Bioconda)
+  sha256: 33dc671840723cacd3e21f27e81ff1ea15ede0583e600fb99aa2e9c40ecf2c3c
 
 build:
   number: 0
