@@ -23,8 +23,12 @@ build:
     cp -r tools "${PREFIX}/share/epicc/"
 
 requirements:
-  host:
-    - python >=3.9
+  # No host: section — this is a noarch: generic package whose build script is
+  # pure shell (mkdir/install/cp), so no build-time Python is needed. Listing
+  # python under host: makes conda-build produce a pyXYZ variant and pin the
+  # run python to whatever built the package (e.g. a 3.14 release candidate
+  # from conda-forge), which makes the package uninstallable. Runtime Python
+  # is declared under run: below.
   run:
     - python >=3.9
     - snakemake >=9.0
