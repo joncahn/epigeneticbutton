@@ -91,8 +91,15 @@ GENOMES_DIR = config["genome_dir"]
 # deeptools, etc.) write to the project filesystem instead of the cluster's
 # /tmp. This avoids ENOSPC on sites where /tmp is a tmpfs sized off the
 # job's RAM allocation (e.g. SLURM JobContainerType=job_container/tmpfs).
-# Per-job subdir uses SLURM_JOB_ID under the cluster, $$ (bash PID) locally,
-# so concurrent jobs never collide; the EXIT trap cleans up on success,
+# Per-job subdir is keyed on SLURM_JOB_ID *and* $$ (the rule shell's PID):
+# SLURM_JOB_ID gives cross-node uniqueness under the SLURM executor, $$ gives
+# per-shell uniqueness within a node. The $$ is essential -- without it, a
+# local `--cores N` run launched inside a single sbatch allocation (no
+# --profile) would hand every concurrent job the *same* .tmp/<SLURM_JOB_ID>
+# dir, and the first job to finish would `rm -rf` it out from under its
+# still-running siblings (deeptools workers writing _deeptools_*.bg via
+# $TMPDIR then die with FileNotFoundError). With $$ appended, each shell owns
+# a distinct dir, so concurrent jobs never collide; the EXIT trap cleans up on
 # failure, or signals other than SIGKILL. Set use_node_tmpdir=true (or pass
 # `epicc run --use-node-tmpdir`) to skip this and inherit whatever TMPDIR
 # the cluster/site provides — useful when /tmp is fast local scratch with
@@ -109,9 +116,11 @@ if not config.get("use_node_tmpdir", False):
     # jobs run from the snakemake workdir, which is this abspath's base.
     _tmpdir_base = os.path.abspath(RESULTS_DIR)
     # Quadruple braces escape twice: f-string → "{{...}}" → Snakemake .format()
-    # → "{SLURM_JOB_ID:-$$}" in the final bash command.
+    # → "{SLURM_JOB_ID:-local}" in the final bash command. The trailing ".$$"
+    # has no braces, so it survives both passes untouched and bash expands it
+    # to the rule shell's PID.
     shell.prefix(
-        f'TMPDIR_JOB="{_tmpdir_base}/.tmp/${{{{SLURM_JOB_ID:-$$}}}}" && '
+        f'TMPDIR_JOB="{_tmpdir_base}/.tmp/${{{{SLURM_JOB_ID:-local}}}}.$$" && '
         'mkdir -p "$TMPDIR_JOB" && '
         'trap \'rm -rf "$TMPDIR_JOB"\' EXIT && '
         'export TMPDIR="$TMPDIR_JOB" && '
