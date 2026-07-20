@@ -19,7 +19,28 @@ env<-args[3]
 types<-unlist(strsplit(args[4], ":"))
 output<-args[5]
 
-sampleslist<-unique(unlist(strsplit(merged$Samples, ",")))
+sampleslist<-unique(unlist(strsplit(as.character(merged$Samples), ",")))
+
+# ComplexUpset needs at least two sets (samples with peaks) to build an
+# intersection matrix; with 0 or 1 non-empty peak file it aborts with
+# "Needs at least two indicator variables". Reachable as a corner case when
+# all but one of the merged peak files are empty (no peaks called, or an
+# upstream failure). Emit an informative placeholder PDF instead of failing
+# the whole combined-analysis DAG.
+if (length(sampleslist) < 2) {
+	msg <- if (length(sampleslist) < 1) {
+		"No sample has any peaks - UpSet plot skipped"
+	} else {
+		paste0("Only one sample has peaks (", sampleslist,
+		       ") - UpSet plot needs at least two")
+	}
+	pdf(output, height = 10, width = 10)
+	plot.new()
+	text(0.5, 0.5, msg, cex = 1.3, col = "grey40")
+	dev.off()
+	quit(save = "no", status = 0)
+}
+
 figsize<-length(sampleslist)
 
 mat<-separate_rows(merged, Samples, sep = ",") %>%
