@@ -575,6 +575,40 @@
     background: var(--accent) !important;
     color: white !important;
   }
+  /* Code-block export modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5em;
+  }
+  .modal-overlay[hidden] { display: none; }
+  .modal-box {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    max-width: 900px; width: 100%; max-height: 90vh;
+    display: flex; flex-direction: column;
+    padding: 1.2em 1.4em; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  .modal-box h2 { margin: 0 0 0.3em; font-size: 1.15em; }
+  .modal-box .modal-sub { margin: 0 0 0.8em; color: var(--text-dim); font-size: 0.9em; }
+  .modal-box .modal-sub code { color: var(--accent2); }
+  #code-modal-text {
+    flex: 1; min-height: 200px; width: 100%; resize: vertical;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.82em;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.7em; white-space: pre; overflow: auto;
+  }
+  .modal-actions { display: flex; align-items: center; gap: 10px; margin-top: 0.9em; }
+  .modal-actions button {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 0.9em;
+  }
+  .modal-actions button:hover { background: var(--accent); }
+  .modal-actions .btn-accent { background: var(--accent); color: #fff; }
+  .modal-actions .btn-accent:hover { background: #c73a52; }
+  .modal-actions .modal-status { color: var(--accent2); font-size: 0.85em; margin-right: auto; }
 </style>
 </head>
 <body>
@@ -602,12 +636,19 @@
       <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
       <button id="btn-dup-selected" aria-label="Duplicate selected rows" disabled>Duplicate Selected</button>
       <button id="btn-del-selected" aria-label="Delete selected rows" disabled>Delete Selected</button>
+      <button id="btn-undo" aria-label="Undo last change" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+      <button id="btn-redo" aria-label="Redo last undone change" title="Redo (Ctrl+Shift+Z)">Redo &#8631;</button>
       <div class="io-group">
         <label for="import-file" class="btn-accent" role="button" aria-label="Import TSV file" tabindex="0"
                onkeydown="if(event.key==='Enter')this.click()">Import TSV
           <input type="file" id="import-file" accept=".tsv,.txt,.tab" aria-label="Choose TSV file to import">
         </label>
+        <input type="text" id="export-filename" value="sample_sheet.tsv"
+               aria-label="Sample sheet filename"
+               title="Filename used by Export TSV and the pasteable command; also fills the Options 'Sample file path' field"
+               style="width:13em">
         <button id="btn-export" class="btn-accent" aria-label="Export sample sheet as TSV">Export TSV</button>
+        <button id="btn-export-code" class="btn-accent" aria-label="Copy sample sheet as a pasteable shell command">Copy as command</button>
       </div>
     </div>
     <div class="factor-panel" id="factor-panel" role="group" aria-label="Factor management">
@@ -638,6 +679,19 @@
     <div class="config-content" id="config-content"></div>
   </div>
 </main>
+
+<div id="code-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="code-modal-title" hidden>
+  <div class="modal-box">
+    <h2 id="code-modal-title">Paste on the cluster</h2>
+    <p class="modal-sub">This command writes the sample sheet to <code id="code-modal-fname"></code> in your current directory. Tabs are encoded as <code>\t</code> so they survive the paste.</p>
+    <textarea id="code-modal-text" readonly aria-label="Shell command to create the sample sheet" spellcheck="false"></textarea>
+    <div class="modal-actions">
+      <button id="code-modal-copy" class="btn-accent">Copy to clipboard</button>
+      <span id="code-modal-status" class="modal-status" role="status" aria-live="polite"></span>
+      <button id="code-modal-close">Close</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ===========================================================================
@@ -1268,6 +1322,12 @@ function moveRow(row, direction) {
 }
 
 function removeRow(row) {
+  // "Remove row" sits directly under "Duplicate row" in the context menu, so
+  // a misclick is easy. Confirm first (still undoable via Undo / Ctrl+Z).
+  var d = row.getData();
+  var who = (d.Sample_ID || "").trim();
+  var msg = who ? "Remove row \"" + who + "\"?" : "Remove this row?";
+  if (!window.confirm(msg + "\n\n(You can undo this with the Undo button or Ctrl+Z.)")) return;
   row.delete();
   refreshUI();
 }
@@ -1755,27 +1815,116 @@ function importTSV(text) {
   setTimeout(function() { refreshUI(); }, 100);
 }
 
-function exportTSV() {
+// Strip characters that would corrupt a TSV cell: embedded tabs, CR and LF
+// (which would spill a value into an adjacent column or a new row), plus
+// leading/trailing whitespace. This matters most for values pasted from
+// spreadsheets or the SRA web UI, where an invisible trailing tab on an
+// SRR accession silently misaligns every downstream column on re-import.
+function sanitizeCell(v) {
+  if (v == null) return "";
+  return String(v).replace(/[\t\r\n]+/g, "").trim();
+}
+
+// Prepare the export matrix shared by exportTSV and the code-block export:
+// reconstruct Levels from the factor columns, accept Sample_ID suggestions
+// for empty cells, and sanitize every value. Returns { header, rows } where
+// rows is an array of sanitized string arrays aligned to COLUMNS.
+function buildExportMatrix() {
   var data = table.getData();
-  if (data.length === 0) { alert("No data to export."); return; }
-  // Reconstruct Levels from factor fields before export
+  if (data.length === 0) return null;
   if (factors.length > 0) {
     for (var i = 0; i < data.length; i++) {
       data[i].Levels = buildLevelsFromFactors(data[i]);
     }
   }
-  // Accept suggestions for empty Sample_IDs
   for (var i = 0; i < data.length; i++) {
     if (!(data[i].Sample_ID || "").trim()) {
       var suggestion = suggestSampleId(data[i]);
       if (suggestion) data[i].Sample_ID = suggestion;
     }
   }
-  var lines = [COLUMNS.join("\t")];
+  var rows = [];
   for (var i = 0; i < data.length; i++) {
-    lines.push(COLUMNS.map(function(c) { var v = data[i][c]; return (v == null) ? "" : String(v); }).join("\t"));
+    rows.push(COLUMNS.map(function(c) { return sanitizeCell(data[i][c]); }));
   }
-  downloadBlob(lines.join("\n") + "\n", "text/tab-separated-values", "sample_sheet.tsv");
+  return { header: COLUMNS.slice(), rows: rows };
+}
+
+// The sample-sheet filename chosen in the toolbar. Drives Export TSV, the
+// pasteable command, and the Options "Sample file path" field.
+function sheetFilename() {
+  var el = document.getElementById("export-filename");
+  var v = el ? el.value.trim() : "";
+  return v || "sample_sheet.tsv";
+}
+
+function exportTSV() {
+  var matrix = buildExportMatrix();
+  if (!matrix) { alert("No data to export."); return; }
+  var lines = [matrix.header.join("\t")];
+  for (var i = 0; i < matrix.rows.length; i++) {
+    lines.push(matrix.rows[i].join("\t"));
+  }
+  // Browsers reduce the download name to a basename, so strip any directory.
+  var fname = sheetFilename().split("/").pop() || "sample_sheet.tsv";
+  downloadBlob(lines.join("\n") + "\n", "text/tab-separated-values", fname);
+}
+
+// Single-quote a value for POSIX shell, escaping any embedded single quotes.
+function shQuote(s) {
+  return "'" + String(s).replace(/'/g, "'\\''") + "'";
+}
+
+// Build a self-contained, paste-safe shell command that recreates the sheet.
+// Uses printf with a recycled "%s\t...%s\n" format so real tabs come from the
+// format string (the pasted text carries literal "\t", avoiding tab-completion
+// mishaps in an interactive shell), and every cell is single-quoted.
+function buildSheetCommand() {
+  var matrix = buildExportMatrix();
+  if (!matrix) return null;
+  var ncol = matrix.header.length;
+  var fmt = [];
+  for (var c = 0; c < ncol; c++) fmt.push("%s");
+  var fmtStr = fmt.join("\\t") + "\\n";
+  var lines = ["printf '" + fmtStr + "' \\"];
+  lines.push("  " + matrix.header.map(shQuote).join(" ") + " \\");
+  for (var i = 0; i < matrix.rows.length; i++) {
+    lines.push("  " + matrix.rows[i].map(shQuote).join(" ") + " \\");
+  }
+  lines.push("  > " + shQuote(sheetFilename()));
+  return lines.join("\n");
+}
+
+function openCodeModal() {
+  var cmd = buildSheetCommand();
+  if (!cmd) { alert("No data to export."); return; }
+  document.getElementById("code-modal-fname").textContent = sheetFilename();
+  var ta = document.getElementById("code-modal-text");
+  ta.value = cmd;
+  document.getElementById("code-modal-status").textContent = "";
+  document.getElementById("code-modal").hidden = false;
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+}
+
+function closeCodeModal() {
+  document.getElementById("code-modal").hidden = true;
+}
+
+function copyCodeModal() {
+  var ta = document.getElementById("code-modal-text");
+  var status = document.getElementById("code-modal-status");
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+  var done = function() { status.textContent = "Copied ✓"; };
+  var fail = function() { status.textContent = "Press Ctrl+C to copy"; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done, function() {
+      try { document.execCommand("copy") ? done() : fail(); } catch (e) { fail(); }
+    });
+  } else {
+    try { document.execCommand("copy") ? done() : fail(); } catch (e) { fail(); }
+  }
 }
 
 // ===========================================================================
@@ -2099,23 +2248,66 @@ document.getElementById("import-file").addEventListener("change", function(e) {
 });
 
 document.getElementById("btn-export").addEventListener("click", exportTSV);
+document.getElementById("btn-export-code").addEventListener("click", openCodeModal);
+
+// Keep the chosen sample-sheet filename in sync with the Options "Sample file
+// path" field, so the exported options YAML points at the sheet the user names.
+document.getElementById("export-filename").addEventListener("input", function() {
+  configState.sample_file = sheetFilename();
+  var cfgInput = document.getElementById("cfg-sample_file");
+  if (cfgInput) cfgInput.value = configState.sample_file;
+});
+
+// Code-block modal controls
+document.getElementById("code-modal-copy").addEventListener("click", copyCodeModal);
+document.getElementById("code-modal-close").addEventListener("click", closeCodeModal);
+document.getElementById("code-modal").addEventListener("click", function(e) {
+  if (e.target === this) closeCodeModal(); // click on backdrop closes
+});
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape" && !document.getElementById("code-modal").hidden) closeCodeModal();
+});
 
 document.getElementById("btn-del-selected").addEventListener("click", function() {
   var selected = table.getSelectedRows();
   if (selected.length === 0) return;
+  // Deleting rows is a quick, easy-to-misfire action (the button sits right
+  // next to Duplicate Selected). Confirm first; it's still undoable via the
+  // Undo button / Ctrl+Z afterward.
+  var n = selected.length;
+  var msg = n === 1
+    ? "Delete the selected row?"
+    : "Delete " + n + " selected rows?";
+  if (!window.confirm(msg + "\n\n(You can undo this with the Undo button or Ctrl+Z.)")) return;
   selected.forEach(function(row) { row.delete(); });
+  refreshUI();
+});
+
+document.getElementById("btn-undo").addEventListener("click", function() {
+  table.undo();
+  refreshUI();
+});
+
+document.getElementById("btn-redo").addEventListener("click", function() {
+  table.redo();
   refreshUI();
 });
 
 document.getElementById("btn-dup-selected").addEventListener("click", function() {
   var selected = table.getSelectedRows();
   if (selected.length === 0) return;
+  // Order the copies by their current table position, then append them all as
+  // one block at the bottom (rather than inserting each copy directly under
+  // its original). Grouping the duplicates makes them easier to edit together
+  // by sample type.
+  var allRows = table.getRows();
+  selected.sort(function(a, b) { return allRows.indexOf(a) - allRows.indexOf(b); });
   for (var i = 0; i < selected.length; i++) {
     var data = Object.assign({}, selected[i].getData());
     data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
     data._sid_user_edited = !!data.Sample_ID;
     delete data.id;
-    table.addRow(data, false, selected[i]);
+    table.addRow(data, false); // false = append at the bottom of the table
   }
   table.deselectRow();
   refreshUI();
@@ -2205,13 +2397,14 @@ var configState = {
   adapter2_RNA: "auto",
   rna_strandedness: "reverse",
   rna_multimap: "multiple",
+  rampage_strandedness: "forward",
+  rampage_multimap: "multiple",
   // mC advanced
   quality_threshold_mC: 10,
   min_read_length_mC: 20,
   trim_front_mC: 0,
   adapter1_mC: "auto",
   adapter2_mC: "auto",
-  mC_method: "default",
   mC_max_insert: 1000,
   // methylation_contexts: gates per-context mC analysis (bigwigs, DMRs,
   // PCA). Toggles below derive the list. Default all three (plants);
@@ -2284,7 +2477,7 @@ function buildTextRow(label, key, placeholder, help) {
   return row;
 }
 
-function buildSelectRow(label, key, options) {
+function buildSelectRow(label, key, options, help) {
   var row = el("div", { className: "cfg-row" });
   row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
   var sel = el("select", {
@@ -2297,6 +2490,7 @@ function buildSelectRow(label, key, options) {
     sel.appendChild(opt);
   }
   row.appendChild(sel);
+  if (help) row.appendChild(el("div", { className: "cfg-help", textContent: help }));
   return row;
 }
 
@@ -2438,6 +2632,15 @@ function buildConfigForm() {
   outSec.appendChild(buildToggleRow("Gene Ontology analysis", "GO",
     "Gene Ontology will be performed! Good luck! \uD83E\uDD1E",
     "Gene ontology deactivated. Probably safer! \uD83D\uDE25"));
+  outSec.appendChild(buildToggleRow("Motifs analysis for TFs", "motifs",
+    "Motifs analysis selected! \uD83D\uDE00",
+    "No motifs analysis will be performed! \uD83D\uDE22"));
+  outSec.appendChild(buildTextRow("JASPAR database:", "jaspar_db",
+    "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt",
+    "MEME-format motif database used when Motifs analysis is on."));
+  outSec.appendChild(buildToggleRow("Motifs on all replicates", "motifs_allreps",
+    "Let's go! Motifs on all individual replicates it is! \uD83D\uDCB8",
+    "Motifs only on merged replicates."));
 
   // --- Intermediate File Retention ---
   var retRow = buildSelectRow("Keep intermediate files", "keep_intermediates", ["standard", "none", "custom", "all"]);
@@ -2490,19 +2693,6 @@ function buildConfigForm() {
     "Alignment coming right up! \uD83D\uDECE\uFE0F"));
   container.appendChild(inSec);
 
-  // --- Motifs ---
-  var motSec = el("div", { className: "cfg-section" });
-  motSec.appendChild(el("h2", { textContent: "Motifs Analysis" }));
-  motSec.appendChild(buildToggleRow("Motifs analysis for TFs", "motifs",
-    "Motifs analysis selected! \uD83D\uDE00",
-    "No motifs analysis will be performed! \uD83D\uDE22"));
-  motSec.appendChild(buildTextRow("JASPAR database:", "jaspar_db",
-    "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt"));
-  motSec.appendChild(buildToggleRow("Motifs on all replicates", "motifs_allreps",
-    "Let's go! Motifs on all individual replicates it is! \uD83D\uDCB8",
-    "Motifs only on merged replicates."));
-  container.appendChild(motSec);
-
   // --- Advanced: ChIP ---
   var chipDet = el("details", { className: "cfg-details" });
   chipDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ChIP-seq Advanced Options" }));
@@ -2516,18 +2706,22 @@ function buildConfigForm() {
     "Fingerprint QC plots will be generated", "Fingerprint plots skipped (saves time)"));
   chipBody.appendChild(buildTextRow("Fingerprint samples (auto or integer):", "fingerprint_samples", "auto"));
   chipBody.appendChild(buildSelectRow("Aligner:", "chip_aligner",
-    ["bowtie2", "chromap"]));
+    ["bowtie2", "chromap"],
+    "\"bowtie2\" (default) is accurate for both SE and PE and handles repeats. \"chromap\" is ~10x faster but appropriate only for SE data — on PE it maps mates independently and loses most proper pairs over repeats. A repeat/repeatall mapping strategy forces bowtie2 regardless."));
   chipBody.appendChild(buildSelectRow("Mapping strategy:", "chip_mapping_strategy",
-    ["default", "repeat", "repeatall", "all"]));
+    ["default", "repeat", "repeatall", "all"],
+    "\"default\" keeps uniquely-mapped reads. \"repeat\"/\"repeatall\" retain multi-mappers for repetitive references (forces bowtie2). \"all\" reports all alignments without MAPQ filtering."));
   chipBody.appendChild(buildNumberRow("Bigwig bin size:", "chip_tracks_binsize", 1, 1000000));
   chipBody.appendChild(buildTextRow("Bigwig parameters:", "chip_tracks_params",
     "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"));
   chipBody.appendChild(buildTextRow("Peak calling parameters:", "chip_callpeaks_params",
     "--keep-dup 'all' --nomodel"));
   chipBody.appendChild(buildSelectRow("CUT&RUN/CUT&Tag broad caller:", "cut_callpeaks_broad_caller",
-    ["epic2", "seacr", "macs2"]));
+    ["epic2", "seacr", "macs2"],
+    "Peak caller for CUT&RUN/CUT&Tag broad-mark assays (histone domains). \"epic2\" (default) calls broad enriched domains; \"seacr\" suits sparse, low-background CUT& data; \"macs2\" is the general fallback. ChIP assays always use MACS2."));
   chipBody.appendChild(buildSelectRow("CUT&RUN/CUT&Tag narrow caller:", "cut_callpeaks_narrow_caller",
-    ["seacr", "macs2"]));
+    ["seacr", "macs2"],
+    "Peak caller for CUT&RUN/CUT&Tag narrow-mark assays (TFs, sharp marks). \"seacr\" (default) is tuned for the low background of CUT& data; \"macs2\" is the general fallback."));
   chipDet.appendChild(chipBody);
   container.appendChild(chipDet);
 
@@ -2541,9 +2735,11 @@ function buildConfigForm() {
   atacBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ATAC", "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG"));
   atacBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ATAC", "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"));
   atacBody.appendChild(buildSelectRow("Aligner:", "atac_aligner",
-    ["bowtie2", "chromap"]));
+    ["bowtie2", "chromap"],
+    "\"bowtie2\" (default) is accurate for both SE and PE and handles repeats. \"chromap\" is ~10x faster but appropriate only for SE data — on PE it maps mates independently and loses most proper pairs over repeats. A repeat/repeatall mapping strategy forces bowtie2 regardless."));
   atacBody.appendChild(buildSelectRow("Mapping strategy:", "atac_mapping_strategy",
-    ["default", "repeat", "repeatall", "all"]));
+    ["default", "repeat", "repeatall", "all"],
+    "\"default\" keeps uniquely-mapped reads. \"repeat\"/\"repeatall\" retain multi-mappers for repetitive references (forces bowtie2). \"all\" reports all alignments without MAPQ filtering."));
   atacDet.appendChild(atacBody);
   container.appendChild(atacDet);
 
@@ -2556,8 +2752,14 @@ function buildConfigForm() {
   rnaBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_RNA", 0, 100));
   rnaBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_RNA", "auto"));
   rnaBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_RNA", "auto"));
-  rnaBody.appendChild(buildSelectRow("Strandedness:", "rna_strandedness", ["reverse", "forward", "unstranded"]));
-  rnaBody.appendChild(buildSelectRow("Mapped reads for bigwigs:", "rna_multimap", ["multiple", "unique"]));
+  rnaBody.appendChild(buildSelectRow("Strandedness:", "rna_strandedness", ["reverse", "forward", "unstranded"],
+    "Library strand orientation for stranded coverage tracks. \"reverse\" fits dUTP/Illumina stranded kits (e.g. TruSeq Stranded mRNA — the most common), \"forward\" fits directional forward-stranded kits, \"unstranded\" if the library keeps no strand information. Applies to the RNAseq assay; RAMPAGE defaults to \"forward\"."));
+  rnaBody.appendChild(buildSelectRow("Mapped reads for bigwigs:", "rna_multimap", ["multiple", "unique"],
+    "\"multiple\" counts multi-mapping reads in coverage tracks (default); \"unique\" restricts tracks to uniquely-mapped reads (cleaner over repeats, lower signal)."));
+  rnaBody.appendChild(buildSelectRow("RAMPAGE strandedness:", "rampage_strandedness", ["forward", "reverse", "unstranded"],
+    "Strand orientation for the RAMPAGE assay's 5'-end coverage tracks. \"forward\" (default) fits standard directional RAMPAGE; use \"unstranded\" if the library keeps no strand information. Separate from the RNAseq setting above."));
+  rnaBody.appendChild(buildSelectRow("RAMPAGE mapped reads for bigwigs:", "rampage_multimap", ["multiple", "unique"],
+    "\"multiple\" counts multi-mapping reads in RAMPAGE coverage tracks (default); \"unique\" restricts to uniquely-mapped reads."));
   rnaDet.appendChild(rnaBody);
   container.appendChild(rnaDet);
 
@@ -2570,8 +2772,8 @@ function buildConfigForm() {
   mcBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_mC", 0, 100));
   mcBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_mC", "auto"));
   mcBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_mC", "auto"));
-  mcBody.appendChild(buildSelectRow("Library prep method:", "mC_method",
-    ["default", "WGBS", "WGBS_nd", "PBAT", "EMseq"]));
+  mcBody.appendChild(el("div", { className: "cfg-help", textContent:
+    "Library prep method (and thus bisulfite directionality) is set per sample by the Assay column in the Sample Sheet, not here: WGBS maps directionally, WGBS_nd non-directionally (--non_directional), PBAT with --pbat, and EMseq directionally. Choose the matching Assay for each mC sample." }));
   mcBody.appendChild(buildNumberRow("Max insert length (PE):", "mC_max_insert", 100, 50000));
   mcBody.appendChild(buildToggleRow("Analyze CG context", "mc_context_CG",
     "CG analysis enabled (bigwigs, DMRs, PCA).",
@@ -2797,6 +2999,12 @@ function configStateToYAML() {
       param_bg: "--outWigType bedGraph",
       strandedness: configState.rna_strandedness,
       multimap: configState.rna_multimap
+    },
+    RAMPAGE: {
+      file_order: "rampage",
+      param_bg: "--outWigType bedGraph read1_5p",
+      strandedness: configState.rampage_strandedness,
+      multimap: configState.rampage_multimap
     }
   };
 
@@ -2973,6 +3181,10 @@ function handleYAMLImport(text) {
   if (cfg.rna_tracks && cfg.rna_tracks.RNAseq) {
     if (cfg.rna_tracks.RNAseq.strandedness) configState.rna_strandedness = cfg.rna_tracks.RNAseq.strandedness;
     if (cfg.rna_tracks.RNAseq.multimap) configState.rna_multimap = cfg.rna_tracks.RNAseq.multimap;
+  }
+  if (cfg.rna_tracks && cfg.rna_tracks.RAMPAGE) {
+    if (cfg.rna_tracks.RAMPAGE.strandedness) configState.rampage_strandedness = cfg.rna_tracks.RAMPAGE.strandedness;
+    if (cfg.rna_tracks.RAMPAGE.multimap) configState.rampage_multimap = cfg.rna_tracks.RAMPAGE.multimap;
   }
 
   // Import genome sections

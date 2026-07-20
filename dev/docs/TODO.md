@@ -62,17 +62,17 @@
 
 ## Epic-builder
 
-* [ ] Can deletion of rows require confirmation, or is there a way to have a "undo" arrow? (deleting a row or the whole table can be very quick - 1 misclick between duplicate and delete)
+* [x] Can deletion of rows require confirmation, or is there a way to have a "undo" arrow? (deleting a row or the whole table can be very quick - 1 misclick between duplicate and delete) **Done**: Added visible Undo/Redo toolbar buttons (wired to Tabulator's existing `history:true` — previously keyboard-only via Ctrl+Z/Y, undiscoverable). Added `confirm()` guards to both destructive paths: the context-menu "Remove row" (names the Sample_ID) and the bulk "Delete Selected" (shows the count); both note the action is undoable.
 
-* [ ] Remove tabs and white spaces from all columns before exporting sample sheet (can trigger column misalignement and errors in sample sheet loading if invisble tab present from copying SRR number for example)
+* [x] Remove tabs and white spaces from all columns before exporting sample sheet (can trigger column misalignement and errors in sample sheet loading if invisble tab present from copying SRR number for example) **Done**: New `sanitizeCell()` strips embedded tabs/CR/LF and trims each value; applied to every cell via the shared `buildExportMatrix()` used by both exporters. Verified end-to-end (a value pasted as `"  WT_rep1\t"` exports as `WT_rep1`).
 
-* [ ] When duplicating multiple rows, can the rows be as one block at the bottom of the table rather than each copied row under it's original? Easier to modifiy by sample type this way.
+* [x] When duplicating multiple rows, can the rows be as one block at the bottom of the table rather than each copied row under it's original? Easier to modifiy by sample type this way. **Done**: "Duplicate Selected" now orders copies by table position and appends them as one block at the bottom (was inserting each copy directly under its original). Single-row context-menu "Duplicate row" still inserts below the original.
 
-* [ ] Could an export option be a code block (i.e. printf "..." > sample_sheet.tsv) that can be pasted directly on cluster? with the sample file label chosen on top which automatically populates the epicc-options field? (not sure if it is that useful since it could still be pasted in a wrong directory)
+* [x] Could an export option be a code block (i.e. printf "..." > sample_sheet.tsv) that can be pasted directly on cluster? with the sample file label chosen on top which automatically populates the epicc-options field? **Done**: New "Copy as command" button opens a modal with a paste-safe `printf '%s\t...' ... > <file>` command (real tabs come from the format string, so the pasted text carries literal `\t`; every cell is single-quoted with `'\''` escaping). A toolbar filename field names the target file, is reused by Export TSV, and populates the Options "Sample file path" (`sample_file`). Validated: the generated command reproduces the exact TSV in bash, incl. empty cells, single quotes, spaces, and `%`.
 
-* [ ] Motifs analysis can be merged with the other output options
+* [x] Motifs analysis can be merged with the other output options **Done**: The Motifs toggle, JASPAR database, and motifs-on-all-replicates controls moved into the "Output Options" section (after Gene Ontology); the standalone "Motifs Analysis" section was removed. Export/import keys unchanged.
 
-* [ ] Some details/explanations would be useful when selecting some parameters (WGBS directionality, RNAseq strandedness, ...)
+* [x] Some details/explanations would be useful when selecting some parameters (WGBS directionality, RNAseq strandedness, ...) **Done**: Added `help` support to `buildSelectRow` and help text to RNAseq strandedness, mapped-reads/multimap, ChIP/ATAC aligner + mapping strategy, and CUT&RUN/CUT&Tag broad/narrow callers. For mC "directionality": discovered the builder's "Library prep method" (`mC_method`) select was **dead** — never exported, never read by the workflow (directionality is set per-sample by the Assay → `mC_mapping[Assay]`); replaced it with an accurate note. **Bonus bug fixed while here**: the config export wrote `rna_tracks` with only the `RNAseq` entry, omitting `RAMPAGE` — a builder-generated options file would `KeyError` at `config['rna_tracks']['RAMPAGE']` for any RAMPAGE dataset. Added round-trip-safe RAMPAGE strandedness/multimap controls and export/import.
 
 ## Deferred
 
