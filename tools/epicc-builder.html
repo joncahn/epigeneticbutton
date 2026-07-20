@@ -1829,33 +1829,55 @@ function sanitizeCell(v) {
 // reconstruct Levels from the factor columns, accept Sample_ID suggestions
 // for empty cells, and sanitize every value. Returns { header, rows } where
 // rows is an array of sanitized string arrays aligned to COLUMNS.
+//
+// Operates on per-row COPIES: table.getData() returns references to the live
+// row objects, so writing Levels/Sample_ID back onto them would mutate the
+// table itself — visibly rewriting cells just because the user previewed the
+// export command. Keep this function side-effect free.
 function buildExportMatrix() {
   var data = table.getData();
   if (data.length === 0) return null;
-  if (factors.length > 0) {
-    for (var i = 0; i < data.length; i++) {
-      data[i].Levels = buildLevelsFromFactors(data[i]);
-    }
-  }
-  for (var i = 0; i < data.length; i++) {
-    if (!(data[i].Sample_ID || "").trim()) {
-      var suggestion = suggestSampleId(data[i]);
-      if (suggestion) data[i].Sample_ID = suggestion;
-    }
-  }
   var rows = [];
   for (var i = 0; i < data.length; i++) {
-    rows.push(COLUMNS.map(function(c) { return sanitizeCell(data[i][c]); }));
+    var row = Object.assign({}, data[i]);
+    if (factors.length > 0) {
+      row.Levels = buildLevelsFromFactors(row);
+    }
+    if (!(row.Sample_ID || "").trim()) {
+      var suggestion = suggestSampleId(row);
+      if (suggestion) row.Sample_ID = suggestion;
+    }
+    rows.push(COLUMNS.map(function(c) { return sanitizeCell(row[c]); }));
   }
   return { header: COLUMNS.slice(), rows: rows };
 }
 
-// The sample-sheet filename chosen in the toolbar. Drives Export TSV, the
-// pasteable command, and the Options "Sample file path" field.
+// The sample-sheet filename chosen in the toolbar. Drives Export TSV and the
+// pasteable command; the "sample_sheet.tsv" fallback only applies to the
+// generated file itself when the field is left blank (it is NOT written back
+// into configState.sample_file — see syncSampleFilename).
 function sheetFilename() {
   var el = document.getElementById("export-filename");
   var v = el ? el.value.trim() : "";
   return v || "sample_sheet.tsv";
+}
+
+// Single source of truth for the sample-sheet filename. The toolbar field, the
+// Options "Sample file path" (configState.sample_file / #cfg-sample_file), and
+// YAML import all funnel through here so they never drift apart. `name` is
+// written verbatim (empty allowed) — no fallback — so clearing one field does
+// not silently substitute a default into the others. Setting .value
+// programmatically does not fire an "input" event, so this can't recurse.
+function syncSampleFilename(name, source) {
+  configState.sample_file = name;
+  if (source !== "toolbar") {
+    var tb = document.getElementById("export-filename");
+    if (tb && tb.value !== name) tb.value = name;
+  }
+  if (source !== "cfg") {
+    var cf = document.getElementById("cfg-sample_file");
+    if (cf && cf.value !== name) cf.value = name;
+  }
 }
 
 function exportTSV() {
@@ -2252,11 +2274,14 @@ document.getElementById("btn-export-code").addEventListener("click", openCodeMod
 
 // Keep the chosen sample-sheet filename in sync with the Options "Sample file
 // path" field, so the exported options YAML points at the sheet the user names.
+// Sync the field's raw value (not the export fallback), so emptying it doesn't
+// silently write "sample_sheet.tsv" into sample_file.
 document.getElementById("export-filename").addEventListener("input", function() {
-  configState.sample_file = sheetFilename();
-  var cfgInput = document.getElementById("cfg-sample_file");
-  if (cfgInput) cfgInput.value = configState.sample_file;
+  syncSampleFilename(this.value.trim(), "toolbar");
 });
+// configState is the source of truth: seed the toolbar field from it at load so
+// the two never start out of step (independent of the static HTML value).
+syncSampleFilename(configState.sample_file);
 
 // Code-block modal controls
 document.getElementById("code-modal-copy").addEventListener("click", copyCodeModal);
@@ -2340,7 +2365,7 @@ var configState = {
   repo_folder: "",
   // Required
   analysis_name: "epicc",
-  sample_file: "config/example_samples.tsv",
+  sample_file: "sample_sheet.tsv",
   // Output options
   full_analysis: true,
   te_analysis: false,
@@ -2470,7 +2495,11 @@ function buildTextRow(label, key, placeholder, help) {
   var inp = el("input", {
     type: "text", id: "cfg-" + key, placeholder: placeholder || "",
     value: configState[key] || "",
-    oninput: function() { configState[key] = this.value; }
+    oninput: function() {
+      configState[key] = this.value;
+      // The sample-sheet path is mirrored in the toolbar filename field.
+      if (key === "sample_file") syncSampleFilename(this.value, "cfg");
+    }
   });
   row.appendChild(inp);
   if (help) row.appendChild(el("div", { className: "cfg-help", textContent: help }));
@@ -3071,7 +3100,7 @@ function handleYAMLImport(text) {
   // Simple fields
   if (cfg.repo_folder != null) configState.repo_folder = cfg.repo_folder;
   if (cfg.analysis_name != null) configState.analysis_name = cfg.analysis_name;
-  if (cfg.sample_file != null) configState.sample_file = cfg.sample_file;
+  if (cfg.sample_file != null) syncSampleFilename(String(cfg.sample_file));
   if (cfg.full_analysis != null) configState.full_analysis = !!cfg.full_analysis;
   if (cfg.te_analysis != null) configState.te_analysis = !!cfg.te_analysis;
   if (cfg.QC_option != null) configState.QC_option = String(cfg.QC_option);
