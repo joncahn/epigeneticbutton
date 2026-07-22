@@ -159,6 +159,10 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 ### Performance/Resource Usage
 
+#### Default behavior adapted to number of samples
+
+* [ ] **Defer** For all analysis or plotting which can include many samples, impose a threshold over which not to perform this analysis by default (which could still be forced with a specific flag). For example, do not perform heatmaps/metaplots on all genes if there are more than 20 samples in total. Suggest the list of analyses/plots to gate this way and a number of samples based on intensity of computation requirements for validation before installing these limitations.   
+
 #### Speeding up bigwig conversion
 
 * [ ] **Defer** Investigate faster libraries than UCSC - [bigtools](https://github.com/jackh726/bigtools), others? Should be actively maintained.
