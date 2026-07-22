@@ -151,7 +151,9 @@ set-resources:
   filter_size_srna_sample: *standard
   merging_srna_replicates: *standard
   make_srna_stranded_bigwigs: *standard
-  analyze_all_srna_samples_on_target_file: *heavy
+  analyze_all_srna_samples_on_target_file:
+    <<: *heavy
+    runtime: "24h"
   prep_files_for_differential_srna_clusters: *single
   # combined_analysis
   prepping_mapping_stats: *low
