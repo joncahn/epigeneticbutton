@@ -227,44 +227,43 @@ class TestValidateBedMethyl:
 class TestValidateModBAM:
     """Tests for validate_modbam function."""
 
-    @patch('subprocess.run')
-    def test_valid_modbam_with_mm_ml_tags(self, mock_run, temp_dir, mock_bam_header, mock_bam_read_with_mm_ml):
+    @patch('subprocess.Popen')
+    def test_valid_modbam_with_mm_ml_tags(self, mock_popen, temp_dir, mock_bam_header, mock_bam_read_with_mm_ml):
         """Test validation passes for modBAM with MM and ML tags."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        # Mock samtools view output
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout=mock_bam_read_with_mm_ml * 10,  # 10 reads
-            stderr=""
-        )
+        # Mock the samtools | head pipeline
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_with_mm_ml * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
 
         is_valid, message = validate_modbam(str(bam_path))
 
         assert is_valid is True
         assert "Valid modBAM with MM/ML tags" in message
-        assert mock_run.called
 
-    @patch('subprocess.run')
-    def test_modbam_without_mm_tag(self, mock_run, temp_dir, mock_bam_read_without_mm):
+    @patch('subprocess.Popen')
+    def test_modbam_without_mm_tag(self, mock_popen, temp_dir, mock_bam_read_without_mm):
         """Test validation fails when MM tag is missing."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout=mock_bam_read_without_mm * 10,
-            stderr=""
-        )
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_without_mm * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
 
         is_valid, message = validate_modbam(str(bam_path))
 
         assert is_valid is False
         assert "No MM (methylation) tags found" in message
 
-    @patch('subprocess.run')
-    def test_modbam_without_ml_tag(self, mock_run, temp_dir):
+    @patch('subprocess.Popen')
+    def test_modbam_without_ml_tag(self, mock_popen, temp_dir):
         """Test validation fails when ML tag is missing."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
@@ -277,11 +276,11 @@ class TestValidateModBAM:
             "MM:Z:C+m,10,5,8;\n"
         )
 
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout=read_with_mm_only * 10,
-            stderr=""
-        )
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (read_with_mm_only * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
 
         is_valid, message = validate_modbam(str(bam_path))
 
@@ -312,30 +311,34 @@ class TestValidateModBAM:
         assert is_valid is False
         assert "BAM file contains no reads" in message
 
-    @patch('subprocess.run')
-    def test_modbam_samtools_error(self, mock_run, temp_dir):
-        """Test validation fails when samtools returns error."""
+    @patch('subprocess.Popen')
+    def test_modbam_samtools_error(self, mock_popen, temp_dir):
+        """Test validation fails when samtools | head returns empty output."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        mock_run.return_value = MagicMock(
-            returncode=1,
-            stdout="",
-            stderr="Error: truncated file"
-        )
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = ("", "Error: truncated file")
+        mock_popen.side_effect = [mock_samtools, mock_head]
 
         is_valid, message = validate_modbam(str(bam_path))
 
         assert is_valid is False
-        assert "Failed to read BAM file" in message
+        assert "BAM file contains no reads" in message
 
-    @patch('subprocess.run')
-    def test_modbam_timeout(self, mock_run, temp_dir):
+    @patch('subprocess.Popen')
+    def test_modbam_timeout(self, mock_popen, temp_dir):
         """Test validation handles timeout gracefully."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd="samtools", timeout=120)
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.side_effect = subprocess.TimeoutExpired(cmd="head", timeout=120)
+        mock_popen.side_effect = [mock_samtools, mock_head]
 
         is_valid, message = validate_modbam(str(bam_path))
 
@@ -343,19 +346,23 @@ class TestValidateModBAM:
         assert "Timeout while reading BAM file" in message
 
     @patch('subprocess.run')
-    def test_modbam_with_chrom_sizes_matching(self, mock_run, temp_dir,
+    @patch('subprocess.Popen')
+    def test_modbam_with_chrom_sizes_matching(self, mock_popen, mock_run, temp_dir,
                                                mock_bam_header, mock_bam_read_with_mm_ml,
                                                sample_chrom_sizes):
         """Test validation with chromosome size checking - matching chromosomes."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        # First call: samtools view (for reads)
-        # Second call: samtools view -H (for header)
-        mock_run.side_effect = [
-            MagicMock(returncode=0, stdout=mock_bam_read_with_mm_ml * 10, stderr=""),
-            MagicMock(returncode=0, stdout=mock_bam_header, stderr="")
-        ]
+        # Popen: samtools view | head pipeline
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_with_mm_ml * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
+
+        # subprocess.run: samtools view -H (for header)
+        mock_run.return_value = MagicMock(returncode=0, stdout=mock_bam_header, stderr="")
 
         is_valid, message = validate_modbam(str(bam_path), sample_chrom_sizes)
 
@@ -363,7 +370,8 @@ class TestValidateModBAM:
         assert "Valid modBAM with MM/ML tags" in message
 
     @patch('subprocess.run')
-    def test_modbam_no_matching_chromosomes(self, mock_run, temp_dir,
+    @patch('subprocess.Popen')
+    def test_modbam_no_matching_chromosomes(self, mock_popen, mock_run, temp_dir,
                                             mock_bam_read_with_mm_ml,
                                             sample_chrom_sizes):
         """Test validation fails when BAM chromosomes don't match reference."""
@@ -377,10 +385,13 @@ class TestValidateModBAM:
             "@SQ\tSN:chrY\tLN:2000000\n"
         )
 
-        mock_run.side_effect = [
-            MagicMock(returncode=0, stdout=mock_bam_read_with_mm_ml * 10, stderr=""),
-            MagicMock(returncode=0, stdout=mismatched_header, stderr="")
-        ]
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_with_mm_ml * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
+
+        mock_run.return_value = MagicMock(returncode=0, stdout=mismatched_header, stderr="")
 
         is_valid, message = validate_modbam(str(bam_path), sample_chrom_sizes)
 
@@ -388,7 +399,8 @@ class TestValidateModBAM:
         assert "No matching chromosomes between BAM and reference" in message
 
     @patch('subprocess.run')
-    def test_modbam_low_chromosome_coverage(self, mock_run, temp_dir,
+    @patch('subprocess.Popen')
+    def test_modbam_low_chromosome_coverage(self, mock_popen, mock_run, temp_dir,
                                             mock_bam_read_with_mm_ml,
                                             sample_chrom_sizes):
         """Test validation fails when < 50% of reference chromosomes are in BAM."""
@@ -403,10 +415,13 @@ class TestValidateModBAM:
             "@SQ\tSN:chrY\tLN:2000000\n"
         )
 
-        mock_run.side_effect = [
-            MagicMock(returncode=0, stdout=mock_bam_read_with_mm_ml * 10, stderr=""),
-            MagicMock(returncode=0, stdout=low_coverage_header, stderr="")
-        ]
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_with_mm_ml * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
+
+        mock_run.return_value = MagicMock(returncode=0, stdout=low_coverage_header, stderr="")
 
         is_valid, message = validate_modbam(str(bam_path), sample_chrom_sizes)
 
@@ -414,15 +429,19 @@ class TestValidateModBAM:
         assert "of reference chromosomes found in BAM" in message
 
     @patch('subprocess.run')
-    def test_modbam_header_read_error(self, mock_run, temp_dir, mock_bam_read_with_mm_ml):
+    @patch('subprocess.Popen')
+    def test_modbam_header_read_error(self, mock_popen, mock_run, temp_dir, mock_bam_read_with_mm_ml):
         """Test validation handles header read errors."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        mock_run.side_effect = [
-            MagicMock(returncode=0, stdout=mock_bam_read_with_mm_ml * 10, stderr=""),
-            MagicMock(returncode=1, stdout="", stderr="Error reading header")
-        ]
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_with_mm_ml * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
+
+        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="Error reading header")
 
         chrom_sizes = str(temp_dir / "chrom.sizes")
         Path(chrom_sizes).write_text("Chr1\t1000000\n")
@@ -436,17 +455,17 @@ class TestValidateModBAM:
 class TestValidationMain:
     """Tests for the main() function and CLI behavior."""
 
-    @patch('subprocess.run')
-    def test_main_modbam_success(self, mock_run, temp_dir, mock_bam_read_with_mm_ml):
+    @patch('subprocess.Popen')
+    def test_main_modbam_success(self, mock_popen, temp_dir, mock_bam_read_with_mm_ml):
         """Test main function with modBAM input type."""
         bam_path = temp_dir / "test.bam"
         bam_path.touch()
 
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout=mock_bam_read_with_mm_ml * 10,
-            stderr=""
-        )
+        mock_samtools = MagicMock()
+        mock_samtools.stdout = MagicMock()
+        mock_head = MagicMock()
+        mock_head.communicate.return_value = (mock_bam_read_with_mm_ml * 10, "")
+        mock_popen.side_effect = [mock_samtools, mock_head]
 
         # Import and test main
         import validate_dmc_input

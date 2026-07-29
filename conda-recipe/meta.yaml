@@ -1,0 +1,64 @@
+{% set name = "epicc" %}
+{% set version = "0.9.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/joncahn/epigeneticbutton/archive/refs/tags/v{{ version }}.tar.gz
+  sha256: 33dc671840723cacd3e21f27e81ff1ea15ede0583e600fb99aa2e9c40ecf2c3c
+
+build:
+  number: 0
+  noarch: generic
+  script: |
+    mkdir -p "${PREFIX}/bin" "${PREFIX}/share/epicc"
+    install -m 755 epicc "${PREFIX}/bin/epicc"
+    # Whole directories are copied recursively, so any file added under data/
+    # (bundled reference data) is included automatically — no per-file listing.
+    cp -r workflow config profiles data scripts dev "${PREFIX}/share/epicc/"
+    # tools/ (epicc-builder.html) is optional but useful
+    cp -r tools "${PREFIX}/share/epicc/"
+
+requirements:
+  # No host: section — this is a noarch: generic package whose build script is
+  # pure shell (mkdir/install/cp), so no build-time Python is needed. Listing
+  # python under host: makes conda-build produce a pyXYZ variant and pin the
+  # run python to whatever built the package (e.g. a 3.14 release candidate
+  # from conda-forge), which makes the package uninstallable. Runtime Python
+  # is declared under run: below.
+  run:
+    - python >=3.9
+    - snakemake >=9.0
+    - pyyaml
+    - snakemake-executor-plugin-slurm
+    - snakemake-executor-plugin-cluster-generic
+    # Bioinformatics tools are managed via per-rule conda environments
+    # declared in workflow/envs/. Snakemake creates them on first use.
+    # To pre-build all envs before submitting cluster jobs, run:
+    #   epicc validate --build-envs --samples your_samples.tsv
+
+test:
+  commands:
+    - epicc --help
+    - epicc run --help
+    - epicc validate --help
+    - epicc init-profile --help
+
+about:
+  home: https://github.com/joncahn/epigeneticbutton
+  summary: "EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization"
+  description: |
+    A Snakemake-based pipeline for ChIP-seq, CUT&RUN, CUT&Tag, ATAC-seq,
+    RNA-seq, RAMPAGE, small RNA-seq, bisulfite methylC-seq (WGBS, PBAT,
+    EMseq), and direct methylation from long-read sequencing (ONT/PacBio).
+    Provides an automated workflow from raw reads to analysis plots with
+    integrated quality control and cross-datatype comparison.
+  license: MIT
+  license_file: LICENSE
+  doc_url: https://epicc-documentation.readthedocs.io
+
+extra:
+  recipe-maintainers:
+    - joncahn

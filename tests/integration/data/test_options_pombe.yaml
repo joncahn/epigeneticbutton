@@ -1,0 +1,32 @@
+# Test configuration for S. pombe integration test
+# Tests ChIP-seq (broad + narrow, PE + SE), RNA-seq, and sRNA-seq
+# Kim et al. 2024 (GSE156069), Ekwall lab 2024 (GSE280066), Martienssen 2025 (GSE278839)
+
+analysis_name: "test_pombe"
+sample_file: "tests/integration/data/test_samples_pombe.tsv"
+
+# Output directories
+output_dir: "test_runs/pombe/results"
+genome_dir: "test_runs/pombe/genomes"
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+structural_rna_depletion: true
+browser_TE_file: false
+
+# Reference genome
+genomes:
+  Spombe:
+    species: "pombe"
+    fasta_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
+    gff_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
+    structural_rna_fafile: "tests/integration/data/Spombe/sp_structural_RNAs.fa.gz"
+    ncbi_taxid: "4896"
+    genus: "Schizosaccharomyces"
+
+# Resource allocation (use defaults from main config)

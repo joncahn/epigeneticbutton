@@ -1,0 +1,3343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPICCbuilder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔘</text></svg>">
+<link href="https://unpkg.com/tabulator-tables@6/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+<script src="https://unpkg.com/tabulator-tables@6/dist/js/tabulator.min.js"></script>
+<script src="https://unpkg.com/js-yaml@4/dist/js-yaml.min.js"></script>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #53a8b6;
+    --text: #eee;
+    --text-dim: #999;
+    --err: #e94560;
+    --warn: #f0a500;
+    --ok: #53a8b6;
+    --border: #2a2a4a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  /* Top navigation bar */
+  .topnav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    height: 44px;
+  }
+  .topnav .brand {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 0 16px 0 0;
+    line-height: 44px;
+    user-select: none;
+  }
+  .topnav .nav-tabs {
+    display: flex;
+    gap: 0;
+    height: 100%;
+  }
+  .topnav .nav-tab {
+    padding: 0 18px;
+    line-height: 44px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .topnav .nav-tab:hover { color: var(--text); }
+  .topnav .nav-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .topnav .nav-links {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .topnav .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.15s;
+  }
+  .topnav .nav-links a:hover { color: var(--accent); }
+
+  /* Section visibility */
+  .section { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .section.active { display: flex; }
+
+  /* Factor management panel */
+  .factor-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    min-height: 40px;
+  }
+  .factor-panel .factor-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .factor-tile {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3px 8px 3px 12px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .factor-tile .factor-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 50%;
+    transition: color 0.15s, background 0.15s;
+  }
+  .factor-tile .factor-remove:hover {
+    color: var(--accent);
+    background: rgba(233,69,96,0.15);
+  }
+  .factor-panel input[type="text"] {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    width: 140px;
+  }
+  .factor-panel input[type="text"]::placeholder { color: var(--text-dim); }
+  .factor-help { color: var(--text-dim); font-size: 12px; }
+  .factor-panel button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .factor-panel button:hover { background: var(--accent); }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .toolbar button, .toolbar label {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .toolbar button:hover, .toolbar label:hover { background: var(--accent); }
+  .toolbar button:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+  .toolbar .io-group { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .toolbar .btn-accent { background: var(--accent); color: #fff; }
+  .toolbar .btn-accent:hover { background: #c73a52; }
+  .toolbar input[type="file"] { display: none; }
+  main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  /* Genomes section */
+  #genomes-section {
+    overflow-y: auto;
+    padding: 0;
+  }
+  #genomes-section .genomes-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .genome-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0 0 16px;
+    min-height: 40px;
+  }
+  .genome-panel .genome-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .genome-tile {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3px 8px 3px 12px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .genome-tile .genome-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 50%;
+    transition: color 0.15s, background 0.15s;
+  }
+  .genome-tile .genome-remove:hover {
+    color: var(--accent);
+    background: rgba(233,69,96,0.15);
+  }
+  .genome-panel input[type="text"] {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 13px;
+    width: 140px;
+  }
+  .genome-panel input[type="text"]::placeholder { color: var(--text-dim); }
+  .genome-panel button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .genome-panel button:hover { background: var(--accent); }
+  .genome-help { color: var(--text-dim); font-size: 12px; }
+  /* Config section */
+  #config-section {
+    overflow-y: auto;
+    padding: 0;
+  }
+  #config-section .config-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .cfg-section { margin-bottom: 24px; }
+  .cfg-section h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent);
+    color: var(--text);
+  }
+  .cfg-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 12px 0 8px;
+    color: var(--accent2);
+  }
+  .cfg-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .cfg-row label {
+    min-width: 200px;
+    font-size: 13px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .cfg-row input[type="text"], .cfg-row input[type="number"], .cfg-row select {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .cfg-row input::placeholder { color: var(--text-dim); }
+  .cfg-row .cfg-help {
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-basis: 100%;
+  }
+  /* Toggle switch */
+  .cfg-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .cfg-toggle-row label {
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--surface2);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+  }
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+    background: white;
+  }
+  .cfg-msg {
+    font-size: 13px;
+    color: var(--text-dim);
+    flex-basis: 100%;
+    margin-top: -4px;
+  }
+  /* Collapsible details */
+  .cfg-details {
+    margin-bottom: 16px;
+  }
+  .cfg-details summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent2);
+    padding: 8px 0;
+    user-select: none;
+  }
+  .cfg-details summary:hover { color: var(--accent); }
+  .cfg-details[open] summary { margin-bottom: 8px; }
+  .cfg-details .cfg-details-body {
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+  }
+  /* Genome/species dynamic sections */
+  .cfg-genome-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .cfg-genome-group h3 {
+    margin-top: 0;
+    font-size: 14px;
+  }
+  .cfg-footer {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+  }
+  #description-panel {
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-dim);
+    min-height: 32px;
+    flex-shrink: 0;
+  }
+  #description-panel strong { color: var(--accent2); margin-right: 6px; }
+  #table-container {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+  }
+  #diagnostics-panel {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 20px;
+    max-height: 180px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  }
+  #diagnostics-panel:empty::before {
+    content: "No validation issues";
+    color: var(--ok);
+  }
+  .diag-error { color: var(--err); }
+  .diag-warning { color: var(--warn); }
+  .diag-ok { color: var(--ok); }
+  .diag-summary { margin-bottom: 4px; font-weight: 600; }
+
+  /* Tabulator overrides */
+  .tabulator {
+    background: var(--bg);
+    border: none;
+    font-size: 13px;
+  }
+  .tabulator .tabulator-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+  }
+  .tabulator .tabulator-header .tabulator-col {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+  }
+  .tabulator .tabulator-header .tabulator-col .tabulator-col-title {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .tabulator .tabulator-tableholder .tabulator-table .tabulator-row {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .tabulator .tabulator-tableholder .tabulator-table .tabulator-row:hover {
+    background: var(--surface);
+  }
+  .tabulator .tabulator-row .tabulator-cell {
+    border: none !important;
+    border-right: 1px solid var(--border) !important;
+    color: var(--text);
+    padding: 4px 8px;
+  }
+  .tabulator .tabulator-row .tabulator-cell.tabulator-editing {
+    border: 1px solid var(--accent2) !important;
+    padding: 0;
+  }
+  .tabulator .tabulator-row .tabulator-cell.tabulator-editing input,
+  .tabulator .tabulator-row .tabulator-cell.tabulator-editing select {
+    background: var(--surface);
+    color: var(--text);
+    border: none;
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  .tabulator .tabulator-footer { background: var(--surface); }
+
+  /* Validation indicators */
+  .cell-error {
+    border-left: 3px solid var(--err) !important;
+  }
+  .cell-warning {
+    border-left: 3px solid var(--warn) !important;
+  }
+
+  /* Selected row highlight */
+  .tabulator-row.tabulator-selected { background: var(--surface2) !important; }
+  .tabulator-row.tabulator-selected:hover { background: #1a4a70 !important; }
+
+  /* Placeholder styling for suggested Sample_ID */
+  .cell-suggestion {
+    color: var(--text-dim) !important;
+    font-style: italic;
+  }
+
+  /* Example cell — dimmed until user edits it */
+  .tabulator-row .tabulator-cell.cell-example {
+    color: var(--text-dim) !important;
+    font-style: italic;
+  }
+
+  /* Action column */
+  .row-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .row-action-btn:hover { color: var(--accent); }
+
+  /* Context menu */
+  .ctx-menu {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 10000;
+    min-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    padding: 4px 0;
+  }
+  .ctx-menu div {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .ctx-menu div:hover {
+    background: var(--surface2);
+    color: var(--accent);
+  }
+  .ctx-menu-sep {
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+    padding: 0 !important;
+    cursor: default !important;
+  }
+  .ctx-menu-sep:hover {
+    background: transparent !important;
+    color: inherit !important;
+  }
+
+  /* Tabulator list editor dropdown styling */
+  .tabulator-edit-list {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+  }
+  .tabulator-edit-list .tabulator-edit-list-item {
+    color: var(--text) !important;
+  }
+  .tabulator-edit-list .tabulator-edit-list-item:hover {
+    background: var(--surface2) !important;
+    color: var(--accent) !important;
+  }
+  .tabulator-edit-list .tabulator-edit-list-item.active {
+    background: var(--accent) !important;
+    color: white !important;
+  }
+  /* Code-block export modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5em;
+  }
+  .modal-overlay[hidden] { display: none; }
+  .modal-box {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    max-width: 900px; width: 100%; max-height: 90vh;
+    display: flex; flex-direction: column;
+    padding: 1.2em 1.4em; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  .modal-box h2 { margin: 0 0 0.3em; font-size: 1.15em; }
+  .modal-box .modal-sub { margin: 0 0 0.8em; color: var(--text-dim); font-size: 0.9em; }
+  .modal-box .modal-sub code { color: var(--accent2); }
+  #code-modal-text {
+    flex: 1; min-height: 200px; width: 100%; resize: vertical;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.82em;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 0.7em; white-space: pre; overflow: auto;
+  }
+  .modal-actions { display: flex; align-items: center; gap: 10px; margin-top: 0.9em; }
+  .modal-actions button {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 0.9em;
+  }
+  .modal-actions button:hover { background: var(--accent); }
+  .modal-actions .btn-accent { background: var(--accent); color: #fff; }
+  .modal-actions .btn-accent:hover { background: #c73a52; }
+  .modal-actions .modal-status { color: var(--accent2); font-size: 0.85em; margin-right: auto; }
+</style>
+</head>
+<body>
+
+<nav class="topnav" role="navigation" aria-label="Main navigation">
+  <span class="brand" onclick="switchSection('genomes-section')" title="EPICC Builder">EPICC<i style="color:var(--accent2);font-weight:400">builder</i></span>
+  <div class="nav-tabs">
+    <span class="nav-tab active" data-section="genomes-section" onclick="switchSection('genomes-section')">Reference Genomes</span>
+    <span class="nav-tab" data-section="samplesheet-section" onclick="switchSection('samplesheet-section')">Samples</span>
+    <span class="nav-tab" data-section="config-section" onclick="switchSection('config-section')">Options</span>
+  </div>
+  <div class="nav-links">
+    <a href="https://epicc-documentation.readthedocs.io/" target="_blank" rel="noopener">Docs</a>
+    <a href="https://github.com/joncahn/epigeneticbutton" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<main>
+  <div id="genomes-section" class="section active">
+    <div class="genomes-content" id="genomes-content"></div>
+  </div>
+
+  <div id="samplesheet-section" class="section">
+    <div class="toolbar" id="ss-toolbar">
+      <button id="btn-add-row" aria-label="Add a new empty row">+ Add Row</button>
+      <button id="btn-dup-selected" aria-label="Duplicate selected rows" disabled>Duplicate Selected</button>
+      <button id="btn-del-selected" aria-label="Delete selected rows" disabled>Delete Selected</button>
+      <button id="btn-undo" aria-label="Undo last change" title="Undo (Ctrl+Z)">&#8630; Undo</button>
+      <button id="btn-redo" aria-label="Redo last undone change" title="Redo (Ctrl+Shift+Z)">Redo &#8631;</button>
+      <div class="io-group">
+        <label for="import-file" class="btn-accent" role="button" aria-label="Import TSV file" tabindex="0"
+               onkeydown="if(event.key==='Enter')this.click()">Import TSV
+          <input type="file" id="import-file" accept=".tsv,.txt,.tab" aria-label="Choose TSV file to import">
+        </label>
+        <input type="text" id="export-filename" value="sample_sheet.tsv"
+               aria-label="Sample sheet filename"
+               title="Filename used by Export TSV and the pasteable command; also fills the Options 'Sample file path' field"
+               style="width:13em">
+        <button id="btn-export" class="btn-accent" aria-label="Export sample sheet as TSV">Export TSV</button>
+        <button id="btn-export-code" class="btn-accent" aria-label="Copy sample sheet as a pasteable shell command">Copy as command</button>
+      </div>
+    </div>
+    <div class="factor-panel" id="factor-panel" role="group" aria-label="Factor management">
+      <span class="factor-label">Factors:</span>
+      <span id="factor-tiles"></span>
+      <input type="text" id="factor-input" placeholder="e.g. genotype" aria-label="New factor name"
+             onkeydown="if(event.key==='Enter'){addFactorFromInput(); event.preventDefault();}">
+      <button onclick="addFactorFromInput()" aria-label="Add factor">+ Add</button>
+      <span class="factor-help">Experimental variables for grouping samples in comparative analysis. All rows must have the same factors, and may have different levels (values).</span>
+    </div>
+    <div id="description-panel" aria-live="polite" role="status">
+      Click a column header or cell to see its description.
+    </div>
+    <div id="table-container"></div>
+    <div id="diagnostics-panel" aria-live="polite" role="log" aria-label="Validation diagnostics"></div>
+  </div>
+
+  <div id="config-section" class="section">
+    <div class="toolbar" id="cfg-toolbar">
+      <div class="io-group">
+        <label for="import-yaml" class="btn-accent" role="button" aria-label="Import YAML config" tabindex="0"
+               onkeydown="if(event.key==='Enter')this.click()">Import YAML
+          <input type="file" id="import-yaml" accept=".yaml,.yml" aria-label="Choose YAML file to import">
+        </label>
+        <button id="btn-export-yaml" class="btn-accent" aria-label="Export config as YAML">Export YAML</button>
+      </div>
+    </div>
+    <div class="config-content" id="config-content"></div>
+  </div>
+</main>
+
+<div id="code-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="code-modal-title" hidden>
+  <div class="modal-box">
+    <h2 id="code-modal-title">Paste on the cluster</h2>
+    <p class="modal-sub">This command writes the sample sheet to <code id="code-modal-fname"></code> in your current directory. Tabs are encoded as <code>\t</code> so they survive the paste.</p>
+    <textarea id="code-modal-text" readonly aria-label="Shell command to create the sample sheet" spellcheck="false"></textarea>
+    <div class="modal-actions">
+      <button id="code-modal-copy" class="btn-accent">Copy to clipboard</button>
+      <span id="code-modal-status" class="modal-status" role="status" aria-live="polite"></span>
+      <button id="code-modal-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===========================================================================
+// Constants (mirroring workflow/scripts/sample_sheet.py & samplefile_validation.py)
+// ===========================================================================
+
+const COLUMNS = [
+  "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
+  "Read_files", "Read_layout", "IP_target", "Control"
+];
+
+const VALID_ASSAYS = [
+  "ChIP_broad", "ChIP_narrow",
+  "CUT_RUN_broad", "CUT_RUN_narrow",
+  "CUT_TAG_broad", "CUT_TAG_narrow",
+  "ATAC",
+  "RNAseq", "RAMPAGE",
+  "sRNA",
+  "WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC"
+];
+
+const ASSAY_TO_ENV = {
+  ChIP_broad: "ChIP", ChIP_narrow: "ChIP",
+  CUT_RUN_broad: "ChIP", CUT_RUN_narrow: "ChIP",
+  CUT_TAG_broad: "ChIP", CUT_TAG_narrow: "ChIP",
+  ATAC: "ATAC",
+  RNAseq: "RNA", RAMPAGE: "RNA",
+  sRNA: "sRNA",
+  WGBS: "mC", WGBS_nd: "mC", PBAT: "mC", EMseq: "mC", dmC: "mC"
+};
+
+const VALID_ASSAYS_SET = new Set(VALID_ASSAYS);
+// Per-family subsets — used to constrain Control-source dropdowns
+const CHIP_ASSAYS    = new Set(["ChIP_broad", "ChIP_narrow"]);
+const CUT_RUN_ASSAYS = new Set(["CUT_RUN_broad", "CUT_RUN_narrow"]);
+const CUT_TAG_ASSAYS = new Set(["CUT_TAG_broad", "CUT_TAG_narrow"]);
+// Assays that pull down a target via antibody and call peaks against an
+// (Input/WCE/IgG) control. Share the ChIP env, peak-calling machinery,
+// and IP_target/Control sample-sheet semantics.
+const IP_PEAK_ASSAYS = new Set([
+  ...CHIP_ASSAYS, ...CUT_RUN_ASSAYS, ...CUT_TAG_ASSAYS
+]);
+const CONTROL_ASSAYS = new Set([...IP_PEAK_ASSAYS, "RAMPAGE"]);
+
+// Which assays can provide a control for each control-bearing assay.
+// Controls are typically drawn from the same family (ChIP Input/WCE
+// for ChIP IPs; IgG CUT&RUN for CUT&RUN IPs; etc.).
+const CONTROL_SOURCE_ASSAYS = {
+  ChIP_broad:    CHIP_ASSAYS,
+  ChIP_narrow:   CHIP_ASSAYS,
+  CUT_RUN_broad: CUT_RUN_ASSAYS,
+  CUT_RUN_narrow: CUT_RUN_ASSAYS,
+  CUT_TAG_broad: CUT_TAG_ASSAYS,
+  CUT_TAG_narrow: CUT_TAG_ASSAYS,
+  RAMPAGE:       new Set(["RNAseq"]),
+};
+
+// Known marks and recommended *peaktype* (derived from config/epicc-options.yaml peaktype).
+// Recommendations apply across all IP_PEAK_ASSAYS — only the broad/narrow
+// designation is checked, not the specific assay family.
+const KNOWN_MARKS = [
+  { pattern: /^(H3K27me[123]|H3K9me[123]|H4K20me[123]|H3K36me3|H3\.3|H3\.1|MGH3|CenH3|.*DDM1|PolIIS2P|H2AT120Ph|H2AKub)$/i, peaktype: "broad" },
+  { pattern: /^(H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase)$/i, peaktype: "narrow" },
+  { pattern: /^(H3|H4)$/i, peaktype: "broad" },
+];
+
+function getRecommendedPeaktype(ipTarget) {
+  for (var i = 0; i < KNOWN_MARKS.length; i++) {
+    if (KNOWN_MARKS[i].pattern.test(ipTarget)) return KNOWN_MARKS[i].peaktype;
+  }
+  return null;
+}
+
+function assayPeaktype(assay) {
+  if (/_broad$/.test(assay)) return "broad";
+  if (/_narrow$/.test(assay)) return "narrow";
+  return null;
+}
+
+const UNSAFE_CHARS_RE = /[/\\\s'";&|<>$`!{}()\[\]?*~#]/;
+const DOUBLE_UNDERSCORE_RE = /__/;
+const SRA_REGEX = /^[SDE]RR\d+$/;
+
+// Factor column field prefix — internal only, never serialized
+const FACTOR_PREFIX = "_factor_";
+function factorField(name) { return FACTOR_PREFIX + name; }
+function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
+
+const COLUMN_DESCRIPTIONS = {
+  Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
+  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), CUT_RUN_broad / CUT_RUN_narrow (CUT&RUN), CUT_TAG_broad / CUT_TAG_narrow (CUT&Tag), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads).",
+  Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
+  Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
+  Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
+  Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated SRA accessions for merging (SRA only). PE: comma-separated R1,R2 pair.",
+  Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
+  IP_target: "What was immunoprecipitated. Required for ChIP and CUT&RUN/CUT&Tag assays (e.g. H3K9me2, Input, WCE, IgG). Must be blank for non-IP assays.",
+  Control: "Sample_ID of the control sample (e.g. Input/WCE for ChIP, IgG for CUT&RUN/CUT&Tag, RNAseq for RAMPAGE). No chaining allowed."
+};
+
+// Assay short names for Sample_ID suggestion (non-ChIP assays)
+const ASSAY_SHORT = {
+  ATAC: "ATAC", RNAseq: "RNA", RAMPAGE: "RAMPAGE",
+  sRNA: "sRNA", WGBS: "WGBS", WGBS_nd: "WGBS_nd", PBAT: "PBAT", EMseq: "EMseq", dmC: "dmC"
+};
+
+// ===========================================================================
+// State
+// ===========================================================================
+
+let table;
+let cellIssues = {}; // { "rowId:field": { errors: [], warnings: [] } }
+let activeCtxMenu = null;
+
+// Factor state — array of factor name strings (e.g. ["genotype", "tissue"])
+var factors = [];
+
+// ===========================================================================
+// Helpers
+// ===========================================================================
+
+function parseLevels(str) {
+  if (!str) return null;
+  const pairs = str.split(",").map(s => s.trim());
+  const result = [];
+  for (const p of pairs) {
+    if (!p.includes(":")) return null;
+    const [factor, ...rest] = p.split(":");
+    result.push({ factor: factor.trim(), level: rest.join(":").trim() });
+  }
+  return result;
+}
+
+function levelsToLabel(str) {
+  const parsed = parseLevels(str);
+  if (!parsed) return "";
+  return parsed.map(p => p.level).join("_");
+}
+
+// Build Levels string from _factor_* fields on a row
+function buildLevelsFromFactors(rowData) {
+  if (factors.length === 0) return "";
+  var parts = [];
+  for (var i = 0; i < factors.length; i++) {
+    var val = (rowData[factorField(factors[i])] || "").trim();
+    parts.push(factors[i] + ":" + val);
+  }
+  return parts.join(",");
+}
+
+// Inverse: populate _factor_* fields from a Levels string
+function populateFactorsFromLevels(rowData) {
+  var parsed = parseLevels(rowData.Levels || "");
+  if (!parsed) return;
+  for (var i = 0; i < parsed.length; i++) {
+    rowData[factorField(parsed[i].factor)] = parsed[i].level;
+  }
+}
+
+function suggestSampleId(rowData) {
+  const assay = (rowData.Assay || "").trim();
+  const rep = (rowData.Replicate_ID || "").trim();
+  const ip = (rowData.IP_target || "").trim();
+  var levels = factors.length > 0 ? buildLevelsFromFactors(rowData) : (rowData.Levels || "").trim();
+  if (!levels) return "";
+  var label = levelsToLabel(levels);
+  if (!label || !rep) return "";
+  if (IP_PEAK_ASSAYS.has(assay)) {
+    if (!ip) return "";
+    return label + "_" + ip + "_" + rep;
+  }
+  const short = ASSAY_SHORT[assay];
+  if (!short) return "";
+  return label + "_" + short + "_" + rep;
+}
+
+function emptyRow() {
+  var row = {
+    Sample_ID: "", Assay: "", Genome: "", Replicate_ID: "",
+    Read_files: "", Read_layout: "", IP_target: "", Control: "",
+    _sid_user_edited: false
+  };
+  for (var i = 0; i < factors.length; i++) {
+    row[factorField(factors[i])] = "";
+  }
+  return row;
+}
+
+// ===========================================================================
+// Factor Management
+// ===========================================================================
+
+function getVisibleFields() {
+  if (factors.length > 0) {
+    var fields = ["Sample_ID", "Assay", "Genome"];
+    for (var i = 0; i < factors.length; i++) {
+      fields.push(factorField(factors[i]));
+    }
+    fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target", "Control");
+    return fields;
+  }
+  return COLUMNS.slice();
+}
+
+function addFactorFromInput() {
+  var input = document.getElementById("factor-input");
+  var name = (input.value || "").trim().replace(/\s+/g, "_");
+  input.value = "";
+  if (name) addFactor(name);
+  input.focus();
+}
+
+function addFactor(name) {
+  name = name.trim().replace(/\s+/g, "_");
+  if (!name) return;
+  // No duplicates
+  for (var i = 0; i < factors.length; i++) {
+    if (factors[i].toLowerCase() === name.toLowerCase()) return;
+  }
+  // Forbidden chars in factor names: : , __
+  if (name.includes(":") || name.includes(",") || name.includes("__")) {
+    alert("Factor name cannot contain ':', ',' or '__'.");
+    return;
+  }
+  factors.push(name);
+  // Initialize factor field in all existing rows
+  var allData = table.getData();
+  for (var i = 0; i < allData.length; i++) {
+    if (!allData[i][factorField(name)]) {
+      allData[i][factorField(name)] = "";
+    }
+  }
+  rebuildTableColumns();
+  renderFactorTiles();
+  refreshUI();
+}
+
+function removeFactor(name) {
+  factors = factors.filter(function(f) { return f !== name; });
+  rebuildTableColumns();
+  renderFactorTiles();
+  refreshUI();
+}
+
+function renderFactorTiles() {
+  var container = document.getElementById("factor-tiles");
+  while (container.firstChild) container.removeChild(container.firstChild);
+  for (var i = 0; i < factors.length; i++) {
+    var tile = document.createElement("span");
+    tile.className = "factor-tile";
+    var nameSpan = document.createElement("span");
+    nameSpan.textContent = factors[i];
+    tile.appendChild(nameSpan);
+    var btn = document.createElement("button");
+    btn.className = "factor-remove";
+    btn.textContent = "\u00d7";
+    btn.title = "Remove factor '" + factors[i] + "'";
+    btn.setAttribute("aria-label", "Remove factor " + factors[i]);
+    (function(fname) {
+      btn.addEventListener("click", function() { removeFactor(fname); });
+    })(factors[i]);
+    tile.appendChild(btn);
+    container.appendChild(tile);
+  }
+}
+
+// ===========================================================================
+// Genome Management (Reference Genomes tab)
+// ===========================================================================
+
+var definedGenomes = [];
+
+function getDefinedGenomes() {
+  // Union of manually added genomes + genomes found in sample sheet
+  var seen = {};
+  var result = [];
+  for (var i = 0; i < definedGenomes.length; i++) {
+    if (!seen[definedGenomes[i]]) {
+      seen[definedGenomes[i]] = true;
+      result.push(definedGenomes[i]);
+    }
+  }
+  if (typeof table !== "undefined") {
+    var data = table.getData();
+    for (var i = 0; i < data.length; i++) {
+      var g = (data[i].Genome || "").trim();
+      if (g && !seen[g]) {
+        seen[g] = true;
+        result.push(g);
+      }
+    }
+  }
+  return result;
+}
+
+function addGenomeFromInput() {
+  var input = document.getElementById("genome-input");
+  var name = (input.value || "").trim();
+  if (!name) return;
+  if (definedGenomes.indexOf(name) >= 0) {
+    input.value = "";
+    return;
+  }
+  definedGenomes.push(name);
+  input.value = "";
+  buildGenomesTab();
+}
+
+function removeDefinedGenome(name) {
+  definedGenomes = definedGenomes.filter(function(g) { return g !== name; });
+  // Also remove configState entry
+  if (configState.genomes && configState.genomes[name]) {
+    delete configState.genomes[name];
+  }
+  buildGenomesTab();
+}
+
+function renderGenomeTiles(container) {
+  var tilesSpan = container.querySelector("#genome-tiles");
+  while (tilesSpan.firstChild) tilesSpan.removeChild(tilesSpan.firstChild);
+  var allGenomes = getDefinedGenomes();
+  for (var i = 0; i < allGenomes.length; i++) {
+    var tile = document.createElement("span");
+    tile.className = "genome-tile";
+    var nameSpan = document.createElement("span");
+    nameSpan.textContent = allGenomes[i];
+    tile.appendChild(nameSpan);
+    var btn = document.createElement("button");
+    btn.className = "genome-remove";
+    btn.textContent = "\u00d7";
+    btn.title = "Remove genome '" + allGenomes[i] + "'";
+    btn.setAttribute("aria-label", "Remove genome " + allGenomes[i]);
+    (function(gname) {
+      btn.addEventListener("click", function() { removeDefinedGenome(gname); });
+    })(allGenomes[i]);
+    tile.appendChild(btn);
+    tilesSpan.appendChild(tile);
+  }
+}
+
+function buildGenomesTab() {
+  var container = document.getElementById("genomes-content");
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // Genome name management panel
+  var panel = el("div", { className: "genome-panel", id: "genome-panel" });
+  panel.setAttribute("role", "group");
+  panel.setAttribute("aria-label", "Reference genome management");
+  panel.appendChild(el("span", { className: "genome-label", textContent: "Genomes:" }));
+  panel.appendChild(el("span", { id: "genome-tiles" }));
+  var inp = el("input", { type: "text", id: "genome-input", placeholder: "e.g. Spombe" });
+  inp.setAttribute("aria-label", "New genome name");
+  inp.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { addGenomeFromInput(); e.preventDefault(); }
+  });
+  panel.appendChild(inp);
+  var addBtn = el("button", { textContent: "+ Add" });
+  addBtn.setAttribute("aria-label", "Add genome");
+  addBtn.addEventListener("click", addGenomeFromInput);
+  panel.appendChild(addBtn);
+  panel.appendChild(el("span", { className: "genome-help",
+    textContent: "Reference genomes used across samples. Configure paths and species parameters for each genome below." }));
+  container.appendChild(panel);
+
+  renderGenomeTiles(container);
+
+  // Per-genome config sections
+  var allGenomes = getDefinedGenomes();
+  if (allGenomes.length === 0) {
+    container.appendChild(el("p", { className: "cfg-help",
+      textContent: "No genomes defined yet. Add a genome above or add samples in the Samples tab." }));
+  } else {
+    for (var i = 0; i < allGenomes.length; i++) {
+      container.appendChild(buildGenomeSection(allGenomes[i]));
+    }
+  }
+}
+
+function rebuildTableColumns() {
+  table.setColumns(buildColumnDefs());
+  EDIT_FIELDS = getVisibleFields();
+}
+
+function buildColumnDefs() {
+  var defs = [
+    {
+      formatter: "rowSelection", titleFormatter: "rowSelection",
+      headerSort: false, width: 30, hozAlign: "center", resizable: false,
+      cssClass: "row-select-col",
+    },
+    {
+      title: "", field: "_actions", width: 36, headerSort: false,
+      cssClass: "action-col", hozAlign: "center", resizable: false,
+      formatter: function() {
+        return '<button class="row-action-btn" aria-label="Row actions" title="Row actions">\u22EE</button>';
+      },
+      cellClick: function(e, cell) {
+        showCtxMenu(e, cell.getRow());
+      }
+    },
+    Object.assign({
+      title: "Sample ID", field: "Sample_ID", editor: "input", width: 160,
+      editorParams: { elementAttributes: { placeholder: "auto-suggested or type your own" } },
+    }, descHooks("Sample_ID")),
+    Object.assign({
+      title: "Assay", field: "Assay", width: 140,
+      editor: "list",
+      editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
+    }, descHooks("Assay")),
+    Object.assign({
+      title: "Genome", field: "Genome", width: 120,
+      editor: "list",
+      editorParams: function() {
+        return { values: getDefinedGenomes(), autocomplete: true, listOnEmpty: true, freetext: true };
+      },
+    }, descHooks("Genome")),
+  ];
+
+  // Factor columns (or placeholder/Levels fallback)
+  if (factors.length > 0) {
+    for (var i = 0; i < factors.length; i++) {
+      (function(fname) {
+        defs.push(Object.assign({
+          title: fname, field: factorField(fname), editor: "input", width: 120,
+          editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
+        }, {
+          headerClick: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
+          headerMouseEnter: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
+          cellClick: (function(fn) { return function(e, cell) { showFactorDescription(fn); }; })(fname),
+        }));
+      })(factors[i]);
+    }
+  } else {
+    // No factors defined — show Levels column with guidance
+    defs.push(Object.assign({
+      title: "Levels", field: "Levels", editor: "input", width: 220,
+      editorParams: { elementAttributes: { placeholder: "Add factors above, or type factor:level pairs" } },
+    }, descHooks("Levels")));
+  }
+
+  defs.push(
+    Object.assign({
+      title: "Replicate ID", field: "Replicate_ID", editor: "input", width: 110,
+      editorParams: { elementAttributes: { placeholder: "e.g. rep1" } },
+    }, descHooks("Replicate_ID")),
+    Object.assign({
+      title: "Read files", field: "Read_files", editor: "input", width: 200,
+      editorParams: { elementAttributes: { placeholder: "e.g. SRR12345678" } },
+    }, descHooks("Read_files")),
+    Object.assign({
+      title: "Read layout", field: "Read_layout", width: 110,
+      editor: "list",
+      editorParams: { values: ["SE", "PE"], listOnEmpty: true, freetext: false },
+    }, descHooks("Read_layout")),
+    Object.assign({
+      title: "IP target", field: "IP_target", editor: "input", width: 120,
+      editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
+      editable: function(cell) {
+        var assay = (cell.getRow().getData().Assay || "").trim();
+        return IP_PEAK_ASSAYS.has(assay);
+      },
+    }, descHooks("IP_target")),
+    Object.assign({
+      title: "Control", field: "Control", width: 200,
+      editor: "list",
+      editorParams: function(cell) {
+        return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
+      },
+    }, descHooks("Control"))
+  );
+
+  return defs;
+}
+
+// ===========================================================================
+// Description panel (safe DOM methods only)
+// ===========================================================================
+
+const descPanel = document.getElementById("description-panel");
+function showFactorDescription(factorName) {
+  while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
+  var strong = document.createElement("strong");
+  strong.textContent = factorName;
+  descPanel.appendChild(strong);
+  descPanel.appendChild(document.createTextNode(
+    " Level of factor '" + factorName + "'. " +
+    "Stored as comma-separated factor:level pairs (e.g. genotype:WT,tissue:root) " +
+    "in the sample sheet TSV 'Levels' column. All rows must have the same factors. " +
+    "Level values form the 'levels_label' in analysis names."
+  ));
+}
+
+function showDescription(field) {
+  const desc = COLUMN_DESCRIPTIONS[field];
+  if (desc) {
+    // Clear and rebuild with safe DOM methods
+    while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
+    const strong = document.createElement("strong");
+    strong.textContent = field;
+    descPanel.appendChild(strong);
+    descPanel.appendChild(document.createTextNode(" " + desc));
+  }
+}
+
+function refreshUI() {
+  runValidation();
+  applySuggestions();
+  applyExampleCellStyles();
+}
+
+function clearSuggestion(el) {
+  el.classList.remove("cell-suggestion");
+  el.removeAttribute("data-suggestion");
+  el.title = "";
+}
+
+function descHooks(field) {
+  return {
+    headerClick: function() { showDescription(field); },
+    headerMouseEnter: function() { showDescription(field); },
+    cellClick: function(e, cell) { showDescription(field); },
+  };
+}
+
+// ===========================================================================
+// Context menu
+// ===========================================================================
+
+function closeCtxMenu() {
+  if (activeCtxMenu) {
+    activeCtxMenu.remove();
+    activeCtxMenu = null;
+  }
+}
+document.addEventListener("click", closeCtxMenu);
+document.addEventListener("keydown", function(e) { if (e.key === "Escape") closeCtxMenu(); });
+
+function showCtxMenu(e, row) {
+  closeCtxMenu();
+  const menu = document.createElement("div");
+  menu.className = "ctx-menu";
+  menu.setAttribute("role", "menu");
+
+  const items = [
+    { label: "Add replicate", action: function() { addReplicate(row); } },
+    { label: "Duplicate row", action: function() { duplicateRow(row); } },
+    { sep: true },
+    { label: "Move up", action: function() { moveRow(row, -1); } },
+    { label: "Move down", action: function() { moveRow(row, 1); } },
+    { sep: true },
+    { label: "Remove row", action: function() { removeRow(row); } },
+  ];
+
+  for (var ii = 0; ii < items.length; ii++) {
+    var item = items[ii];
+    if (item.sep) {
+      var sep = document.createElement("div");
+      sep.className = "ctx-menu-sep";
+      menu.appendChild(sep);
+      continue;
+    }
+    var el = document.createElement("div");
+    el.textContent = item.label;
+    el.setAttribute("role", "menuitem");
+    el.setAttribute("tabindex", "0");
+    (function(action) {
+      el.addEventListener("click", function(ev) { ev.stopPropagation(); closeCtxMenu(); action(); });
+      el.addEventListener("keydown", function(ev) { if (ev.key === "Enter") { ev.stopPropagation(); closeCtxMenu(); action(); } });
+    })(item.action);
+    menu.appendChild(el);
+  }
+
+  // Position
+  var x = (e.clientX || e.pageX || 100);
+  var y = (e.clientY || e.pageY || 100);
+  menu.style.left = x + "px";
+  menu.style.top = y + "px";
+  document.body.appendChild(menu);
+
+  // Adjust if offscreen
+  var rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + "px";
+  if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + "px";
+
+  activeCtxMenu = menu;
+}
+
+// ===========================================================================
+// Row actions
+// ===========================================================================
+
+function addReplicate(row) {
+  var data = Object.assign({}, row.getData());
+  // Increment replicate
+  var rep = data.Replicate_ID || "";
+  var m = rep.match(/^(.*?)(\d+)$/);
+  if (m) {
+    data.Replicate_ID = m[1] + (parseInt(m[2]) + 1);
+  } else {
+    data.Replicate_ID = rep ? rep + "_2" : "rep1";
+  }
+  data.Sample_ID = ""; // clear so suggestion kicks in
+  data._sid_user_edited = false;
+  delete data.id; // new internal id
+  table.addRow(data, false, row);
+  refreshUI();
+}
+
+function duplicateRow(row) {
+  var data = Object.assign({}, row.getData());
+  data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
+  data._sid_user_edited = !!data.Sample_ID;
+  delete data.id;
+  table.addRow(data, false, row);
+  refreshUI();
+}
+
+function moveRow(row, direction) {
+  var rows = table.getRows();
+  var idx = rows.indexOf(row);
+  var targetIdx = idx + direction;
+  if (targetIdx < 0 || targetIdx >= rows.length) return;
+  if (direction < 0) {
+    row.move(rows[targetIdx], true);
+  } else {
+    row.move(rows[targetIdx], false);
+  }
+}
+
+function removeRow(row) {
+  // "Remove row" sits directly under "Duplicate row" in the context menu, so
+  // a misclick is easy. Confirm first (still undoable via Undo / Ctrl+Z).
+  var d = row.getData();
+  var who = (d.Sample_ID || "").trim();
+  var msg = who ? "Remove row \"" + who + "\"?" : "Remove this row?";
+  if (!window.confirm(msg + "\n\n(You can undo this with the Undo button or Ctrl+Z.)")) return;
+  row.delete();
+  refreshUI();
+}
+
+// ===========================================================================
+// Validation Engine
+// ===========================================================================
+
+function runValidation() {
+  cellIssues = {};
+  var data = table.getData();
+  var errors = [];
+  var warnings = [];
+  var sampleIds = new Set();
+  var rows = table.getRows();
+
+  // --- Per-row validation ---
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var rowNum = i + 1;
+    var sid = (row.Sample_ID || "").trim();
+    var assay = (row.Assay || "").trim();
+    var genome = (row.Genome || "").trim();
+    var levels = (row.Levels || "").trim();
+    var rep = (row.Replicate_ID || "").trim();
+    var readFiles = (row.Read_files || "").trim();
+    var readLayout = (row.Read_layout || "").trim();
+    var ipTarget = (row.IP_target || "").trim();
+    var control = (row.Control || "").trim();
+    var rowKey = rows[i] ? rows[i].getIndex() : i;
+
+    // Sample_ID
+    if (!sid) {
+      addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + ": Sample_ID is required");
+    } else {
+      if (UNSAFE_CHARS_RE.test(sid))
+        addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + " '" + sid + "': Sample_ID contains unsafe characters");
+      if (DOUBLE_UNDERSCORE_RE.test(sid))
+        addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + " '" + sid + "': Sample_ID must not contain '__'");
+      if (sampleIds.has(sid))
+        addIssue(cellIssues, errors, rowKey, "Sample_ID", "[X] Row #" + rowNum + " '" + sid + "': duplicate Sample_ID");
+      sampleIds.add(sid);
+    }
+
+    // Assay
+    if (!VALID_ASSAYS_SET.has(assay))
+      addIssue(cellIssues, errors, rowKey, "Assay", "[X] Row #" + rowNum + " '" + sid + "': Assay '" + assay + "' not in [" + VALID_ASSAYS.join(", ") + "]");
+
+    // Genome
+    if (!genome)
+      addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': Genome is required");
+
+    // Levels / Factor validation
+    if (factors.length > 0) {
+      // Validate each factor field individually
+      for (var fi = 0; fi < factors.length; fi++) {
+        var fval = (row[factorField(factors[fi])] || "").trim();
+        var fField = factorField(factors[fi]);
+        if (!fval)
+          addIssue(cellIssues, errors, rowKey, fField, "[X] Row #" + rowNum + " '" + sid + "': " + factors[fi] + " level is required");
+        else if (fval.includes(":") || fval.includes(","))
+          addIssue(cellIssues, errors, rowKey, fField, "[X] Row #" + rowNum + " '" + sid + "': " + factors[fi] + " level must not contain ':' or ','");
+      }
+    } else {
+      // Fallback: validate Levels column directly
+      var levels = (row.Levels || "").trim();
+      if (!levels) {
+        addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels is required");
+      } else {
+        var pairs = levels.split(",");
+        for (var pi = 0; pi < pairs.length; pi++) {
+          var p = pairs[pi].trim();
+          if (!p.includes(":")) {
+            addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': Levels entry '" + p + "' must be 'factor:level' format");
+          } else {
+            var parts = p.split(":");
+            var factor = parts[0];
+            var level = parts.slice(1).join(":");
+            if (!factor.trim() || !level.trim())
+              addIssue(cellIssues, errors, rowKey, "Levels", "[X] Row #" + rowNum + " '" + sid + "': empty factor name or level in Levels");
+          }
+        }
+      }
+    }
+
+    // Replicate_ID
+    if (!rep)
+      addIssue(cellIssues, errors, rowKey, "Replicate_ID", "[X] Row #" + rowNum + " '" + sid + "': Replicate_ID is required");
+
+    // Read_layout
+    if (readLayout !== "SE" && readLayout !== "PE")
+      addIssue(cellIssues, errors, rowKey, "Read_layout", "[X] Row #" + rowNum + " '" + sid + "': Read_layout must be 'SE' or 'PE', got '" + readLayout + "'");
+
+    // Read_files
+    if (!readFiles) {
+      addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_files is required");
+    } else {
+      var components = readFiles.split("+").map(function(s) { return s.trim(); });
+      if (components.length > 1) {
+        // '+'-merge concatenates after download: OK for SRA and FASTQ; BAM
+        // (needs samtools merge) and bedMethyl (counts must be summed) are
+        // not, and mixing component types is rejected.
+        var kindOf = function(c) {
+          var f = c.split(",")[0].trim();
+          var b = f.split("?")[0].split("#")[0].toLowerCase();
+          if (SRA_REGEX.test(f)) return "sra";
+          if (b.endsWith(".bam")) return "bam";
+          if (b.endsWith(".bed.gz") || b.endsWith(".bedmethyl.gz")) return "bedmethyl";
+          if (/\.(fastq|fq)(\.gz)?$/.test(b)) return "fastq";
+          return "other";
+        };
+        var kinds = components.map(kindOf);
+        var uniqKinds = kinds.filter(function(v, ix) { return kinds.indexOf(v) === ix; });
+        var bad = uniqKinds.filter(function(k) { return k === "bam" || k === "bedmethyl" || k === "other"; });
+        if (uniqKinds.length > 1)
+          addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': '+'-merge components must all be the same type");
+        else if (bad.length)
+          addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': '+'-merge is not supported for " + bad[0] + " inputs (only SRA accessions and FASTQ files); merge upstream instead");
+      }
+      for (var ci = 0; ci < components.length; ci++) {
+        var files = components[ci].split(",").map(function(s) { return s.trim(); });
+        var first = files[0];
+        if (SRA_REGEX.test(first)) {
+          for (var fi = 0; fi < files.length; fi++) {
+            if (!SRA_REGEX.test(files[fi]))
+              addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': mixed SRA/path in Read_files component");
+          }
+        } else {
+          var isUrl = /^https?:\/\//.test(first);
+          var isBam = first.replace(/\?.*$/, "").endsWith(".bam");
+          if (readLayout === "PE" && files.length === 1 && !isBam)
+            addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_layout is PE but Read_files has only one path (expected comma-separated pair)");
+          if (readLayout === "SE" && files.length > 1)
+            addIssue(cellIssues, errors, rowKey, "Read_files", "[X] Row #" + rowNum + " '" + sid + "': Read_layout is SE but Read_files has multiple comma-separated paths");
+        }
+      }
+    }
+
+    // IP_target
+    if (IP_PEAK_ASSAYS.has(assay)) {
+      if (!ipTarget) {
+        addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target is required for " + assay);
+      } else {
+        // Compare recommended peaktype (from known marks) to the assay's
+        // own broad/narrow suffix. Warn only on peaktype mismatch — the
+        // assay family (ChIP vs CUT_RUN vs CUT_TAG) is the user's choice.
+        var recommendedPt = getRecommendedPeaktype(ipTarget);
+        var assayPt = assayPeaktype(assay);
+        if (recommendedPt && assayPt && recommendedPt !== assayPt) {
+          addIssue(cellIssues, warnings, rowKey, "IP_target",
+            "[!] Row #" + rowNum + " '" + sid + "': IP_target '" + ipTarget + "' is typically called as a " + recommendedPt + " peak, but Assay '" + assay + "' is " + assayPt, "warnings");
+        }
+      }
+    } else if (assay) {
+      if (ipTarget)
+        addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target must be blank for " + assay);
+    }
+
+    // Control (assay check only - reference checks below)
+    if (control) {
+      if (!CONTROL_ASSAYS.has(assay))
+        addIssue(cellIssues, errors, rowKey, "Control", "[X] Row #" + rowNum + " '" + sid + "': Control is not allowed for " + assay);
+    }
+  }
+
+  // --- Cross-row validation ---
+
+  // Levels: consistent factors (only needed when factors are NOT managed via panel)
+  if (factors.length === 0) {
+    var allRowFactors = [];
+    for (var i = 0; i < data.length; i++) {
+      var lvl = (data[i].Levels || "").trim();
+      if (!lvl) { allRowFactors.push(null); continue; }
+      var parsed = parseLevels(lvl);
+      allRowFactors.push(parsed ? parsed.map(function(p) { return p.factor; }) : null);
+    }
+    var refFactorNames = null;
+    var refRowNum2 = 1;
+    for (var i = 0; i < allRowFactors.length; i++) {
+      if (allRowFactors[i] !== null) { refFactorNames = allRowFactors[i]; refRowNum2 = i + 1; break; }
+    }
+    if (refFactorNames) {
+      for (var i = 0; i < allRowFactors.length; i++) {
+        var rf = allRowFactors[i];
+        if (rf === null) continue;
+        if (i + 1 === refRowNum2) continue;
+        var rowNum = i + 1;
+        var rowKey = rows[i] ? rows[i].getIndex() : i;
+        if (rf.length !== refFactorNames.length) {
+          addIssue(cellIssues, errors, rowKey, "Levels",
+            "[X] Row #" + rowNum + ": Levels has " + rf.length + " factors, expected " + refFactorNames.length + " (matching row " + refRowNum2 + ")");
+        } else if (rf.join("\0") !== refFactorNames.join("\0")) {
+          addIssue(cellIssues, errors, rowKey, "Levels",
+            "[X] Row #" + rowNum + ": Levels factor names [" + rf.join(",") + "] don't match row " + refRowNum2 + " [" + refFactorNames.join(",") + "]");
+        }
+      }
+    }
+  }
+
+  // Read_files: cross-row duplicate check
+  var seenInputs = {};  // path/accession -> Sample_ID
+  for (var i = 0; i < data.length; i++) {
+    var readFiles = (data[i].Read_files || "").trim();
+    var sid = (data[i].Sample_ID || "").trim();
+    var rowNum = i + 1;
+    var rowKey = rows[i] ? rows[i].getIndex() : i;
+    if (!readFiles) continue;
+    var components = readFiles.split("+").map(function(s) { return s.trim(); });
+    for (var ci = 0; ci < components.length; ci++) {
+      var files = components[ci].split(",").map(function(s) { return s.trim(); });
+      for (var fi = 0; fi < files.length; fi++) {
+        var f = files[fi];
+        if (!f) continue;
+        if (seenInputs[f]) {
+          addIssue(cellIssues, errors, rowKey, "Read_files",
+            "[X] Row #" + rowNum + " '" + sid + "': Read_files entry '" + f + "' is also used by '" + seenInputs[f] + "'");
+        } else {
+          seenInputs[f] = sid;
+        }
+      }
+    }
+  }
+
+  // Control: reference validation
+  // Build O(1) lookup from Sample_ID → row data (sampleIds Set already complete from per-row loop)
+  var sidToRow = new Map();
+  for (var i = 0; i < data.length; i++) {
+    var s = (data[i].Sample_ID || "").trim();
+    if (s) sidToRow.set(s, data[i]);
+  }
+  for (var i = 0; i < data.length; i++) {
+    var control = (data[i].Control || "").trim();
+    var sid = (data[i].Sample_ID || "").trim();
+    var rowNum = i + 1;
+    var rowKey = rows[i] ? rows[i].getIndex() : i;
+    if (!control) continue;
+
+    if (!sampleIds.has(control)) {
+      addIssue(cellIssues, errors, rowKey, "Control",
+        "[X] Row #" + rowNum + " '" + sid + "': Control '" + control + "' does not match any Sample_ID in the sheet");
+    } else {
+      // No chaining
+      var ctrlRow = sidToRow.get(control);
+      if (ctrlRow) {
+        var ctrlCtrl = (ctrlRow.Control || "").trim();
+        if (ctrlCtrl) {
+          addIssue(cellIssues, errors, rowKey, "Control",
+            "[X] Row #" + rowNum + " '" + sid + "': Control '" + control + "' itself has a Control (chaining not allowed)");
+        }
+      }
+    }
+  }
+
+  // Mixed PE/SE within analysis groups
+  var analysisGroups = {};  // key -> [{sid, layout, rowKey, rowNum}]
+  for (var i = 0; i < data.length; i++) {
+    var sid = (data[i].Sample_ID || "").trim();
+    var assay = (data[i].Assay || "").trim();
+    var genome = (data[i].Genome || "").trim();
+    var layout = (data[i].Read_layout || "").trim();
+    var ipTarget = (data[i].IP_target || "").trim();
+    var levels = (data[i].Levels || "").trim();
+    if (!sid || !assay || !genome) continue;
+    // Skip control samples
+    var ctrl = (data[i].Control || "").trim();
+    if (IP_PEAK_ASSAYS.has(assay) && (!ipTarget || /^(WCE|Input|IgG)$/i.test(ipTarget))) continue;
+    var groupKey = [assay, levels, ipTarget, genome].join("||");
+    if (!analysisGroups[groupKey]) analysisGroups[groupKey] = [];
+    analysisGroups[groupKey].push({sid: sid, layout: layout, rowKey: rows[i] ? rows[i].getIndex() : i, rowNum: i + 1});
+  }
+  for (var gk in analysisGroups) {
+    var members = analysisGroups[gk];
+    var layouts = {};
+    for (var m = 0; m < members.length; m++) layouts[members[m].layout] = true;
+    if (Object.keys(layouts).length > 1) {
+      var sids = members.map(function(m) { return m.sid; }).join(", ");
+      for (var m = 0; m < members.length; m++) {
+        addIssue(cellIssues, warnings, members[m].rowKey, "Read_layout",
+          "[!] Mixed PE/SE replicates in analysis group (" + sids + "): merged peak calling will treat all reads as SE",
+          "warnings");
+      }
+    }
+  }
+
+  // --- Update UI ---
+  updateCellStyles();
+  renderDiagnostics(errors, warnings);
+}
+
+function addIssue(issues, list, rowKey, field, msg, severity) {
+  list.push(msg);
+  var key = rowKey + ":" + field;
+  if (!issues[key]) issues[key] = { errors: [], warnings: [] };
+  issues[key][severity || "errors"].push(msg);
+}
+
+function updateCellStyles() {
+  var rows = table.getRows();
+  var visibleFields = getVisibleFields();
+  for (var ri = 0; ri < rows.length; ri++) {
+    var rowKey = rows[ri].getIndex();
+    for (var ci = 0; ci < visibleFields.length; ci++) {
+      var field = visibleFields[ci];
+      var cell = rows[ri].getCell(field);
+      if (!cell) continue;
+      var cellEl = cell.getElement();
+      cellEl.classList.remove("cell-error", "cell-warning");
+      var key = rowKey + ":" + field;
+      var issues = cellIssues[key];
+      if (issues && issues.errors.length > 0) {
+        cellEl.classList.add("cell-error");
+      } else if (issues && issues.warnings.length > 0) {
+        cellEl.classList.add("cell-warning");
+      }
+    }
+  }
+}
+
+var _lastDiagKey = "";
+
+function appendDiagSection(panel, items, cssClass, label) {
+  if (items.length === 0) return;
+  var summary = document.createElement("div");
+  summary.className = "diag-summary " + cssClass;
+  summary.textContent = items.length + " " + label + (items.length > 1 ? "s" : "");
+  panel.appendChild(summary);
+  for (var i = 0; i < items.length; i++) {
+    var div = document.createElement("div");
+    div.className = cssClass;
+    div.textContent = items[i];
+    panel.appendChild(div);
+  }
+}
+
+function renderDiagnostics(errors, warnings) {
+  // Toggle export button based on validation errors
+  var exportBtn = document.getElementById("btn-export");
+  if (errors.length > 0) {
+    exportBtn.disabled = true;
+    exportBtn.title = "Fix validation errors to enable export";
+    exportBtn.setAttribute("aria-disabled", "true");
+  } else {
+    exportBtn.disabled = false;
+    exportBtn.title = "";
+    exportBtn.removeAttribute("aria-disabled");
+  }
+
+  // Skip DOM rebuild if content is unchanged — prevents focus theft
+  var newKey = errors.join("\n") + "\n---\n" + warnings.join("\n");
+  if (newKey === _lastDiagKey) return;
+  _lastDiagKey = newKey;
+
+  // Save and restore focus so panel rebuild doesn't steal it
+  var focused = document.activeElement;
+
+  var panel = document.getElementById("diagnostics-panel");
+  while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+  if (errors.length === 0 && warnings.length === 0) {
+    if (focused && focused !== document.body) focused.focus();
+    return;
+  }
+
+  appendDiagSection(panel, errors,   "diag-error",   "error");
+  appendDiagSection(panel, warnings, "diag-warning", "warning");
+
+  // Restore focus if it was lost during rebuild
+  if (focused && focused !== document.body && document.activeElement !== focused) {
+    focused.focus();
+  }
+}
+
+// ===========================================================================
+// Sample_ID suggestion
+// ===========================================================================
+
+function applySuggestions() {
+  var rows = table.getRows();
+  for (var ri = 0; ri < rows.length; ri++) {
+    var data = rows[ri].getData();
+    var sid = (data.Sample_ID || "").trim();
+    var userEdited = !!data._sid_user_edited;
+    var cell = rows[ri].getCell("Sample_ID");
+    if (!cell) continue;
+    var cellEl = cell.getElement();
+    var suggestion = suggestSampleId(data);
+
+    if (!userEdited) {
+      // Auto-update: set the actual cell value to the suggestion
+      if (suggestion) {
+        if (sid !== suggestion) {
+          cell.setValue(suggestion, true);  // true = don't trigger cellEdited
+        }
+        cellEl.classList.add("cell-suggestion");
+        cellEl.setAttribute("data-suggestion", suggestion);
+        cellEl.title = "Suggested: " + suggestion;
+      } else if (!sid) {
+        clearSuggestion(cellEl);
+      } else {
+        clearSuggestion(cellEl);
+      }
+    } else {
+      // User has manually edited — don't touch the value
+      clearSuggestion(cellEl);
+    }
+  }
+}
+
+// ===========================================================================
+// Import / Export
+// ===========================================================================
+
+function downloadBlob(content, mimeType, filename) {
+  var blob = new Blob([content], { type: mimeType });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+}
+
+function readFileAsText(inputElement, callback) {
+  var file = inputElement.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) { callback(ev.target.result); };
+  reader.readAsText(file);
+  inputElement.value = "";
+}
+
+function importTSV(text) {
+  var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+  if (lines.length < 1) return;
+
+  var header = lines[0].split("\t").map(function(s) { return s.trim(); });
+  // Validate header
+  var missing = COLUMNS.filter(function(c) { return header.indexOf(c) === -1; });
+  if (missing.length > 0) {
+    alert("Import error: missing columns: " + missing.join(", ") +
+      "\n\nExpected: " + COLUMNS.join(", ") +
+      "\nFound: " + header.join(", "));
+    return;
+  }
+
+  var colIdx = {};
+  for (var ci = 0; ci < COLUMNS.length; ci++) {
+    colIdx[COLUMNS[ci]] = header.indexOf(COLUMNS[ci]);
+  }
+
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var fields = lines[i].split("\t");
+    var row = {};
+    for (var ci = 0; ci < COLUMNS.length; ci++) {
+      var c = COLUMNS[ci];
+      row[c] = (fields[colIdx[c]] || "").trim();
+    }
+    rows.push(row);
+  }
+
+  // Extract factors from the Levels column and set up factor columns
+  var importedFactors = [];
+  for (var i = 0; i < rows.length; i++) {
+    var parsed = parseLevels(rows[i].Levels || "");
+    if (parsed && parsed.length > 0) {
+      importedFactors = parsed.map(function(p) { return p.factor; });
+      break;
+    }
+  }
+
+  // Set global factors and populate _factor_* fields
+  factors = importedFactors;
+  for (var i = 0; i < rows.length; i++) {
+    populateFactorsFromLevels(rows[i]);
+    // Imported rows with a Sample_ID are treated as user-edited
+    rows[i]._sid_user_edited = !!(rows[i].Sample_ID || "").trim();
+  }
+
+  // Rebuild columns for the new factors
+  rebuildTableColumns();
+  renderFactorTiles();
+
+  table.setData(rows);
+  setTimeout(function() { refreshUI(); }, 100);
+}
+
+// Strip characters that would corrupt a TSV cell: embedded tabs, CR and LF
+// (which would spill a value into an adjacent column or a new row), plus
+// leading/trailing whitespace. This matters most for values pasted from
+// spreadsheets or the SRA web UI, where an invisible trailing tab on an
+// SRR accession silently misaligns every downstream column on re-import.
+function sanitizeCell(v) {
+  if (v == null) return "";
+  return String(v).replace(/[\t\r\n]+/g, "").trim();
+}
+
+// Prepare the export matrix shared by exportTSV and the code-block export:
+// reconstruct Levels from the factor columns, accept Sample_ID suggestions
+// for empty cells, and sanitize every value. Returns { header, rows } where
+// rows is an array of sanitized string arrays aligned to COLUMNS.
+//
+// Operates on per-row COPIES: table.getData() returns references to the live
+// row objects, so writing Levels/Sample_ID back onto them would mutate the
+// table itself — visibly rewriting cells just because the user previewed the
+// export command. Keep this function side-effect free.
+function buildExportMatrix() {
+  var data = table.getData();
+  if (data.length === 0) return null;
+  var rows = [];
+  for (var i = 0; i < data.length; i++) {
+    var row = Object.assign({}, data[i]);
+    if (factors.length > 0) {
+      row.Levels = buildLevelsFromFactors(row);
+    }
+    if (!(row.Sample_ID || "").trim()) {
+      var suggestion = suggestSampleId(row);
+      if (suggestion) row.Sample_ID = suggestion;
+    }
+    rows.push(COLUMNS.map(function(c) { return sanitizeCell(row[c]); }));
+  }
+  return { header: COLUMNS.slice(), rows: rows };
+}
+
+// The sample-sheet filename chosen in the toolbar. Drives Export TSV and the
+// pasteable command; the "sample_sheet.tsv" fallback only applies to the
+// generated file itself when the field is left blank (it is NOT written back
+// into configState.sample_file — see syncSampleFilename).
+function sheetFilename() {
+  var el = document.getElementById("export-filename");
+  var v = el ? el.value.trim() : "";
+  return v || "sample_sheet.tsv";
+}
+
+// Single source of truth for the sample-sheet filename. The toolbar field, the
+// Options "Sample file path" (configState.sample_file / #cfg-sample_file), and
+// YAML import all funnel through here so they never drift apart. `name` is
+// written verbatim (empty allowed) — no fallback — so clearing one field does
+// not silently substitute a default into the others. Setting .value
+// programmatically does not fire an "input" event, so this can't recurse.
+function syncSampleFilename(name, source) {
+  configState.sample_file = name;
+  if (source !== "toolbar") {
+    var tb = document.getElementById("export-filename");
+    if (tb && tb.value !== name) tb.value = name;
+  }
+  if (source !== "cfg") {
+    var cf = document.getElementById("cfg-sample_file");
+    if (cf && cf.value !== name) cf.value = name;
+  }
+}
+
+function exportTSV() {
+  var matrix = buildExportMatrix();
+  if (!matrix) { alert("No data to export."); return; }
+  var lines = [matrix.header.join("\t")];
+  for (var i = 0; i < matrix.rows.length; i++) {
+    lines.push(matrix.rows[i].join("\t"));
+  }
+  // Browsers reduce the download name to a basename, so strip any directory.
+  var fname = sheetFilename().split("/").pop() || "sample_sheet.tsv";
+  downloadBlob(lines.join("\n") + "\n", "text/tab-separated-values", fname);
+}
+
+// Single-quote a value for POSIX shell, escaping any embedded single quotes.
+function shQuote(s) {
+  return "'" + String(s).replace(/'/g, "'\\''") + "'";
+}
+
+// Build a self-contained, paste-safe shell command that recreates the sheet.
+// Uses printf with a recycled "%s\t...%s\n" format so real tabs come from the
+// format string (the pasted text carries literal "\t", avoiding tab-completion
+// mishaps in an interactive shell), and every cell is single-quoted.
+function buildSheetCommand() {
+  var matrix = buildExportMatrix();
+  if (!matrix) return null;
+  var ncol = matrix.header.length;
+  var fmt = [];
+  for (var c = 0; c < ncol; c++) fmt.push("%s");
+  var fmtStr = fmt.join("\\t") + "\\n";
+  var lines = ["printf '" + fmtStr + "' \\"];
+  lines.push("  " + matrix.header.map(shQuote).join(" ") + " \\");
+  for (var i = 0; i < matrix.rows.length; i++) {
+    lines.push("  " + matrix.rows[i].map(shQuote).join(" ") + " \\");
+  }
+  lines.push("  > " + shQuote(sheetFilename()));
+  return lines.join("\n");
+}
+
+function openCodeModal() {
+  var cmd = buildSheetCommand();
+  if (!cmd) { alert("No data to export."); return; }
+  document.getElementById("code-modal-fname").textContent = sheetFilename();
+  var ta = document.getElementById("code-modal-text");
+  ta.value = cmd;
+  document.getElementById("code-modal-status").textContent = "";
+  document.getElementById("code-modal").hidden = false;
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+}
+
+function closeCodeModal() {
+  document.getElementById("code-modal").hidden = true;
+}
+
+function copyCodeModal() {
+  var ta = document.getElementById("code-modal-text");
+  var status = document.getElementById("code-modal-status");
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+  var done = function() { status.textContent = "Copied ✓"; };
+  var fail = function() { status.textContent = "Press Ctrl+C to copy"; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done, function() {
+      try { document.execCommand("copy") ? done() : fail(); } catch (e) { fail(); }
+    });
+  } else {
+    try { document.execCommand("copy") ? done() : fail(); } catch (e) { fail(); }
+  }
+}
+
+// ===========================================================================
+// Tabulator initialization
+// ===========================================================================
+
+// Build a filtered list of compatible Control candidates for a given row's Assay.
+// ChIP_broad/ChIP_narrow: controls must be ChIP_broad or ChIP_narrow samples.
+// RAMPAGE: controls must be RNAseq samples.
+function controlListValues(cell) {
+  var rowData = cell.getRow().getData();
+  var assay = (rowData.Assay || "").trim();
+  var currentSid = (rowData.Sample_ID || "").trim();
+  var allData = table.getData();
+
+  // Determine which assays are valid sources for controls
+  var validSourceAssays = CONTROL_SOURCE_ASSAYS[assay];
+  if (!validSourceAssays) {
+    return [{ label: "(None available)", value: "", disabled: true }];
+  }
+
+  var candidates = [];
+  for (var i = 0; i < allData.length; i++) {
+    var sid = (allData[i].Sample_ID || "").trim();
+    var sAssay = (allData[i].Assay || "").trim();
+    if (!sid || sid === currentSid) continue;
+    if (validSourceAssays.has(sAssay)) {
+      candidates.push(sid);
+    }
+  }
+
+  if (candidates.length === 0) {
+    return [{ label: "(None available)", value: "", disabled: true }];
+  }
+  return [""].concat(candidates);
+}
+
+// Example rows — valid data shown dimmed per-row until that row is edited.
+// The _example flag marks rows as examples; removed when the row is first edited.
+var EXAMPLE_DATA = [
+  { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1_R1.fq.gz,/path/to/fastqs/WT_Input_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2_R1.fq.gz,/path/to/fastqs/WT_Input_Rep2_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R1.fq.gz,/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "CenH3", Control: "WT_leaf_Input_rep1" },
+  { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep1", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep1", Read_files: "SRR12362026", Read_layout: "PE", IP_target: "", Control: "" },
+  { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
+];
+
+// Initialize factors and factor fields from example data
+function initExampleData() {
+  // Extract factors from the first example row's Levels
+  var parsed = parseLevels(EXAMPLE_DATA[0].Levels || "");
+  if (parsed && parsed.length > 0) {
+    factors = parsed.map(function(p) { return p.factor; });
+  }
+  // Populate _factor_* fields on all example rows
+  for (var i = 0; i < EXAMPLE_DATA.length; i++) {
+    populateFactorsFromLevels(EXAMPLE_DATA[i]);
+  }
+  renderFactorTiles();
+}
+initExampleData();
+
+// Per-cell example tracking: stash for restoring on edit cancel
+var _editingExampleStash = null; // { field } while an example cell is being edited
+
+function applyExampleCellStyles() {
+  var rows = table.getRows();
+  var visibleFields = getVisibleFields();
+  for (var ri = 0; ri < rows.length; ri++) {
+    var data = rows[ri].getData();
+    var exData = data._exampleData;
+    for (var ci = 0; ci < visibleFields.length; ci++) {
+      var cell = rows[ri].getCell(visibleFields[ci]);
+      if (!cell) continue;
+      var cellEl = cell.getElement();
+      // For factor fields, check if the original COLUMNS field "Levels" is still in exData
+      var isFactor = isFactorField(visibleFields[ci]);
+      if (exData && ((visibleFields[ci] in exData) || (isFactor && "Levels" in exData))) {
+        cellEl.classList.add("cell-example");
+      } else {
+        cellEl.classList.remove("cell-example");
+      }
+    }
+  }
+}
+
+function hasAnyExampleRows() {
+  var data = table.getData();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i]._example) return true;
+  }
+  return false;
+}
+
+// Editable column fields in Tab order (excludes _actions) — updated by rebuildTableColumns()
+var EDIT_FIELDS = getVisibleFields();
+
+table = new Tabulator("#table-container", {
+  data: EXAMPLE_DATA,
+  columns: buildColumnDefs(),
+  layout: "fitDataFill",
+  selectableRows: true,
+  movableRows: true,
+  history: true,
+  placeholder: "No data \u2014 click '+ Add Row' or import a TSV file",
+  rowHeight: 32,
+  index: "id",
+  reactiveData: false,
+  // Keep Tab within the table: wrap from last cell to next row, last row to first
+  navigatorNextCell: function(cell, direction) {
+    var row = cell.getRow();
+    var field = cell.getField();
+    var idx = EDIT_FIELDS.indexOf(field);
+    if (idx < EDIT_FIELDS.length - 1) {
+      // Move to next column in same row
+      return row.getCell(EDIT_FIELDS[idx + 1]);
+    }
+    // End of row — move to first column of next row
+    var rows = table.getRows();
+    var rowIdx = rows.indexOf(row);
+    if (rowIdx < rows.length - 1) {
+      return rows[rowIdx + 1].getCell(EDIT_FIELDS[0]);
+    }
+    // Last cell of last row — wrap to first cell of first row
+    return rows[0].getCell(EDIT_FIELDS[0]);
+  },
+  navigatorPrevCell: function(cell, direction) {
+    var row = cell.getRow();
+    var field = cell.getField();
+    var idx = EDIT_FIELDS.indexOf(field);
+    if (idx > 0) {
+      // Move to previous column in same row
+      return row.getCell(EDIT_FIELDS[idx - 1]);
+    }
+    // Start of row — move to last column of previous row
+    var rows = table.getRows();
+    var rowIdx = rows.indexOf(row);
+    if (rowIdx > 0) {
+      return rows[rowIdx - 1].getCell(EDIT_FIELDS[EDIT_FIELDS.length - 1]);
+    }
+    // First cell of first row — wrap to last cell of last row
+    return rows[rows.length - 1].getCell(EDIT_FIELDS[EDIT_FIELDS.length - 1]);
+  },
+});
+
+// Auto-increment IDs for row indexing
+var _rowIdCounter = 0;
+table.on("dataLoaded", function(data) {
+  for (var i = 0; i < data.length; i++) {
+    if (!data[i].id) data[i].id = ++_rowIdCounter;
+    // Build per-cell example data map for example rows
+    if (data[i]._example && !data[i]._exampleData) {
+      var exData = {};
+      var visFields = getVisibleFields();
+      for (var j = 0; j < visFields.length; j++) {
+        exData[visFields[j]] = data[i][visFields[j]] || "";
+      }
+      data[i]._exampleData = exData;
+    }
+  }
+});
+table.on("rowAdded", function(row) {
+  var d = row.getData();
+  if (!d.id) {
+    row.update({ id: ++_rowIdCounter });
+  }
+});
+
+// --- Editing-aware validation scheduling ---
+// Validation modifies DOM (cell classes, diagnostics panel) which steals focus
+// from Tabulator editors. We track editing state and only run validation when
+// no cell editor is open.
+var _editingActive = false;
+var _validationDirty = false;
+
+function scheduleValidation() {
+  _validationDirty = true;
+  // Check after a tick whether editing has stopped
+  setTimeout(function() {
+    if (!_editingActive && _validationDirty) {
+      _validationDirty = false;
+      refreshUI();
+    }
+  }, 20);
+}
+
+function flushValidationIfIdle() {
+  if (!_editingActive && _validationDirty) {
+    _validationDirty = false;
+    refreshUI();
+  }
+}
+
+// Per-cell example editing: let editor open with example text (user types over it).
+// cellEdited fires only when the value actually changes; cellEditCancelled fires
+// when the user presses Escape or commits without changing the value.
+table.on("cellEditing", function(cell) {
+  _editingActive = true;
+  var row = cell.getRow();
+  var data = row.getData();
+  var field = cell.getField();
+
+  // For factor fields, check if "Levels" is still in exampleData
+  var isExampleField = data._exampleData && (field in data._exampleData ||
+    (isFactorField(field) && "Levels" in data._exampleData));
+
+  if (isExampleField) {
+    // Stash that this is an example cell; remove dimmed styling while editing
+    _editingExampleStash = { field: field };
+    cell.getElement().classList.remove("cell-example");
+    // Select all text so typing immediately replaces the example value
+    setTimeout(function() {
+      var input = cell.getElement().querySelector("input");
+      if (input) input.select();
+    }, 0);
+  } else {
+    _editingExampleStash = null;
+    // For real rows, the Sample_ID already has the suggestion as its value
+    // (set by applySuggestions), so no special handling needed here
+  }
+});
+
+table.on("cellEdited", function(cell) {
+  _editingActive = false;
+  var row = cell.getRow();
+  var data = row.getData();
+  var field = cell.getField();
+
+  // User committed a real change on an example cell — mark this field as edited
+  if (data._exampleData) {
+    if (field in data._exampleData) {
+      delete data._exampleData[field];
+    } else if (isFactorField(field) && "Levels" in data._exampleData) {
+      // Editing any factor field clears the Levels example
+      delete data._exampleData["Levels"];
+      // Also clear all factor fields from exampleData
+      var keys = Object.keys(data._exampleData);
+      for (var ki = 0; ki < keys.length; ki++) {
+        if (isFactorField(keys[ki])) delete data._exampleData[keys[ki]];
+      }
+    }
+    // Enable validation by clearing _example on first real edit
+    if (data._example) {
+      data._example = false;
+    }
+  }
+  _editingExampleStash = null;
+
+  // Track manual Sample_ID edits for auto-suggestion behavior
+  if (field === "Sample_ID") {
+    var newVal = (cell.getValue() || "").trim();
+    var suggestion = suggestSampleId(row.getData());
+    if (!newVal) {
+      // Clearing Sample_ID resumes auto-suggestion
+      row.update({ _sid_user_edited: false });
+    } else if (newVal !== suggestion) {
+      // User typed something different from the suggestion
+      row.update({ _sid_user_edited: true });
+    }
+    // If newVal === suggestion, keep current _sid_user_edited state
+  }
+
+  // When Assay changes, clear IP_target for non-IP-peak assays
+  if (field === "Assay") {
+    var assay = (cell.getValue() || "").trim();
+    if (!IP_PEAK_ASSAYS.has(assay)) {
+      row.update({ IP_target: "" });
+    }
+  }
+  scheduleValidation();
+});
+
+table.on("cellEditCancelled", function(cell) {
+  _editingActive = false;
+  // Restore example styling — value was never changed so no need to restore it
+  if (_editingExampleStash && _editingExampleStash.field === cell.getField()) {
+    cell.getElement().classList.add("cell-example");
+  }
+  _editingExampleStash = null;
+  flushValidationIfIdle();
+});
+
+// Only allow row selection via the checkbox column — undo automatic selection from other clicks
+table.on("rowClick", function(e, row) {
+  var cell = e.target.closest(".tabulator-cell");
+  if (!cell || !cell.classList.contains("row-select-col")) {
+    // Click was outside the checkbox column — reverse the toggle that just happened
+    if (row.isSelected()) { row.deselect(); } else { row.select(); }
+  }
+});
+table.on("rowDeleted", function() { scheduleValidation(); });
+table.on("rowMoved", function() { scheduleValidation(); });
+table.on("rowSelectionChanged", function(rows) {
+  var hasSelection = rows.length > 0;
+  document.getElementById("btn-dup-selected").disabled = !hasSelection;
+  document.getElementById("btn-del-selected").disabled = !hasSelection;
+});
+
+// Initial state
+table.on("tableBuilt", function() {
+  applyExampleCellStyles();
+  // Only run validation on non-example data
+  if (!hasAnyExampleRows()) {
+    refreshUI();
+  }
+  // Build genomes tab now that table data is available
+  buildGenomesTab();
+});
+
+// ===========================================================================
+// Toolbar event handlers
+// ===========================================================================
+
+document.getElementById("btn-add-row").addEventListener("click", function() {
+  table.addRow(emptyRow());
+  refreshUI();
+});
+
+document.getElementById("import-file").addEventListener("change", function(e) {
+  readFileAsText(e.target, importTSV);
+});
+
+document.getElementById("btn-export").addEventListener("click", exportTSV);
+document.getElementById("btn-export-code").addEventListener("click", openCodeModal);
+
+// Keep the chosen sample-sheet filename in sync with the Options "Sample file
+// path" field, so the exported options YAML points at the sheet the user names.
+// Sync the field's raw value (not the export fallback), so emptying it doesn't
+// silently write "sample_sheet.tsv" into sample_file.
+document.getElementById("export-filename").addEventListener("input", function() {
+  syncSampleFilename(this.value.trim(), "toolbar");
+});
+// configState is the source of truth: seed the toolbar field from it at load so
+// the two never start out of step (independent of the static HTML value).
+syncSampleFilename(configState.sample_file);
+
+// Code-block modal controls
+document.getElementById("code-modal-copy").addEventListener("click", copyCodeModal);
+document.getElementById("code-modal-close").addEventListener("click", closeCodeModal);
+document.getElementById("code-modal").addEventListener("click", function(e) {
+  if (e.target === this) closeCodeModal(); // click on backdrop closes
+});
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape" && !document.getElementById("code-modal").hidden) closeCodeModal();
+});
+
+document.getElementById("btn-del-selected").addEventListener("click", function() {
+  var selected = table.getSelectedRows();
+  if (selected.length === 0) return;
+  // Deleting rows is a quick, easy-to-misfire action (the button sits right
+  // next to Duplicate Selected). Confirm first; it's still undoable via the
+  // Undo button / Ctrl+Z afterward.
+  var n = selected.length;
+  var msg = n === 1
+    ? "Delete the selected row?"
+    : "Delete " + n + " selected rows?";
+  if (!window.confirm(msg + "\n\n(You can undo this with the Undo button or Ctrl+Z.)")) return;
+  selected.forEach(function(row) { row.delete(); });
+  refreshUI();
+});
+
+document.getElementById("btn-undo").addEventListener("click", function() {
+  table.undo();
+  refreshUI();
+});
+
+document.getElementById("btn-redo").addEventListener("click", function() {
+  table.redo();
+  refreshUI();
+});
+
+document.getElementById("btn-dup-selected").addEventListener("click", function() {
+  var selected = table.getSelectedRows();
+  if (selected.length === 0) return;
+  // Order the copies by their current table position, then append them all as
+  // one block at the bottom (rather than inserting each copy directly under
+  // its original). Grouping the duplicates makes them easier to edit together
+  // by sample type.
+  var allRows = table.getRows();
+  selected.sort(function(a, b) { return allRows.indexOf(a) - allRows.indexOf(b); });
+  for (var i = 0; i < selected.length; i++) {
+    var data = Object.assign({}, selected[i].getData());
+    data.Sample_ID = data.Sample_ID ? data.Sample_ID + "_copy" : "";
+    data._sid_user_edited = !!data.Sample_ID;
+    delete data.id;
+    table.addRow(data, false); // false = append at the bottom of the table
+  }
+  table.deselectRow();
+  refreshUI();
+});
+
+// ===========================================================================
+// Keyboard shortcuts
+// ===========================================================================
+
+document.addEventListener("keydown", function(e) {
+  // Ctrl+Z: undo
+  if (e.ctrlKey && e.key === "z" && !e.shiftKey) {
+    table.undo();
+    refreshUI();
+  }
+  // Ctrl+Shift+Z or Ctrl+Y: redo
+  if ((e.ctrlKey && e.shiftKey && e.key === "Z") || (e.ctrlKey && e.key === "y")) {
+    table.redo();
+    refreshUI();
+  }
+});
+
+// ===========================================================================
+// Options File Form — State, Builder, YAML I/O
+// ===========================================================================
+
+var _configFormBuilt = false;
+var configState = {
+  // Optional — auto-detected from Snakefile location if omitted
+  repo_folder: "",
+  // Required
+  analysis_name: "epicc",
+  sample_file: "sample_sheet.tsv",
+  // Output options
+  full_analysis: true,
+  te_analysis: false,
+  QC_option: "none",
+  GO: false,
+  rna_deduplicate: false,
+  // Input options
+  trimmed_fastqs: false,
+  aligned_bams: false,
+  // TMPDIR routing
+  use_node_tmpdir: false,
+  // Intermediate file retention
+  keep_intermediates: "standard",
+  keep_trimmed_fastqs: false,
+  keep_final_bams: true,
+  keep_merged_bams: false,
+  keep_shifted_bams: false,
+  keep_cx_reports: false,
+  keep_dmc_intermediates: false,
+  // Motifs
+  motifs: true,
+  jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt",
+  motifs_allreps: false,
+  // ChIP advanced
+  quality_threshold_ChIP: 10,
+  min_read_length_ChIP: 20,
+  trim_front_ChIP: 0,
+  adapter1_ChIP: "auto",
+  adapter2_ChIP: "auto",
+  chip_fingerprint_plots: true,
+  fingerprint_samples: "auto",
+  chip_aligner: "bowtie2",
+  chip_mapping_strategy: "default",
+  chip_tracks_binsize: 1,
+  chip_tracks_params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300",
+  chip_callpeaks_params: "--keep-dup 'all' --nomodel",
+  // CUT&RUN / CUT&Tag peak callers (defaults differ from ChIP):
+  // broad → epic2, narrow → SEACR; macs2 available as a fallback.
+  cut_callpeaks_broad_caller: "epic2",
+  cut_callpeaks_narrow_caller: "seacr",
+  // ATAC advanced
+  quality_threshold_ATAC: 10,
+  min_read_length_ATAC: 20,
+  trim_front_ATAC: 0,
+  adapter1_ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG",
+  adapter2_ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG",
+  atac_aligner: "bowtie2",
+  atac_mapping_strategy: "default",
+  // RNA advanced
+  quality_threshold_RNA: 10,
+  min_read_length_RNA: 20,
+  trim_front_RNA: 0,
+  adapter1_RNA: "auto",
+  adapter2_RNA: "auto",
+  rna_strandedness: "reverse",
+  rna_multimap: "multiple",
+  rampage_strandedness: "forward",
+  rampage_multimap: "multiple",
+  // mC advanced
+  quality_threshold_mC: 10,
+  min_read_length_mC: 20,
+  trim_front_mC: 0,
+  adapter1_mC: "auto",
+  adapter2_mC: "auto",
+  mC_max_insert: 1000,
+  // methylation_contexts: gates per-context mC analysis (bigwigs, DMRs,
+  // PCA). Toggles below derive the list. Default all three (plants);
+  // set CG only for animal genomes. Must keep at least one enabled.
+  mc_context_CG: true,
+  mc_context_CHG: true,
+  mc_context_CHH: true,
+  custom_script_dmrs: false,
+  // sRNA advanced
+  quality_threshold_sRNA: 10,
+  min_read_length_sRNA: 15,
+  trim_front_sRNA: 0,
+  adapter1_sRNA: "TGGAATTCTCGGGTGCCAAGG",
+  adapter2_sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA",
+  nextflex_v3_deduplication: false,
+  structural_rna_depletion: true,
+  infernal_threshold: "ga",
+  srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24",
+  shortstack_dn_mirna: true,
+  srna_min_size: 21,
+  srna_max_size: 24,
+  srna_heatmap_sizes: "21, 22, 24",
+  // Plotting
+  plot_allreps: false,
+  upset_allreps: false,
+  heatmaps_scales: "type",
+  stranded_heatmaps: true,
+  heatmaps_sort_options: "mean",
+  heatmap_sort_mc_after_others: true,
+  profiles_scale: "mean",
+  profiles_plot_params: "--plotType lines",
+  browser_TE_file: true,
+  browser_scales: "sample",
+  // Dynamic — keyed by genome name
+  genomes: {},
+};
+
+// Shorthand DOM helper
+function el(tag, props, children) {
+  var e = document.createElement(tag);
+  if (props) {
+    for (var k in props) {
+      if (k === "className") e.className = props[k];
+      else if (k === "textContent") e.textContent = props[k];
+      else if (k === "htmlFor") e.htmlFor = props[k];
+      else if (k.indexOf("on") === 0) e.addEventListener(k.slice(2), props[k]);
+      else e.setAttribute(k, props[k]);
+    }
+  }
+  if (children) {
+    if (!Array.isArray(children)) children = [children];
+    for (var i = 0; i < children.length; i++) {
+      if (typeof children[i] === "string") e.appendChild(document.createTextNode(children[i]));
+      else if (children[i]) e.appendChild(children[i]);
+    }
+  }
+  return e;
+}
+
+function buildTextRow(label, key, placeholder, help) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
+  var inp = el("input", {
+    type: "text", id: "cfg-" + key, placeholder: placeholder || "",
+    value: configState[key] || "",
+    oninput: function() {
+      configState[key] = this.value;
+      // The sample-sheet path is mirrored in the toolbar filename field.
+      if (key === "sample_file") syncSampleFilename(this.value, "cfg");
+    }
+  });
+  row.appendChild(inp);
+  if (help) row.appendChild(el("div", { className: "cfg-help", textContent: help }));
+  return row;
+}
+
+function buildSelectRow(label, key, options, help) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
+  var sel = el("select", {
+    id: "cfg-" + key,
+    onchange: function() { configState[key] = this.value; }
+  });
+  for (var i = 0; i < options.length; i++) {
+    var opt = el("option", { value: options[i], textContent: options[i] });
+    if (configState[key] === options[i]) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  row.appendChild(sel);
+  if (help) row.appendChild(el("div", { className: "cfg-help", textContent: help }));
+  return row;
+}
+
+function buildNumberRow(label, key, min, max) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { htmlFor: "cfg-" + key, textContent: label }));
+  var inp = el("input", {
+    type: "number", id: "cfg-" + key, min: String(min || 1), max: String(max || 100000),
+    value: String(configState[key] || 0),
+    oninput: function() { configState[key] = parseFloat(this.value) || 0; }
+  });
+  row.appendChild(inp);
+  return row;
+}
+
+function buildToggleRow(label, key, msgOn, msgOff) {
+  var wrap = el("div", { className: "cfg-toggle-row" });
+  var sw = el("label", { className: "toggle-switch" });
+  var cb = el("input", { type: "checkbox" });
+  cb.checked = !!configState[key];
+  var slider = el("span", { className: "toggle-slider" });
+  sw.appendChild(cb);
+  sw.appendChild(slider);
+  wrap.appendChild(sw);
+  wrap.appendChild(el("label", { textContent: label }));
+  var msgEl = el("div", { className: "cfg-msg" });
+  msgEl.textContent = configState[key] ? msgOn : msgOff;
+  cb.addEventListener("change", function() {
+    configState[key] = this.checked;
+    msgEl.textContent = this.checked ? msgOn : msgOff;
+  });
+  wrap.appendChild(msgEl);
+  return wrap;
+}
+
+function buildBoundTextRow(label, stateObj, key, placeholder, ariaHint) {
+  var row = el("div", { className: "cfg-row" });
+  row.appendChild(el("label", { textContent: label }));
+  var attrs = { type: "text", placeholder: placeholder, value: stateObj[key] || "" };
+  if (ariaHint) attrs["aria-label"] = label + " (example: " + ariaHint + ")";
+  var inp = el("input", attrs);
+  inp.addEventListener("input", function() { stateObj[key] = this.value; });
+  row.appendChild(inp);
+  return row;
+}
+
+function buildGenomeSection(genomeName) {
+  if (!configState.genomes[genomeName]) {
+    configState.genomes[genomeName] = {
+      genus: "", species: "",
+      fasta_file: "", gff_file: "", gtf_file: "",
+      gaf_file: "", gene_info_file: "", te_file: "", structural_rna_fafile: "",
+      star_index: "", genomesize: "",
+      ncbi_taxid: ""
+    };
+  }
+  var g = configState.genomes[genomeName];
+  var group = el("div", { className: "cfg-genome-group" });
+  group.appendChild(el("h3", { textContent: "Reference Genome: " + genomeName }));
+  var fields = [
+    ["Genus", "genus", "Arabidopsis", "Arabidopsis"],
+    ["Species (specific epithet)", "species", "thaliana", "thaliana"],
+    ["FASTA file", "fasta_file", "/path/to/genome.fa.gz"],
+    ["GFF file", "gff_file", "/path/to/genes.gff3.gz"],
+    ["GTF file", "gtf_file", "<auto>"],
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    var ariaHint = fields[i].length > 3 ? fields[i][3] : null;
+    group.appendChild(buildBoundTextRow(fields[i][0], g, fields[i][1], fields[i][2], ariaHint));
+  }
+
+  // Auto-computed parameters info
+  var autoRow = el("div", { className: "cfg-row" });
+  var autoInfo = el("span", {
+    textContent: "GTF annotation (from GFF via gffread), genome size (MACS2), STAR index, NCBI TaxId, and GO database name are computed automatically. To override GTF, enter a path above. To override TaxId, set it below. To override genome size or STAR index, add star_index / genomesize to your options YAML manually.",
+    style: "font-style: italic; color: #666; font-size: 0.9em;"
+  });
+  autoRow.appendChild(autoInfo);
+  group.appendChild(autoRow);
+
+  // Optional files and GO fields in a collapsible
+  var details = el("details", { className: "cfg-details" });
+  details.appendChild(el("summary", { textContent: "Optional files & Gene Ontology" }));
+  var body = el("div", { className: "cfg-details-body" });
+  var optFields = [
+    ["GAF file (Gene Ontology)", "gaf_file", "data/ColCEN_infoGO.tab.gz", "data/ColCEN_infoGO.tab.gz"],
+    ["Gene info file (Gene Ontology)", "gene_info_file", "data/ColCEN_genes_info.tab.gz", "data/ColCEN_genes_info.tab.gz"],
+    ["TE bed file", "te_file", "/path/to/TEs.bed.gz"],
+    ["Structural RNA FASTA", "structural_rna_fafile", "<auto>", "auto-derived via Infernal/Rfam; provide path to override"],
+    ["NCBI TaxId", "ncbi_taxid", "<auto>"],
+  ];
+  for (var i = 0; i < optFields.length; i++) {
+    var ariaHint = optFields[i].length > 3 ? optFields[i][3] : null;
+    body.appendChild(buildBoundTextRow(optFields[i][0], g, optFields[i][1], optFields[i][2], ariaHint));
+  }
+  details.appendChild(body);
+  group.appendChild(details);
+  return group;
+}
+
+function buildConfigForm() {
+  var container = document.getElementById("config-content");
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  // --- Required Parameters ---
+  var reqSec = el("div", { className: "cfg-section" });
+  reqSec.appendChild(el("h2", { textContent: "Required Parameters" }));
+  reqSec.appendChild(buildTextRow("Analysis name:", "analysis_name", "epicc", "Label for analysis plots."));
+  reqSec.appendChild(buildTextRow("Sample file path:", "sample_file", "config/example_samples.tsv",
+    "Path to the sample sheet created in the Sample Sheet tab."));
+  container.appendChild(reqSec);
+
+  // --- Optional Parameters ---
+  var optSec = el("div", { className: "cfg-section" });
+  optSec.appendChild(el("h2", { textContent: "Optional Parameters" }));
+  optSec.appendChild(buildTextRow("Path to repo folder (optional):", "repo_folder", "",
+    "Auto-detected from the Snakefile location at runtime. Override only if the repository is accessed from a non-standard path."));
+  container.appendChild(optSec);
+
+  // --- Output Options ---
+  var outSec = el("div", { className: "cfg-section" });
+  outSec.appendChild(el("h2", { textContent: "Output Options" }));
+  outSec.appendChild(buildToggleRow("Complete analysis", "full_analysis",
+    "Complete analysis activated! Smash that button! \uD83D\uDCAA",
+    "Complete analysis deactivated. Only mapping will be performed. \uD83D\uDE1E"));
+  outSec.appendChild(buildToggleRow("Analysis on transposable elements", "te_analysis",
+    "TE analysis is ON! You know where it's at! \uD83D\uDC4F",
+    "TE analysis is deactivated. It's only junk DNA afterall... \uD83D\uDC40"));
+  outSec.appendChild(buildToggleRow("Deduplicate mRNA-seq reads", "rna_deduplicate",
+    "mRNA-seq dedup ON \u2014 only do this if your reads carry UMIs! \uD83E\uDDEC",
+    "mRNA-seq dedup OFF (default) \u2014 no UMIs, no dedup. RAMPAGE is deduped regardless. \uD83D\uDC4D"));
+  var qcRow = buildSelectRow("FastQC option:", "QC_option", ["none", "all"]);
+  var qcMsg = el("div", { className: "cfg-msg" });
+  qcMsg.textContent = configState.QC_option === "all" ? "How good is that raw data, hum? \uD83E\uDDD0" : "";
+  qcRow.appendChild(qcMsg);
+  var qcSel = qcRow.querySelector("select");
+  qcSel.addEventListener("change", function() { qcMsg.textContent = this.value === "all" ? "How good is that raw data, hum? \uD83E\uDDD0" : ""; });
+  outSec.appendChild(qcRow);
+  outSec.appendChild(buildToggleRow("Gene Ontology analysis", "GO",
+    "Gene Ontology will be performed! Good luck! \uD83E\uDD1E",
+    "Gene ontology deactivated. Probably safer! \uD83D\uDE25"));
+  outSec.appendChild(buildToggleRow("Motifs analysis for TFs", "motifs",
+    "Motifs analysis selected! \uD83D\uDE00",
+    "No motifs analysis will be performed! \uD83D\uDE22"));
+  outSec.appendChild(buildTextRow("JASPAR database:", "jaspar_db",
+    "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt",
+    "MEME-format motif database used when Motifs analysis is on."));
+  outSec.appendChild(buildToggleRow("Motifs on all replicates", "motifs_allreps",
+    "Let's go! Motifs on all individual replicates it is! \uD83D\uDCB8",
+    "Motifs only on merged replicates."));
+
+  // --- Intermediate File Retention ---
+  var retRow = buildSelectRow("Keep intermediate files", "keep_intermediates", ["standard", "none", "custom", "all"]);
+  var retQuote = el("div", { className: "cfg-msg", style: "font-style:italic" });
+  retQuote.textContent = "\"Space. It seems to go on and on forever. Then you get to the end, and a monkey starts throwing barrels at you.\" \u2014 Phillip Fry, Futurama";
+  retRow.appendChild(retQuote);
+  outSec.appendChild(retRow);
+
+  var customPanel = el("div", { id: "retention-custom-panel", style: "margin-left:1.5em;display:" + (configState.keep_intermediates === "custom" ? "block" : "none") });
+  customPanel.appendChild(buildToggleRow("Keep trimmed FASTQs", "keep_trimmed_fastqs",
+    "Trimmed FASTQs will be retained",
+    "Trimmed FASTQs will be cleaned after mapping"));
+  customPanel.appendChild(buildToggleRow("Keep final BAMs", "keep_final_bams",
+    "Per-replicate final BAMs will be retained",
+    "Per-replicate final BAMs will be cleaned after downstream steps"));
+  customPanel.appendChild(buildToggleRow("Keep merged BAMs", "keep_merged_bams",
+    "Merged-replicate BAMs will be retained",
+    "Merged-replicate BAMs will be cleaned after downstream steps"));
+  customPanel.appendChild(buildToggleRow("Keep shifted BAMs", "keep_shifted_bams",
+    "ATAC shifted BAMs will be retained",
+    "ATAC shifted BAMs will be cleaned after downstream steps"));
+  customPanel.appendChild(buildToggleRow("Keep CX reports", "keep_cx_reports",
+    "Per-replicate CX reports will be retained",
+    "Per-replicate CX reports will be cleaned after merging"));
+  customPanel.appendChild(buildToggleRow("Keep dmC intermediates", "keep_dmc_intermediates",
+    "dmC aligned modBAMs and bedMethyl pileups will be retained",
+    "dmC aligned modBAMs and bedMethyl pileups will be cleaned after downstream steps"));
+  outSec.appendChild(customPanel);
+
+  // Show/hide custom panel based on tier selection
+  var tierSelect = outSec.querySelector("#cfg-keep_intermediates");
+  tierSelect.addEventListener("change", function() {
+    customPanel.style.display = this.value === "custom" ? "block" : "none";
+  });
+
+  outSec.appendChild(buildToggleRow("Inherit cluster TMPDIR (skip workflow override)", "use_node_tmpdir",
+    "Using cluster default TMPDIR (typically /tmp). Use this when /tmp is fast local scratch.",
+    "TMPDIR routed under {output_dir}/.tmp/<jobid>/ — avoids ENOSPC on RAM-tmpfs /tmp."));
+
+  container.appendChild(outSec);
+
+  // --- Input Options ---
+  var inSec = el("div", { className: "cfg-section" });
+  inSec.appendChild(el("h2", { textContent: "Input Options" }));
+  inSec.appendChild(buildToggleRow("Trimmed FASTQs already available?", "trimmed_fastqs",
+    "I do my own trimming, thank you! \u2702\uFE0F",
+    "A little bit more off the top, please! \uD83D\uDC87\u200D\u2640\uFE0F\uD83D\uDC87\u200D\u2642\uFE0F"));
+  inSec.appendChild(buildToggleRow("Aligned BAMs already available?", "aligned_bams",
+    "Been there, done that! \u2714",
+    "Alignment coming right up! \uD83D\uDECE\uFE0F"));
+  container.appendChild(inSec);
+
+  // --- Advanced: ChIP ---
+  var chipDet = el("details", { className: "cfg-details" });
+  chipDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ChIP-seq Advanced Options" }));
+  var chipBody = el("div", { className: "cfg-details-body" });
+  chipBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_ChIP", 0, 40));
+  chipBody.appendChild(buildNumberRow("Min read length:", "min_read_length_ChIP", 1, 500));
+  chipBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_ChIP", 0, 100));
+  chipBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_ChIP", "auto"));
+  chipBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_ChIP", "auto"));
+  chipBody.appendChild(buildToggleRow("Fingerprint plots:", "chip_fingerprint_plots",
+    "Fingerprint QC plots will be generated", "Fingerprint plots skipped (saves time)"));
+  chipBody.appendChild(buildTextRow("Fingerprint samples (auto or integer):", "fingerprint_samples", "auto"));
+  chipBody.appendChild(buildSelectRow("Aligner:", "chip_aligner",
+    ["bowtie2", "chromap"],
+    "\"bowtie2\" (default) is accurate for both SE and PE and handles repeats. \"chromap\" is ~10x faster but appropriate only for SE data — on PE it maps mates independently and loses most proper pairs over repeats. A repeat/repeatall mapping strategy forces bowtie2 regardless."));
+  chipBody.appendChild(buildSelectRow("Mapping strategy:", "chip_mapping_strategy",
+    ["default", "repeat", "repeatall", "all"],
+    "\"default\" keeps uniquely-mapped reads. \"repeat\"/\"repeatall\" retain multi-mappers for repetitive references (forces bowtie2). \"all\" reports all alignments without MAPQ filtering."));
+  chipBody.appendChild(buildNumberRow("Bigwig bin size:", "chip_tracks_binsize", 1, 1000000));
+  chipBody.appendChild(buildTextRow("Bigwig parameters:", "chip_tracks_params",
+    "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"));
+  chipBody.appendChild(buildTextRow("Peak calling parameters:", "chip_callpeaks_params",
+    "--keep-dup 'all' --nomodel"));
+  chipBody.appendChild(buildSelectRow("CUT&RUN/CUT&Tag broad caller:", "cut_callpeaks_broad_caller",
+    ["epic2", "seacr", "macs2"],
+    "Peak caller for CUT&RUN/CUT&Tag broad-mark assays (histone domains). \"epic2\" (default) calls broad enriched domains; \"seacr\" suits sparse, low-background CUT& data; \"macs2\" is the general fallback. ChIP assays always use MACS2."));
+  chipBody.appendChild(buildSelectRow("CUT&RUN/CUT&Tag narrow caller:", "cut_callpeaks_narrow_caller",
+    ["seacr", "macs2"],
+    "Peak caller for CUT&RUN/CUT&Tag narrow-mark assays (TFs, sharp marks). \"seacr\" (default) is tuned for the low background of CUT& data; \"macs2\" is the general fallback."));
+  chipDet.appendChild(chipBody);
+  container.appendChild(chipDet);
+
+  // --- Advanced: ATAC ---
+  var atacDet = el("details", { className: "cfg-details" });
+  atacDet.appendChild(el("summary", { textContent: "\u2699\uFE0F ATAC-seq Advanced Options" }));
+  var atacBody = el("div", { className: "cfg-details-body" });
+  atacBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_ATAC", 0, 40));
+  atacBody.appendChild(buildNumberRow("Min read length:", "min_read_length_ATAC", 1, 500));
+  atacBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_ATAC", 0, 100));
+  atacBody.appendChild(buildTextRow("Adapter 1:", "adapter1_ATAC", "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG"));
+  atacBody.appendChild(buildTextRow("Adapter 2:", "adapter2_ATAC", "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"));
+  atacBody.appendChild(buildSelectRow("Aligner:", "atac_aligner",
+    ["bowtie2", "chromap"],
+    "\"bowtie2\" (default) is accurate for both SE and PE and handles repeats. \"chromap\" is ~10x faster but appropriate only for SE data — on PE it maps mates independently and loses most proper pairs over repeats. A repeat/repeatall mapping strategy forces bowtie2 regardless."));
+  atacBody.appendChild(buildSelectRow("Mapping strategy:", "atac_mapping_strategy",
+    ["default", "repeat", "repeatall", "all"],
+    "\"default\" keeps uniquely-mapped reads. \"repeat\"/\"repeatall\" retain multi-mappers for repetitive references (forces bowtie2). \"all\" reports all alignments without MAPQ filtering."));
+  atacDet.appendChild(atacBody);
+  container.appendChild(atacDet);
+
+  // --- Advanced: RNA ---
+  var rnaDet = el("details", { className: "cfg-details" });
+  rnaDet.appendChild(el("summary", { textContent: "\u2699\uFE0F RNA-seq Advanced Options" }));
+  var rnaBody = el("div", { className: "cfg-details-body" });
+  rnaBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_RNA", 0, 40));
+  rnaBody.appendChild(buildNumberRow("Min read length:", "min_read_length_RNA", 1, 500));
+  rnaBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_RNA", 0, 100));
+  rnaBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_RNA", "auto"));
+  rnaBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_RNA", "auto"));
+  rnaBody.appendChild(buildSelectRow("Strandedness:", "rna_strandedness", ["reverse", "forward", "unstranded"],
+    "Library strand orientation for stranded coverage tracks. \"reverse\" fits dUTP/Illumina stranded kits (e.g. TruSeq Stranded mRNA — the most common), \"forward\" fits directional forward-stranded kits, \"unstranded\" if the library keeps no strand information. Applies to the RNAseq assay; RAMPAGE defaults to \"forward\"."));
+  rnaBody.appendChild(buildSelectRow("Mapped reads for bigwigs:", "rna_multimap", ["multiple", "unique"],
+    "\"multiple\" counts multi-mapping reads in coverage tracks (default); \"unique\" restricts tracks to uniquely-mapped reads (cleaner over repeats, lower signal)."));
+  rnaBody.appendChild(buildSelectRow("RAMPAGE strandedness:", "rampage_strandedness", ["forward", "reverse", "unstranded"],
+    "Strand orientation for the RAMPAGE assay's 5'-end coverage tracks. \"forward\" (default) fits standard directional RAMPAGE; use \"unstranded\" if the library keeps no strand information. Separate from the RNAseq setting above."));
+  rnaBody.appendChild(buildSelectRow("RAMPAGE mapped reads for bigwigs:", "rampage_multimap", ["multiple", "unique"],
+    "\"multiple\" counts multi-mapping reads in RAMPAGE coverage tracks (default); \"unique\" restricts to uniquely-mapped reads."));
+  rnaDet.appendChild(rnaBody);
+  container.appendChild(rnaDet);
+
+  // --- Advanced: mC ---
+  var mcDet = el("details", { className: "cfg-details" });
+  mcDet.appendChild(el("summary", { textContent: "\u2699\uFE0F mC (Methylation) Advanced Options" }));
+  var mcBody = el("div", { className: "cfg-details-body" });
+  mcBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_mC", 0, 40));
+  mcBody.appendChild(buildNumberRow("Min read length:", "min_read_length_mC", 1, 500));
+  mcBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_mC", 0, 100));
+  mcBody.appendChild(buildTextRow("Adapter 1 (auto=auto-detect):", "adapter1_mC", "auto"));
+  mcBody.appendChild(buildTextRow("Adapter 2 (auto=auto-detect):", "adapter2_mC", "auto"));
+  mcBody.appendChild(el("div", { className: "cfg-help", textContent:
+    "Library prep method (and thus bisulfite directionality) is set per sample by the Assay column in the Sample Sheet, not here: WGBS maps directionally, WGBS_nd non-directionally (--non_directional), PBAT with --pbat, and EMseq directionally. Choose the matching Assay for each mC sample." }));
+  mcBody.appendChild(buildNumberRow("Max insert length (PE):", "mC_max_insert", 100, 50000));
+  mcBody.appendChild(buildToggleRow("Analyze CG context", "mc_context_CG",
+    "CG analysis enabled (bigwigs, DMRs, PCA).",
+    "CG analysis disabled — outputs skipped."));
+  mcBody.appendChild(buildToggleRow("Analyze CHG context", "mc_context_CHG",
+    "CHG analysis enabled (plants — the major asymmetric context).",
+    "CHG analysis disabled — skip for animal genomes."));
+  mcBody.appendChild(buildToggleRow("Analyze CHH context", "mc_context_CHH",
+    "CHH analysis enabled (plants — the diffuse asymmetric context).",
+    "CHH analysis disabled — skip for animal genomes."));
+  mcBody.appendChild(buildToggleRow("Custom DMR calling script", "custom_script_dmrs",
+    "Using custom call_DMRs_custom.R script (more thorough, slower).",
+    "Standard DMR calling."));
+  mcDet.appendChild(mcBody);
+  container.appendChild(mcDet);
+
+  // --- Advanced: sRNA ---
+  var srnaDet = el("details", { className: "cfg-details" });
+  srnaDet.appendChild(el("summary", { textContent: "\u2699\uFE0F sRNA Advanced Options" }));
+  var srnaBody = el("div", { className: "cfg-details-body" });
+  srnaBody.appendChild(buildNumberRow("Quality threshold:", "quality_threshold_sRNA", 0, 40));
+  srnaBody.appendChild(buildNumberRow("Min read length:", "min_read_length_sRNA", 1, 500));
+  srnaBody.appendChild(buildNumberRow("Trim front (bp):", "trim_front_sRNA", 0, 100));
+  srnaBody.appendChild(buildTextRow("Adapter 1:", "adapter1_sRNA", "TGGAATTCTCGGGTGCCAAGG"));
+  srnaBody.appendChild(buildTextRow("Adapter 2:", "adapter2_sRNA", "AGATCGGAAGAGCGTCGTGTAGGGAAAGA"));
+  srnaBody.appendChild(buildToggleRow("Nextflex V3 deduplication", "nextflex_v3_deduplication",
+    "Going old school, eh! \uD83D\uDC75\uD83D\uDC74",
+    "Standard deduplication."));
+  srnaBody.appendChild(buildToggleRow("Structural RNA depletion", "structural_rna_depletion",
+    "Depletion of structural RNA will be performed! Good riddance! \uD83E\uDDF9",
+    "No structural RNA depletion. rRNAs, here we come! \uD83E\uDEA1"));
+  srnaBody.appendChild(buildTextRow("Infernal threshold:", "infernal_threshold",
+    "ga", 'Rfam gathering threshold ("ga", recommended) or numeric E-value (e.g. 1e-5)'));
+  srnaBody.appendChild(buildTextRow("Mapping parameters:", "srna_mapping_params",
+    "--mmap u --dicermin 21 --dicermax 24"));
+  srnaBody.appendChild(buildToggleRow("De novo miRNA discovery", "shortstack_dn_mirna",
+    "ShortStack will search for novel miRNAs \uD83D\uDD2C",
+    "De novo miRNA discovery disabled"));
+  srnaBody.appendChild(buildNumberRow("Min sRNA size:", "srna_min_size", 15, 100));
+  srnaBody.appendChild(buildNumberRow("Max sRNA size:", "srna_max_size", 15, 100));
+  srnaBody.appendChild(buildTextRow("Heatmap sizes (comma-separated):", "srna_heatmap_sizes", "21, 22, 24"));
+  srnaDet.appendChild(srnaBody);
+  container.appendChild(srnaDet);
+
+  // --- Plotting ---
+  var plotDet = el("details", { className: "cfg-details" });
+  plotDet.appendChild(el("summary", { textContent: "\u2699\uFE0F Plotting Options" }));
+  var plotBody = el("div", { className: "cfg-details-body" });
+  plotBody.appendChild(buildToggleRow("Use all replicates in plots", "plot_allreps",
+    "I want EVERYTHING! \uD83E\uDD24",
+    "Using merged replicates for plots."));
+  plotBody.appendChild(buildToggleRow("Use all replicates for Upset plots", "upset_allreps",
+    "All individual replicates for Upset plots!",
+    "Merged replicates for Upset plots."));
+  plotBody.appendChild(buildSelectRow("Heatmap scales:", "heatmaps_scales",
+    ["type", "sample", "default"]));
+  plotBody.appendChild(buildToggleRow("Stranded heatmaps", "stranded_heatmaps",
+    "If possible, heatmaps will be split by strand and then merged! Awesome! \uD83D\uDD00",
+    "No strandedness in my heatmaps, thank you. \u27A1\uFE0F"));
+  plotBody.appendChild(buildSelectRow("Heatmap sort:", "heatmaps_sort_options",
+    ["mean", "median", "no"]));
+  plotBody.appendChild(buildToggleRow("Sort mC heatmap based on other samples", "heatmap_sort_mc_after_others",
+    "mC follows the sort order of other samples.",
+    "mC uses its own sort order."));
+  plotBody.appendChild(buildSelectRow("Profile scale:", "profiles_scale", ["mean", "median"]));
+  plotBody.appendChild(buildTextRow("Profile plot parameters:", "profiles_plot_params", "--plotType lines"));
+  plotBody.appendChild(buildSelectRow("Browser scales:", "browser_scales", ["sample", "type"]));
+  plotBody.appendChild(buildToggleRow("Include TE track in browser", "browser_TE_file",
+    "Wait, it's all repeats?! \uD83D\uDD2B",
+    "No TE track in browser."));
+  plotDet.appendChild(plotBody);
+  container.appendChild(plotDet);
+
+  // --- Footer ---
+  container.appendChild(el("div", { className: "cfg-footer",
+    textContent: "More options are available to those who can directly change the yamls... \uD83E\uDD13" }));
+  _configFormBuilt = true;
+}
+
+// Get unique genome names from sample sheet data
+function getGenomesFromSampleSheet() {
+  var data = table.getData();
+  var seen = {};
+  var genomes = [];
+  for (var i = 0; i < data.length; i++) {
+    var g = (data[i].Genome || "").trim();
+    if (g && !seen[g]) {
+      seen[g] = true;
+      genomes.push(g);
+    }
+  }
+  return genomes;
+}
+
+// Get unique species names from genome config
+// Rebuild dynamic config sections (genomes are now in their own tab)
+function updateConfigDynamicSections() {
+  if (!_configFormBuilt) {
+    buildConfigForm();
+  }
+}
+
+// ===========================================================================
+// YAML Export / Import
+// ===========================================================================
+
+function configStateToYAML() {
+  var cfg = {};
+  // repo_folder is optional — omit from YAML when blank so the Snakefile auto-detects it
+  if (configState.repo_folder && configState.repo_folder.trim() !== "") {
+    cfg.repo_folder = configState.repo_folder;
+  }
+  cfg.analysis_name = configState.analysis_name;
+  cfg.sample_file = configState.sample_file;
+
+  // Genomes (namespaced under genomes: key)
+  cfg.genomes = {};
+  for (var gn in configState.genomes) {
+    var g = configState.genomes[gn];
+    cfg.genomes[gn] = {};
+    if (g.species) cfg.genomes[gn].species = g.species.replace(/ /g, "_");
+    if (g.fasta_file) cfg.genomes[gn].fasta_file = g.fasta_file;
+    if (g.gff_file) cfg.genomes[gn].gff_file = g.gff_file;
+    if (g.gtf_file && g.gtf_file !== "<auto>") cfg.genomes[gn].gtf_file = g.gtf_file;
+    if (g.gaf_file) cfg.genomes[gn].gaf_file = g.gaf_file;
+    if (g.gene_info_file) cfg.genomes[gn].gene_info_file = g.gene_info_file;
+    if (g.te_file) cfg.genomes[gn].te_file = g.te_file;
+    if (g.structural_rna_fafile && g.structural_rna_fafile !== "<auto>") cfg.genomes[gn].structural_rna_fafile = g.structural_rna_fafile;
+    if (g.star_index) cfg.genomes[gn].star_index = g.star_index;
+    if (g.genomesize) {
+      var gs = parseFloat(g.genomesize);
+      cfg.genomes[gn].genomesize = isNaN(gs) ? g.genomesize : gs;
+    }
+    if (g.ncbi_taxid && g.ncbi_taxid !== "<auto>") cfg.genomes[gn].ncbi_taxid = g.ncbi_taxid;
+    if (g.genus) cfg.genomes[gn].genus = g.genus;
+  }
+
+  // Output options
+  cfg.full_analysis = configState.full_analysis;
+  cfg.te_analysis = configState.te_analysis;
+  cfg.QC_option = configState.QC_option;
+  cfg.GO = configState.GO;
+  cfg.rna_deduplicate = configState.rna_deduplicate;
+
+  // Input options
+  cfg.trimmed_fastqs = configState.trimmed_fastqs;
+  cfg.aligned_bams = configState.aligned_bams;
+
+  // TMPDIR routing
+  cfg.use_node_tmpdir = configState.use_node_tmpdir;
+
+  // Intermediate file retention
+  cfg.keep_intermediates = configState.keep_intermediates;
+  if (configState.keep_intermediates === "custom") {
+    cfg.keep_trimmed_fastqs = configState.keep_trimmed_fastqs;
+    cfg.keep_final_bams = configState.keep_final_bams;
+    cfg.keep_merged_bams = configState.keep_merged_bams;
+    cfg.keep_shifted_bams = configState.keep_shifted_bams;
+    cfg.keep_cx_reports = configState.keep_cx_reports;
+    cfg.keep_dmc_intermediates = configState.keep_dmc_intermediates;
+  }
+
+  // Trimming (fastp)
+  cfg.quality_threshold = {
+    ChIP: configState.quality_threshold_ChIP,
+    RNA: configState.quality_threshold_RNA,
+    mC: configState.quality_threshold_mC,
+    sRNA: configState.quality_threshold_sRNA,
+    ATAC: configState.quality_threshold_ATAC
+  };
+  cfg.min_read_length = {
+    ChIP: configState.min_read_length_ChIP,
+    RNA: configState.min_read_length_RNA,
+    mC: configState.min_read_length_mC,
+    sRNA: configState.min_read_length_sRNA,
+    ATAC: configState.min_read_length_ATAC
+  };
+  cfg.trim_front = {
+    ChIP: configState.trim_front_ChIP,
+    RNA: configState.trim_front_RNA,
+    mC: configState.trim_front_mC,
+    sRNA: configState.trim_front_sRNA,
+    ATAC: configState.trim_front_ATAC
+  };
+  cfg.adapter1 = {
+    ChIP: configState.adapter1_ChIP,
+    RNA: configState.adapter1_RNA,
+    mC: configState.adapter1_mC,
+    sRNA: configState.adapter1_sRNA,
+    ATAC: configState.adapter1_ATAC
+  };
+  cfg.adapter2 = {
+    ChIP: configState.adapter2_ChIP,
+    RNA: configState.adapter2_RNA,
+    mC: configState.adapter2_mC,
+    sRNA: configState.adapter2_sRNA,
+    ATAC: configState.adapter2_ATAC
+  };
+
+  cfg.chip_fingerprint_plots = configState.chip_fingerprint_plots;
+  cfg.fingerprint_samples = configState.fingerprint_samples;
+  cfg.chip_aligner = configState.chip_aligner;
+  cfg.atac_aligner = configState.atac_aligner;
+  cfg.chip_mapping_strategy = configState.chip_mapping_strategy;
+  cfg.atac_mapping_strategy = configState.atac_mapping_strategy;
+  cfg.chip_tracks = {
+    binsize: configState.chip_tracks_binsize,
+    params: configState.chip_tracks_params
+  };
+  cfg.chip_callpeaks = {
+    params: configState.chip_callpeaks_params
+  };
+  cfg.cut_callpeaks = {
+    broad_caller: configState.cut_callpeaks_broad_caller,
+    narrow_caller: configState.cut_callpeaks_narrow_caller
+  };
+  cfg.upset_allreps = configState.upset_allreps;
+
+  // RNA
+  cfg.rna_tracks = {
+    RNAseq: {
+      file_order: "rnaseq",
+      param_bg: "--outWigType bedGraph",
+      strandedness: configState.rna_strandedness,
+      multimap: configState.rna_multimap
+    },
+    RAMPAGE: {
+      file_order: "rampage",
+      param_bg: "--outWigType bedGraph read1_5p",
+      strandedness: configState.rampage_strandedness,
+      multimap: configState.rampage_multimap
+    }
+  };
+
+  // mC
+  var mcContexts = [];
+  if (configState.mc_context_CG)  mcContexts.push("CG");
+  if (configState.mc_context_CHG) mcContexts.push("CHG");
+  if (configState.mc_context_CHH) mcContexts.push("CHH");
+  cfg.methylation_contexts = mcContexts;
+  cfg.custom_script_dmrs = configState.custom_script_dmrs;
+
+  // sRNA
+  cfg.nextflex_v3_deduplication = configState.nextflex_v3_deduplication;
+  cfg.structural_rna_depletion = configState.structural_rna_depletion;
+  cfg.infernal_threshold = configState.infernal_threshold;
+  cfg.srna_mapping_params = configState.srna_mapping_params;
+  cfg.shortstack_dn_mirna = configState.shortstack_dn_mirna;
+  cfg.srna_min_size = configState.srna_min_size;
+  cfg.srna_max_size = configState.srna_max_size;
+  // Parse heatmap sizes string to array
+  var heatSizes = (configState.srna_heatmap_sizes || "").split(",").map(function(s) {
+    return parseInt(s.trim());
+  }).filter(function(n) { return !isNaN(n); });
+  cfg.srna_heatmap_sizes = heatSizes;
+
+  // Motifs
+  cfg.motifs = configState.motifs;
+  cfg.motifs_allreps = configState.motifs_allreps;
+  cfg.jaspar_db = configState.jaspar_db;
+
+  // Plotting
+  cfg.plot_allreps = configState.plot_allreps;
+  cfg.heatmaps_scales = configState.heatmaps_scales;
+  cfg.stranded_heatmaps = configState.stranded_heatmaps;
+  cfg.heatmaps_sort_options = configState.heatmaps_sort_options;
+  cfg.heatmap_sort_mc_after_others = configState.heatmap_sort_mc_after_others;
+  cfg.profiles_scale = configState.profiles_scale;
+  cfg.profiles_plot_params = configState.profiles_plot_params;
+  cfg.browser_TE_file = configState.browser_TE_file;
+  cfg.browser_scales = configState.browser_scales;
+
+  return cfg;
+}
+
+function exportYAML() {
+  var cfg = configStateToYAML();
+  var yamlStr = jsyaml.dump(cfg, { sortKeys: false, lineWidth: -1, noRefs: true });
+  downloadBlob(yamlStr, "application/x-yaml", "epicc-options.yaml");
+}
+
+function handleYAMLImport(text) {
+  var cfg;
+  try {
+    cfg = jsyaml.load(text);
+  } catch (e) {
+    alert("YAML parse error: " + e.message);
+    return;
+  }
+  if (!cfg || typeof cfg !== "object") {
+    alert("Invalid YAML: expected an object at the top level.");
+    return;
+  }
+
+  // Simple fields
+  if (cfg.repo_folder != null) configState.repo_folder = cfg.repo_folder;
+  if (cfg.analysis_name != null) configState.analysis_name = cfg.analysis_name;
+  if (cfg.sample_file != null) syncSampleFilename(String(cfg.sample_file));
+  if (cfg.full_analysis != null) configState.full_analysis = !!cfg.full_analysis;
+  if (cfg.te_analysis != null) configState.te_analysis = !!cfg.te_analysis;
+  if (cfg.QC_option != null) configState.QC_option = String(cfg.QC_option);
+  if (cfg.GO != null) configState.GO = !!cfg.GO;
+  if (cfg.rna_deduplicate != null) configState.rna_deduplicate = !!cfg.rna_deduplicate;
+  if (cfg.trimmed_fastqs != null) configState.trimmed_fastqs = !!cfg.trimmed_fastqs;
+  if (cfg.aligned_bams != null) configState.aligned_bams = !!cfg.aligned_bams;
+  if (cfg.use_node_tmpdir != null) configState.use_node_tmpdir = !!cfg.use_node_tmpdir;
+  if (cfg.keep_intermediates != null) configState.keep_intermediates = String(cfg.keep_intermediates);
+  if (cfg.keep_trimmed_fastqs != null) configState.keep_trimmed_fastqs = !!cfg.keep_trimmed_fastqs;
+  if (cfg.keep_final_bams != null) configState.keep_final_bams = !!cfg.keep_final_bams;
+  if (cfg.keep_merged_bams != null) configState.keep_merged_bams = !!cfg.keep_merged_bams;
+  if (cfg.keep_shifted_bams != null) configState.keep_shifted_bams = !!cfg.keep_shifted_bams;
+  if (cfg.keep_cx_reports != null) configState.keep_cx_reports = !!cfg.keep_cx_reports;
+  if (cfg.keep_dmc_intermediates != null) configState.keep_dmc_intermediates = !!cfg.keep_dmc_intermediates;
+  if (cfg.motifs != null) configState.motifs = !!cfg.motifs;
+  if (cfg.jaspar_db != null) configState.jaspar_db = cfg.jaspar_db;
+  if (cfg.motifs_allreps != null) configState.motifs_allreps = !!cfg.motifs_allreps;
+  if (cfg.chip_fingerprint_plots != null) configState.chip_fingerprint_plots = !!cfg.chip_fingerprint_plots;
+  if (cfg.fingerprint_samples != null) configState.fingerprint_samples = String(cfg.fingerprint_samples);
+  if (cfg.chip_aligner != null) configState.chip_aligner = cfg.chip_aligner;
+  if (cfg.atac_aligner != null) configState.atac_aligner = cfg.atac_aligner;
+  if (cfg.chip_mapping_strategy != null) configState.chip_mapping_strategy = cfg.chip_mapping_strategy;
+  else if (cfg.chip_mapping_option != null) configState.chip_mapping_strategy = cfg.chip_mapping_option;
+  if (cfg.atac_mapping_strategy != null) configState.atac_mapping_strategy = cfg.atac_mapping_strategy;
+  else if (cfg.atac_mapping_option != null) configState.atac_mapping_strategy = cfg.atac_mapping_option;
+  if (Array.isArray(cfg.methylation_contexts)) {
+    var mcSet = new Set(cfg.methylation_contexts.map(String));
+    configState.mc_context_CG  = mcSet.has("CG");
+    configState.mc_context_CHG = mcSet.has("CHG");
+    configState.mc_context_CHH = mcSet.has("CHH");
+  }
+  if (cfg.custom_script_dmrs != null) configState.custom_script_dmrs = !!cfg.custom_script_dmrs;
+  if (cfg.nextflex_v3_deduplication != null) configState.nextflex_v3_deduplication = !!cfg.nextflex_v3_deduplication;
+  if (cfg.structural_rna_depletion != null) configState.structural_rna_depletion = !!cfg.structural_rna_depletion;
+  if (cfg.infernal_threshold != null) configState.infernal_threshold = String(cfg.infernal_threshold);
+  if (cfg.srna_mapping_params != null) configState.srna_mapping_params = cfg.srna_mapping_params;
+  if (cfg.shortstack_dn_mirna != null) configState.shortstack_dn_mirna = !!cfg.shortstack_dn_mirna;
+  if (cfg.srna_min_size != null) configState.srna_min_size = cfg.srna_min_size;
+  if (cfg.srna_max_size != null) configState.srna_max_size = cfg.srna_max_size;
+  if (cfg.srna_heatmap_sizes != null) {
+    configState.srna_heatmap_sizes = Array.isArray(cfg.srna_heatmap_sizes)
+      ? cfg.srna_heatmap_sizes.join(", ") : String(cfg.srna_heatmap_sizes);
+  }
+  if (cfg.plot_allreps != null) configState.plot_allreps = !!cfg.plot_allreps;
+  if (cfg.upset_allreps != null) configState.upset_allreps = !!cfg.upset_allreps;
+  if (cfg.heatmaps_scales != null) configState.heatmaps_scales = cfg.heatmaps_scales;
+  if (cfg.stranded_heatmaps != null) configState.stranded_heatmaps = !!cfg.stranded_heatmaps;
+  if (cfg.heatmaps_sort_options != null) configState.heatmaps_sort_options = cfg.heatmaps_sort_options;
+  if (cfg.heatmap_sort_mc_after_others != null) configState.heatmap_sort_mc_after_others = !!cfg.heatmap_sort_mc_after_others;
+  if (cfg.profiles_scale != null) configState.profiles_scale = cfg.profiles_scale;
+  if (cfg.profiles_plot_params != null) configState.profiles_plot_params = cfg.profiles_plot_params;
+  if (cfg.browser_TE_file != null) configState.browser_TE_file = !!cfg.browser_TE_file;
+  if (cfg.browser_scales != null) configState.browser_scales = cfg.browser_scales;
+
+  // Trimming/adapter nested objects (fastp)
+  if (cfg.quality_threshold) {
+    if (cfg.quality_threshold.ChIP != null) configState.quality_threshold_ChIP = cfg.quality_threshold.ChIP;
+    if (cfg.quality_threshold.RNA != null) configState.quality_threshold_RNA = cfg.quality_threshold.RNA;
+    if (cfg.quality_threshold.mC != null) configState.quality_threshold_mC = cfg.quality_threshold.mC;
+    if (cfg.quality_threshold.sRNA != null) configState.quality_threshold_sRNA = cfg.quality_threshold.sRNA;
+    if (cfg.quality_threshold.ATAC != null) configState.quality_threshold_ATAC = cfg.quality_threshold.ATAC;
+  }
+  if (cfg.min_read_length) {
+    if (cfg.min_read_length.ChIP != null) configState.min_read_length_ChIP = cfg.min_read_length.ChIP;
+    if (cfg.min_read_length.RNA != null) configState.min_read_length_RNA = cfg.min_read_length.RNA;
+    if (cfg.min_read_length.mC != null) configState.min_read_length_mC = cfg.min_read_length.mC;
+    if (cfg.min_read_length.sRNA != null) configState.min_read_length_sRNA = cfg.min_read_length.sRNA;
+    if (cfg.min_read_length.ATAC != null) configState.min_read_length_ATAC = cfg.min_read_length.ATAC;
+  }
+  if (cfg.trim_front) {
+    if (cfg.trim_front.ChIP != null) configState.trim_front_ChIP = cfg.trim_front.ChIP;
+    if (cfg.trim_front.RNA != null) configState.trim_front_RNA = cfg.trim_front.RNA;
+    if (cfg.trim_front.mC != null) configState.trim_front_mC = cfg.trim_front.mC;
+    if (cfg.trim_front.sRNA != null) configState.trim_front_sRNA = cfg.trim_front.sRNA;
+    if (cfg.trim_front.ATAC != null) configState.trim_front_ATAC = cfg.trim_front.ATAC;
+  }
+  if (cfg.adapter1) {
+    if (cfg.adapter1.ChIP != null) configState.adapter1_ChIP = cfg.adapter1.ChIP;
+    if (cfg.adapter1.RNA != null) configState.adapter1_RNA = cfg.adapter1.RNA;
+    if (cfg.adapter1.mC != null) configState.adapter1_mC = cfg.adapter1.mC;
+    if (cfg.adapter1.sRNA != null) configState.adapter1_sRNA = cfg.adapter1.sRNA;
+    if (cfg.adapter1.ATAC != null) configState.adapter1_ATAC = cfg.adapter1.ATAC;
+  }
+  if (cfg.adapter2) {
+    if (cfg.adapter2.ChIP != null) configState.adapter2_ChIP = cfg.adapter2.ChIP;
+    if (cfg.adapter2.RNA != null) configState.adapter2_RNA = cfg.adapter2.RNA;
+    if (cfg.adapter2.mC != null) configState.adapter2_mC = cfg.adapter2.mC;
+    if (cfg.adapter2.sRNA != null) configState.adapter2_sRNA = cfg.adapter2.sRNA;
+    if (cfg.adapter2.ATAC != null) configState.adapter2_ATAC = cfg.adapter2.ATAC;
+  }
+
+  // ChIP tracks
+  if (cfg.chip_tracks) {
+    if (cfg.chip_tracks.binsize != null) configState.chip_tracks_binsize = cfg.chip_tracks.binsize;
+    if (cfg.chip_tracks.params != null) configState.chip_tracks_params = cfg.chip_tracks.params;
+  }
+  if (cfg.chip_callpeaks && cfg.chip_callpeaks.params != null) {
+    configState.chip_callpeaks_params = cfg.chip_callpeaks.params;
+  }
+  if (cfg.cut_callpeaks) {
+    if (cfg.cut_callpeaks.broad_caller != null) configState.cut_callpeaks_broad_caller = String(cfg.cut_callpeaks.broad_caller);
+    if (cfg.cut_callpeaks.narrow_caller != null) configState.cut_callpeaks_narrow_caller = String(cfg.cut_callpeaks.narrow_caller);
+  }
+
+  // RNA
+  if (cfg.rna_tracks && cfg.rna_tracks.RNAseq) {
+    if (cfg.rna_tracks.RNAseq.strandedness) configState.rna_strandedness = cfg.rna_tracks.RNAseq.strandedness;
+    if (cfg.rna_tracks.RNAseq.multimap) configState.rna_multimap = cfg.rna_tracks.RNAseq.multimap;
+  }
+  if (cfg.rna_tracks && cfg.rna_tracks.RAMPAGE) {
+    if (cfg.rna_tracks.RAMPAGE.strandedness) configState.rampage_strandedness = cfg.rna_tracks.RAMPAGE.strandedness;
+    if (cfg.rna_tracks.RAMPAGE.multimap) configState.rampage_multimap = cfg.rna_tracks.RAMPAGE.multimap;
+  }
+
+  // Import genome sections
+  configState.genomes = {};
+
+  function importGenomeBlock(key, val) {
+    if (definedGenomes.indexOf(key) < 0) definedGenomes.push(key);
+    configState.genomes[key] = {
+      genus: val.genus || "",
+      species: val.species || "",
+      fasta_file: val.fasta_file || "",
+      gff_file: val.gff_file || "",
+      gtf_file: val.gtf_file || "",
+      gaf_file: val.gaf_file || "",
+      gene_info_file: val.gene_info_file || "",
+      te_file: val.te_file || "",
+      structural_rna_fafile: val.structural_rna_fafile || "",
+      star_index: val.star_index || "",
+      genomesize: String(val.genomesize || ""),
+      ncbi_taxid: val.ncbi_taxid ? String(val.ncbi_taxid) : (val.ncbiID ? String(val.ncbiID) : "")
+    };
+  }
+
+  if (cfg.genomes && typeof cfg.genomes === "object") {
+    // New format: genomes are under the genomes: key
+    for (var gn in cfg.genomes) {
+      importGenomeBlock(gn, cfg.genomes[gn]);
+    }
+  } else {
+    // Old format fallback: detect bare genome keys + separate species blocks
+    var oldSpecies = {};
+    var knownKeys = new Set(["repo_folder","analysis_name","sample_file","full_analysis","te_analysis",
+      "QC_option","GO","rna_deduplicate","trimmed_fastqs","aligned_bams","use_node_tmpdir",
+      "keep_intermediates","keep_trimmed_fastqs","keep_final_bams","keep_merged_bams",
+      "keep_shifted_bams","keep_cx_reports","keep_dmc_intermediates","motifs","jaspar_db","motifs_allreps",
+      "quality_threshold","min_read_length","trim_front","adapter1","adapter2",
+      "chip_fingerprint_plots","fingerprint_samples",
+      "chip_aligner","atac_aligner","chip_mapping_strategy","atac_mapping_strategy",
+      "chip_mapping_option","atac_mapping_option",
+      "bt2_mapping_strategy","chip_tracks","atac_tracks","chip_callpeaks","cut_callpeaks","atac_callpeaks",
+      "rampage_calltss","diffpeaks_params","upset_allreps","rna_tracks","methylation_contexts","pca_bs",
+      "pca_step","mC_mapping","custom_script_dmrs","dmc_methylation","dmc_dmr_method",
+      "nextflex_v3_deduplication","structural_rna_depletion","infernal_threshold","srna_mapping_params","shortstack_dn_mirna",
+      "srna_min_size","srna_max_size","srna_heatmap_sizes","plot_allreps","heatmaps_scales",
+      "stranded_heatmaps","heatmaps_sort_options","heatmap_sort_mc_after_others",
+      "profiles_scale","profiles_plot_params","heatmaps_plot_params","heatmaps",
+      "heat_mcg","heat_mchg","heat_mchh","browser_TE_file","browser_scales",
+      "chromosome_bs","fixed_mc_scales","fixed_mcg","fixed_mchg","fixed_mchh",
+      "motif_target_file_label","motif_target_file","motif_ref_genome",
+      "rnaseq_target_file_label","rnaseq_target_file","rnaseq_background_file",
+      "srna_target_file_label","srna_target_file","heatmap_target_file_label",
+      "heatmap_target_file","browser_target_file_label","browser_target_file",
+      "low_resources","standard_resources","heavy_resources","heavier_resources",
+      "max_resources","single_thread","resources"]);
+
+    // First pass: collect species blocks
+    for (var key in cfg) {
+      if (knownKeys.has(key)) continue;
+      var val = cfg[key];
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        if (!val.fasta_file && !val.species && !val.gff_file && (val.star_index != null || val.genomesize != null)) {
+          oldSpecies[key] = val;
+        }
+      }
+    }
+
+    // Second pass: import genome blocks, merging species params
+    for (var key in cfg) {
+      if (knownKeys.has(key)) continue;
+      var val = cfg[key];
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        if (val.fasta_file || val.species || val.gff_file) {
+          var merged = {};
+          // Inline species params if species block exists
+          var spName = val.species;
+          if (spName && oldSpecies[spName]) {
+            for (var sk in oldSpecies[spName]) merged[sk] = oldSpecies[spName][sk];
+          }
+          for (var gk in val) merged[gk] = val[gk];
+          importGenomeBlock(key, merged);
+        }
+      }
+    }
+  }
+
+  // Rebuild the form
+  buildConfigForm();
+}
+
+// Config toolbar event handlers
+document.getElementById("import-yaml").addEventListener("change", function(e) {
+  readFileAsText(e.target, handleYAMLImport);
+});
+document.getElementById("btn-export-yaml").addEventListener("click", exportYAML);
+
+// ===========================================================================
+// Section switching (navigation)
+// ===========================================================================
+
+function switchSection(sectionId) {
+  // Toggle section divs
+  var sections = document.querySelectorAll(".section");
+  for (var i = 0; i < sections.length; i++) {
+    sections[i].classList.toggle("active", sections[i].id === sectionId);
+  }
+  // Toggle nav tab highlights
+  var tabs = document.querySelectorAll(".topnav .nav-tab");
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle("active", tabs[i].getAttribute("data-section") === sectionId);
+  }
+  // Tabulator needs a redraw when its container becomes visible again
+  if (sectionId === "samplesheet-section") {
+    table.redraw(true);
+  }
+  // Rebuild genomes tab when switching to it
+  if (sectionId === "genomes-section") {
+    buildGenomesTab();
+  }
+  // Rebuild dynamic config sections when switching to config
+  if (sectionId === "config-section") {
+    updateConfigDynamicSections();
+  }
+}
+
+</script>
+</body>
+</html>

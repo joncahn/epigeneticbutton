@@ -1,0 +1,103 @@
+# Test configuration for A. thaliana ColCEN integration test
+# Tests ChIP-seq (CenH3, H3K9me2), ATAC-seq, EMseq, and direct methylation (dmC)
+# Shimada et al. 2024 Nat Plants (GSE132005), Crisp et al. 2020 (ATAC, GSE155023),
+# Trasser et al. 2024 EMBO Reports (PRJNA1111825, EMseq)
+
+analysis_name: "test_colcen"
+sample_file: "tests/integration/data/test_samples_colcen.tsv"
+
+# Output directories
+output_dir: "results_test_colcen"
+genome_dir: "genomes_test_colcen"
+
+# Analysis options
+full_analysis: true
+te_analysis: true
+QC_option: "none"
+GO: true   # exercises create_GO_database (org.Athaliana.eg.db build + install); see test_colcen_postrun.py
+trimmed_fastqs: false
+aligned_bams: false
+structural_rna_depletion: false
+browser_TE_file: false
+
+# Reference genome — downloaded from GitHub (Col-CEN v1.2)
+genomes:
+  ColCEN:
+    genus: "Arabidopsis"
+    species: "thaliana"
+    fasta_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2.fasta.gz"
+    gff_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2_genes.tair10.gff3.gz"
+    te_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/t2t-col.20201227.fasta.mod.EDTA.TEanno.gff3.gz"
+    gaf_file: "data/ColCEN_infoGO.tab.gz"
+    gene_info_file: "data/ColCEN_genes_info.tab.gz"
+    ncbi_taxid: "3702"
+
+# Methylation contexts (subset of CG, CHG, CHH)
+methylation_contexts: ["CG", "CHG", "CHH"]
+
+# Direct methylation (dmC) parameters
+dmc_methylation:
+  alignment:
+    preset: "lr:hqae"
+  pileup:
+    combine_mods: true
+    min_coverage: 3
+
+# DMR calling
+custom_script_dmrs: false
+dmc_dmr_method: "dmrcaller"
+
+# Trimming parameters (fastp)
+quality_threshold:
+  ChIP: 10
+  mC: 10
+  ATAC: 10
+
+min_read_length:
+  ChIP: 20
+  mC: 20
+  ATAC: 20
+
+trim_front:
+  ChIP: 0
+  mC: 0
+  ATAC: 0
+
+adapter1:
+  ChIP: "auto"
+  mC: "auto"
+  ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG"
+
+adapter2:
+  ChIP: "auto"
+  mC: "auto"
+  ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG"
+
+# Aligner
+chip_aligner: "bowtie2"
+atac_aligner: "bowtie2"
+chip_mapping_strategy: "default"
+atac_mapping_strategy: "default"
+
+# Bismark mapping parameters (for non-dmC mC samples, not used here but required)
+mC_mapping:
+  default:
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--ignore_r2 2 --buffer_size 16G"
+    process_se: "--buffer_size 16G"
+  EMseq:
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--buffer_size 16G"
+    process_se: "--buffer_size 16G"
+  PBAT:
+    map_pe: "--maxins 1000 --pbat"
+    map_se: "--pbat"
+    process_pe: "--buffer_size 16G"
+    process_se: "--buffer_size 16G"
+  dmC:
+    map_pe: ""
+    map_se: ""
+    process_pe: ""
+    process_se: ""

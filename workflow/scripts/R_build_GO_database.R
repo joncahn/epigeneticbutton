@@ -19,7 +19,8 @@ genes<-read.delim(args[2], header=TRUE) %>%
 refgenome<-args[3]
 genus<-args[4]
 species<-args[5]
-ncbiID<-args[6]
+ncbi_taxid<-args[6]
+
 dbname<-paste0("org.",substr(genus,1,1),species,".eg.db")
 
 fGO<-unique(gaf[,c(1,6,10)])
@@ -30,17 +31,39 @@ fSym$ENTREZID<-paste0("ent",fSym$GID)
 
 fChr<-unique(select(genes, GID, Chr))
 
+# Derive the GO directory from the gaf path the rule passes in (args[1] =
+# <genome_dir>/<refgenome>/GO/<dbname>_gaf_file.tab) rather than reconstructing
+# "./genomes/<refgenome>/GO". The genome_dir is configurable (genome_dir
+# config key / --genome-dir, and the test suite uses genomes_test_*), so a
+# hardcoded ./genomes/ installed the package into the wrong tree -- failing
+# with "cannot open the connection" and never producing the rule's declared
+# output -- on any run with a non-default genome_dir.
+godir <- normalizePath(dirname(args[1]), mustWork=FALSE)
+dir.create(godir, showWarnings=FALSE, recursive=TRUE)
+
+# makeOrgPackage writes a source package directory; install.packages with
+# repos=NULL,type="source" refuses to install when lib equals the source
+# package's parent dir ("cannot install to srcdir"). Avoid the conflict by
+# writing the source to a sibling temp dir, then installing from there.
+src_tmp <- tempfile(pattern="go_src_", tmpdir=dirname(godir))
+dir.create(src_tmp)
+on.exit(unlink(src_tmp, recursive=TRUE), add=TRUE)
+
 makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
               version="0.1",
-              maintainer="user <user@epicbutton>",
-              author="user <user@epicbutton>",
-              outputDir = paste0("./genomes/",refgenome,"/GO"),
-              tax_id = ncbiID,
+              maintainer="user <user@epicc>",
+              author="user <user@epicc>",
+              outputDir = src_tmp,
+              tax_id = ncbi_taxid,
               genus = genus,
               species = species,
               goTable="go")
 
-db<-paste0("./genomes/",refgenome,"/GO/")
-setwd(db)
-install.packages(dbname, repos=NULL, type="source")
-setwd("../../..")
+# Install into the per-genome GO directory and prepend it to .libPaths()
+# so this run loads its own org.<G><species>.eg.db, isolated from any
+# same-named package built for a different reference genome with the
+# same binomial. AnnotationForge fixes the package name to
+# org.<G><species>.eg.db, so the only way to keep multiple genomes
+# coexisting is to scope each install to its own library directory.
+install.packages(file.path(src_tmp, dbname), repos=NULL, type="source", lib=godir)
+.libPaths(c(godir, .libPaths()))

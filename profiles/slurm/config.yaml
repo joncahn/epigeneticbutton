@@ -1,16 +1,128 @@
 # profiles/slurm/config.yaml
+#
+# EXAMPLE SLURM profile. Copy this file and edit for your cluster, to either
+#   ~/.config/snakemake/<name>/config.yaml      (then: --profile <name>)
+# or any path of your choosing
+#   (then: --profile path/to/config.yaml   or   export SNAKEMAKE_PROFILE=...)
+# and edit every value flagged "EDIT:" below.
+
 executor: slurm
 jobs: 16
 use-conda: true
 conda-frontend: conda
+conda-cleanup-pkgs: tarballs
 latency-wait: 60
 keep-going: true
 max-jobs-per-second: 2
 max-status-checks-per-second: 5
+# Auto-retry transient cluster glitches: SLURM control-plane hiccups
+# ("Unable to confirm allocation", "Batch job submission failed") and
+# SnowParam PSOCK port collisions in the DMR pair-context rule (random
+# ephemeral-port reuse under high concurrent load; ~1-2 % of jobs on
+# whole-genome plant runs). Real bugs still surface after the retry.
+retries: 1
 
-sbatch:
-  job-name: "smk-{rule}-{jobid}"
-  cpus-per-task: "{threads}"
-  mem: "{resources.mem_mb}"
-  tmp: "{resources.tmp_mb}"
-  qos: "{resources.qos}"
+# Safety-net defaults sent with every sbatch submission.
+#
+# SITE-SPECIFIC — review before using on a new cluster:
+#   * slurm_account    Change to your cluster's SLURM account. Silences
+#                      the "No SLURM account given" warning. Remove this
+#                      line if your cluster doesn't require --account.
+#   * runtime          Fallback wall time in minutes, used only if a rule
+#                      fails to declare its own runtime resource. Raise
+#                      if your shortest rule takes longer than 60 min.
+default-resources:
+  - runtime="1h"
+  #- slurm_account="<your-slurm-account>"   # EDIT: uncomment and replace with your cluster's SLURM account if --account is required.
+
+# precommand runs in every job's shell before the rule body. Use it to
+# wire TMPDIR for the cluster's local-scratch convention. Two common
+# situations require attention:
+#
+#   1. Plain SLURM (no JobContainerType): default TMPDIR may be /tmp
+#      on the node, shared across jobs. Per-job subdir under /tmp
+#      avoids collisions:
+#
+#        precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR"
+#          && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID
+#          && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
+#
+#   2. JobContainerType=job_container/tmpfs (common at HPCs that want
+#      strong /tmp isolation): each job gets a private /tmp tmpfs
+#      whose size is bounded by the job's RAM allocation, NOT by the
+#      node's TmpDisk. Heavy-temp rules (e.g. deeptools bamCompare
+#      --binSize 1 on a plant genome) easily exceed 16G and hit ENOSPC
+#      even when --tmp= is requested at the scheduler. Route TMPDIR
+#      to a path *outside* the container, e.g. on a shared filesystem
+#      that's NFS-mounted everywhere:
+#
+#        precommand: 'test -n "\$SLURM_JOB_ID"
+#          && export TMPDIR=/path/to/shared/scratch/\$USER/slurm_\$SLURM_JOB_ID
+#          && mkdir -p \$TMPDIR || true'
+#
+# To detect whether your cluster uses job_container/tmpfs, run
+# `scontrol show config | grep JobContainerType` on a login node.
+precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
+
+# Per-rule cluster-specific overrides go here if any rule needs different
+# resources/threads on this cluster than profiles/default/config.yaml
+# specifies. Uncomment and adapt as needed.
+#
+# slurm_extra:
+#   Forwarded verbatim to sbatch by snakemake-executor-plugin-slurm.
+#   Useful for flags the plugin doesn't manage itself — most importantly
+#   --tmp=N for rules that write large intermediates into TMPDIR.
+#   Without an explicit --tmp request, sbatch lands the job on whatever
+#   node and the local /tmp partition can fill up under concurrent load
+#   (e.g. deeptools bamCompare with --binSize 1 on a plant genome runs
+#   into ENOSPC). Skip these lines if your cluster doesn't configure
+#   TmpDisk= in slurm.conf — the flag is silently ignored in that case.
+#   Sizes are in MB; tune to your nodes' actual scratch capacity.
+#
+# set-resources:
+#   bismark_map_pe:
+#     mem_mb: 48000
+#     slurm_extra: "'--tmp=131072'"   # 128G scratch per job
+#   bismark_map_se:
+#     slurm_extra: "'--tmp=131072'"
+#   filter_bam_pe:
+#     slurm_extra: "'--tmp=65536'"    # 64G
+#   filter_bam_se:
+#     slurm_extra: "'--tmp=65536'"
+#   STAR_map_pe:
+#     slurm_extra: "'--tmp=65536'"
+#   STAR_map_se:
+#     slurm_extra: "'--tmp=65536'"
+#   shortstack_map:
+#     slurm_extra: "'--tmp=65536'"
+#   prepare_modbam_for_pileup:
+#     slurm_extra: "'--tmp=65536'"
+#   make_bigwig_chip:
+#     slurm_extra: "'--tmp=65536'"
+#   make_coverage_chip:
+#     slurm_extra: "'--tmp=65536'"
+#   make_coverage_atac:
+#     slurm_extra: "'--tmp=65536'"
+#   make_fingerprint_plot:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_bam_replicates:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_mc_replicates:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_rna_replicates:
+#     slurm_extra: "'--tmp=32768'"
+#   merging_srna_replicates:
+#     slurm_extra: "'--tmp=16384'"
+#   atac_shift_bam:
+#     slurm_extra: "'--tmp=32768'"
+#   get_fastq_pe:
+#     slurm_extra: "'--tmp=65536'"    # fasterq-dump spools FASTQs through TMPDIR
+#   get_fastq_se:
+#     slurm_extra: "'--tmp=65536'"
+#   call_DMRs_pairwise:
+#     slurm_extra: "'--tmp=32768'"
+#   summarize_tracks_pca:
+#     slurm_extra: "'--tmp=32768'"
+#
+# set-threads:
+#   bismark_map_pe: 16

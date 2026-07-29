@@ -1,0 +1,196 @@
+# Test configuration for CUT&RUN / CUT&Tag integration tests
+# Designed for dry-run only (no actual files required); covers all four
+# CUT&x assay variants (broad/narrow × CUT_RUN/CUT_TAG) plus shared IgG.
+
+analysis_name: "test_CUT"
+sample_file: "tests/integration/data/test_samples_CUT.tsv"
+
+# Output directories
+output_dir: "results_test_CUT"
+genome_dir: "genomes_test_CUT"
+
+# Minimal reference genome configuration for test_genome
+genomes:
+  test_genome:
+    species: "test_species"
+    fasta_file: "tests/integration/data/mock_inputs/test_genome.fa"
+    gff_file: "tests/integration/data/mock_inputs/test_genome.gff3"
+    gtf_file: "tests/integration/data/mock_inputs/test_genome.gtf"
+    structural_rna_fafile: "data/zm_structural_RNAs.fa.gz"
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+
+# ChIP aligner and mapping strategy
+chip_aligner: "chromap"
+chip_mapping_strategy: "default"
+
+# Fingerprint plots disabled for dry-run simplicity
+chip_fingerprint_plots: false
+
+# Motifs disabled
+motifs: false
+motifs_allreps: false
+
+# Upset plots
+upset_allreps: false
+
+# Bowtie2 mapping parameters
+bt2_mapping_strategy:
+  default:
+    map_pe: "--end-to-end --maxins 1500"
+    map_se: "--end-to-end"
+    filter: "-b -h -q 10 -F 256"
+  repeat:
+    map_pe: "--very-sensitive --no-mixed --no-discordant --k 100 --end-to-end"
+    map_se: "--very-sensitive --k 100 --end-to-end"
+    filter: "-b -h -q 10 -F 256"
+  repeatall:
+    map_pe: "--very-sensitive --no-mixed --no-discordant --k 100 --end-to-end"
+    map_se: "--very-sensitive --k 100 --end-to-end"
+    filter: "-b -h -F 256"
+  all:
+    map_pe: "--end-to-end --maxins 1500"
+    map_se: "--end-to-end"
+    filter: "-b -h -F 256"
+
+# ChIP bigwig tracks
+chip_tracks:
+  binsize: 1
+  params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"
+
+# ChIP peak calling (kept for any ChIP samples in the sheet; unused for CUT&x)
+chip_callpeaks:
+  peaktype:
+    'H3K4me1|H3K27me1|H3K27me2|H3K27me3|H3K9me1|H3K9me2|H3K9me3|H4K20me1|H4K20me2|H4K20me3|.*DDM1|H3\.3|H3\.1|MGH3|CenH3|PolIIS2P|H2AT120Ph|H2AKub|H3K36me3': "broad"
+    'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow"
+    'H3|H4': "broad"
+  params: "--keep-dup all --nomodel"
+
+# CUT&RUN / CUT&Tag peak calling (defaults: epic2 for *_broad, seacr for *_narrow)
+cut_callpeaks:
+  broad_caller: "epic2"
+  narrow_caller: "seacr"
+  epic2_params: "--bin-size 150 --gaps-allowed 2"
+  seacr_norm: "non"
+  seacr_threshold: "stringent"
+  macs2_params_pe: "--keep-dup all --nomodel"
+  macs2_params_se: "--keep-dup all --nomodel --shift -75 --extsize 150"
+
+# Differential peak analysis (MAnorm)
+diffpeaks_params:
+  chip_pe: "-w 2000 --pe"
+  chip_se: "-w 2000"
+  TF_pe: "-w 1000 --pe"
+  TF_se: "-w 1000"
+  ATAC_pe: "-w 1000 --s1 75 --s2 75"
+  ATAC_se: "-w 1000 --s1 75 --s2 75"
+
+# Trimming parameters (fastp)
+quality_threshold:
+  ChIP: 10
+
+min_read_length:
+  ChIP: 20
+
+trim_front:
+  ChIP: 0
+
+adapter1:
+  ChIP: "auto"
+
+adapter2:
+  ChIP: "auto"
+
+# Resource allocation (minimal for dry-run)
+low_resources: &low
+  threads: 1
+  mem_mb: 1000
+  tmp_mb: 1000
+  qos: "default"
+
+standard_resources: &standard
+  threads: 2
+  mem_mb: 2000
+  tmp_mb: 2000
+  qos: "default"
+
+heavy_resources: &heavy
+  threads: 4
+  mem_mb: 8000
+  tmp_mb: 16000
+  qos: "default"
+
+max_resources: &max
+  threads: 8
+  mem_mb: 16000
+  tmp_mb: 32000
+  qos: "default"
+
+single_thread: &single
+  threads: 1
+  mem_mb: 32000
+  tmp_mb: 48000
+  qos: "default"
+
+heavier_resources: &heavier
+  threads: 8
+  mem_mb: 32000
+  tmp_mb: 64000
+  qos: "default"
+
+download_resources: &download
+  threads: 8
+  mem_mb: 16000
+  tmp_mb: 48000
+  qos: "default"
+
+resources:
+  # Environment setup
+  check_fasta: *standard
+  check_gff: *standard
+  check_gtf: *standard
+  check_chrom_sizes: *low
+  compute_genome_stats: *low
+  prep_region_file: *low
+  resolve_taxid: *single
+  # Sample download
+  get_fastq_pe: *download
+  get_fastq_se: *download
+  run_fastqc: *single
+  process_fastq_pe: *heavy
+  process_fastq_se: *heavy
+  get_available_bam: *standard
+  # ChIP-seq rules
+  make_bt2_indices: *heavy
+  make_chromap_index: *heavy
+  filter_bam_pe: *heavier
+  filter_bam_se: *heavier
+  make_mapping_stats_pe: *low
+  make_mapping_stats_se: *low
+  dispatch_final_bam: *standard
+  make_coverage_chip: *heavy
+  make_bigwig_chip: *heavy
+  make_fingerprint_plot: *heavy
+  calling_peaks_pe: *heavy
+  calling_peaks_se: *heavy
+  idr_analysis_replicates: *single
+  merging_bam_replicates: *heavy
+  making_pseudo_replicates: *heavy
+  best_peaks_pseudoreps: *low
+  find_motifs_in_file: *heavy
+  make_peak_stats: *low
+  perform_pairwise_diff_peaks: *heavy
+  # Combined analysis
+  prepping_mapping_stats: *low
+  plotting_mapping_stats: *low
+  prepping_peak_stats: *low
+  plotting_peak_stats: *low
+  combine_peakfiles: *low
+  get_annotations_for_bedfile: *low
+  plotting_upset_regions: *low

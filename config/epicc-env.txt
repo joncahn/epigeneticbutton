@@ -1,0 +1,3 @@
+snakemake>=9
+snakemake-executor-plugin-slurm
+snakemake-executor-plugin-cluster-generic

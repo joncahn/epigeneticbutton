@@ -5,10 +5,21 @@ channels:
   - defaults
 dependencies:
   - bismark
+  - mm2plus>=1.2
+  - samtools>=1.17
+  - htslib>=1.17
   - pigz
   - bedtools
   - ucsc-bedgraphtobigwig
+  - python>=3.10
+  - pysam>=0.22
+  - requests
+  # Note: modkit is installed via binary download in the workflow
+  # (not available on conda, get from https://github.com/nanoporetech/modkit/releases)
   - r-base
   - r-dplyr
   - bioconductor-dmrcaller
+  - bioconductor-biocparallel
+  - bioconductor-genomicranges
+  - metilene
 

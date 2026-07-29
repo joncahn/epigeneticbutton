@@ -7,13 +7,25 @@ import re
 from snakemake.utils import min_version
 from itertools import combinations
 from collections import defaultdict
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import colorsys
 import time
 import atexit
 import traceback
-from scripts.samplefile_validation import check_table
+from scripts.samplefile_validation import (
+    check_table, check_genome_config, check_extra_output_files, resolve_data_path,
+)
+from scripts.sample_sheet import (
+    NEW_COLNAMES,
+    VALID_ASSAYS, ASSAY_TO_ENV, ASSAY_TO_PEAKTYPE,
+    parse_levels, levels_to_label, levels_to_factors,
+    parse_read_files, get_seq_id_and_path,
+    read_sample_sheet,
+    build_analysis_key, build_analysis_name,
+    build_analysis_to_replicates, get_replicate_sample_ids,
+    identify_control_samples, get_analysis_samples,
+    get_sample_field, get_control_sample_id,
+    get_env, get_peaktype,
+    add_compat_columns,
+)
 
 min_version("9.0")
 
@@ -41,7 +53,7 @@ def print_banner():
     ]
     
     try:
-        with open("data/banner.txt") as f:
+        with open(resolve_repo_data("data/banner.txt")) as f:
             banner_lines.extend(f.read().splitlines())
     except FileNotFoundError:
         pass
@@ -49,35 +61,118 @@ def print_banner():
     for line in banner_lines:
         print_to_tty_or_stdout(line, color="green")
 
-try:
-    with open("/dev/tty", "w") as tty:
-        print_banner()
-except OSError:
-    pass
+# The banner ("you pushed the epigenetic button") is printed from the
+# `onstart` handler below, not here at parse time. Snakemake only fires
+# `onstart` when a run actually begins executing jobs — never on dry-run,
+# unlock, --dag, --list, env pre-build, and the like. That keeps the banner
+# tied to a genuine run without having to enumerate every administrative
+# invocation that merely parses the workflow.
 
-# Configuration
-configfile: "config/config.yaml"
+# Configuration — default options ship alongside the workflow. Anchor to
+# workflow.basedir (the Snakefile's dir) rather than the CWD so the base
+# config loads in both git-clone (<repo>/config/) and installed
+# ($PREFIX/share/epicc/config/) layouts. A user --configfile overrides it.
+configfile: os.path.join(workflow.basedir, "..", "config", "epicc-options.yaml")
 analysis = config['full_analysis']
 
-# Function to create a unique name for each sample based on the sample columns, and later based on wildcards
-def sample_name_str(d, string):
-    if string == 'sample':
-        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['replicate']}__{d['ref_genome']}"
-    elif string == 'analysis':
-        return f"{d['data_type']}__{d['line']}__{d['tissue']}__{d['sample_type']}__{d['ref_genome']}"
+# ---------------------------------------------------------------------------
+# Configurable output directories
+# ---------------------------------------------------------------------------
+config.setdefault("output_dir", "results")
+config.setdefault("genome_dir", "genomes")
+RESULTS_DIR = config["output_dir"]
+GENOMES_DIR = config["genome_dir"]
 
-# Function to extract extra information from data_type (either the name of the TF, or the ChIP Input grouping if it exists)
-def extract_extra_info(d):
-    parts=d['data_type'].split("_", 1)
-    if len(parts) == 2 and parts[0] in ["ChIP", "TF"]:
-        return parts[1]
-    else:
-        return "N/A"   
+# ---------------------------------------------------------------------------
+# Workflow-level TMPDIR routing
+# ---------------------------------------------------------------------------
+# Default: every job gets its own subdirectory under {output_dir}/.tmp/, so
+# tools that spill through TMPDIR (sort, samtools, STAR, fasterq-dump,
+# deeptools, etc.) write to the project filesystem instead of the cluster's
+# /tmp. This avoids ENOSPC on sites where /tmp is a tmpfs sized off the
+# job's RAM allocation (e.g. SLURM JobContainerType=job_container/tmpfs).
+# Per-job subdir is keyed on SLURM_JOB_ID *and* $$ (the rule shell's PID):
+# SLURM_JOB_ID gives cross-node uniqueness under the SLURM executor, $$ gives
+# per-shell uniqueness within a node. The $$ is essential -- without it, a
+# local `--cores N` run launched inside a single sbatch allocation (no
+# --profile) would hand every concurrent job the *same* .tmp/<SLURM_JOB_ID>
+# dir, and the first job to finish would `rm -rf` it out from under its
+# still-running siblings (deeptools workers writing _deeptools_*.bg via
+# $TMPDIR then die with FileNotFoundError). With $$ appended, each shell owns
+# a distinct dir, so concurrent jobs never collide; the EXIT trap cleans up on
+# failure, or signals other than SIGKILL. Set use_node_tmpdir=true (or pass
+# `epicc run --use-node-tmpdir`) to skip this and inherit whatever TMPDIR
+# the cluster/site provides — useful when /tmp is fast local scratch with
+# adequate capacity.
+if not config.get("use_node_tmpdir", False):
+    # TMPDIR must be ABSOLUTE. RESULTS_DIR is relative whenever output_dir is
+    # (the default "results", and e.g. the integration tests' test_runs/...).
+    # Some tools run sub-steps in a child process that chdir's into a staging
+    # area before touching TMPDIR -- most notably `R CMD INSTALL`'s
+    # byte-compile/lazy-load phase (the GO database build, create_GO_database).
+    # A relative TMPDIR then resolves against the wrong CWD, the staged path
+    # doesn't exist, and the install dies with "Error in file(con, "w") :
+    # cannot open the connection". Anchoring to an absolute path fixes it;
+    # jobs run from the snakemake workdir, which is this abspath's base.
+    _tmpdir_base = os.path.abspath(RESULTS_DIR)
+    # Quadruple braces escape twice: f-string → "{{...}}" → Snakemake .format()
+    # → "{SLURM_JOB_ID:-local}" in the final bash command. The trailing ".$$"
+    # has no braces, so it survives both passes untouched and bash expands it
+    # to the rule shell's PID.
+    shell.prefix(
+        f'TMPDIR_JOB="{_tmpdir_base}/.tmp/${{{{SLURM_JOB_ID:-local}}}}.$$" && '
+        'mkdir -p "$TMPDIR_JOB" && '
+        'trap \'rm -rf "$TMPDIR_JOB"\' EXIT && '
+        'export TMPDIR="$TMPDIR_JOB" && '
+    )
+
+# ---------------------------------------------------------------------------
+# Genome config
+# ---------------------------------------------------------------------------
+# Reference genomes are defined under the config["genomes"] namespace.
+if "genomes" not in config:
+    sys.exit(
+        "ERROR: no 'genomes:' section in the options file. Define reference "
+        "genomes under the 'genomes:' namespace (see config/epicc-options.yaml)."
+    )
+
+# ---------------------------------------------------------------------------
+# Intermediate file retention
+# ---------------------------------------------------------------------------
+TIER_DEFAULTS = {
+    'none':     {'keep_trimmed_fastqs': False, 'keep_final_bams': False, 'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False, 'keep_dmc_intermediates': False},
+    'standard': {'keep_trimmed_fastqs': False, 'keep_final_bams': True,  'keep_merged_bams': False, 'keep_shifted_bams': False, 'keep_cx_reports': False, 'keep_dmc_intermediates': False},
+    'all':      {'keep_trimmed_fastqs': True,  'keep_final_bams': True,  'keep_merged_bams': True,  'keep_shifted_bams': True,  'keep_cx_reports': True,  'keep_dmc_intermediates': True},
+}
+
+_tier = config.get('keep_intermediates', 'standard')
+if _tier == 'custom':
+    for _key, _val in TIER_DEFAULTS['standard'].items():
+        config.setdefault(_key, _val)
+elif _tier in TIER_DEFAULTS:
+    config.update(TIER_DEFAULTS[_tier])
+else:
+    raise ValueError(f"Invalid keep_intermediates tier: '{_tier}'. Use: none, standard, custom, all")
+
+def maybe_temp(path, keep=False):
+    """Conditionally wrap a path with temp(). Used for configurable intermediate retention."""
+    return path if keep else temp(path)
 
 # Define the folder in which the snakemake pipeline has been cloned
-REPO_FOLDER = os.path.abspath(config["repo_folder"])
+REPO_FOLDER = os.path.abspath(config.get("repo_folder", os.path.join(workflow.basedir, "..")))
 if not os.path.isdir(REPO_FOLDER):
-    raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the config file!")
+    raise FileNotFoundError(f"Repository folder not found: {REPO_FOLDER}\nUpdate the options file!")
+
+
+def resolve_repo_data(path):
+    """Resolve a bundled-data path against REPO_FOLDER (installed-mode aware).
+
+    Thin wrapper over samplefile_validation.resolve_data_path so the workflow
+    and the config validators share one resolution rule. See that function for
+    semantics. Generic by design: any path under REPO_FOLDER resolves, so new
+    files dropped into ``data/`` need no special-casing.
+    """
+    return resolve_data_path(path, REPO_FOLDER)
 
 # Define the conda environment to build
 CONDA_ENV = os.path.join(REPO_FOLDER,"workflow","envs","epibutton.yaml")
@@ -85,127 +180,122 @@ CONDA_ENV = os.path.join(REPO_FOLDER,"workflow","envs","epibutton.yaml")
 # Define label for the analysis
 analysis_name = config["analysis_name"]
 
-# Function to split the sample_name to recover its components
-def parse_sample_name(sample_name):
-    data_type, line, tissue, sample_type, rep, ref_genome = sample_name.split("__")
-    parsed = {
-        "data_type": data_type,
-        "line": line,
-        "tissue": tissue,
-        "sample_type": sample_type,
-        "replicate": rep,
-        "ref_genome": ref_genome
-    }    
-    
-    # To extract ChIP Input group from data_type
-    if data_type.startswith("ChIP_"):
-        chip_parts = data_type.split("_", 1)
-        if len(chip_parts) == 2:
-            parsed["group_label"] = chip_parts[1]   # e.g., "A"
-    # To extract TF name from data_type
-    if data_type.startswith("TF_"):
-        tf_parts = data_type.split("_", 1)
-        if len(tf_parts) == 2:
-            parsed["tf_name"] = tf_parts[1]   # e.g., "TB1"
+# ---------------------------------------------------------------------------
+# Read and validate sample sheet (new format)
+# ---------------------------------------------------------------------------
+# `snakemake --unlock` only removes lock files, but it still parses the whole
+# workflow first — so it would otherwise trip the no-sample-sheet guard below.
+# Unlocking needs no sample sheet, so when unlocking we build an empty one,
+# which lets the rule modules parse (their module-level sample lookups are
+# empty-safe) and skip sample validation entirely.
+UNLOCKING = "--unlock" in sys.argv
 
-    return parsed
-
-# Function to access extra information form the samplefile using the name
-def get_sample_info_from_name(sname, samples, field):
-    match = samples.loc[samples["sample_name"] == sname]
-    if match.empty:
-        return None
-    else:
-        return match[field].iloc[0]
-
-# Function to extract all samples of each env based on sample name
-def get_sample_names_by_env(env, samples):
-    sample_names = samples.loc[samples['env'] == env, "sample_name"].tolist()
-    return sample_names
-
-# Define patterns and envs
-env_patterns = [
-    ("ChIP*", "ChIP"),
-    ("RNAseq", "RNA"),
-    ("RAMPAGE", "RNA"),
-    ("sRNA", "sRNA"),
-    ("mC", "mC"),
-    ("TF_*", "TF"),
-    ("ATAC", "ATAC"),
-]
-
-# Define sample metadata and avoid header if present
-colnames = ["data_type", "line", "tissue", "sample_type", "replicate", "seq_id", "fastq_path", "paired", "ref_genome"]
-with open(config["sample_file"]) as f:
-    first_line = f.readline().strip().split("\t")
-if first_line == colnames:
-    samples = pd.read_csv(config["sample_file"], sep="\t", header=0, names=colnames)
+if not config.get("sample_file"):
+    if not UNLOCKING:
+        sys.exit(
+            "Error: No sample sheet specified. Set `sample_file:` in your options "
+            "YAML or pass --config sample_file=PATH (or use `epicc run --samples "
+            "PATH`). See config/example_samples.tsv for a documented template."
+        )
+    samples = add_compat_columns(
+        pd.DataFrame({c: pd.Series(dtype=str) for c in NEW_COLNAMES})
+    )
 else:
-    samples = pd.read_csv(config["sample_file"], sep="\t", header=None, names=colnames)
+    samples = read_sample_sheet(config["sample_file"])
+    check_table(samples)
+    check_genome_config(samples, config, repo_folder=REPO_FOLDER)
+    check_extra_output_files(config, repo_folder=REPO_FOLDER)
 
-samples = samples.sort_values(by=["ref_genome","data_type","line","tissue","sample_type","replicate"]).reset_index(drop=True)
+    # Add backward-compatible columns derived from new-format fields
+    samples = add_compat_columns(samples)
 
-check_table(samples)
-
-# Create an "env" column based on the string patterns in data_type
-conditions = [samples["data_type"].str.match(fnmatch.translate(pat)) for pat, _ in env_patterns]
-choices = [env for _, env in env_patterns]
-samples["env"] = np.select(conditions, choices, default="unknown")
-        
-# Check for unknown envs and exit if any
-unknowns = samples.loc[samples["env"] == "unknown", "data_type"].unique()
+# Check for unknown envs
+unknowns = samples.loc[samples["env"].isna(), "Assay"].unique()
 if len(unknowns) > 0:
-    unknown_list = "\n".join(f"  - {dt}" for dt in unknowns)
-    raise ValueError(f"Type of data unknown for the following data types:\n"
-                     f"{unknown_list}\n\n"
-                     "Please check your sample file or update the env_patterns.")
-
-# Add a sample_name column to the sample file
-samples["sample_name"] = samples.apply(lambda row: sample_name_str(row, 'sample'), axis=1)
-
-# Add an extra_info column to the sample file
-samples["extra_info"] = samples.apply(extract_extra_info, axis=1)
+    unknown_list = "\n".join(f"  - {a}" for a in unknowns)
+    raise ValueError(f"Unknown Assay types:\n{unknown_list}\n\n"
+                     "Please check your sample file. Valid assays: " + ", ".join(VALID_ASSAYS))
 
 # Define reference genomes, data types and environments
 REF_GENOMES = set(samples["ref_genome"].unique())
 DATA_TYPES = set(samples["data_type"].unique())
 UNIQUE_ENVS = samples["env"].unique().tolist()
 
-# To assign all replicates to each sample
-analysis_to_replicates = (
-    samples
-    .groupby(["data_type", "line", "tissue", "sample_type", "ref_genome"])["replicate"]
-    .apply(list)
-    .to_dict()
-)
+# Build analysis_to_replicates mapping
+# Key: (Assay, levels_label, IP_target, Genome) tuple
+analysis_to_replicates = build_analysis_to_replicates(samples)
 
-# Load the sample metadata and perform all operations in a single chain
-analysis_samples = (
-    samples
-    .query("sample_type != 'Input'") # filter Input samples
-    [["env", "data_type", "line", "tissue", "sample_type", "ref_genome", "paired", "extra_info"]]
-    .drop_duplicates()
-)
+# Build analysis_samples: non-control samples, deduplicated by analysis key
+analysis_samples = get_analysis_samples(samples)
+analysis_samples = add_compat_columns(analysis_samples)
+
+# Build analysis_samples with sample_name = analysis name (for backward compat)
+if not analysis_samples.empty:
+    analysis_samples["sample_name"] = analysis_samples.apply(
+        lambda row: build_analysis_name(row), axis=1
+    )
+
 pathtoanalysisfile = os.path.join(REPO_FOLDER,"config",f"analysis_samplefile_{analysis_name}.tsv")
-analysis_samples.to_csv(pathtoanalysisfile, sep="\t", index=False)
-    
-# Add a sample_name column to the analysis_sample file
-analysis_samples["sample_name"] = analysis_samples.apply(lambda row: sample_name_str(row, 'analysis'), axis=1)
+analysis_samples[["Assay", "Genome", "Levels", "IP_target", "env", "sample_name"]].to_csv(pathtoanalysisfile, sep="\t", index=False)
+
+# ---------------------------------------------------------------------------
+# Backward-compat helper functions (used by rule files during migration)
+# ---------------------------------------------------------------------------
+
+def parse_sample_name(sample_name):
+    """Parse a sample_name (= Sample_ID in new format) by looking up the samples DataFrame."""
+    match = samples.loc[samples["sample_name"] == sample_name]
+    if not match.empty:
+        row = match.iloc[0]
+        return {
+            "data_type": row["data_type"],
+            "line": row["line"],
+            "tissue": row["tissue"],
+            "sample_type": row["sample_type"],
+            "replicate": row["replicate"],
+            "ref_genome": row["ref_genome"],
+            "levels_label": row["levels_label"],
+        }
+    # Fallback: try analysis_samples (always returns "merged" for replicate)
+    match2 = analysis_samples.loc[analysis_samples["sample_name"] == sample_name]
+    if not match2.empty:
+        row = match2.iloc[0]
+        return {
+            "data_type": row["data_type"],
+            "line": row["line"],
+            "tissue": row["tissue"],
+            "sample_type": row["sample_type"],
+            "replicate": "merged",
+            "ref_genome": row["ref_genome"],
+            "levels_label": row["levels_label"],
+        }
+    raise ValueError(f"Sample '{sample_name}' not found in samples or analysis_samples")
+
+def get_sample_info_from_name(sname, df, field):
+    """Look up a field value by sample_name."""
+    match = df.loc[df["sample_name"] == sname]
+    if match.empty:
+        return None
+    return match[field].iloc[0]
+
+def get_sample_names_by_env(env, df):
+    """Get all sample_names for a given env."""
+    return df.loc[df['env'] == env, "sample_name"].tolist()
 
 # Logic for intermediate target
 def all_map_only_input(wildcards):
     map_files = []
     chkpt_files = []
     
-    map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA", "mC"]])
+    map_files += expand(f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA", "mC"]])
     if not config["aligned_bams"]:
-        map_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP", "TF", "ATAC"]])
-    map_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
+        map_files += expand(f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP", "ATAC"]])
+    map_files += expand(f"{RESULTS_DIR}/combined/plots/srna_sizes_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
     
     for _, row in samples.iterrows():
         sname = row['sample_name']
         env = row['env']
-        chkpt_files.append(f"results/{env}/chkpts/map_{env}__{sname}.done")
+        chkpt_files.append(f"{RESULTS_DIR}/{env}/chkpts/map_{env}__{sname}.done")
     
     return map_files + chkpt_files
         
@@ -222,7 +312,7 @@ include: "rules/combined_analysis.smk"
 # Rule all to specify final target
 rule all:
     input:
-	    expand(f"results/combined/chkpts/final_analysis__{analysis_name}.done", analysis_name = analysis_name)
+	    expand(f"{RESULTS_DIR}/combined/chkpts/final_analysis__{analysis_name}.done", analysis_name = analysis_name)
     localrule: True
 
 ### Intermediate target rules
@@ -236,7 +326,7 @@ rule map_only:
 rule coverage_chip:
     input: 
         [
-            f"results/ChIP/tracks/coverage__{sample_name}.bw"
+            f"{RESULTS_DIR}/ChIP/tracks/coverage__{sample_name}.bw"
             for sample_name in get_sample_names_by_env("ChIP", samples)
         ]
     localrule: True
@@ -244,20 +334,24 @@ rule coverage_chip:
 # Rule to perform combined analysis
 rule combined_analysis:
     input:
-        expand("results/combined/chkpts/combined_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES),
-        expand("results/ChIP/chkpts/ChIP_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
-        expand("results/TF/chkpts/TF_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "TF" in UNIQUE_ENVS else []),
-        expand("results/RNA/chkpts/RNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
-        expand("results/mC/chkpts/mC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
-        expand("results/sRNA/chkpts/sRNA_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
-        expand("results/ATAC/chkpts/ATAC_analysis__{analysis_name}__{ref_genome}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ATAC" in UNIQUE_ENVS else [])
+        expand(f"{RESULTS_DIR}/combined/chkpts/combined_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES),
+        expand(f"{RESULTS_DIR}/ChIP/chkpts/ChIP_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ChIP" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/RNA/chkpts/RNA_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "RNA" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/mC/chkpts/mC_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "mC" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/sRNA/chkpts/sRNA_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "sRNA" in UNIQUE_ENVS else []),
+        expand(f"{RESULTS_DIR}/ATAC/chkpts/ATAC_analysis__{{analysis_name}}__{{ref_genome}}.done", analysis_name = analysis_name, ref_genome=REF_GENOMES if "ATAC" in UNIQUE_ENVS else [])
     output:
-        chkpt = f"results/combined/chkpts/final_analysis__{analysis_name}.done"
+        chkpt = f"{RESULTS_DIR}/combined/chkpts/final_analysis__{analysis_name}.done"
     localrule: True
     shell:
         """
         touch {output.chkpt}
         """ 
+
+# Start message — fires only when a run actually begins executing jobs, so the
+# banner never appears on dry-run/unlock/--dag/--list/env-build invocations.
+onstart:
+    print_banner()
 
 # Exit message
 onsuccess:

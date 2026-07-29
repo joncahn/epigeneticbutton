@@ -1,0 +1,1807 @@
+#!/usr/bin/env python3
+"""EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization.
+
+User-friendly CLI wrapper around the EPICC Snakemake pipeline.
+
+Usage:
+    epicc run [options] [-- SNAKEMAKE_ARGS...]
+    epicc validate [options]
+    epicc output --plot-type TYPE --input-file PATH [options]
+    epicc perf [--single | LOGFILE] [--html FILE]
+    epicc clean [--intermediates] [--conda-envs] [--logs] [--all]
+    epicc init-profile TYPE [NAME] [--force]
+
+For a dry-run, prefer ``epicc validate`` (parses the config + sample sheet
+and surfaces a concise summary) or pass --dry-run through to snakemake
+via ``epicc run -- --dry-run`` for the raw output.
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+DESCRIPTION = """\
+EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization.
+
+Snakemake pipeline for ChIP-seq, ATAC-seq, RNA-seq, small RNA-seq, bisulfite
+methylC-seq, and direct methylation from long-read sequencing.
+"""
+
+DEFAULT_OPTIONS = "config/epicc-options.yaml"
+DEFAULT_PROFILE = "profiles/slurm"
+DEFAULT_WORKFLOW_PROFILE = "profiles/default"
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def find_repo_root():
+    """Find the repository root (directory containing workflow/Snakefile)."""
+    # Start from the script's own location (git-clone install)
+    script_dir = Path(__file__).resolve().parent
+    if (script_dir / "workflow" / "Snakefile").exists():
+        return script_dir
+    # Conda/pip install: workflow files at $PREFIX/share/epicc/
+    share = Path(sys.prefix) / "share" / "epicc"
+    if (share / "workflow" / "Snakefile").exists():
+        return share
+    # Fall back to cwd
+    cwd = Path.cwd()
+    if (cwd / "workflow" / "Snakefile").exists():
+        return cwd
+    sys.exit(
+        "Error: Cannot find EPICC pipeline (workflow/Snakefile).\n"
+        "Run this command from the pipeline directory, or ensure the epicc "
+        "script is located at the repository root."
+    )
+
+
+def _is_installed_mode():
+    """True when epicc is running from a conda/pip install, not a git clone.
+
+    Git-clone mode: the epicc script sits in the repository root, adjacent to
+    workflow/Snakefile. Installed mode: the script is in $PREFIX/bin/ and the
+    workflow lives in $PREFIX/share/epicc/. Also returns False when the user
+    runs epicc from the repo's CWD (supports running the script by path from
+    a different location during development).
+    """
+    if (Path(__file__).resolve().parent / "workflow" / "Snakefile").exists():
+        return False
+    if (Path.cwd() / "workflow" / "Snakefile").exists():
+        return False
+    return True
+
+
+def is_url(path):
+    """Return True if the string looks like an HTTP(S) URL."""
+    return isinstance(path, str) and (
+        path.startswith("http://") or path.startswith("https://")
+    )
+
+
+def url_resolves(url, timeout=10):
+    """Check whether an HTTP(S) URL resolves. Returns (ok, detail).
+
+    Uses a ranged GET (bytes=0-0) rather than HEAD because some hosts (e.g.
+    CDN-fronted downloads) mishandle HEAD. Follows redirects via urllib's
+    default opener.
+    """
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(url, headers={"Range": "bytes=0-0"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            code = resp.getcode()
+            return code < 400, f"HTTP {code}"
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}"
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        return False, str(e)
+
+
+def fmt_duration(seconds):
+    """Format seconds as human-readable duration."""
+    if seconds < 60:
+        return f"{seconds:.0f}s"
+    elif seconds < 3600:
+        m, s = divmod(seconds, 60)
+        return f"{int(m)}m {int(s)}s"
+    else:
+        h, rem = divmod(seconds, 3600)
+        m, _ = divmod(rem, 60)
+        return f"{int(h)}h {int(m)}m"
+
+
+# Snakemake graph flags: (cli_kind, snakemake_flag)
+GRAPH_KINDS = (("dag", "--dag"), ("rulegraph", "--rulegraph"))
+
+
+def render_graph(args, kind, snakemake_flag, output_path):
+    """Run `snakemake <flag>` and render its dot output to a file.
+
+    Output format is inferred from ``output_path``'s extension.  ``.dot``
+    writes the raw dot text; everything else is piped through graphviz
+    ``dot -T<fmt>`` (png/svg/pdf/...). Requires the ``dot`` executable on PATH
+    for non-``.dot`` outputs.
+    """
+    import shutil as _shutil
+
+    out = Path(output_path)
+    fmt = out.suffix.lstrip(".").lower() or "png"
+
+    options_file = _prepare_options_file(args)
+    repo = find_repo_root()
+    cmd = ["snakemake", snakemake_flag,
+           "--configfile", options_file,
+           "--cores", "1", "--quiet", "all"]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+    # Honor the same workflow profile and config overrides as the run.
+    workflow_profile = getattr(args, "workflow_profile", None) or str(
+        repo / DEFAULT_WORKFLOW_PROFILE
+    )
+    if Path(workflow_profile).is_dir():
+        cmd += ["--workflow-profile", workflow_profile]
+    overrides = []
+    if getattr(args, "samples", None):
+        overrides.append(f"sample_file={args.samples}")
+    overrides.extend(_collect_config_overrides(args))
+    if overrides:
+        cmd += ["--config"] + overrides
+
+    print(f"EPICC: Generating {kind} → {out}", file=sys.stderr)
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stderr)
+        return proc.returncode
+    dot_text = proc.stdout
+
+    if fmt == "dot":
+        out.write_text(dot_text)
+        return 0
+    if not _shutil.which("dot"):
+        sys.exit(
+            f"Error: graphviz 'dot' not found on PATH (needed to render "
+            f"{out}). Install graphviz, or output a .dot file instead."
+        )
+    render = subprocess.run(
+        ["dot", f"-T{fmt}", "-o", str(out)],
+        input=dot_text, text=True, capture_output=True,
+    )
+    if render.returncode != 0:
+        sys.stderr.write(render.stderr)
+    return render.returncode
+
+
+def maybe_render_graphs(args):
+    """If --dag or --rulegraph was requested, render and return True.
+
+    Returns the number of graph files successfully written (0 if none asked).
+    Caller decides whether to short-circuit downstream work.
+    """
+    written = 0
+    for kind, flag in GRAPH_KINDS:
+        out = getattr(args, kind, None)
+        if not out:
+            continue
+        rc = render_graph(args, kind, flag, out)
+        if rc != 0:
+            sys.exit(rc)
+        written += 1
+    return written
+
+
+def _lock_present(repo):
+    """Return True if Snakemake's lock directory holds any lock files.
+
+    Snakemake releases its lock on a clean exit and on most in-run failures,
+    so a non-empty lock dir means either a run was killed (SLURM timeout,
+    Ctrl-C, node/power loss) or a run was just refused because the lock was
+    already there — exactly the cases where 'epicc unlock' is the fix.
+    """
+    # Installed mode: .snakemake/ is in the user's project CWD, not the repo.
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    locks = run_dir / ".snakemake" / "locks"
+    return locks.exists() and any(locks.iterdir())
+
+
+def maybe_clear_stale_lock(args, repo):
+    """Clear a stale Snakemake lock before running, but only if opted in.
+
+    Killed runs (SLURM timeouts, Ctrl-C, node failures) leave files in
+    `.snakemake/locks/` that block subsequent invocations until cleared. By
+    default we mirror snakemake and leave the lock in place — a lock can also
+    mean another run is genuinely active, and we can't reliably detect a live
+    concurrent coordinator in a cluster environment (it could be on any node,
+    and the lock files contain no PID/host info). Pass --auto-unlock to clear
+    it automatically; otherwise the user is directed to 'epicc unlock'.
+    """
+    if not getattr(args, "auto_unlock", False):
+        return
+    if not _lock_present(repo):
+        return
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    print("=" * 72, file=sys.stderr)
+    print("EPICC WARNING: a Snakemake lock was found; --auto-unlock is set,",
+          file=sys.stderr)
+    print("  so it is being cleared. If another epicc/snakemake run is ACTIVE",
+          file=sys.stderr)
+    print("  on this same directory, unlocking will corrupt its state.",
+          file=sys.stderr)
+    print("=" * 72, file=sys.stderr)
+    cmd = ["snakemake", "--unlock", "--configfile", args.options]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+    subprocess.run(cmd, cwd=str(run_dir), check=False)
+
+
+_PLACEHOLDER_RE = __import__("re").compile(r"<your-[a-z0-9-]+>", __import__("re").IGNORECASE)
+
+
+def _strip_yaml_comment(line):
+    """Return `line` with any trailing YAML comment removed.
+
+    A `#` starts a comment unless it sits inside a quoted scalar. We don't
+    need a full YAML parser here — just enough quote awareness to avoid
+    chopping a value that legitimately contains `#`. Lines that are entirely
+    a comment (the common `#- slurm_account=...` case) collapse to empty.
+    """
+    in_single = in_double = False
+    for i, ch in enumerate(line):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "#" and not in_single and not in_double:
+            return line[:i]
+    return line
+
+
+def check_profile_placeholders(profile_arg):
+    """Fail fast if the user's profile still ships an unedited placeholder.
+
+    profiles/slurm/config.yaml ships `slurm_account="<your-slurm-account>"`
+    as a *commented-out* example. Without this check, an account left at
+    that placeholder value (once uncommented but not edited) makes sbatch
+    silently reject every job and the run hangs at "Select jobs to
+    execute..." with nothing visible in `squeue` — a debugging trap (see
+    e.g. github.com/joncahn/epigeneticbutton/issues/... for the original
+    report). Surface the unedited value upfront with a pointer back at the
+    offending file so the user knows exactly what to fix.
+
+    We only scan *active* (non-comment) config: a placeholder that lives
+    in a commented-out line is an example the user hasn't opted into — most
+    notably the shipped `#- slurm_account="<your-slurm-account>"`, which a
+    user can simply leave alone to let SLURM assign its default account.
+    Flagging that would force users to specify an account that their
+    cluster doesn't actually require.
+
+    `profile_arg` is whatever the user passed to --profile (a directory
+    or a config.yaml path); this resolves either to the actual config
+    file before scanning.
+    """
+    if not profile_arg:
+        return
+    repo = find_repo_root()
+    candidate = Path(profile_arg)
+    if not candidate.is_absolute():
+        # Try repo-relative first, then XDG Snakemake config dir.
+        repo_rel = (repo / candidate).resolve()
+        if repo_rel.exists():
+            candidate = repo_rel
+        else:
+            xdg = os.environ.get("XDG_CONFIG_HOME")
+            smk_cfg = Path(xdg) / "snakemake" if xdg else Path.home() / ".config" / "snakemake"
+            xdg_profile = smk_cfg / candidate
+            candidate = xdg_profile if xdg_profile.exists() else repo_rel
+    if candidate.is_dir():
+        config_path = candidate / "config.yaml"
+    else:
+        config_path = candidate
+    if not config_path.exists():
+        return  # snakemake will report the missing-profile error itself
+    active = "\n".join(
+        _strip_yaml_comment(line) for line in config_path.read_text().splitlines()
+    )
+    placeholders = sorted(set(_PLACEHOLDER_RE.findall(active)))
+    if not placeholders:
+        return
+    print(
+        "EPICC: profile contains unedited placeholder value(s):",
+        file=sys.stderr,
+    )
+    for ph in placeholders:
+        print(f"    {ph}", file=sys.stderr)
+    print(
+        f"  in: {config_path}\n"
+        "  Edit that file to fill in the real value(s) for your cluster, "
+        "or remove the offending lines if not applicable. Without this fix, "
+        "sbatch will silently reject every job and the run will hang at "
+        "'Select jobs to execute...' with nothing in the queue.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
+def detect_execution_mode(args):
+    """Determine whether to use a SLURM profile or local cores.
+
+    Returns (profile_path, cores) — one will be None.
+    """
+    if args.profile:
+        return args.profile, None
+    if args.cores:
+        return None, args.cores
+
+    # Auto-detect: SLURM if sbatch is available
+    if shutil.which("sbatch"):
+        repo = find_repo_root()
+        if not (repo / DEFAULT_PROFILE / "config.yaml").exists():
+            print(f"Warning: sbatch found but {DEFAULT_PROFILE}/config.yaml missing; "
+                  f"falling back to local execution.", file=sys.stderr)
+            cores = max(1, os.cpu_count() // 2)
+            return None, cores
+        # Installed mode: return absolute path; git-clone: relative (resolves
+        # after os.chdir(repo) in cmd_run).
+        profile = str(repo / DEFAULT_PROFILE) if _is_installed_mode() else DEFAULT_PROFILE
+        return profile, None
+
+    cores = max(1, os.cpu_count() // 2)
+    return None, cores
+
+
+def _parse_dmr_min_diff(s):
+    """Argument type for --dmr-min-diff.
+
+    Accepted forms:
+      auto                    → data-driven calibration
+      0.3                     → apply the same threshold to all three contexts
+      CG=0.3,CHG=0.2,CHH=0.1 → per-context values (any subset is valid)
+    """
+    if s.lower() == "auto":
+        return "auto"
+    if "=" not in s:
+        try:
+            return float(s)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"--dmr-min-diff: expected 'auto', a float, or 'CG=F,CHG=F,CHH=F'; got {s!r}"
+            )
+    result = {}
+    for pair in s.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        k, _, v = pair.partition("=")
+        k = k.strip().upper()
+        if k not in ("CG", "CHG", "CHH"):
+            raise argparse.ArgumentTypeError(
+                f"--dmr-min-diff: unknown context {k!r}; expected CG, CHG, or CHH"
+            )
+        try:
+            result[k] = float(v.strip())
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"--dmr-min-diff: invalid value for {k}: {v!r}"
+            )
+    if not result:
+        raise argparse.ArgumentTypeError("--dmr-min-diff: no valid context=value pairs")
+    return result
+
+
+def _collect_config_overrides(args):
+    """Collect --config key=value pairs from epicc CLI flags (excluding sample_file).
+
+    Covers only top-level config keys that Snakemake can receive directly via
+    --config. Used by both build_snakemake_cmd and render_graph.
+    """
+    ov = []
+    if getattr(args, "output_dir", None):
+        ov.append(f"output_dir={args.output_dir}")
+    if getattr(args, "genome_dir", None):
+        ov.append(f"genome_dir={args.genome_dir}")
+    if getattr(args, "keep_intermediates", None):
+        ov.append(f"keep_intermediates={args.keep_intermediates}")
+    if getattr(args, "use_node_tmpdir", False):
+        ov.append("use_node_tmpdir=true")
+    # Aligner / mapping strategy
+    if getattr(args, "chip_aligner", None):
+        ov.append(f"chip_aligner={args.chip_aligner}")
+    if getattr(args, "atac_aligner", None):
+        ov.append(f"atac_aligner={args.atac_aligner}")
+    if getattr(args, "chip_mapping_strategy", None):
+        ov.append(f"chip_mapping_strategy={args.chip_mapping_strategy}")
+    if getattr(args, "atac_mapping_strategy", None):
+        ov.append(f"atac_mapping_strategy={args.atac_mapping_strategy}")
+    # Analysis toggles
+    if getattr(args, "full_analysis", None) is not None:
+        ov.append(f"full_analysis={'true' if args.full_analysis else 'false'}")
+    if getattr(args, "te_analysis", None) is not None:
+        ov.append(f"te_analysis={'true' if args.te_analysis else 'false'}")
+    if getattr(args, "GO", None) is not None:
+        ov.append(f"GO={'true' if args.GO else 'false'}")
+    if getattr(args, "rna_deduplicate", None) is not None:
+        ov.append(f"rna_deduplicate={'true' if args.rna_deduplicate else 'false'}")
+    # Methylation / DMR (top-level keys)
+    if getattr(args, "methylation_contexts", None):
+        ov.append(f"methylation_contexts=[{','.join(args.methylation_contexts)}]")
+    if getattr(args, "dmr_caller", None):
+        ov.append(f"dmr_caller={args.dmr_caller}")
+    return ov
+
+
+def _collect_nested_overrides(args):
+    """Collect dot-path overrides for nested config keys.
+
+    Returns a list of (dotpath, value) tuples for settings that live inside
+    nested YAML blocks (e.g. dmr_thresholds.min_diff.CG) and therefore cannot
+    be passed directly as Snakemake --config key=val — Snakemake's shallow merge
+    would drop sibling keys in the same block.
+    """
+    nested = []
+
+    # DMR thresholds
+    dmr_min_diff = getattr(args, "dmr_min_diff", None)
+    if dmr_min_diff is not None:
+        if dmr_min_diff == "auto":
+            nested.append(("dmr_thresholds.min_diff", "auto"))
+        elif isinstance(dmr_min_diff, float):
+            for ctx in ("CG", "CHG", "CHH"):
+                nested.append((f"dmr_thresholds.min_diff.{ctx}", dmr_min_diff))
+        else:  # dict from per-context form
+            for ctx, val in dmr_min_diff.items():
+                nested.append((f"dmr_thresholds.min_diff.{ctx}", val))
+    if getattr(args, "dmr_min_cytosines", None) is not None:
+        nested.append(("dmr_thresholds.min_cytosines", args.dmr_min_cytosines))
+    if getattr(args, "dmr_q_value", None) is not None:
+        nested.append(("dmr_thresholds.q_value", args.dmr_q_value))
+    if getattr(args, "dmr_sigma_n", None) is not None:
+        nested.append(("dmr_thresholds.sigma_n", args.dmr_sigma_n))
+
+    # Peak calling
+    if getattr(args, "chip_callpeaks_params", None) is not None:
+        nested.append(("chip_callpeaks.params", args.chip_callpeaks_params))
+    if getattr(args, "cut_broad_caller", None) is not None:
+        nested.append(("cut_callpeaks.broad_caller", args.cut_broad_caller))
+    if getattr(args, "cut_narrow_caller", None) is not None:
+        nested.append(("cut_callpeaks.narrow_caller", args.cut_narrow_caller))
+
+    return nested
+
+
+def _prepare_options_file(args):
+    """Return the options file path to use for snakemake.
+
+    When nested CLI overrides (e.g. --dmr-min-diff-cg) are present, writes
+    a temporary merged config that incorporates those overrides and returns
+    its path. The temp file is registered for cleanup via atexit. When no
+    nested overrides are set, returns args.options unchanged.
+    """
+    nested = _collect_nested_overrides(args)
+    if not nested:
+        return args.options
+
+    try:
+        import yaml
+    except ImportError:
+        sys.exit("Error: PyYAML not available. Activate the epicc conda environment.")
+    import tempfile
+    import atexit
+
+    with open(args.options) as f:
+        config = yaml.safe_load(f) or {}
+
+    for dotpath, value in nested:
+        parts = dotpath.split(".")
+        d = config
+        for part in parts[:-1]:
+            if not isinstance(d.get(part), dict):
+                d[part] = {}
+            d = d[part]
+        d[parts[-1]] = value
+
+    tmp = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="epicc_merged_", delete=False
+    )
+    yaml.dump(config, tmp, default_flow_style=False, allow_unicode=True)
+    tmp.close()
+    atexit.register(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
+    return tmp.name
+
+
+def build_snakemake_cmd(args, extra_args, *, dry_run=False):
+    """Construct the snakemake command line from parsed arguments."""
+    repo = find_repo_root()
+
+    cmd = ["snakemake"]
+    # Installed mode (conda/pip): must point snakemake at the installed
+    # Snakefile explicitly since we don't os.chdir to the repo.
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+
+    # Options file — may be replaced by a temp merged file when nested CLI
+    # overrides (--dmr-min-diff, --chip-callpeaks-params, etc.) are present.
+    options_file = _prepare_options_file(args)
+    if not Path(options_file).exists():
+        sys.exit(f"Error: Options file not found: {options_file}")
+    cmd += ["--configfile", options_file]
+
+    # Workflow profile — per-rule resource and thread tuning. Ships with the
+    # repo; users normally should not edit it. Override with --workflow-profile.
+    workflow_profile = getattr(args, "workflow_profile", None) or str(
+        repo / DEFAULT_WORKFLOW_PROFILE
+    )
+    if Path(workflow_profile).is_dir():
+        cmd += ["--workflow-profile", workflow_profile]
+
+    # Execution mode
+    profile, cores = detect_execution_mode(args)
+    if profile:
+        cmd += ["--profile", profile]
+    else:
+        cmd += ["--use-conda", "--conda-frontend", "conda", "--cores", str(cores)]
+
+    # Config overrides via --config key=value — collected here, emitted below
+    # after merging any --config values from extra_args (the -- passthrough).
+    # Snakemake with multiple --config flags uses the LAST one, silently
+    # dropping keys from earlier blocks (empirically confirmed; see issue #31).
+    # Merging into a single block avoids that.
+    config_overrides = []
+    if args.samples:
+        if not Path(args.samples).exists():
+            sys.exit(f"Error: Sample file not found: {args.samples}")
+        config_overrides.append(f"sample_file={args.samples}")
+    config_overrides.extend(_collect_config_overrides(args))
+
+    # Dry-run
+    if dry_run:
+        cmd.append("--dry-run")
+
+    # Re-run any jobs Snakemake marked incomplete on a prior interrupted run.
+    # Without this, Snakemake errors out on the first affected rule, which is
+    # almost never what the user wants when resuming. The --no-rerun-incomplete
+    # flag opts out (e.g. when investigating which jobs are flagged incomplete,
+    # or to force a fresh start without re-running them).
+    if not getattr(args, "no_rerun_incomplete", False):
+        cmd.append("--rerun-incomplete")
+
+    # Verbosity
+    if args.verbose:
+        cmd.append("--printshellcmds")
+    if args.quiet:
+        cmd.append("--quiet")
+
+    # Subcommand-specific options
+    if hasattr(args, 'target') and args.target:
+        cmd.append(args.target)
+    if hasattr(args, 'until') and args.until:
+        cmd += ["--until", args.until]
+    if hasattr(args, 'forcerun') and args.forcerun:
+        cmd += ["--forcerun"] + args.forcerun
+
+    # Passthrough arguments (everything after --).
+    # Extract any --config key=value tokens and merge into config_overrides so
+    # the entire config lives in a single --config block. Snakemake's last
+    # --config wins, so if we emitted ours first and the user's --config
+    # follows in the passthrough, keys like sample_file get silently dropped.
+    filtered_extra = []
+    i = 0
+    while i < len(extra_args):
+        if extra_args[i] == "--config":
+            i += 1
+            while i < len(extra_args) and "=" in extra_args[i] and not extra_args[i].startswith("-"):
+                config_overrides.append(extra_args[i])
+                i += 1
+        elif extra_args[i].startswith("--config="):
+            config_overrides.append(extra_args[i][len("--config="):])
+            i += 1
+        else:
+            filtered_extra.append(extra_args[i])
+            i += 1
+
+    if config_overrides:
+        cmd += ["--config"] + config_overrides
+    if filtered_extra:
+        cmd += filtered_extra
+
+    return cmd
+
+
+# ---------------------------------------------------------------------------
+# Subcommands
+# ---------------------------------------------------------------------------
+
+def _scan_log_for_env_failure(repo):
+    """Return True if the most recent .snakemake/log entry shows a conda env
+    creation failure. Used to surface a targeted recovery hint after cmd_run.
+    """
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    log_dir = run_dir / ".snakemake" / "log"
+    try:
+        latest = max(log_dir.glob("*.snakemake.log"), key=lambda p: p.stat().st_mtime)
+    except (FileNotFoundError, ValueError):
+        return False
+    try:
+        text = latest.read_text(errors="replace")
+    except OSError:
+        return False
+    return "CreateCondaEnvironmentException" in text
+
+
+def cmd_run(args, extra_args):
+    """Execute the pipeline."""
+    repo = find_repo_root()
+    if not _is_installed_mode():
+        os.chdir(repo)
+
+    maybe_clear_stale_lock(args, repo)
+
+    profile, cores = detect_execution_mode(args)
+    check_profile_placeholders(profile)
+    mode_desc = f"profile {profile}" if profile else f"{cores} local cores"
+    cmd = build_snakemake_cmd(args, extra_args)
+    print(f"EPICC: Starting pipeline ({mode_desc})", file=sys.stderr)
+    if args.verbose:
+        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+
+    t0 = time.time()
+    result = subprocess.run(cmd)
+    elapsed = time.time() - t0
+
+    print(file=sys.stderr)
+    if result.returncode == 0:
+        print(f"EPICC: Pipeline completed in {fmt_duration(elapsed)}.",
+              file=sys.stderr)
+        print("  Tip: Run 'epicc perf' to see the execution timing report.",
+              file=sys.stderr)
+    else:
+        print(f"EPICC: Pipeline failed after {fmt_duration(elapsed)} "
+              f"(exit code {result.returncode}).", file=sys.stderr)
+        # A leftover lock means a prior run was killed, or this run was
+        # refused because the directory is already locked. Point users at the
+        # epicc subcommand rather than snakemake's raw `--unlock` suggestion.
+        if _lock_present(repo):
+            print(
+                "\n  The working directory is locked. If no other epicc run is "
+                "active here, a\n  prior run was likely killed — clear the lock "
+                "with:\n      epicc unlock\n  or re-run with 'epicc run "
+                "--auto-unlock' to clear it automatically.",
+                file=sys.stderr,
+            )
+        # Some clusters reject `conda env create --prefix` from inside a
+        # SLURM job allocation, while the same install works from a login
+        # node (issue #25). Detect the symptom in the snakemake log and
+        # point users at the prebuild path.
+        if _scan_log_for_env_failure(repo):
+            print(
+                "\n  Looks like a conda environment failed to install. "
+                "If this run was launched via sbatch, try pre-building the\n"
+                "  envs from a login/dev node first:\n"
+                "      epicc validate --build-envs --options ... --samples ...\n"
+                "  then resubmit the run.",
+                file=sys.stderr,
+            )
+
+    return result.returncode
+
+
+def _run_build_envs(args, extra_args):
+    """Pre-build all rule conda envs via `snakemake --conda-create-envs-only`.
+
+    Returns the snakemake exit code. Streams snakemake's own progress
+    directly so users see per-env install logs (which can be slow).
+    """
+    if os.environ.get("SLURM_JOB_ID"):
+        print(
+            "  [!] Detected SLURM_JOB_ID — pre-building envs from inside a\n"
+            "      SLURM job is the failure mode this is meant to work\n"
+            "      around (issue #25). Run from a login/dev node instead.\n",
+            file=sys.stderr,
+        )
+    print("\n  Building conda envs (this may take several minutes)...\n",
+          file=sys.stderr)
+    cmd = build_snakemake_cmd(args, extra_args)
+    cmd.append("--conda-create-envs-only")
+    if args.verbose:
+        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+    return subprocess.run(cmd).returncode
+
+
+def cmd_validate(args, extra_args):
+    """Validate configuration without running the pipeline."""
+    repo = find_repo_root()
+    if not _is_installed_mode():
+        os.chdir(repo)
+
+    options_file = Path(args.options)
+    if not options_file.exists():
+        sys.exit(f"Error: Options file not found: {options_file}")
+
+    # Catch unedited placeholder values in the cluster profile (e.g.
+    # slurm_account=<your-slurm-account>) before snakemake even starts.
+    check_profile_placeholders(getattr(args, "profile", None))
+
+    print("EPICC: Validating configuration...\n", file=sys.stderr)
+
+    # Load and display config summary
+    try:
+        import yaml
+    except ImportError:
+        sys.exit("Error: PyYAML not available. Activate the epicc conda environment.")
+
+    with open(options_file) as f:
+        config = yaml.safe_load(f)
+
+    # Basic config checks
+    sample_file = args.samples or config.get("sample_file")
+    if not sample_file:
+        sys.exit(
+            "Error: no sample sheet specified. Pass --samples PATH on the "
+            "CLI, or set `sample_file:` in your options YAML."
+        )
+    print(f"  Options file:  {options_file}", file=sys.stderr)
+    print(f"  Sample file:   {sample_file}", file=sys.stderr)
+    print(f"  Repo folder:   {config.get('repo_folder', '(auto-detected)')}",
+          file=sys.stderr)
+    print(f"  Analysis name: {config.get('analysis_name', '(not set)')}",
+          file=sys.stderr)
+    print(f"  Full analysis: {config.get('full_analysis', '(not set)')}",
+          file=sys.stderr)
+
+    # Genomes
+    genomes = config.get("genomes", {})
+    if genomes:
+        print(f"  Genomes:       {', '.join(genomes.keys())}",
+              file=sys.stderr)
+    else:
+        print("  Genomes:       (none configured)", file=sys.stderr)
+
+    # Check files exist
+    errors = []
+    if not Path(sample_file).exists():
+        errors.append(f"Sample file not found: {sample_file}")
+    repo_folder = config.get("repo_folder")
+    if repo_folder and not Path(repo_folder).is_dir():
+        errors.append(f"Repo folder not found: {repo_folder}")
+    genome_fields = [
+        ("fasta_file", "FASTA"),
+        ("gff_file", "GFF"),
+        ("te_file", "TE"),
+    ]
+    url_checks = []
+    for gname, gconf in genomes.items():
+        for field, label in genome_fields:
+            value = gconf.get(field, "")
+            if not value:
+                continue
+            if is_url(value):
+                url_checks.append((gname, label, value))
+            elif not Path(value).exists():
+                errors.append(f"Genome {gname}: {label} not found: {value}")
+    if url_checks:
+        print(f"\n  Checking {len(url_checks)} genome URL(s)...",
+              file=sys.stderr)
+        for gname, label, url in url_checks:
+            ok, detail = url_resolves(url)
+            if not ok:
+                errors.append(
+                    f"Genome {gname}: {label} URL does not resolve "
+                    f"({detail}): {url}"
+                )
+
+    if errors:
+        print(f"\n  Found {len(errors)} error(s):", file=sys.stderr)
+        for e in errors:
+            print(f"    - {e}", file=sys.stderr)
+    else:
+        print("\n  Configuration looks good.", file=sys.stderr)
+
+    # Optionally run snakemake dry-run for full DAG validation
+    if not errors:
+        print("\n  Running snakemake dry-run for DAG validation...\n",
+              file=sys.stderr)
+        cmd = build_snakemake_cmd(args, extra_args, dry_run=True)
+        # In verbose mode, stream snakemake's output directly. Otherwise
+        # capture it and surface only the diagnostic summary (rule counts,
+        # files-to-be-removed, etc.) — most users care about "what would
+        # the pipeline do" rather than the full DAG dump. On dry-run
+        # failure, the captured output is dumped so the user can debug.
+        if args.verbose:
+            result = subprocess.run(cmd)
+            if result.returncode == 0:
+                print("\nEPICC: Validation passed.", file=sys.stderr)
+                maybe_render_graphs(args)
+            else:
+                print(f"\nEPICC: Dry-run validation failed (exit code "
+                      f"{result.returncode}).", file=sys.stderr)
+                return result.returncode
+            if getattr(args, "build_envs", False):
+                return _run_build_envs(args, extra_args)
+            return 0
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            summary = _summarize_dryrun(result.stdout, result.stderr)
+            if summary:
+                print(summary, file=sys.stderr)
+                print("", file=sys.stderr)
+            print("EPICC: Validation passed.", file=sys.stderr)
+            print("  (re-run with --verbose to see the full snakemake output)",
+                  file=sys.stderr)
+            maybe_render_graphs(args)
+            if getattr(args, "build_envs", False):
+                return _run_build_envs(args, extra_args)
+            return 0
+        else:
+            print(f"\nEPICC: Dry-run validation failed (exit code "
+                  f"{result.returncode}). Full snakemake output below:\n",
+                  file=sys.stderr)
+            if result.stdout:
+                sys.stderr.write(result.stdout)
+            if result.stderr:
+                sys.stderr.write(result.stderr)
+        return result.returncode
+
+    return 1 if errors else 0
+
+
+def _summarize_dryrun(stdout, stderr):
+    """Extract a concise summary from snakemake dry-run output.
+
+    Pulls the ``Job stats:`` table (rule → count, plus the totals row), any
+    ``Removing files...`` notice, and any leading warnings — drops the
+    per-job rule blocks that dominate the volume. Returns the formatted
+    block as a string, or ``None`` if nothing summary-like was found, in
+    which case the caller can decide how to fall back.
+    """
+    sections = []
+
+    # 1. Warnings printed before the DAG build (one-line each, on stderr).
+    warning_lines = [
+        line for line in stderr.splitlines()
+        if line.lstrip().startswith(("Warning", "WARNING", "[!]"))
+    ]
+    if warning_lines:
+        sections.append("\n".join(warning_lines))
+
+    # 2. The Job stats: table — present whenever snakemake plans any jobs.
+    lines = stdout.splitlines()
+    block = []
+    in_block = False
+    seen_total = False
+    for line in lines:
+        if line.startswith("Job stats:"):
+            in_block = True
+        if in_block:
+            block.append(line)
+            stripped = line.lstrip()
+            if stripped.startswith("total"):
+                seen_total = True
+                continue
+            if seen_total and line.strip() == "":
+                break
+    if block:
+        sections.append("\n".join(block).rstrip())
+
+    # 3. Files snakemake plans to remove (typical when temp/touch outputs
+    # are stale, or after a configuration change).
+    remove_lines = [
+        line for line in stdout.splitlines()
+        if line.lstrip().startswith("Removing")
+    ]
+    if remove_lines:
+        sections.append("Files to be removed:\n  " + "\n  ".join(remove_lines))
+
+    if not sections:
+        return None
+    return "\n\n".join(sections)
+
+
+# ---------------------------------------------------------------------------
+# `epicc output` — targeted single-product runs
+# ---------------------------------------------------------------------------
+
+# Per-plot-type metadata. Each entry declares:
+#   target  : Python format string for the snakemake target file. Available
+#             placeholders: {output_dir}, {analysis_name}, {ref_genome},
+#             {env}, {label}, {matrix}.
+#   inputs  : ordered list of (config_key, source) tuples. source is
+#             "input_file" → the user's --input-file, or "label" → the
+#             resolved plot label, or "ref_genome" → the resolved genome.
+#   needs   : list of arg attributes that must resolve to a value
+#             (e.g. "ref_genome", "env"). Surfaces a clear error early.
+#   format  : input-file format validator name ("tsv_geneids", "bed",
+#             "loci"). Used by validate_output_input().
+OUTPUT_TYPES = {
+    "rnaseq-histogram": {
+        "target": "{output_dir}/RNA/plots/plot_expression__{analysis_name}__{ref_genome}__{label}.pdf",
+        "inputs": [
+            ("rnaseq_target_file", "input_file"),
+            ("rnaseq_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "tsv_geneids",
+    },
+    "go": {
+        "target": "{output_dir}/RNA/GO/TopGO__{analysis_name}__{ref_genome}__{label}.done",
+        "inputs": [
+            ("rnaseq_target_file", "input_file"),
+            ("rnaseq_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "tsv_geneids",
+    },
+    "motifs": {
+        "target": "{output_dir}/ChIP/chkpts/motifs__{label}.done",
+        "inputs": [
+            ("motif_target_file", "input_file"),
+            ("motif_target_file_label", "label"),
+            ("motif_ref_genome", "ref_genome"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "bed",
+    },
+    "srna-clusters": {
+        "target": "{output_dir}/sRNA/clusters/{analysis_name}__{ref_genome}__on_{label}/Counts.txt",
+        "inputs": [
+            ("srna_target_file", "input_file"),
+            ("srna_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome"],
+        "format": "loci",
+    },
+    "heatmap": {
+        "target": "{output_dir}/combined/plots/Heatmap__{matrix}__{env}__{analysis_name}__{ref_genome}__{label}.pdf",
+        "inputs": [
+            ("heatmap_target_file", "input_file"),
+            ("heatmap_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome", "env"],
+        "format": "bed",
+    },
+    "metaplot": {
+        "target": "{output_dir}/combined/plots/Profile__{matrix}__{env}__{analysis_name}__{ref_genome}__{label}.pdf",
+        "inputs": [
+            ("heatmap_target_file", "input_file"),
+            ("heatmap_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome", "env"],
+        "format": "bed",
+    },
+    "browser": {
+        "target": "{output_dir}/combined/plots/Browser_{label}__{env}__{analysis_name}__{ref_genome}.pdf",
+        "inputs": [
+            ("browser_target_file", "input_file"),
+            ("browser_target_file_label", "label"),
+        ],
+        "needs": ["ref_genome", "env"],
+        "format": "bed",
+    },
+}
+
+VALID_OUTPUT_ENVS = ("all", "most", "ChIP", "ATAC", "RNA", "sRNA", "mC", "mCG", "mCHG", "mCHH")
+VALID_OUTPUT_MATRICES = ("regions", "tss", "tes")
+
+
+def derive_label_from_filename(path):
+    """Strip extension(s) from a basename to use as a default plot label.
+
+    "/data/target_genes.txt" → "target_genes"
+    "/data/regions.bed.gz"   → "regions"
+    """
+    name = Path(path).name
+    while True:
+        stem, ext = os.path.splitext(name)
+        if not ext:
+            break
+        name = stem
+    return name or "target"
+
+
+def validate_output_input(input_path, fmt):
+    """Lightweight format check on the user-provided input file.
+
+    "tsv_geneids" : at least one non-comment line, first column non-empty.
+    "bed"         : at least one non-comment line with ≥3 cols where
+                    col2/col3 are non-negative integers.
+    "loci"        : just verify the file is non-empty and readable.
+
+    Raises SystemExit with a clear message on validation failure.
+    """
+    p = Path(input_path)
+    if not p.exists():
+        sys.exit(f"Error: --input-file not found: {input_path}")
+    if p.stat().st_size == 0:
+        sys.exit(f"Error: --input-file is empty: {input_path}")
+
+    # Open .gz transparently
+    import gzip
+    opener = gzip.open if str(p).endswith(".gz") else open
+    try:
+        with opener(p, "rt") as fh:
+            first = None
+            for line in fh:
+                line = line.rstrip("\n")
+                if not line or line.startswith("#"):
+                    continue
+                first = line
+                break
+    except OSError as e:
+        sys.exit(f"Error: cannot read --input-file: {e}")
+
+    if first is None:
+        sys.exit(f"Error: --input-file has no data rows: {input_path}")
+
+    if fmt == "tsv_geneids":
+        cols = first.split("\t")
+        if not cols[0].strip():
+            sys.exit(
+                f"Error: first column of {input_path} is empty (expected gene IDs)."
+            )
+    elif fmt == "bed":
+        cols = first.split("\t")
+        if len(cols) < 3:
+            sys.exit(
+                f"Error: {input_path} doesn't look like BED — expected ≥3 "
+                f"tab-separated columns, got {len(cols)}."
+            )
+        try:
+            start = int(cols[1])
+            end = int(cols[2])
+        except ValueError:
+            # Could be a header row; let snakemake's has_header handle it
+            return
+        if start < 0 or end < start:
+            sys.exit(
+                f"Error: {input_path} BED coordinates look wrong on the "
+                f"first data row (start={cols[1]}, end={cols[2]})."
+            )
+    elif fmt == "loci":
+        # ShortStack accepts gff3, bed, or simple chr:start-end; just confirm readability
+        return
+    else:
+        sys.exit(f"Internal error: unknown input format '{fmt}'")
+
+
+def cmd_output(args, extra_args):
+    """Run snakemake on a single user-targeted plot/output."""
+    repo = find_repo_root()
+    if not _is_installed_mode():
+        os.chdir(repo)
+
+    spec = OUTPUT_TYPES[args.plot_type]
+
+    # --- Resolve label
+    label = args.plot_label or derive_label_from_filename(args.input_file)
+    # Strip any path components and disallow path separators
+    if "/" in label or "\\" in label or label.startswith("-"):
+        sys.exit(
+            f"Error: --plot-label must be a plain identifier (no path "
+            f"separators, no leading dash): got '{label}'"
+        )
+
+    # --- Validate input file format
+    validate_output_input(args.input_file, spec["format"])
+
+    # --- Load options to resolve analysis_name / output_dir defaults
+    try:
+        import yaml
+    except ImportError:
+        sys.exit("Error: PyYAML not available. Activate the epicc conda environment.")
+    if not Path(args.options).exists():
+        sys.exit(f"Error: Options file not found: {args.options}")
+    with open(args.options) as f:
+        cfg = yaml.safe_load(f) or {}
+
+    analysis_name = args.analysis_name or cfg.get("analysis_name") or "epicc"
+    output_dir = args.output_dir or cfg.get("output_dir", "results")
+    ref_genome = args.ref_genome
+    env = args.env
+    matrix = args.matrix or "regions"
+
+    # --- Required-arg gating per type
+    for need in spec["needs"]:
+        if not getattr(args, need.replace("-", "_"), None):
+            sys.exit(
+                f"Error: --{need.replace('_', '-')} is required for "
+                f"--plot-type {args.plot_type}."
+            )
+    if "env" in spec["needs"] and env not in VALID_OUTPUT_ENVS:
+        sys.exit(
+            f"Error: --env {env!r} is not one of "
+            f"{', '.join(VALID_OUTPUT_ENVS)}."
+        )
+    if matrix not in VALID_OUTPUT_MATRICES:
+        sys.exit(
+            f"Error: --matrix {matrix!r} is not one of "
+            f"{', '.join(VALID_OUTPUT_MATRICES)}."
+        )
+
+    # --- Build target path
+    target = spec["target"].format(
+        output_dir=output_dir,
+        analysis_name=analysis_name,
+        ref_genome=ref_genome or "",
+        env=env or "",
+        label=label,
+        matrix=matrix,
+    )
+
+    # --- Build snakemake config overrides for the target's input wiring
+    sources = {
+        "input_file": args.input_file,
+        "label": label,
+        "ref_genome": ref_genome or "",
+    }
+    config_overrides = []
+    for cfg_key, source in spec["inputs"]:
+        config_overrides.append(f"{cfg_key}={sources[source]}")
+    if args.analysis_name:
+        config_overrides.append(f"analysis_name={analysis_name}")
+
+    # --- Build snakemake command (re-uses the same execution-mode logic)
+    cmd = ["snakemake"]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+    if not Path(args.options).exists():
+        sys.exit(f"Error: Options file not found: {args.options}")
+    cmd += ["--configfile", args.options]
+    workflow_profile = getattr(args, "workflow_profile", None) or str(
+        repo / DEFAULT_WORKFLOW_PROFILE
+    )
+    if Path(workflow_profile).is_dir():
+        cmd += ["--workflow-profile", workflow_profile]
+    profile, cores = detect_execution_mode(args)
+    if profile:
+        cmd += ["--profile", profile]
+    else:
+        cmd += ["--use-conda", "--conda-frontend", "conda", "--cores", str(cores)]
+    if args.samples:
+        if not Path(args.samples).exists():
+            sys.exit(f"Error: Sample file not found: {args.samples}")
+        config_overrides.append(f"sample_file={args.samples}")
+    if args.output_dir:
+        config_overrides.append(f"output_dir={args.output_dir}")
+    if args.genome_dir:
+        config_overrides.append(f"genome_dir={args.genome_dir}")
+    if getattr(args, "use_node_tmpdir", False):
+        config_overrides.append("use_node_tmpdir=true")
+    if config_overrides:
+        cmd += ["--config"] + config_overrides
+    if not getattr(args, "no_rerun_incomplete", False):
+        cmd.append("--rerun-incomplete")
+    if args.verbose:
+        cmd.append("--printshellcmds")
+    if args.quiet:
+        cmd.append("--quiet")
+    if args.dry_run:
+        cmd.append("--dry-run")
+    if extra_args:
+        cmd += extra_args
+    # Use -- separator to prevent Snakemake from interpreting the target as an option
+    cmd.append("--")
+    cmd.append(target)
+
+    print(f"EPICC: Targeting output → {target}", file=sys.stderr)
+    if args.verbose:
+        print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
+def cmd_perf(args, extra_args):
+    """Generate an execution timing report from a pipeline run's logs."""
+    repo = find_repo_root()
+    if not _is_installed_mode():
+        os.chdir(repo)
+
+    profiler = repo / "dev" / "profile_snakemake_log.py"
+    if not profiler.exists():
+        sys.exit(f"Error: Profiler script not found: {profiler}")
+
+    cmd = [sys.executable, str(profiler)]
+
+    if args.logfile:
+        cmd.append(args.logfile)
+    elif args.single:
+        cmd.append("--single")
+
+    if args.html:
+        cmd += ["--html", args.html]
+
+    if args.multi:
+        cmd += ["--multi"] + args.multi
+
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
+def cmd_unlock(args, extra_args):
+    """Unlock the working directory after a failed or interrupted run."""
+    repo = find_repo_root()
+    if not _is_installed_mode():
+        os.chdir(repo)
+
+    print("EPICC: Unlocking working directory...", file=sys.stderr)
+    cmd = ["snakemake", "--unlock"]
+    if _is_installed_mode():
+        cmd += ["--snakefile", str(repo / "workflow" / "Snakefile")]
+    result = subprocess.run(cmd)
+    if result.returncode == 0:
+        print("EPICC: Unlock complete.", file=sys.stderr)
+    else:
+        print(f"EPICC: Unlock failed (exit code {result.returncode}).",
+              file=sys.stderr)
+    return result.returncode
+
+
+def cmd_clean(args, extra_args):
+    """Selective cleanup of pipeline artifacts."""
+    repo = find_repo_root()
+    # Installed mode: pipeline artifacts (.snakemake/, results/, etc.) live
+    # in the user's project CWD, not in the installed share directory.
+    run_dir = Path.cwd() if _is_installed_mode() else repo
+    if not _is_installed_mode():
+        os.chdir(repo)
+
+    if not any([args.intermediates, args.conda_envs, args.logs, args.all]):
+        print("Nothing to clean. Specify --intermediates, --conda-envs, "
+              "--logs, or --all.", file=sys.stderr)
+        return 1
+
+    if args.logs or args.all:
+        log_dir = run_dir / ".snakemake" / "log"
+        if log_dir.exists():
+            logs = list(log_dir.glob("*.snakemake.log"))
+            if len(logs) > 1:
+                # Keep the most recent, remove the rest
+                logs.sort(key=lambda p: p.stat().st_mtime)
+                old_logs = logs[:-1]
+                print(f"Removing {len(old_logs)} old log file(s) "
+                      f"(keeping most recent)...", file=sys.stderr)
+                for log in old_logs:
+                    log.unlink()
+            else:
+                print("No old logs to clean.", file=sys.stderr)
+
+    if args.conda_envs or args.all:
+        print("Cleaning unused conda environments...", file=sys.stderr)
+        result = subprocess.run(
+            ["snakemake", "--sdm", "conda", "--conda-cleanup-envs"],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0:
+            print("  Done.", file=sys.stderr)
+        else:
+            print(f"  Failed: {result.stderr.strip()}", file=sys.stderr)
+
+    if args.intermediates or args.all:
+        # Delete checkpoint files to force reanalysis
+        output_dir = args.output_dir or "results"
+        chkpt_dirs = list(run_dir.glob(f"{output_dir}/*/chkpts"))
+        if chkpt_dirs:
+            print(f"Removing checkpoint files from {len(chkpt_dirs)} "
+                  f"environment(s)...", file=sys.stderr)
+            for d in chkpt_dirs:
+                for f in d.iterdir():
+                    f.unlink()
+            print("  Done. Re-run the pipeline to regenerate analysis.",
+                  file=sys.stderr)
+        else:
+            print("No checkpoint files found.", file=sys.stderr)
+
+    return 0
+
+
+def cmd_init_profile(args, extra_args):
+    """Install a cluster execution profile template to the Snakemake config dir."""
+    repo = find_repo_root()
+    template_dir = repo / "profiles" / args.profile_type
+    if not (template_dir / "config.yaml").exists():
+        available = sorted(
+            p.name for p in (repo / "profiles").iterdir()
+            if p.is_dir() and (p / "config.yaml").exists() and p.name != "default"
+        )
+        sys.exit(
+            f"Error: No profile template for '{args.profile_type}'. "
+            f"Available: {', '.join(available)}."
+        )
+
+    profile_name = args.name or args.profile_type
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    smk_config = (Path(xdg) / "snakemake") if xdg else (Path.home() / ".config" / "snakemake")
+    dest = smk_config / profile_name
+
+    if dest.exists() and not args.force:
+        sys.exit(
+            f"Error: Profile '{profile_name}' already exists at {dest}.\n"
+            f"  Use --force to overwrite, or choose a different name."
+        )
+
+    dest.mkdir(parents=True, exist_ok=True)
+    for src in template_dir.iterdir():
+        import shutil as _shutil
+        _shutil.copy2(src, dest / src.name)
+
+    print(f"EPICC: Profile '{args.profile_type}' installed to {dest}/config.yaml",
+          file=sys.stderr)
+    print(f"  Edit the EDIT: markers in that file for your cluster (account,",
+          file=sys.stderr)
+    print(f"  TMPDIR path, per-rule resource overrides).", file=sys.stderr)
+    print(f"  Then run:  epicc run --samples <file.tsv> --profile {profile_name}",
+          file=sys.stderr)
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+
+def add_common_options(parser):
+    """Add options shared by run/validate."""
+    parser.add_argument(
+        "--options", default=DEFAULT_OPTIONS, metavar="FILE",
+        help=f"Path to options YAML file (default: {DEFAULT_OPTIONS})",
+    )
+    parser.add_argument(
+        "--samples", metavar="FILE",
+        help="Path to sample sheet TSV (overrides options file value)",
+    )
+    parser.add_argument(
+        "--cores", type=int, metavar="N",
+        help="Cores for local execution (default: auto, half of nproc)",
+    )
+    parser.add_argument(
+        "--profile", metavar="DIR",
+        help=f"Cluster (execution) profile directory with executor and "
+             f"site-specific settings (default: auto-detect; uses "
+             f"{DEFAULT_PROFILE} if sbatch is available)",
+    )
+    parser.add_argument(
+        "--workflow-profile", metavar="DIR",
+        help=f"Workflow profile directory with per-rule resources/threads "
+             f"(default: {DEFAULT_WORKFLOW_PROFILE})",
+    )
+    parser.add_argument(
+        "--output-dir", metavar="DIR",
+        help="Output directory prefix (default: results)",
+    )
+    parser.add_argument(
+        "--genome-dir", metavar="DIR",
+        help="Genome directory prefix (default: genomes)",
+    )
+    parser.add_argument(
+        "--keep-intermediates", metavar="TIER",
+        choices=["none", "standard", "custom", "all"],
+        help="Intermediate file retention tier (none/standard/custom/all)",
+    )
+    parser.add_argument(
+        "--use-node-tmpdir", action="store_true",
+        help="Skip the workflow-level TMPDIR override and inherit the "
+             "cluster's default TMPDIR. By default, every job gets its own "
+             "subdir under <output_dir>/.tmp/ to avoid ENOSPC on sites with "
+             "a small in-memory /tmp tmpfs.",
+    )
+    verbosity = parser.add_mutually_exclusive_group()
+    verbosity.add_argument(
+        "--verbose", "-v", action="store_true",
+        help="Verbose output (print shell commands)",
+    )
+    verbosity.add_argument(
+        "--quiet", "-q", action="store_true",
+        help="Minimal output",
+    )
+
+
+def add_run_options(parser):
+    """Add options specific to run."""
+    parser.add_argument(
+        "--target", metavar="TARGET",
+        help="Named target (default: all)",
+    )
+    parser.add_argument(
+        "--until", metavar="RULE",
+        help="Stop after this rule completes",
+    )
+    parser.add_argument(
+        "--forcerun", nargs="+", metavar="RULE",
+        help="Force re-execution of specific rules",
+    )
+    parser.add_argument(
+        "--auto-unlock", action="store_true",
+        help="If a stale Snakemake lock is detected at startup, clear it and "
+             "continue (default: halt and report the lock, like snakemake). "
+             "Only use when you are sure no other run is active on this "
+             "directory; run 'epicc unlock' to clear a lock manually",
+    )
+    parser.add_argument(
+        "--no-rerun-incomplete", action="store_true",
+        help="Don't pass --rerun-incomplete to snakemake. Default behavior "
+             "is to re-run any jobs Snakemake marked incomplete on a prior "
+             "interrupted run; opt out when you want to inspect which jobs "
+             "are flagged incomplete or force a fresh start without "
+             "re-running them.",
+    )
+
+
+def add_graph_options(parser):
+    """Add --dag / --rulegraph file outputs.
+
+    Format is inferred from the file extension (.png/.svg/.pdf via graphviz
+    ``dot``; .dot writes raw dot text). Available on validate.
+    """
+    parser.add_argument(
+        "--dag", metavar="FILE",
+        help="Render the per-job DAG to FILE (format from extension: "
+             "png/svg/pdf/dot). Requires graphviz 'dot' for non-dot formats.",
+    )
+    parser.add_argument(
+        "--rulegraph", metavar="FILE",
+        help="Render the rule-level graph to FILE (format from extension).",
+    )
+
+
+def add_analysis_options(parser):
+    """Add analysis configuration overrides for run/validate.
+
+    All flags override the corresponding setting in the options YAML file.
+    Omitting a flag leaves the options file value unchanged.
+    Top-level settings go through --config directly; nested settings
+    (dmr_thresholds.*, chip_callpeaks.params, cut_callpeaks.*) are applied
+    via a temporary merged config file written by _prepare_options_file.
+    """
+    # --- Aligners and mapping ---
+    parser.add_argument(
+        "--chip-aligner", dest="chip_aligner", choices=["bowtie2", "chromap"],
+        metavar="{bowtie2,chromap}",
+        help="ChIP/CUT&RUN/CUT&Tag aligner (overrides chip_aligner). "
+             "bowtie2 (default) is recommended for PE data; chromap is ~10x "
+             "faster but yields low proper-pair rates on PE libraries.",
+    )
+    parser.add_argument(
+        "--atac-aligner", dest="atac_aligner", choices=["bowtie2", "chromap"],
+        metavar="{bowtie2,chromap}",
+        help="ATAC-seq aligner (overrides atac_aligner). "
+             "Same speed/quality trade-offs as --chip-aligner.",
+    )
+    parser.add_argument(
+        "--chip-mapping-strategy", dest="chip_mapping_strategy",
+        choices=["default", "repeat", "repeatall", "all"], metavar="STRATEGY",
+        help="ChIP/CUT&RUN/CUT&Tag mapping strategy (overrides chip_mapping_strategy): "
+             "default, repeat, repeatall, or all.",
+    )
+    parser.add_argument(
+        "--atac-mapping-strategy", dest="atac_mapping_strategy",
+        choices=["default", "repeat", "repeatall", "all"], metavar="STRATEGY",
+        help="ATAC-seq mapping strategy (overrides atac_mapping_strategy).",
+    )
+
+    # --- Analysis toggles ---
+    _fa = parser.add_mutually_exclusive_group()
+    _fa.add_argument(
+        "--full-analysis", dest="full_analysis", action="store_true",
+        help="Enable full downstream analysis (overrides full_analysis in options).",
+    )
+    _fa.add_argument(
+        "--no-full-analysis", dest="full_analysis", action="store_false",
+        help="Skip downstream analysis; mapping and peak-calling only.",
+    )
+    parser.set_defaults(full_analysis=None)
+
+    _te = parser.add_mutually_exclusive_group()
+    _te.add_argument(
+        "--te-analysis", dest="te_analysis", action="store_true",
+        help="Enable TE-annotation analysis (overrides te_analysis in options).",
+    )
+    _te.add_argument(
+        "--no-te-analysis", dest="te_analysis", action="store_false",
+        help="Disable TE-annotation analysis.",
+    )
+    parser.set_defaults(te_analysis=None)
+
+    _go = parser.add_mutually_exclusive_group()
+    _go.add_argument(
+        "--go", dest="GO", action="store_true",
+        help="Enable GO enrichment analysis (overrides GO in options).",
+    )
+    _go.add_argument(
+        "--no-go", dest="GO", action="store_false",
+        help="Disable GO enrichment analysis.",
+    )
+    parser.set_defaults(GO=None)
+
+    _dedup = parser.add_mutually_exclusive_group()
+    _dedup.add_argument(
+        "--rna-deduplicate", dest="rna_deduplicate", action="store_true",
+        help="Mark/remove duplicate reads for mRNA-seq (overrides rna_deduplicate "
+             "in options). Only meaningful with UMIs, which are not yet handled. "
+             "RAMPAGE is deduplicated regardless.",
+    )
+    _dedup.add_argument(
+        "--no-rna-deduplicate", dest="rna_deduplicate", action="store_false",
+        help="Disable mRNA-seq read deduplication (the default).",
+    )
+    parser.set_defaults(rna_deduplicate=None)
+
+    # --- Methylation contexts ---
+    parser.add_argument(
+        "--methylation-contexts", dest="methylation_contexts",
+        type=lambda s: [c.strip().upper() for c in s.split(",")],
+        metavar="CONTEXTS",
+        help="Comma-separated methylation contexts to analyze "
+             "(overrides methylation_contexts). E.g. 'CG' for animal genomes "
+             "where non-CpG methylation is negligible (default: CG,CHG,CHH).",
+    )
+
+    # --- DMR settings ---
+    parser.add_argument(
+        "--dmr-caller", dest="dmr_caller", choices=["metilene", "dmrcaller"],
+        metavar="{metilene,dmrcaller}",
+        help="DMR caller for Bismark-aligned samples (overrides dmr_caller). "
+             "metilene (default) is multi-threaded and faster; "
+             "dmrcaller uses beta-regression statistics.",
+    )
+    parser.add_argument(
+        "--dmr-min-diff", dest="dmr_min_diff", type=_parse_dmr_min_diff,
+        metavar="SPEC",
+        help="Minimum mean methylation difference to call a DMR "
+             "(overrides dmr_thresholds.min_diff). "
+             "SPEC: 'auto' (data-driven per-pair calibration), "
+             "a single float applied to all contexts (e.g. 0.2), "
+             "or per-context values 'CG=0.3,CHG=0.2,CHH=0.1'.",
+    )
+    parser.add_argument(
+        "--dmr-min-cytosines", dest="dmr_min_cytosines", type=int, metavar="N",
+        help="Minimum cytosine/CpG count per DMR window "
+             "(overrides dmr_thresholds.min_cytosines; default: 5).",
+    )
+    parser.add_argument(
+        "--dmr-q-value", dest="dmr_q_value", type=float, metavar="Q",
+        help="FDR q-value (adjusted p-value) threshold for DMR significance "
+             "(overrides dmr_thresholds.q_value; default: 0.01). Applies to "
+             "both callers: DMRcaller filters internally on its BH-adjusted "
+             "pValue, metilene filters on its q-value column.",
+    )
+    parser.add_argument(
+        "--dmr-sigma-n", dest="dmr_sigma_n", type=float, metavar="N",
+        help="Noise-floor sigma multiplier for data-driven min_diff calibration "
+             "(overrides dmr_thresholds.sigma_n; default: 3.0; "
+             "only used when --dmr-min-diff auto).",
+    )
+
+    # --- Peak calling ---
+    parser.add_argument(
+        "--chip-callpeaks-params", dest="chip_callpeaks_params", metavar="STR",
+        help="MACS2 parameters for ChIP peak calling "
+             "(overrides chip_callpeaks.params; "
+             "default: '--keep-dup all --nomodel').",
+    )
+    parser.add_argument(
+        "--cut-broad-caller", dest="cut_broad_caller",
+        choices=["epic2", "seacr", "macs2"], metavar="{epic2,seacr,macs2}",
+        help="Peak caller for CUT&RUN/CUT&Tag broad marks "
+             "(overrides cut_callpeaks.broad_caller; default: epic2).",
+    )
+    parser.add_argument(
+        "--cut-narrow-caller", dest="cut_narrow_caller",
+        choices=["seacr", "macs2"], metavar="{seacr,macs2}",
+        help="Peak caller for CUT&RUN/CUT&Tag narrow marks/TFs "
+             "(overrides cut_callpeaks.narrow_caller; default: seacr).",
+    )
+
+
+def build_parser():
+    """Build the argument parser with subcommands."""
+    parser = argparse.ArgumentParser(
+        prog="epicc",
+        description=DESCRIPTION,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # --- run ---
+    p_run = subparsers.add_parser(
+        "run", help="Execute the pipeline",
+        description="Run the EPICC pipeline. Arguments after -- are passed "
+                    "directly to snakemake.",
+    )
+    add_common_options(p_run)
+    add_run_options(p_run)
+    add_analysis_options(p_run)
+
+    # --- validate ---
+    p_val = subparsers.add_parser(
+        "validate", help="Validate configuration",
+        description="Check the options file and sample sheet for errors, "
+                    "then run a snakemake dry-run for full DAG validation.",
+    )
+    add_common_options(p_val)
+    add_graph_options(p_val)
+    add_analysis_options(p_val)
+    p_val.add_argument(
+        "--build-envs", action="store_true",
+        help="After validation passes, pre-build all rule conda envs "
+             "(snakemake --conda-create-envs-only). Useful before sbatch-"
+             "wrapped runs on clusters where conda env creation fails "
+             "from inside a SLURM job (issue #25). Run from a login node.",
+    )
+
+    # --- output ---
+    p_out = subparsers.add_parser(
+        "output", help="Generate a single targeted output (plot/GO/clusters/browser)",
+        description="Run a single, user-targeted output type against a "
+                    "supplied input file. Available types: "
+                    + ", ".join(OUTPUT_TYPES.keys()) + ".",
+    )
+    add_common_options(p_out)
+    p_out.add_argument(
+        "--plot-type", required=True, choices=sorted(OUTPUT_TYPES.keys()),
+        help="Output product to generate.",
+    )
+    p_out.add_argument(
+        "--input-file", required=True, metavar="PATH",
+        help="Input data file for the target output (gene list, BED, "
+             "GFF/loci file). Format is validated per --plot-type.",
+    )
+    p_out.add_argument(
+        "--plot-label", metavar="LABEL",
+        help="Label embedded in output filenames. Defaults to the input "
+             "file's basename without extension.",
+    )
+    p_out.add_argument(
+        "--analysis-name", metavar="NAME",
+        help="Override analysis_name from the options file.",
+    )
+    p_out.add_argument(
+        "--ref-genome", metavar="GENOME",
+        help="Reference genome name (must match a genome configured in "
+             "the options file). Required for most plot types.",
+    )
+    p_out.add_argument(
+        "--env", metavar="ENV", choices=VALID_OUTPUT_ENVS,
+        help="Data type for env-aware plots (heatmap/metaplot/browser): "
+             + ", ".join(VALID_OUTPUT_ENVS) + ".",
+    )
+    p_out.add_argument(
+        "--matrix", metavar="KIND", choices=VALID_OUTPUT_MATRICES,
+        default="regions",
+        help="Matrix layout for heatmap/metaplot: regions (whole feature), "
+             "tss, or tes. Default: regions.",
+    )
+    p_out.add_argument(
+        "--dry-run", action="store_true",
+        help="Resolve and print the snakemake plan without running.",
+    )
+
+    # --- perf ---
+    p_perf = subparsers.add_parser(
+        "perf", help="Profile pipeline performance",
+        description="Generate an execution timing report from snakemake log "
+                    "files. By default, all logs from the most recent resumed "
+                    "run are aggregated. Wraps dev/profile_snakemake_log.py.",
+    )
+    p_perf.add_argument(
+        "logfile", nargs="?",
+        help="Path to a specific .snakemake.log file, or a run's results "
+             "directory (output_dir) to aggregate that run's logs "
+             "(default: aggregate latest run)",
+    )
+    p_perf.add_argument(
+        "--single", action="store_true",
+        help="Profile only the newest single log, without aggregating",
+    )
+    p_perf.add_argument(
+        "--html", metavar="FILE",
+        help="Write HTML report to FILE",
+    )
+    p_perf.add_argument(
+        "--multi", nargs="+", metavar="LABEL=LOG",
+        help="Generate multi-section HTML: 'Label=path/to/log' ...",
+    )
+
+    # --- unlock ---
+    subparsers.add_parser(
+        "unlock", help="Unlock the working directory",
+        description="Remove Snakemake's directory lock after a failed or "
+                    "interrupted run. Equivalent to 'snakemake --unlock'.",
+    )
+
+    # --- init-profile ---
+    p_init = subparsers.add_parser(
+        "init-profile",
+        help="Install a cluster execution profile to ~/.config/snakemake/",
+        description=(
+            "Copy a bundled cluster profile template to the Snakemake user "
+            "configuration directory (~/.config/snakemake/NAME/config.yaml). "
+            "After installation, edit the EDIT: markers in that file, then use "
+            "'epicc run --profile NAME'. Useful when EPICC is installed via "
+            "conda and the bundled profiles/ directory is not in the project tree."
+        ),
+    )
+    p_init.add_argument(
+        "profile_type", choices=["slurm", "uge"],
+        metavar="TYPE",
+        help="Cluster scheduler type: 'slurm' (Slurm Workload Manager) or "
+             "'uge' (Univa/Open Grid Engine, qsub-based).",
+    )
+    p_init.add_argument(
+        "name", nargs="?",
+        metavar="NAME",
+        help="Profile name (used with --profile NAME). Defaults to TYPE.",
+    )
+    p_init.add_argument(
+        "--force", action="store_true",
+        help="Overwrite an existing profile with the same name.",
+    )
+
+    # --- clean ---
+    p_clean = subparsers.add_parser(
+        "clean", help="Clean pipeline artifacts",
+        description="Selectively remove pipeline artifacts like old logs, "
+                    "unused conda environments, and checkpoint files.",
+    )
+    p_clean.add_argument(
+        "--output-dir", metavar="DIR",
+        help="Output directory to clean (default: results)",
+    )
+    p_clean.add_argument(
+        "--intermediates", action="store_true",
+        help="Remove checkpoint files (forces reanalysis on next run)",
+    )
+    p_clean.add_argument(
+        "--conda-envs", action="store_true",
+        help="Remove unused conda environments",
+    )
+    p_clean.add_argument(
+        "--logs", action="store_true",
+        help="Remove old snakemake log files (keeps most recent)",
+    )
+    p_clean.add_argument(
+        "--all", action="store_true",
+        help="All of the above",
+    )
+
+    return parser
+
+
+def main():
+    parser = build_parser()
+
+    # Split args at -- to separate epicc args from snakemake passthrough
+    argv = sys.argv[1:]
+    if "--" in argv:
+        split_idx = argv.index("--")
+        epicc_args = argv[:split_idx]
+        extra_args = argv[split_idx + 1:]
+    else:
+        epicc_args = argv
+        extra_args = []
+
+    args = parser.parse_args(epicc_args)
+
+    dispatch = {
+        "run": cmd_run,
+        "validate": cmd_validate,
+        "output": cmd_output,
+        "unlock": cmd_unlock,
+        "perf": cmd_perf,
+        "clean": cmd_clean,
+        "init-profile": cmd_init_profile,
+    }
+
+    handler = dispatch.get(args.command)
+    if handler is None:
+        parser.print_help()
+        return 1
+
+    return handler(args, extra_args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,494 @@
+# Path to the repository (optional — auto-detected from Snakefile location if omitted)
+#repo_folder: "/path/to/epigeneticbutton"
+
+# Name of the run
+analysis_name: "epicc"
+
+# Path to the sample metadata file (required).
+# No default is provided; pass --samples on the CLI or set this here.
+# See config/example_samples.tsv for a documented template.
+#sample_file: "config/my_samples.tsv"
+
+# Reference genomes — each entry defines paths to annotation files and
+# species-level parameters. ColCEN below is a fully working public-URL
+# example (Arabidopsis thaliana, schatzlab Col-CEN v1.2 + EDTA TE
+# annotation). Add your own genomes following the same pattern: every
+# `*_file` field accepts a local path (absolute or relative to the repo)
+# or an HTTP(S) URL; gzipped inputs are handled transparently.
+genomes:
+  ColCEN:
+    genus: "Arabidopsis"
+    species: "thaliana"
+    fasta_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2.fasta.gz" # can be gzipped or not
+    gff_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/Col-CEN_v1.2_genes.tair10.gff3.gz" # can be gzipped or not
+    #gtf_file: "<path/to/your.gtf(.gz)>"  # optional override (auto-derived from GFF via gffread if omitted)
+    te_file: "https://github.com/schatzlab/Col-CEN/raw/main/v1.2/t2t-col.20201227.fasta.mod.EDTA.TEanno.gff3.gz" # .bed(.gz) or .gff3(.gz) — GFF3 auto-converted to BED6;
+    gaf_file: "data/ColCEN_infoGO.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+    gene_info_file: "data/ColCEN_genes_info.tab.gz" # can be gzipped or not; only required for Gene Ontology analysis (GO: true).
+    #structural_rna_fafile: "<auto>"  # optional override; omit or set to "<auto>" to auto-derive via Infernal/Rfam
+    #star_index: "--genomeSAindexNbases 12"  # optional override (auto-computed from FASTA if omitted)
+    #genomesize: 1.3e8  # optional override (auto-computed as total bases − N bases if omitted)
+    ncbi_taxid: "3702"
+
+  # ── Additional genome examples (commented out) ────────────────────────
+  # The blocks below are starting templates for popular references.
+  # Uncomment whichever you need, or copy a block to add your own
+  # genome. Every `*_file` field accepts a local path (absolute or
+  # relative to the repo) or an HTTP(S) URL; gzipped inputs are
+  # handled transparently. Auto-derived fields (gtf_file, genomesize,
+  # star_index, structural_rna_fafile) can be set to "<auto>" or
+  # omitted entirely.
+  #
+  # --- Schizosaccharomyces pombe (PomBase, dated release) ---
+  # Same files used by tests/integration/test_options_pombe.yaml.
+  #Spombe:
+  #  genus: "Schizosaccharomyces"
+  #  species: "pombe"
+  #  fasta_file: "https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/genome_sequence/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
+  #  gff_file: "https://www.pombase.org/monthly_releases/2026/pombase-2026-02-01/gff3/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
+  #  ncbi_taxid: "4896"
+  #
+  # --- Arabidopsis thaliana TAIR10 (Ensembl Plants) ---
+  # Update the release-XX number to the current Ensembl Plants release.
+  #TAIR10:
+  #  genus: "Arabidopsis"
+  #  species: "thaliana"
+  #  fasta_file: "https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-62/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz"
+  #  gff_file: "https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-62/gff3/arabidopsis_thaliana/Arabidopsis_thaliana.TAIR10.62.gff3.gz"
+  #  ncbi_taxid: "3702"
+  #
+  # --- Generic skeleton for any new genome ---
+  #MyGenome:
+  #  genus: "<Genus>"
+  #  species: "<species>"
+  #  fasta_file: "<path/to/genome.fa(.gz)>"
+  #  gff_file: "<path/to/genes.gff3(.gz)>"
+  #  te_file: "<path/to/transposable_elements.bed(.gz) or .gff3(.gz)>"
+  #  gaf_file: "<path/to/GO_annotations.tab(.gz)>"        # only for GO: true
+  #  gene_info_file: "<path/to/gene_info.tab(.gz)>"       # only for GO: true
+  #  #structural_rna_fafile: "<auto>"
+  #  #star_index: "--genomeSAindexNbases 14"
+  #  ncbi_taxid: "<NCBI taxonomy ID>"
+
+
+# Output options: "all": returns all QC, stats, plots and files (i.e fastqc, fingerprints, idr, stats table and plots); "none" if you don't want the fastqc; other options can be added.
+full_analysis: true
+te_analysis: false
+QC_option: "none" # options: ["none"|"all"] for fastqc
+GO: false # If switching to true, make sure the database is created, or the required files below are edited
+
+# Input options: By default, will perform the analysis from the raw fastqs. If intermediate files are already available, switch the corresponding format to "true".
+trimmed_fastqs: false # if fastqs are already trimmed (fastq file(s) (can be gzipped) specified in the Read_files column of the sample sheet, 1 file if SE, comma-separated R1,R2 if PE)
+aligned_bams: false # if ChIP-seq alignments are already performed (a single sam or bam file specified in Read_files). Only works for ChIP-seq data (histone or TF) since other output from the alignment steps are necessary for the other data types (e.g. count table for RNA-seq)
+
+# Intermediate file retention
+# Tier presets control which intermediate files are kept after downstream rules finish.
+#   "standard" (default): keeps per-replicate final BAMs; cleans trimmed FASTQs, merged BAMs, shifted BAMs
+#   "none": cleans all intermediates including final BAMs (most aggressive)
+#   "all": keeps everything (most disk usage)
+#   "custom": uses the per-category options below
+keep_intermediates: "standard"
+
+# Per-category options (only used when keep_intermediates: "custom")
+keep_trimmed_fastqs: false   # trimmed FASTQ files (consumed by mapping rules)
+keep_final_bams: true        # per-replicate final BAMs and indices (consumed by bigwigs, peaks, merging)
+keep_merged_bams: false      # merged-replicate BAMs and indices (consumed by analysis-level tracks/peaks)
+keep_shifted_bams: false     # ATAC Tn5-shifted BAMs and indices (consumed by ATAC bigwigs/peaks)
+keep_cx_reports: false       # per-replicate CX methylation reports (consumed by merging; keep if passing per-rep data to DMRcaller)
+keep_dmc_intermediates: false # dmC aligned modBAMs and bedMethyl pileup files (useful for IGV or custom modification analysis)
+
+# TMPDIR routing
+# Default (false): each job gets its own subdir under {output_dir}/.tmp/ and
+# TMPDIR is pointed there, so sort/samtools/STAR/fasterq-dump/deeptools
+# spill onto the project filesystem rather than the cluster's /tmp. Avoids
+# ENOSPC on sites where /tmp is a tmpfs sized off the job's RAM allocation
+# (e.g. SLURM JobContainerType=job_container/tmpfs). Set true to skip the
+# override and inherit whatever TMPDIR the cluster provides.
+use_node_tmpdir: false
+
+# Trimming and processing parameters (fastp):
+quality_threshold: # 3' quality trimming (Phred score)
+  ChIP: 10
+  RNA: 10
+  mC: 10
+  sRNA: 10
+  ATAC: 10
+
+min_read_length: # minimum read length after trimming
+  ChIP: 20
+  RNA: 20
+  mC: 20
+  sRNA: 15
+  ATAC: 20
+
+trim_front: # bases trimmed from read start (e.g. set mC to 10 for Pico bisulfite kit)
+  ChIP: 0
+  RNA: 0
+  mC: 0
+  sRNA: 0
+  ATAC: 0
+
+adapter1: # "auto" = fastp auto-detection (standard Illumina); set explicitly for non-standard kits
+  ChIP: "auto"
+  RNA: "auto"
+  mC: "auto"
+  sRNA: "TGGAATTCTCGGGTGCCAAGG" # NextFlex
+  ATAC: "TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG" # Nextera
+
+adapter2:
+  ChIP: "auto"
+  RNA: "auto"
+  mC: "auto"
+  sRNA: "AGATCGGAAGAGCGTCGTGTAGGGAAAGA" # NextFlex
+  ATAC: "GTCTCGTGGGCTCGGAGATGTGTATAAGAGACAG" # Nextera
+
+# Fingerprint plots (deeptools plotFingerprint): QC diagnostic for ChIP enrichment.
+# Set to false to skip entirely (saves ~15 min per-sample on large genomes).
+# fingerprint_samples controls the number of genomic bins sampled (default: "auto"
+# scales to genome size, capped at 100000; deeptools default is 500000).
+chip_fingerprint_plots: true
+fingerprint_samples: "auto" # "auto" or integer (e.g. 100000)
+
+# Aligner for ChIP/ATAC: "bowtie2" (default) or "chromap" (~10x faster but
+# poor PE proper-pair concordance: 11-28% vs 99%+ for bowtie2, because
+# chromap maps paired ends independently and the MAPQ filter removes one
+# mate from each discordant pair). chromap is appropriate for SE-only
+# datasets where speed is the priority.
+# When chromap is selected and mapping_strategy is repeat/repeatall,
+# bowtie2 is used automatically (chromap lacks multi-mapping support).
+chip_aligner: "bowtie2"
+atac_aligner: "bowtie2"
+
+# Mapping strategy
+chip_mapping_strategy: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+atac_mapping_strategy: "default" # options: [ 'default' | 'repeat' | 'repeatall' | 'all' ]
+
+# Bowtie2-based mapping parameters (shared by ChIP and ATAC)
+# Also used when chromap auto-falls back to bowtie2 for repeat/repeatall strategies
+bt2_mapping_strategy:
+  default:
+    map_pe: "--end-to-end --maxins 1500"
+    map_se: "--end-to-end"
+    filter: "-b -h -q 10 -F 256"
+  repeat:
+    map_pe: "--very-sensitive --no-mixed --no-discordant --k 100 --end-to-end"
+    map_se: "--very-sensitive --k 100 --end-to-end"
+    filter: "-b -h -q 10 -F 256"
+  repeatall:
+    map_pe: "--very-sensitive --no-mixed --no-discordant --k 100 --end-to-end"
+    map_se: "--very-sensitive --k 100 --end-to-end"
+    filter: "-b -h -F 256"
+  all:
+    map_pe: "--end-to-end --maxins 1500"
+    map_se: "--end-to-end "
+    filter: "-b -h -F 256"
+
+# For bigwigs
+chip_tracks:
+  binsize: 1
+  params: "--scaleFactorsMethod None --normalizeUsing CPM --extendReads 300"
+
+atac_tracks:
+  binsize: 1
+  params: "--normalizeUsing CPM"
+
+# For peaks
+chip_callpeaks:
+  # To link the type of IP with the type of peaks. Can be updated with other marks. If creating regex patterns, make sure to escape "." with "\."
+  peaktype:
+    'H3K4me1|H3K27me1|H3K27me2|H3K27me3|H3K9me1|H3K9me2|H3K9me3|H4K20me1|H4K20me2|H4K20me3|.*DDM1|H3\.3|H3\.1|MGH3|CenH3|PolIIS2P|H2AT120Ph|H2AKub|H3K36me3': "broad"
+    'H3K27ac|H3K4me3|H3K9ac|H4K16ac|H3K23ac|MNase': "narrow"
+    'H3|H4': "broad"
+  params: "--keep-dup all --nomodel"
+
+# CUT&RUN / CUT&Tag peak calling. Default callers are picked per peak shape:
+# epic2 for diffuse/broad signal (window/RoI based), SEACR for sharp/narrow
+# signal (bedgraph-thresholded, IgG-aware). MACS2 is an explicit fallback
+# for either. CUT&Tag SE data benefits from MACS2's --shift/--extsize when
+# the user opts into MACS2.
+cut_callpeaks:
+  broad_caller: "epic2"           # epic2 | seacr | macs2
+  narrow_caller: "seacr"          # seacr | macs2
+  epic2_params: "--bin-size 150 --gaps-allowed 2"
+  seacr_norm: "non"               # norm | non — set "non" when an IgG control is supplied
+  seacr_threshold: "stringent"    # stringent | relaxed
+  macs2_params_pe: "--keep-dup all --nomodel"
+  macs2_params_se: "--keep-dup all --nomodel --shift -75 --extsize 150"
+  # Defer for later PR: spike-in normalization (E. coli for CUT&RUN,
+  # Drosophila for CUT&Tag) and CUT&RUN fragment-size splitting
+  # (TF <120bp / histone >150bp).
+
+atac_callpeaks:
+  peaktype: "narrow"
+  params: "--keep-dup all --nomodel --shift 75 --extsize 150"
+  
+rampage_calltss:
+  peaktype: "narrow"
+  params: "--keep-dup all --nomodel --extsize 100"
+
+diffpeaks_params:
+  chip_pe: "-w 2000 --pe"
+  chip_se: "-w 2000"
+  TF_pe: "-w 1000 --pe"
+  TF_se: "-w 1000"
+  ATAC_pe: "-w 1000 --s1 75 --s2 75"
+  ATAC_se: "-w 1000 --s1 75 --s2 75"
+
+upset_allreps: false # whether to use data from all individual replicates or from merged samples when multiple replicates are present. Default to false (using merged replicates). Only affects Upset for peaks and TSS, not sRNA clusters (always allreps).
+
+# RNA parameters
+rna_tracks:
+  RNAseq:
+    file_order: "rnaseq"
+    param_bg: "--outWigType bedGraph"
+    strandedness: "reverse" # default for stranded RNAseq libraries. Use "unstranded" if libraries do not keep strand information
+    multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
+  RAMPAGE:
+    file_order: "rampage"
+    param_bg: "--outWigType bedGraph read1_5p"
+    strandedness: "forward" # default for stranded RAMPAGE libraries. Use "unstranded" if libraries do not keep strand information
+    multimap: "multiple" # change to 'unique' if you only want uniquely mapped reads
+
+# Mark/remove duplicate reads for mRNA-seq (RNAseq assay). Default false:
+# without UMIs, PCR and optical duplicates are indistinguishable from
+# genuine high-expression reads, so deduplicating biases quantification.
+# Only enable for quantitative protocols that carry UMIs (UMI-aware
+# deduplication is not yet implemented — see TODO). RAMPAGE is always
+# deduplicated regardless of this setting (5'-end collapsing for TSS calling).
+rna_deduplicate: false
+
+# WGBS parameters
+# Methylation contexts to analyze (subset of CG, CHG, CHH). Plants
+# typically use all three; animal genomes lack substantive non-CpG
+# methylation, so set ["CG"] to skip the empty mCHG/mCHH bigwigs, DMR
+# calls, and PCA plots for animal samples. Subcontexts (CAG, CAA, etc.)
+# are not yet supported.
+methylation_contexts: ["CG", "CHG", "CHH"]
+pca_bs: 1000 # binsize for PCA 
+pca_step: 10000 # step between bins for PCA 
+# If using the Pico or EMseq kit for DNA methylation, set trim_front.mC to 10 above
+mC_mapping:
+  default: 
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--ignore_r2 2 --buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+  WGBS: 
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--ignore_r2 2 --buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+  EMseq:
+    map_pe: "--maxins 1000"
+    map_se: ""
+    process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+  WGBS_nd: # non-directional WGBS (Zymo Pico Methyl-Seq, Swift Accel-NGS, etc.)
+    map_pe: "--maxins 1000 --non_directional"
+    map_se: "--non_directional"
+    process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+  PBAT: # post-bisulfite adapter tagging
+    map_pe: "--maxins 1000 --pbat"
+    map_se: "--pbat"
+    process_pe: "--buffer_size 16G" # change buffer size if not appropriate for setup
+    process_se: "--buffer_size 16G" # change buffer size if not appropriate for setup
+
+# DMR caller selection (Bismark-aligned samples only — dmC samples honor
+# the dmc_dmr_method setting below). Choices:
+#   "metilene" (default): C++ binary segmentation, multi-threaded,
+#     significantly faster than DMRcaller on high-coverage replicate data.
+#   "dmrcaller": R/Bioconductor DMRcaller via computeDMRsReplicates
+#     (beta regression with replicate variance). Slower on real data;
+#     useful when you want the betareg statistical model.
+dmr_caller: "metilene"
+
+# DMR calling thresholds. Defaults are tuned for Arabidopsis leaves
+# (Catoni et al. 2018 NAR). Cross-species/cross-tissue methylation varies
+# widely — adjust for your organism (e.g. maize CHH is very low; pollen
+# differs from leaf). Omit any key to use the default.
+dmr_thresholds:
+  # Minimum mean methylation difference to call a DMR (per context).
+  # Applies to: metilene -d, DMRcaller minProportionDifference.
+  # Set to "auto" (string) to let the pipeline estimate per-pair, per-context
+  # thresholds from the data (sigma_n * noise-floor sigma; see sigma_n below).
+  # "auto" is recommended when working outside Arabidopsis leaf tissue.
+  min_diff:
+    CG:  0.3
+    CHG: 0.2
+    CHH: 0.1
+  # min_diff: "auto"   # data-driven alternative — uncomment to use
+
+  # Multiplier applied to the noise-floor sigma when min_diff: "auto".
+  # threshold = sigma_n * SD(per-position between-group diff), floored at 0.05.
+  # Only used when min_diff is "auto"; ignored otherwise.
+  sigma_n: 3.0
+
+  # Minimum cytosine/CpG count per DMR window.
+  # Applies to: metilene -m, DMRcaller minCytosinesCount.
+  min_cytosines: 5
+
+  # Significance cutoff applied to the FDR-adjusted q-value (both callers).
+  # DMRcaller filters internally on its BH-adjusted pValue; metilene filters
+  # on its q-value column (col 4). Regions with q-value >= this are dropped.
+  q_value: 0.01
+
+  # Minimum DMR length in bp (both callers). DMRcaller: minSize. metilene: a
+  # post-hoc (end-start) >= min_size filter applied to the called segments,
+  # equivalent to metilene_output.pl's -l.
+  min_size: 50
+
+  # DMRcaller-specific parameters (ignored when dmr_caller: metilene)
+  bin_size: 200   # window size for bins method (bp)
+  min_gap:  200   # minimum gap between adjacent DMRs (bp); no metilene equivalent
+  min_reads: 3    # minimum reads per cytosine; no metilene equivalent (rates only)
+
+  # Metilene-specific parameters (ignored when dmr_caller: dmrcaller)
+  maxdist: 300    # -M/--maxdist: max distance (nt) between adjacent CpGs in a segment
+  valley:         # -v: per-position valley filter (higher = more stringent)
+    CG:  0.7
+    CHG: 0.7
+    CHH: 0.3
+  maxseg:         # -G: max segment length cap in CpGs (-1 = no cap)
+    CG:  -1       # no cap needed for CG/CHG (manageable memory)
+    CHG: -1
+    CHH: 10000    # cap CHH to avoid OOM on dense plant data
+
+# Whether to use the custom version of the script to call DMRs
+custom_script_dmrs: false # true will use workflow/scripts/call_DMRs_custom.R which explore different options to call DMRs (more time and resource intensive)
+
+# Direct methylation (dmC) parameters
+# For Assay "dmC" - native base modification detection from long-read sequencing (Oxford Nanopore, PacBio)
+# Supports two input formats that are automatically detected:
+#   - modBAM: BAM files with MM/ML tags from modified basecalling (e.g., Dorado, Guppy)
+#   - bedMethyl: Pre-computed methylation calls in bedMethyl format (e.g., from prior modkit pileup)
+dmc_methylation:
+  alignment:
+    # Minimap2 preset for alignment (used by mm2plus, an accelerated minimap2 fork)
+    # "lr:hqae" = long-read, high-quality, accurate end-to-end alignment
+    # Optimized for high-accuracy ONT basecalls (e.g., Guppy SUP, Dorado HAC/SUP models)
+    # Alternative presets: "map-ont" (standard ONT), "map-hifi" (PacBio HiFi)
+    preset: "lr:hqae"
+  pileup:
+    # Combine 5mC (5-methylcytosine) and 5hmC (5-hydroxymethylcytosine) into total methylation
+    # This matches bisulfite sequencing behavior, which cannot distinguish these modifications
+    # Set to false to analyze them separately (requires changes to downstream bigwig generation)
+    combine_mods: true
+    # Minimum read coverage threshold for reporting a methylation call
+    # Sites with fewer reads are excluded from bedMethyl output
+    min_coverage: 3
+
+# DMR (Differentially Methylated Region) calling method for dmC samples
+# Options:
+#   - "dmrcaller": R/Bioconductor DMRcaller package (default)
+#     Same method used for Bismark samples, enables unified dmC vs Bismark comparisons
+#     Uses sliding window approach with statistical testing
+#   - "modkit": Native modkit DMR caller with HMM-based segmentation (experimental)
+#     Only suitable for dmC vs dmC comparisons, not compatible with Bismark samples
+#     May provide better sensitivity for long-read specific patterns
+# Note: Bismark samples always use dmrcaller regardless of this setting
+dmc_dmr_method: "dmrcaller"
+
+# small RNA parameters
+nextflex_v3_deduplication: false # additional deduplication if nextflex v3 kit was used for sRNA library preparation
+structural_rna_depletion: true # to filter structural RNA (rRNAs, tRNAs, snoRNAs) before mapping. Recommended step when studying microRNAs and small interfering RNAs.
+infernal_threshold: "ga" # threshold for Infernal structural RNA annotation: "ga" (Rfam gathering threshold, recommended) or a numeric E-value (e.g. 1e-5 for more aggressive filtering). Only used when structural_rna_fafile is auto-derived.
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
+shortstack_dn_mirna: true # enable ShortStack de novo miRNA discovery; set false when libraries lack true small RNA size profiles (e.g. rRNA-depleted total RNA)
+srna_min_size: 21 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
+srna_max_size: 24 # these sizes in nucleotide will be used for filtering bigiwg and creating an individual file for each nucleotide size in between (e.g. 20 21 22 23 24). Also used in the Upset plots (if within the dicer calls above)
+srna_heatmap_sizes: [21, 22, 24] # these sizes in nucleotide will be used for plotting heatmaps and browsers. Can add as many as desired as a list, for sizes within the range above.
+
+# For all plots (heatmaps, metaplots, browsers)
+plot_allreps: false # whether to use data from all individual replicates or from merged samples when multiple replicates are present. Default to false (using merged replicates).
+# For deeptools heatmaps and profiles
+heatmaps_scales: "type" # options: [ 'default' = default scaling from deeptools, one scale for all samples | 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
+stranded_heatmaps: true # chose whether the heatmap should be done with stranded information or not. If true, lines in the bedfile without strand information (6th column "+" or "-") will not be included.
+heatmaps_sort_options: "mean" # options: [ 'no' | 'mean' | median' ]; mean = "--sortRegions descend --sortUsing mean"
+heatmap_sort_mc_after_others: true # chose whether the heatmaps for mC samples are done based on the sort order of the other samples or not.
+profiles_scale: "mean" # options: [ 'mean' | median' ]
+profiles_plot_params: "--plotType lines"
+heatmaps_plot_params:
+  all: "--colorMap seismic --interpolationMethod bilinear"
+  most: "--colorMap seismic --interpolationMethod bilinear"
+  ChIP: "--colorMap seismic --interpolationMethod bilinear"
+  TF: "--colorMap seismic --interpolationMethod bilinear"
+  RNA: "--colorMap seismic --interpolationMethod bilinear"
+  sRNA: "--colorMap seismic --interpolationMethod bilinear"
+  mC: "--colorMap Oranges --missingDataColor 0.9 --interpolationMethod nearest"
+  ATAC: "--colorMap seismic --interpolationMethod bilinear"
+heatmaps:
+  regions:
+    base: "scale-regions --missingDataAsZero --skipZeros"
+    bs: 50
+    base_mc: "scale-regions"
+    bs_mc: 100
+    before: 2000
+    middle: "-m 5000"
+    after: 2000
+  tss:
+    base: "reference-point --referencePoint TSS --missingDataAsZero --skipZeros"
+    bs: 50
+    base_mc: "reference-point --referencePoint TSS"
+    bs_mc: 100
+    before: 2000
+    middle: ""
+    after: 6000
+  tes:
+    base: "reference-point --referencePoint TES --missingDataAsZero --skipZeros"
+    bs: 50
+    base_mc: "reference-point --referencePoint TES"
+    bs_mc: 100
+    before: 6000
+    middle: ""
+    after: 2000
+heat_mcg: 100
+heat_mchg: 60
+heat_mchh: 40
+
+# Motif discovery (meme-chip + tomtom) for narrow-peak assays: ChIP_narrow,
+# CUT_RUN_narrow, CUT_TAG_narrow, and ATAC (when called narrow). Runs on each
+# analysis sample's selected peaks (and IDR peaks when >=2 reps).
+motifs: true # set false to disable motif discovery
+motifs_allreps: false # set true to also run motifs on every individual replicate
+jaspar_db: "data/JASPAR2024_CORE_plants_non-redundant_pfms_meme.txt" # other databases can be downloaded at https://jaspar.elixir.no/downloads/
+
+# meme-chip / motif-discovery parameters
+motif_params:
+  min_region_size: 8   # drop input regions shorter than this (bp); regions below
+                       # the motif width make meme-chip error. Negative starts
+                       # (peaks near a contig edge) are clamped to 0 first.
+  n_motifs: 10         # number of motifs to report (meme -meme-nmotifs / streme -streme-nmotifs)
+  min_width: 6         # minimum motif width (meme-chip -minw)
+  max_width: 20        # maximum motif width (meme-chip -maxw)
+
+## optional targets for extra output
+# motifs analysis
+motif_target_file_label: "target_motifs" # This name will be used for the name of the results files and should used in the rule target
+motif_target_file: "data/target_genes.bed" # bed file containing the regions to use for motifs analysis
+motif_ref_genome: "ColCEN" # Reference genome corresponding to the motif target file
+
+# gene expression plots
+rnaseq_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
+rnaseq_target_file: "data/target_genes.txt" # tab-delimited file listing genes in rows where the first column is GID (matching the gene IDs in the reference genome gff) and optionally the second column are labels (see example). Other columns will be ignored.
+rnaseq_background_file: "default" # tab-delimited file with a column of GID (matching the gene IDs in the reference genome gff). Other columns will be ignored. Will be used as background for GO enrichment analysis. Default is all genes.
+
+# sRNA diffenrential expression analysis
+srna_target_file_label: "miRNAs" # This name will be used for the results folder and should be used in the rule target.
+srna_target_file: "config/ath.gff3" # file of target regions for sRNA analysis. It will be used as LOCIFILE in ShortStack (from ShortStack: Can be simple tab-delimited, .bed, or .gff3. Tab-delimited format is column 1 with coordinates Chr:start-stop, column 2 with names. Input file assumed to be simple tab-delimited unless file name ends in .bed or .gff3.)
+
+# heatmaps and profiles
+heatmap_target_file_label: "target_genes" # This name will be used for the name of the results files and should used in the rule target.
+heatmap_target_file: "data/target_genes.bed" # bed file containing the regions to use for heatmaps. Can have a header.
+
+# browsers
+browser_target_file_label: "target_loci" # This name will be used for the name of the results files and should used in the rule target.
+browser_target_file: "data/target_loci.bed" # bed file containing the regions to use for browser shots. Each region will be a seperate page in a pdf. Can have a header.
+browser_TE_file: true # Whether to use a file of TEs or not. The file should be listed in the corresponding reference genome, and be a (potentially gzipped) bed file.
+browser_scales: "sample" # options: [ 'sample' = each sample on its own scale | 'type' = each type of data on a different scale (each ChIP mark + each TF + RNA + sRNA + each mC context) ]
+chromosome_bs: 50000 # default to 50kb bins for full chromosome browsers 
+fixed_mc_scales: true # Whether the scales for mC should be fixed to the value below
+fixed_mcg: 100
+fixed_mchg: 80
+fixed_mchh: 60
+

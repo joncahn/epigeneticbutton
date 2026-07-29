@@ -1,0 +1,37 @@
+# Test configuration for human chr21 integration test
+# Tests all assay types: ChIP_broad, ChIP_narrow, RNAseq, RAMPAGE, sRNA, WGBS, dmC
+# EN-TEx (ENCODE) stomach vs colon comparison + ONT Open Data HG002 dmC
+
+analysis_name: "test_hg38_chr21"
+sample_file: "tests/integration/data/test_samples_hg38_chr21.tsv"
+
+# Output directories
+output_dir: "results_test_hg38_chr21"
+genome_dir: "genomes_test_hg38_chr21"
+
+# Analysis options
+full_analysis: true
+te_analysis: false
+QC_option: true
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+structural_rna_depletion: false
+browser_TE_file: false
+
+# Reference genome
+genomes:
+  hg38_chr21:
+    genus: "Homo"
+    species: "sapiens"
+    fasta_file: "tests/integration/data/hg38_chr21/hg38_chr21.fa.gz"
+    gff_file: "tests/integration/data/hg38_chr21/hg38_chr21.gff3.gz"
+    # ncbi_taxid and star_index omitted to exercise auto-computation
+
+# Disable de novo miRNA discovery — EN-TEx sRNA libraries are rRNA-depleted
+# total RNA (<200 nt), not true miRNA-seq, so ShortStack finds zero candidates
+# and crashes on the empty de novo list (ShortStack 4.1.2 bug)
+shortstack_dn_mirna: false
+srna_mapping_params: "--mmap u --dicermin 21 --dicermax 24 --known_miRNAs tests/integration/data/hg38_chr21/known-mirnas-mirbase-high-confidence.fasta" # consider adding --known_miRNAs KNOWN_MIRNAS.fa (fetching miRNAs sequences from miRBase)
+
+# Resource allocation (use defaults from main config)

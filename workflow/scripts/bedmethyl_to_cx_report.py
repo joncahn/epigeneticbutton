@@ -3,11 +3,24 @@
 
 Determines methylation context (CG/CHG/CHH) from the reference genome.
 
+Only 5mC calls (column 4 == 'm') are retained. Other modification types
+(e.g. 5hmC 'h') are skipped. If the input was produced with modkit's
+--combine-mods flag, all modifications are already merged into a single
+row per position and column 4 is 'C' — these rows are kept as-is.
+
+When the bedMethyl has combined-strand data (strand column == '.'), the
+strand is inferred from the reference: if the base at the position is C
+on the forward strand, the call is assigned to '+'; if it is G (i.e. a
+C on the reverse strand), the call is assigned to '-'. Note that for CpG
+sites produced with --combine-strands, each position appears only once
+(on the reference C strand), so the CX_report will have half the CpG
+entries compared to Bismark output.
+
 bedMethyl columns (modkit output):
     0: chrom
     1: start (0-based)
     2: end
-    3: base (C)
+    3: mod_code ('m' for 5mC, 'h' for 5hmC, 'C' for combined)
     4: score
     5: strand (. = combined, + or -)
     6-8: thickStart, thickEnd, itemRgb
@@ -88,20 +101,41 @@ def get_context_and_trinuc_from_seq(chrom_seq, chrom_len, pos, strand):
     return (context, trinuc)
 
 
+def infer_strand_from_reference(chrom_seq, pos):
+    """Infer strand from the reference base at a 0-based position.
+
+    Returns '+' if the base is C (cytosine on forward strand),
+    '-' if the base is G (cytosine on reverse strand),
+    or None if the base is neither (unexpected).
+    """
+    if pos < 0 or pos >= len(chrom_seq):
+        return None
+    base = chrom_seq[pos]
+    if base == 'C':
+        return '+'
+    elif base == 'G':
+        return '-'
+    return None
+
+
 def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
     """Convert bedMethyl to CX_report format with context from reference.
 
-    Optimized to load each chromosome sequence into memory once, avoiding
-    per-position file I/O overhead from repeated fasta.fetch() calls.
+    Filters to 5mC calls only (mod_code 'm') or combined calls ('C').
+    Infers strand from reference when bedMethyl has combined strands.
     """
 
-    # Open reference genome
     fasta = pysam.FastaFile(reference_file)
 
-    # Cache for current chromosome sequence (avoids millions of fetch calls)
+    # Cache for current chromosome sequence
     current_chrom = None
     chrom_seq = None
     chrom_len = 0
+
+    n_kept = 0
+    n_skipped_mod = 0
+    n_skipped_strand = 0
+    n_skipped_no_ref = 0
 
     with ExitStack() as stack:
         # Handle gzipped or plain input
@@ -126,6 +160,13 @@ def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
             if len(fields) < 13:
                 continue
 
+            # Filter by modification type: keep only 5mC ('m') or
+            # combined ('C', from --combine-mods)
+            mod_code = fields[3]
+            if mod_code not in ('m', 'C'):
+                n_skipped_mod += 1
+                continue
+
             chrom = fields[0]
             start = int(fields[1])
             strand = fields[5]
@@ -145,24 +186,40 @@ def convert_bedmethyl_to_cx_report(input_file, reference_file, output_file):
                     chrom_len = 0
                     current_chrom = chrom
 
-            # Handle combined strand data (strand = '.')
-            # For combined CpG, report as + strand
+            # Skip positions on chromosomes absent from the reference: their
+            # context cannot be determined, and emitting a placeholder "CNN"
+            # leaks into the bigwig demux (mC.smk), where the catch-all branch
+            # would miscount them as CG methylation.
+            if chrom_len == 0:
+                n_skipped_no_ref += 1
+                continue
+
+            # Infer strand from reference when bedMethyl has combined strands
             if strand == '.':
-                strand = '+'
+                strand = infer_strand_from_reference(chrom_seq, start)
+                if strand is None:
+                    n_skipped_strand += 1
+                    continue
 
             # Get context and trinucleotide from cached sequence
-            if chrom_len == 0:
-                context, trinuc = ("CNN", "CNN")
-            else:
-                context, trinuc = get_context_and_trinuc_from_seq(chrom_seq, chrom_len, start, strand)
+            context, trinuc = get_context_and_trinuc_from_seq(chrom_seq, chrom_len, start, strand)
 
             # Convert to 1-based position for CX_report
             position = start + 1
 
             # Write CX_report format
             outfile.write(f"{chrom}\t{position}\t{strand}\t{n_mod}\t{n_canonical}\t{context}\t{trinuc}\n")
+            n_kept += 1
 
     fasta.close()
+
+    print(f"Kept {n_kept:,} 5mC calls", file=sys.stderr)
+    if n_skipped_mod:
+        print(f"Skipped {n_skipped_mod:,} non-5mC rows (e.g. 5hmC)", file=sys.stderr)
+    if n_skipped_strand:
+        print(f"Skipped {n_skipped_strand:,} positions where reference base was neither C nor G", file=sys.stderr)
+    if n_skipped_no_ref:
+        print(f"Skipped {n_skipped_no_ref:,} positions on chromosomes absent from the reference", file=sys.stderr)
 
 
 def main():

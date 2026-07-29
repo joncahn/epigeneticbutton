@@ -1,7 +1,6 @@
-CONDA_ENV_UPSET=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_upset.yaml")
 
 def return_log_combined(analysis_name, genome, types):
-    return os.path.join(REPO_FOLDER,"results","combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
+    return os.path.join(REPO_FOLDER, RESULTS_DIR,"combined","logs",f"tmp__{analysis_name}__{genome}__{types}.log")
 
 def define_combined_target_file(wildcards):
     heatname = config['heatmap_target_file_label']
@@ -14,21 +13,21 @@ def define_combined_target_file(wildcards):
     elif target_name == browsername:
         return config['browser_target_file']
     elif target_name == "full_chromosomes":
-        return f"results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
+        return f"{RESULTS_DIR}/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
     elif target_name.startswith("combined_peaks"):
-        file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
+        file = f"{RESULTS_DIR}/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("combined_clusters"):
-        file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
+        file = f"{RESULTS_DIR}/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("combined_TSS"):
-        file = f"results/combined/bedfiles/{target_name}__{ref_genome}.bed"
+        file = f"{RESULTS_DIR}/combined/bedfiles/{target_name}__{ref_genome}.bed"
     elif target_name.startswith("all_genes") or target_name.startswith("protein_coding_genes"):
-        file = f"results/combined/bedfiles/{ref_genome}__{target_name}.bed"
+        file = f"{RESULTS_DIR}/combined/bedfiles/{ref_genome}__{target_name}.bed"
     elif target_name.startswith("all_TEs"):
-        file = f"genomes/{ref_genome}/{ref_genome}__TE_file.bed"
+        file = f"{GENOMES_DIR}/{ref_genome}/{ref_genome}__TE_file.bed"
     else:
         raise ValueError(   
             f"{target_name} does not match possible files. It can be 'combined_peaks', 'combined_clusters', 'all_genes', 'all_TEs'" 
-            "'full_chromosomes' or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the config file"
+            "'full_chromosomes' or the value of 'heatmap_target_file_label' or 'browser_target_file_label' in the options file"
         )
     
     return file
@@ -43,7 +42,7 @@ def get_heatmap_param(matrix, key):
 def get_matrix_inputs(wildcards):
     stranded_heatmaps = config['stranded_heatmaps']
     bedfile = define_combined_target_file(wildcards)
-    prefix = f"results/combined/matrix/matrix_{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}__{wildcards.target_name}"
+    prefix = f"{RESULTS_DIR}/combined/matrix/matrix_{wildcards.matrix_param}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}__{wildcards.target_name}"
     with checkpoints.is_stranded.get(bedfile=bedfile).output[0].open() as f:
         if f.read().strip() == "stranded" and stranded_heatmaps:
             return [ f"{prefix}__plus.gz", f"{prefix}__minus.gz" ]
@@ -52,11 +51,6 @@ def get_matrix_inputs(wildcards):
 
 def define_sort_options(wildcards):
     sort_options = config['heatmaps_sort_options']
-    matrix_param = wildcards.matrix_param
-    env = wildcards.env
-    analysis_name=config['analysis_name']
-    ref_genome = wildcards.ref_genome
-    target_name = wildcards.target_name
     if sort_options == "no":
         return "--sortRegions keep"
     elif sort_options == "mean":
@@ -76,73 +70,55 @@ def define_samples_for_upset(wildcards, string):
     globenv = wildcards.env
     allreps = config['upset_allreps']
     if globenv == "all_chip":
-        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
+        filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     elif globenv == "RAMPAGE":
         filtered_analysis_samples = analysis_samples[ (analysis_samples['sample_type'] == "RAMPAGE") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        spname = sample_name_str(row, 'analysis')
-        if row.env == "TF":
+        if row.env in ["ChIP", "ATAC"]:
             if allreps:
-                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                    peaktype = get_peaktype_for_env(row.sample_type, row.env)
-                    paired = get_sample_info_from_name(spname, analysis_samples, 'paired')
-                    if paired == "PE":
-                        prefix = "peaks_pe"
-                    else:
-                        prefix = "peaks_se"
-                    file = f"results/{row.env}/peaks/{prefix}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.{peaktype}Peak"
-                    label = f"{row.line}_{row.tissue}_{row.extra_info}_{replicate}"
-                    names.append(f"{label}:{file}")
-                    files.append(file)
-                    types.add(row.extra_info)
-            else:
-                file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
-                label = f"{row.line}_{row.tissue}_{row.extra_info}"
-                names.append(f"{label}:{file}")
-                files.append(file)
-                types.add(row.extra_info)
-        elif row.env in ["ChIP", "ATAC"]:
-            if allreps:
-                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                    peaktype = get_peaktype_for_env(row.sample_type, row.env)
-                    paired = get_sample_info_from_name(spname, analysis_samples, 'paired')
+                for sid in get_replicate_sample_ids(row['sample_name'], samples):
+                    peaktype = get_peaktype_for_env(row['sample_name'], row.env)
+                    paired = get_sample_info_from_name(row['sample_name'], analysis_samples, 'paired')
                     if row.env == "ATAC":
                         prefix = "peaks_atac"
                     elif paired == "PE":
                         prefix = "peaks_pe"
                     else:
                         prefix = "peaks_se"
-                    file = f"results/{row.env}/peaks/{prefix}__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.{peaktype}Peak"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{replicate}"
+                    file = f"{RESULTS_DIR}/{row.env}/peaks/{prefix}__final__{sid}_peaks.{peaktype}Peak"
+                    rep = parse_sample_name(sid)['replicate']
+                    label = f"{row.levels_label}_{row.sample_type}_{rep}"
                     names.append(f"{label}:{file}")
                     files.append(file)
                     types.add(row.sample_type)
             else:
-                file = f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak"
-                label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                file = f"{RESULTS_DIR}/{row.env}/peaks/selected_peaks__{row['sample_name']}.bedPeak"
+                label = f"{row.levels_label}_{row.sample_type}"
                 names.append(f"{label}:{file}")
                 files.append(file)
                 types.add(row.sample_type)
         elif globenv == "RAMPAGE":
             if allreps:
-                for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                    file = f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
-                    label = f"{row.line}_{row.tissue}_{replicate}"
+                for sid in get_replicate_sample_ids(row['sample_name'], samples):
+                    file = f"{RESULTS_DIR}/RNA/TSS/TSS__final__{sid}_peaks.narrowPeak"
+                    rep = parse_sample_name(sid)['replicate']
+                    label = f"{row.levels_label}_{rep}"
                     names.append(f"{label}:{file}")
                     files.append(file)
-                    types.add(f"{row.line}_{row.tissue}")
+                    types.add(f"{row.levels_label}")
             else:
-                file = f"results/RNA/TSS/TSS__merged__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__merged__{row.ref_genome}_peaks.narrowPeak"
-                label = f"{row.line}_{row.tissue}"
+                file = f"{RESULTS_DIR}/RNA/TSS/TSS__merged__{row['sample_name']}_peaks.narrowPeak"
+                label = f"{row.levels_label}"
                 names.append(f"{label}:{file}")
                 files.append(file)
-                types.add(f"{row.line}_{row.tissue}")
+                types.add(f"{row.levels_label}")
         elif row.env == "sRNA":
-            for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []):
-                file = f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
-                label = f"{row.line}_{row.tissue}_{replicate}"
+            for sid in get_replicate_sample_ids(row['sample_name'], samples):
+                file = f"{RESULTS_DIR}/sRNA/mapped/{sid}/clusters.bed"
+                rep = parse_sample_name(sid)['replicate']
+                label = f"{row.levels_label}_{rep}"
                 names.append(f"{label}:{file}")
                 files.append(file)
 
@@ -162,64 +138,9 @@ def define_samples_for_upset(wildcards, string):
     elif string == "types":
         return ordered
 
-# def define_bedfiles_per_env_and_ref(wildcards):
-    # files = []
-    # ref_genome = wildcards.ref_genome
-    # globenv = wildcards.env
-    # if globenv == "all_chip":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # elif globenv == "RAMPAGE":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['sample_type'] == "RAMPAGE") & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # else:
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # for _, row in filtered_analysis_samples.iterrows():
-        # spname = sample_name_str(row, 'analysis')
-        # if globenv in ["all_chip", "ChIP", "TF", "ATAC"]:
-            # files.append(f"results/{row.env}/peaks/selected_peaks__{spname}.bedPeak")
-        # elif globenv == "sRNA":
-            # files.extend(f"results/sRNA/mapped/{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}/clusters.bed"
-                                      # for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
-        # elif globenv == "RAMPAGE":
-            # files.extend(f"results/RNA/TSS/TSS__final__{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}__{replicate}__{row.ref_genome}_peaks.narrowPeak"
-                                      # for replicate in analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), []))
-
-    # return files
-
-# def define_sample_types_for_upset(wildcards):
-    # types = set()
-    # ref_genome = wildcards.ref_genome
-    # globenv = wildcards.env
-    # if globenv == "all_chip":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'].isin(["ChIP","TF","ATAC"])) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # elif globenv in ["ChIP", "TF", "ATAC"]:
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # elif globenv == "RAMPAGE":
-        # filtered_analysis_samples = analysis_samples[ (analysis_samples['data_type'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    # else:
-        # filtered_analysis_samples = None
-
-    # if filtered_analysis_samples is not None:
-        # for _, row in filtered_analysis_samples.iterrows():
-            # if row.env in ["ChIP", "ATAC"]:
-                # types.add(row.sample_type)
-            # elif row.env == "TF":
-                # types.add(row.extra_info)
-            # elif row.sample_type == "RAMPAGE":
-                # types.add(f"{row.line}__{row.tissue}")
-
-    # if globenv == "sRNA":
-        # srna_min = config['srna_min_size']
-        # srna_max = config['srna_max_size']
-        # types = [f"{s}nt" for s in range(srna_min, srna_max + 1)]
-        # types += ["MIRNA", "Others"]
-        # result = ":".join(types)
-    # else:
-        # result = ":".join(sorted(types))
-    # return result
-
 def define_upset_script(wildcards):
     globenv = wildcards.env
-    if globenv in ["all_chip", "ChIP", "TF", "ATAC"]:
+    if globenv in ["all_chip", "ChIP", "ATAC"]:
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_peaks.R")
     elif globenv == "sRNA":
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_Upset_plot_clusters.R")
@@ -228,27 +149,43 @@ def define_upset_script(wildcards):
 
     return script
 
+import colorsys
+
+# Matplotlib tab20 and Set2 palettes as hex — avoids runtime matplotlib dependency
+_PALETTES = {
+    "tab20": [
+        "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c",
+        "#98df8a", "#d62728", "#ff9896", "#9467bd", "#c5b0d5",
+        "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f",
+        "#c7c7c7", "#bcbd22", "#dbdb8d", "#17becf", "#9edae5",
+    ],
+    "Set2": [
+        "#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854",
+        "#ffd92f", "#e5c494", "#b3b3b3",
+    ],
+}
+
 def assign_colors(keys, cmap_name="tab20"):
-    cmap = plt.get_cmap(cmap_name)
+    pal = _PALETTES[cmap_name]
     colors = {}
-    for i,key in enumerate(sorted(set(keys))):
-        colors[key] = mcolors.to_hex(cmap(i % cmap.N))
+    for i, key in enumerate(sorted(set(keys))):
+        colors[key] = pal[i % len(pal)]
     return colors
-    
+
 def make_it_lighter(palette, factor):
     new_palette = {}
     for k, c in palette.items():
-        rgb = mcolors.hex2color(c)
-        h, l, s = colorsys.rgb_to_hls(*rgb)
-        n = min(0.9, l*factor)
-        new_palette[k] = mcolors.to_hex(colorsys.hls_to_rgb(h, n, s))
+        r, g, b = int(c[1:3], 16) / 255, int(c[3:5], 16) / 255, int(c[5:7], 16) / 255
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+        l = min(0.9, l * factor)
+        rr, gg, bb = colorsys.hls_to_rgb(h, l, s)
+        new_palette[k] = f"#{int(rr*255+.5):02x}{int(gg*255+.5):02x}{int(bb*255+.5):02x}"
     return new_palette
 
 def define_key_for_plots(wildcards, string):
     bigwigs = []
     labels = []
     marks = []
-    unique_tf = set()
     unique_chip = set()
     unique_atac = set()
     unique_rna = set()
@@ -261,6 +198,7 @@ def define_key_for_plots(wildcards, string):
     label_to_track = {}
     srna_sizes = config['srna_heatmap_sizes']
     plot_allreps = config['plot_allreps']
+    mc_contexts = get_methylation_contexts()
     ref_genome = wildcards.ref_genome
     globenv = wildcards.env
     strand = getattr(wildcards, "strand", "unstranded")
@@ -272,237 +210,204 @@ def define_key_for_plots(wildcards, string):
     else:
         filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == globenv) & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
-        prefix = f"{row.data_type}__{row.line}__{row.tissue}__{row.sample_type}"
-        reps = analysis_to_replicates.get((row.data_type, row.line, row.tissue, row.sample_type, row.ref_genome), [])
+        rep_ids = get_replicate_sample_ids(row['sample_name'], samples)
         if row.env == "ChIP":
             if not plot_allreps:
-                merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
-                onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"                
-                bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
-                label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                bw = f"{RESULTS_DIR}/{row.env}/tracks/FC__merged__{row['sample_name']}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/FC__final__{rep_ids[0]}.bw"
+                label = f"{row.levels_label}_{row.sample_type}"
                 grouped_bw[f"chip_{row.sample_type}"].append(bw)
                 grouped_labs[f"chip_{row.sample_type}"].append(label)
                 unique_chip.add(row.sample_type)
                 label_to_mark[label] = row.sample_type
-                label_to_type[label] = f"{row.line}_{row.tissue}"
+                label_to_type[label] = f"{row.levels_label}"
                 label_to_track[label] = row.sample_type
             else:
-                for rep in reps:
-                    bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                for sid in rep_ids:
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/FC__final__{sid}.bw"
+                    rep = parse_sample_name(sid)['replicate']
+                    label = f"{row.levels_label}_{row.sample_type}_{rep}"
                     grouped_bw[f"chip_{row.sample_type}"].append(bw)
                     grouped_labs[f"chip_{row.sample_type}"].append(label)
                     unique_chip.add(row.sample_type)
                     label_to_mark[label] = row.sample_type
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_type[label] = f"{row.levels_label}"
                     label_to_track[label] = row.sample_type
-            
-        elif row.env == "TF":
-            if not plot_allreps:
-                merged = f"FC__merged__{prefix}__merged__{row.ref_genome}.bw"
-                onerep = f"FC__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
-                bw = f"results/{row.env}/tracks/{merged}" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}"
-                label = f"{row.line}_{row.tissue}_{row.extra_info}"
-                grouped_bw[f"tf_{row.extra_info}"].append(bw)
-                grouped_labs[f"tf_{row.extra_info}"].append(label)
-                unique_tf.add(row.extra_info)
-                label_to_mark[label] = row.extra_info
-                label_to_type[label] = f"{row.line}_{row.tissue}"
-                label_to_track[label] = row.extra_info
-            else:
-                for rep in reps:
-                    bw = f"results/{row.env}/tracks/FC__final__{prefix}__{rep}__{row.ref_genome}.bw"
-                    label = f"{row.line}_{row.tissue}_{row.extra_info}_{rep}"
-                    grouped_bw[f"tf_{row.extra_info}"].append(bw)
-                    grouped_labs[f"tf_{row.extra_info}"].append(label)
-                    unique_tf.add(row.extra_info)
-                    label_to_mark[label] = row.extra_info
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
-                    label_to_track[label] = row.extra_info
-            
+
         elif row.env == "RNA":
             strandedness = config['rna_tracks'][row.data_type]['strandedness']
             if strandedness == "unstranded":
                 if not plot_allreps:
-                    merged = f"{prefix}__merged__{row.ref_genome}"
-                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw = f"results/{row.env}/tracks/{merged}__unstranded.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__unstranded.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__unstranded.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__unstranded.bw"
+                    label = f"{row.levels_label}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].append(bw)
                     grouped_labs[f"{row.data_type}"].append(f"{label}")
                     unique_rna.add(row.data_type)
                     label_to_mark[label] = row.data_type
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_type[label] = f"{row.levels_label}"
                     label_to_track[label] = row.data_type
                 else:
-                    for rep in reps:
-                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__unstranded.bw"
-                        label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                    for sid in rep_ids:
+                        bw = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__unstranded.bw"
+                        rep = parse_sample_name(sid)['replicate']
+                        label = f"{row.levels_label}_{row.sample_type}_{rep}"
                         grouped_bw[f"{row.data_type}"].append(bw)
                         grouped_labs[f"{row.data_type}"].append(f"{label}")
                         unique_rna.add(row.data_type)
                         label_to_mark[label] = row.data_type
-                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_type[label] = f"{row.levels_label}"
                         label_to_track[label] = row.data_type
             elif strand == "unstranded":
                 if not plot_allreps:
-                    merged = f"{prefix}__merged__{row.ref_genome}"
-                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw1 = f"results/{row.env}/tracks/{merged}__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__plus.bw"
-                    bw2 = f"results/{row.env}/tracks/{merged}__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__minus.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                    bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__plus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__plus.bw"
+                    bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__minus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__minus.bw"
+                    label = f"{row.levels_label}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
                     grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
                     unique_rna.add(row.data_type)
                     label_to_mark[f"{label}_plus"] = row.data_type
                     label_to_mark[f"{label}_minus"] = row.data_type
-                    label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
-                    label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                    label_to_type[f"{label}_plus"] = f"{row.levels_label}"
+                    label_to_type[f"{label}_minus"] = f"{row.levels_label}"
                     label_to_track[f"{label}_plus"] = f"{row.data_type}_plus"
                     label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
                 else:
-                    for rep in reps:
-                        bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__plus.bw"
-                        bw2 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__minus.bw"
-                        label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                    for sid in rep_ids:
+                        bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__plus.bw"
+                        bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__minus.bw"
+                        rep = parse_sample_name(sid)['replicate']
+                        label = f"{row.levels_label}_{row.sample_type}_{rep}"
                         grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
                         grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
                         unique_rna.add(row.data_type)
                         label_to_mark[f"{label}_plus"] = row.data_type
                         label_to_mark[f"{label}_minus"] = row.data_type
-                        label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
-                        label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                        label_to_type[f"{label}_plus"] = f"{row.levels_label}"
+                        label_to_type[f"{label}_minus"] = f"{row.levels_label}"
                         label_to_track[f"{label}_plus"] = f"{row.data_type}_plus"
                         label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
             else:
                 if not plot_allreps:
-                    merged = f"{prefix}__merged__{row.ref_genome}"
-                    onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                    bw = f"results/{row.env}/tracks/{merged}__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{strand}.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{strand}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{strand}.bw"
+                    label = f"{row.levels_label}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].append(bw)
                     grouped_labs[f"{row.data_type}"].append(f"{label}")
                     unique_rna.add(row.data_type)
                     label_to_mark[label] = row.data_type
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_type[label] = f"{row.levels_label}"
                     label_to_track[label] = row.data_type
                 else:
-                    for rep in reps:
-                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{strand}.bw"
-                        label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                    for sid in rep_ids:
+                        bw = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__{strand}.bw"
+                        rep = parse_sample_name(sid)['replicate']
+                        label = f"{row.levels_label}_{row.sample_type}_{rep}"
                         grouped_bw[f"{row.data_type}"].append(bw)
                         grouped_labs[f"{row.data_type}"].append(f"{label}")
                         unique_rna.add(row.data_type)
                         label_to_mark[label] = row.data_type
-                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_type[label] = f"{row.levels_label}"
                         label_to_track[label] = row.data_type
                         
         elif row.env == "sRNA":
             for size in srna_sizes:
                 if strand == "unstranded":
                     if not plot_allreps:
-                        merged = f"{prefix}__merged__{row.ref_genome}"
-                        onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                        bw1 = f"results/{row.env}/tracks/{merged}__{size}nt__plus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__plus.bw"
-                        bw2 = f"results/{row.env}/tracks/{merged}__{size}nt__minus.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__minus.bw"
-                        label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
+                        bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{size}nt__plus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__plus.bw"
+                        bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{size}nt__minus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__minus.bw"
+                        label = f"{row.levels_label}_sRNA_{size}nt"
                         grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
                         grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
                         unique_srna.add(f"sRNA_{size}nt")
                         label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
                         label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
-                        label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
-                        label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                        label_to_type[f"{label}_plus"] = f"{row.levels_label}"
+                        label_to_type[f"{label}_minus"] = f"{row.levels_label}"
                         label_to_track[f"{label}_plus"] = f"sRNA_{size}nt_plus"
                         label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                     else:
-                        for rep in reps:
-                            bw1 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__plus.bw"
-                            bw2 = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__minus.bw"
-                            label = f"{row.line}_{row.tissue}_sRNA_{rep}_{size}nt"
+                        for sid in rep_ids:
+                            bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__{size}nt__plus.bw"
+                            bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__{size}nt__minus.bw"
+                            rep = parse_sample_name(sid)['replicate']
+                            label = f"{row.levels_label}_sRNA_{rep}_{size}nt"
                             grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
                             grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
                             unique_srna.add(f"sRNA_{size}nt")
                             label_to_mark[f"{label}_plus"] = f"sRNA_{size}nt"
                             label_to_mark[f"{label}_minus"] = f"sRNA_{size}nt"
-                            label_to_type[f"{label}_plus"] = f"{row.line}_{row.tissue}"
-                            label_to_type[f"{label}_minus"] = f"{row.line}_{row.tissue}"
+                            label_to_type[f"{label}_plus"] = f"{row.levels_label}"
+                            label_to_type[f"{label}_minus"] = f"{row.levels_label}"
                             label_to_track[f"{label}_plus"] = f"sRNA_{size}nt_plus"
                             label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                 else:
                     if not plot_allreps:
-                        merged = f"{prefix}__merged__{row.ref_genome}"
-                        onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                        bw = f"results/{row.env}/tracks/{merged}__{size}nt__{strand}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{size}nt__{strand}.bw"
-                        label = f"{row.line}_{row.tissue}_sRNA_{size}nt"
+                        bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{size}nt__{strand}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__{strand}.bw"
+                        label = f"{row.levels_label}_sRNA_{size}nt"
                         grouped_bw[f"sRNA_{size}nt"].append(bw)
                         grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
                         unique_srna.add(f"sRNA_{size}nt")
                         label_to_mark[label] = f"sRNA_{size}nt"
-                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_type[label] = f"{row.levels_label}"
                         label_to_track[label] = f"sRNA_{size}nt"
                     else:
-                        for rep in reps:
-                            bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{size}nt__{strand}.bw"
-                            label = f"{row.line}_{row.tissue}_sRNA_{rep}_{size}nt"
+                        for sid in rep_ids:
+                            bw = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__{size}nt__{strand}.bw"
+                            rep = parse_sample_name(sid)['replicate']
+                            label = f"{row.levels_label}_sRNA_{rep}_{size}nt"
                             grouped_bw[f"sRNA_{size}nt"].append(bw)
                             grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
                             unique_srna.add(f"sRNA_{size}nt")
                             label_to_mark[label] = f"sRNA_{size}nt"
-                            label_to_type[label] = f"{row.line}_{row.tissue}"
+                            label_to_type[label] = f"{row.levels_label}"
                             label_to_track[label] = f"sRNA_{size}nt"
                         
         elif row.env == "mC":
             if not plot_allreps:
-                merged = f"{prefix}__merged__{row.ref_genome}"
-                onerep = f"{prefix}__{reps[0]}__{row.ref_genome}"
-                for context in ["CG","CHG","CHH"]:
-                    bw = f"results/{row.env}/tracks/{merged}__{context}.bw" if len(reps) >=2 else f"results/{row.env}/tracks/{onerep}__{context}.bw"
-                    label = f"{row.line}_{row.tissue}_m{context}"
+                for context in mc_contexts:
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{context}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{context}.bw"
+                    label = f"{row.levels_label}_m{context}"
                     grouped_bw[f"m{context}"].append(bw)
                     grouped_labs[f"m{context}"].append(f"{label}")
                     unique_mc.add(f"m{context}")
                     label_to_mark[label] = f"m{context}"
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_type[label] = f"{row.levels_label}"
                     label_to_track[label] = f"m{context}"
             else:
-                for rep in reps:
-                    for context in ["CG","CHG","CHH"]:
-                        bw = f"results/{row.env}/tracks/{prefix}__{rep}__{row.ref_genome}__{context}.bw"
-                        label = f"{row.line}_{row.tissue}_{rep}_m{context}"
+                for sid in rep_ids:
+                    for context in mc_contexts:
+                        bw = f"{RESULTS_DIR}/{row.env}/tracks/{sid}__{context}.bw"
+                        rep = parse_sample_name(sid)['replicate']
+                        label = f"{row.levels_label}_{rep}_m{context}"
                         grouped_bw[f"m{context}"].append(bw)
                         grouped_labs[f"m{context}"].append(f"{label}")
                         unique_mc.add(f"m{context}")
                         label_to_mark[label] = f"m{context}"
-                        label_to_type[label] = f"{row.line}_{row.tissue}"
+                        label_to_type[label] = f"{row.levels_label}"
                         label_to_track[label] = f"m{context}"
 
         elif row.env == "ATAC":
             if not plot_allreps:
-                merged = f"coverage__merged__{prefix}__merged__{row.ref_genome}.bw"
-                onerep = f"coverage__final__{prefix}__{reps[0]}__{row.ref_genome}.bw"
-                bw = f"results/ATAC/tracks/{merged}" if len(reps) >=2 else f"results/ATAC/tracks/{onerep}"
-                label = f"{row.line}_{row.tissue}_{row.sample_type}"
+                bw = f"{RESULTS_DIR}/ATAC/tracks/coverage__merged__{row['sample_name']}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{rep_ids[0]}.bw"
+                label = f"{row.levels_label}_{row.sample_type}"
                 grouped_bw["atac"].append(bw)
                 grouped_labs["atac"].append(label)
                 unique_atac.add("ATAC")
                 label_to_mark[label] = "ATAC"
-                label_to_type[label] = f"{row.line}_{row.tissue}"
+                label_to_type[label] = f"{row.levels_label}"
                 label_to_track[label] = "ATAC"
             else:
-                for rep in reps:
-                    bw = f"results/ATAC/tracks/coverage__final__{prefix}__{rep}__{row.ref_genome}.bw"
-                    label = f"{row.line}_{row.tissue}_{row.sample_type}_{rep}"
+                for sid in rep_ids:
+                    bw = f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{sid}.bw"
+                    rep = parse_sample_name(sid)['replicate']
+                    label = f"{row.levels_label}_{row.sample_type}_{rep}"
                     grouped_bw["atac"].append(bw)
                     grouped_labs["atac"].append(label)
                     unique_atac.add("ATAC")
                     label_to_mark[label] = "ATAC"
-                    label_to_type[label] = f"{row.line}_{row.tissue}"
+                    label_to_type[label] = f"{row.levels_label}"
                     label_to_track[label] = "ATAC"
 
     bigwigs = (
         sum([grouped_bw.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
-        sum([grouped_bw.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) +
         sum([grouped_bw.get("atac", [])], []) +
         sum([grouped_bw.get(f"{rna}", []) for rna in sorted(unique_rna)], []) +
         sum([grouped_bw.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
@@ -510,17 +415,16 @@ def define_key_for_plots(wildcards, string):
     )
     labels = (
         sum([grouped_labs.get(f"chip_{chip}", []) for chip in sorted(unique_chip)], []) +
-        sum([grouped_labs.get(f"tf_{tf}", []) for tf in sorted(unique_tf)], []) +
         sum([grouped_labs.get("atac", [])], []) +
         sum([grouped_labs.get(f"{rna}", []) for rna in sorted(unique_rna)], []) +
         sum([grouped_labs.get(f"{srna}", []) for srna in sorted(unique_srna)], []) +
         sum([grouped_labs.get(f"{mc}", []) for mc in sorted(unique_mc)], [])
     )
-    marks = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marks = ( sorted(unique_chip) + sorted(unique_atac) + [f"{rna}_{strand}" for rna in sorted(unique_rna) for strand in ["plus", "minus"]] + [f"{srna}_{strand}" for srna in sorted(unique_srna) for strand in ["plus", "minus"]] + sorted(unique_mc) ) if strand == "unstranded" else ( sorted(unique_chip) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
 
-    marksforbrowser = ( sorted(unique_chip) + sorted(unique_tf) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
+    marksforbrowser = ( sorted(unique_chip) + sorted(unique_atac) + sorted(unique_rna) + sorted(unique_srna) + sorted(unique_mc) )
     
-    types = sorted((filtered_analysis_samples["line"] + "_" + filtered_analysis_samples["tissue"]).tolist())
+    types = sorted(filtered_analysis_samples["levels_label"].tolist())
     
     back_palette = assign_colors(types, "tab20")
     track_palette = assign_colors(marksforbrowser, "Set2")
@@ -542,7 +446,7 @@ def define_key_for_plots(wildcards, string):
     elif string == "marks":
         return marks
     elif string == "table":
-        table_name = f"results/combined/matrix/sample_table__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.tab"
+        table_name = f"{RESULTS_DIR}/combined/matrix/sample_table__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.tab"
         os.makedirs(os.path.dirname(table_name), exist_ok=True)
         tab = pd.DataFrame({
             "bigwigs": bigwigs,
@@ -577,8 +481,15 @@ def define_individual_browser_plots(wildcards):
     files = []
     starter = 2 if header == "yes" else 1
     for row_number, _ in enumerate(regions.itertuples(index=False),start=starter):
-        files.append(f"results/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
+        files.append(f"{RESULTS_DIR}/combined/plots/single_browser__{target_name}__line{row_number}__{env}__{analysis_name}__{ref_genome}.pdf")    
     return files
+
+def get_TE_file(wildcards):
+    ref_genome = wildcards.ref_genome
+    te_file = config['genomes'][ref_genome].get('te_file')
+    if config['browser_TE_file'] and te_file:
+        return f"{GENOMES_DIR}/{ref_genome}/{ref_genome}__TE_file.bed"
+    return []
 
 def define_input_for_pca(wildcards, string):
     tracks = []
@@ -592,29 +503,29 @@ def define_input_for_pca(wildcards, string):
         filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
         context = globenv[1:]
         for _, row in filtered_samples.iterrows():
-            bw = f"results/mC/tracks/{sample_name_str(row, 'sample')}__{context}.bw"
-            label = f"{row.line}_{row.tissue}_{row.replicate}"
-            group = f"{row.line}_{row.tissue}"
+            bw = f"{RESULTS_DIR}/mC/tracks/{row['sample_name']}__{context}.bw"
+            label = f"{row.levels_label}_{row.replicate}"
+            group = f"{row.levels_label}"
             tracks.append(bw)
             labels.append(label)
             unique_group.add(group)
             label_to_group[label] = group
-    elif globenv in ["TF", "ChIP", "ATAC"]:
+    elif globenv in ["ChIP", "ATAC"]:
         filtered_samples = samples[ (samples['env'] == globenv) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
-            bam = f"results/{globenv}/mapped/final__{sample_name_str(row, 'sample')}.bam"
-            label = f"{row.sample_type}_{row.line}_{row.tissue}_{row.data_type}_{row.replicate}"
-            group = f"{row.sample_type}_{row.line}_{row.tissue}"
+            bam = f"{RESULTS_DIR}/{globenv}/mapped/final__{row['sample_name']}.bam"
+            label = f"{row.sample_type}_{row.levels_label}_{row.data_type}_{row.replicate}"
+            group = f"{row.sample_type}_{row.levels_label}"
             tracks.append(bam)
             labels.append(label)
             unique_group.add(group)
             label_to_group[label] = group
     elif globenv == "all_chip":
-        filtered_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
+        filtered_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
-            bam = f"results/{row.env}/mapped/final__{sample_name_str(row, 'sample')}.bam"
-            label = f"{row.sample_type}_{row.line}_{row.tissue}_{row.data_type}_{row.replicate}"
-            group = f"{row.sample_type}_{row.line}_{row.tissue}"
+            bam = f"{RESULTS_DIR}/{row.env}/mapped/final__{row['sample_name']}.bam"
+            label = f"{row.sample_type}_{row.levels_label}_{row.data_type}_{row.replicate}"
+            group = f"{row.sample_type}_{row.levels_label}"
             tracks.append(bam)
             labels.append(label)
             unique_group.add(group)
@@ -634,11 +545,11 @@ def define_final_stats_output():
     aligned_bams = config['aligned_bams']
     stat_files = []    
     if not aligned_bams:
-        stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","ATAC"]])
+        stat_files += expand(f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","ATAC"]])
 
-    stat_files += expand("results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA","mC"]])
-    stat_files += expand("results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
-    stat_files += expand("results/combined/plots/peak_stats_{analysis_name}_{env}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","TF","ATAC"]])
+    stat_files += expand(f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["RNA","mC"]])
+    stat_files += expand(f"{RESULTS_DIR}/combined/plots/srna_sizes_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["sRNA"]])
+    stat_files += expand(f"{RESULTS_DIR}/combined/plots/peak_stats_{{analysis_name}}_{{env}}.pdf", analysis_name = analysis_name, env=[env for env in UNIQUE_ENVS if env in ["ChIP","ATAC"]])
 
     return stat_files
 
@@ -647,14 +558,13 @@ def define_final_combined_output(ref_genome):
     full_analysis = config['full_analysis']
     te_analysis = config['te_analysis']
     analysis_name = config['analysis_name']
-    mc_sort = config['heatmap_sort_mc_after_others']    
-    mc_context = config['mC_context']
+    mc_sort = config['heatmap_sort_mc_after_others']
+    mc_contexts = get_methylation_contexts()
     plot_files = []
     te_plots = []
     
     all_analysis_samples = analysis_samples[ analysis_samples['ref_genome'] == ref_genome ].copy()
     chip_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
-    tf_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'TF') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     atac_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ATAC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     mc_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'mC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     rna_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'RNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
@@ -662,87 +572,82 @@ def define_final_combined_output(ref_genome):
     rampage_analysis_samples = analysis_samples[ (analysis_samples['data_type'] == 'RAMPAGE') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
         
     if len(all_analysis_samples) >=1:
-        plot_files.append(f"results/combined/plots/Browser_full_chromosomes__all__{analysis_name}__{ref_genome}.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Browser_full_chromosomes__all__{analysis_name}__{ref_genome}.pdf")
     
     if len(chip_analysis_samples) >=2:
-        plot_files.append(f"results/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
-    
-    if len(tf_analysis_samples) >=2:
-        plot_files.append(f"results/combined/plots/Upset_combined_peaks__TF__{analysis_name}__{ref_genome}.pdf")
-    
-    peak_envs = sum(1 for s in [chip_analysis_samples, tf_analysis_samples, atac_analysis_samples] if len(s) >= 1)
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Upset_combined_peaks__ChIP__{analysis_name}__{ref_genome}.pdf")
+
+    peak_envs = sum(1 for s in [chip_analysis_samples, atac_analysis_samples] if len(s) >= 1)
     if peak_envs >= 2:
-        plot_files.append(f"results/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Upset_combined_peaks__all_chip__{analysis_name}__{ref_genome}.pdf")
     
     if len(srna_analysis_samples) >=1:
-        plot_files.append(f"results/combined/plots/Upset_combined_clusters__sRNA__{analysis_name}__{ref_genome}.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Upset_combined_clusters__sRNA__{analysis_name}__{ref_genome}.pdf")
 
     if len(atac_analysis_samples) >=2:
-        plot_files.append(f"results/combined/plots/Upset_combined_peaks__ATAC__{analysis_name}__{ref_genome}.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Upset_combined_peaks__ATAC__{analysis_name}__{ref_genome}.pdf")
     
     if len(rampage_analysis_samples) >=2:
-        plot_files.append(f"results/combined/plots/Upset_combined_TSS__RAMPAGE__{analysis_name}__{ref_genome}.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Upset_combined_TSS__RAMPAGE__{analysis_name}__{ref_genome}.pdf")
 
     if len(mc_analysis_samples) >=1:
         if len(all_analysis_samples) > len(mc_analysis_samples) and mc_sort:
-            plot_files.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")            
-            te_plots.append(f"results/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-            te_plots.append(f"results/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-            te_plots.append(f"results/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")            
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
             
-            plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-            te_plots.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-            te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-            te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
         else:
-            plot_files.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            plot_files.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-            te_plots.append(f"results/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-            te_plots.append(f"results/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-            te_plots.append(f"results/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+            te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
         
-        plot_files.append(f"results/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
-        te_plots.append(f"results/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-        te_plots.append(f"results/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
-        te_plots.append(f"results/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_genes.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__regions__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__tss__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__tes__mC__{analysis_name}__{ref_genome}__all_TEs.pdf")
         
     else:
-        plot_files.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-        te_plots.append(f"results/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-        te_plots.append(f"results/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-        te_plots.append(f"results/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Heatmap__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
     
-        plot_files.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-        plot_files.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
-        te_plots.append(f"results/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-        te_plots.append(f"results/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
-        te_plots.append(f"results/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        plot_files.append(f"{RESULTS_DIR}/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_genes.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__regions__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__tss__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
+        te_plots.append(f"{RESULTS_DIR}/combined/plots/Profile__tes__most__{analysis_name}__{ref_genome}__all_TEs.pdf")
 
     mc_rep_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
     if len(mc_rep_samples) >=3:
-        plot_files.append(f"results/combined/plots/PCA__mCG__{analysis_name}__{ref_genome}.pdf")
-        if mc_context == "all":
-            plot_files.append(f"results/combined/plots/PCA__mCHG__{analysis_name}__{ref_genome}.pdf")
-            plot_files.append(f"results/combined/plots/PCA__mCHH__{analysis_name}__{ref_genome}.pdf")
+        for ctxt in mc_contexts:
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__m{ctxt}__{analysis_name}__{ref_genome}.pdf")
     
-    all_chip_samples = samples[ (samples['env'].isin(["ChIP","TF","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
+    all_chip_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
     if len(all_chip_samples) >=3:
-            plot_files.append(f"results/combined/plots/PCA__all_chip__{analysis_name}__{ref_genome}.pdf")
-    
-    for env in [e for e in UNIQUE_ENVS if e in ["TF", "ChIP", "ATAC"]]:
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__all_chip__{analysis_name}__{ref_genome}.pdf")
+
+    for env in [e for e in UNIQUE_ENVS if e in ["ChIP", "ATAC"]]:
         env_rep_samples = samples[ (samples['env'] == env) & (samples['ref_genome'] == ref_genome) ].copy()
         if len(env_rep_samples) >=3:
-            plot_files.append(f"results/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf")
+            plot_files.append(f"{RESULTS_DIR}/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf")
 
     results = []
     
@@ -805,21 +710,16 @@ checkpoint is_stranded:
 # Rules to prep and then plot the mapping stats:
 rule prepping_mapping_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"results/{wildcards.env}/reports/summary_{wildcards.env}_{get_sample_info_from_name(sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
+        sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/{wildcards.env}/reports/summary_{wildcards.env}_{get_sample_info_from_name(sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
                                                 for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
     output:
-        temp_stat_file = temp("results/combined/reports/temp_summary_mapping_stats_{analysis_name}_{env}.txt"),
-        stat_file = "results/combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
+        temp_stat_file = temp(f"{RESULTS_DIR}/combined/reports/temp_summary_mapping_stats_{{analysis_name}}_{{env}}.txt"),
+        stat_file = f"{RESULTS_DIR}/combined/reports/summary_mapping_stats_{{analysis_name}}_{{env}}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_mapping_stats"))
-    threads: config["resources"]["prepping_mapping_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prepping_mapping_stats"]["mem_mb"],
-        tmp_mb=config["resources"]["prepping_mapping_stats"]["tmp_mb"],
-        qos=config["resources"]["prepping_mapping_stats"]["qos"]
     shell:
         """
-        printf "Line\tTissue\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
+        printf "Group\tLevels\tSample\tRep\tReference_genome\tTotal_reads\tPassing_filtering\tAll_mapped_reads\tUniquely_mapped_reads\n" > "{output.stat_file}"
         for f in {input.sample_stat_files}
         do
             awk -F "\t" -v OFS="\t" 'NR>1 {{print $1,$2,$3,$4,$5,$6,$7,$8,$9}}' $f >> "{output.temp_stat_file}"
@@ -829,20 +729,15 @@ rule prepping_mapping_stats:
     
 rule plotting_mapping_stats:
     input:
-        summary_stats = "results/combined/reports/summary_mapping_stats_{analysis_name}_{env}.txt"
+        summary_stats = f"{RESULTS_DIR}/combined/reports/summary_mapping_stats_{{analysis_name}}_{{env}}.txt"
     output:
-        plot = "results/combined/plots/mapping_stats_{analysis_name}_{env}.pdf"
+        plot = f"{RESULTS_DIR}/combined/plots/mapping_stats_{{analysis_name}}_{{env}}.pdf"
     params:
         analysis_name = lambda wildcards: wildcards.analysis_name,
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_mapping_stats.R")
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "plot_mapping_stats"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_mapping_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_mapping_stats"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_mapping_stats"]["tmp_mb"],
-        qos=config["resources"]["plotting_mapping_stats"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}"
@@ -850,22 +745,17 @@ rule plotting_mapping_stats:
         
 ###
 # Rules to prep and then plot the peak stats:
-rule prepping_chip_peak_stats:
+rule prepping_peak_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"results/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
+        sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
     output:
-        temp_stat_file = temp("results/combined/reports/temp_summary_peak_stats_{analysis_name}_{env}.txt"),
-        stat_file = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
+        temp_stat_file = temp(f"{RESULTS_DIR}/combined/reports/temp_summary_peak_stats_{{analysis_name}}_{{env}}.txt"),
+        stat_file = f"{RESULTS_DIR}/combined/reports/summary_peak_stats_{{analysis_name}}_{{env}}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_peak_stats"))
-    threads: config["resources"]["prepping_chip_peak_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prepping_chip_peak_stats"]["mem_mb"],
-        tmp_mb=config["resources"]["prepping_chip_peak_stats"]["tmp_mb"],
-        qos=config["resources"]["prepping_chip_peak_stats"]["qos"]
     shell:
         """
-        printf "Line\tTissue\tSample\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > "{output.stat_file}"
+        printf "Group\tLevels\tMark\tReference_genome\tPeaks_in_Rep1\tPeaks_in_Rep2\tPeaks_in_merged\tPeaks_in_pseudo_reps\tPeaks_in_idr\tSelected_peaks\n" > "{output.stat_file}"
         for f in {input.sample_stat_files}
         do
             awk 'NR>1' $f >> "{output.temp_stat_file}"
@@ -873,11 +763,11 @@ rule prepping_chip_peak_stats:
         sort {output.temp_stat_file} -u >> "{output.stat_file}"
         """
     
-rule plotting_peaks_stats_chip_tf:
+rule plotting_peak_stats:
     input:
-        summary_stats = "results/combined/reports/summary_peak_stats_{analysis_name}_{env}.txt"
+        summary_stats = f"{RESULTS_DIR}/combined/reports/summary_peak_stats_{{analysis_name}}_{{env}}.txt"
     output:
-        plot = "results/combined/plots/peak_stats_{analysis_name}_{env}.pdf"
+        plot = f"{RESULTS_DIR}/combined/plots/peak_stats_{{analysis_name}}_{{env}}.pdf"
     params:
         analysis_name = lambda wildcards: wildcards.analysis_name,
         env = lambda wildcards: wildcards.env,
@@ -885,11 +775,6 @@ rule plotting_peaks_stats_chip_tf:
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "plot_peak_stats"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_peaks_stats_chip_tf"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_peaks_stats_chip_tf"]["tmp_mb"],
-        qos=config["resources"]["plotting_peaks_stats_chip_tf"]["qos"]
     shell:
         """
         Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{output.plot}" "{params.env}"
@@ -899,18 +784,13 @@ rule plotting_peaks_stats_chip_tf:
 # Rules to prep and then plot the sizes stats for sRNA
 rule prepping_srna_sizes_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"results/sRNA/reports/sizes_stats__{sample_name}.txt"
+        sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/sRNA/reports/sizes_stats__{sample_name}.txt"
                                                 for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
     output:
-        temp_stat_file = temp("results/combined/reports/temp_summary_sizes_stats_{analysis_name}_{env}.txt"),
-        stat_file = "results/combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt"
+        temp_stat_file = temp(f"{RESULTS_DIR}/combined/reports/temp_summary_sizes_stats_{{analysis_name}}_{{env}}.txt"),
+        stat_file = f"{RESULTS_DIR}/combined/reports/summary_sizes_stats_{{analysis_name}}_{{env}}.txt"
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "prep_srna_sizes"))
-    threads: config["resources"]["prepping_srna_sizes_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prepping_srna_sizes_stats"]["mem_mb"],
-        tmp_mb=config["resources"]["prepping_srna_sizes_stats"]["tmp_mb"],
-        qos=config["resources"]["prepping_srna_sizes_stats"]["qos"]
     shell:
         """
         printf "Sample\tType\tSize\tCount\n" > "{output.stat_file}"
@@ -923,10 +803,10 @@ rule prepping_srna_sizes_stats:
     
 rule plotting_srna_sizes_stats:
     input:
-        summary_stats = "results/combined/reports/summary_sizes_stats_{analysis_name}_{env}.txt"
+        summary_stats = f"{RESULTS_DIR}/combined/reports/summary_sizes_stats_{{analysis_name}}_{{env}}.txt"
     output:
-        plot1 = "results/combined/plots/srna_sizes_stats_{analysis_name}_{env}.pdf",
-        plot2 = "results/combined/plots/srna_sizes_stats_zoom_{analysis_name}_{env}.pdf"
+        plot1 = f"{RESULTS_DIR}/combined/plots/srna_sizes_stats_{{analysis_name}}_{{env}}.pdf",
+        plot2 = f"{RESULTS_DIR}/combined/plots/srna_sizes_stats_zoom_{{analysis_name}}_{{env}}.pdf"
     params:
         analysis_name = lambda wildcards: wildcards.analysis_name,
         script=os.path.join(REPO_FOLDER,"workflow","scripts","R_sizes_stats.R"),
@@ -935,26 +815,21 @@ rule plotting_srna_sizes_stats:
     log:
         temp(return_log_combined("{analysis_name}", "{env}", "plot_srna_sizes"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_srna_sizes_stats"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_srna_sizes_stats"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_srna_sizes_stats"]["tmp_mb"],
-        qos=config["resources"]["plotting_srna_sizes_stats"]["qos"]
     shell:
         """
-        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{params.zoommin}" "{params.zoommax}"
+        Rscript "{params.script}" "{input.summary_stats}" "{params.analysis_name}" "{params.zoommin}" "{params.zoommax}" "{output.plot1}" "{output.plot2}"
         """
 
 ###
 # Rules to prep and plot ChIP upset plots
 rule combine_clusterfiles:
     input:
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes",
         clusterfiles = lambda wildcards: define_samples_for_upset(wildcards, "files")
     output:
-        temp1_file = temp("results/combined/bedfiles/temp1_combined_clusters__{env}__{analysis_name}__{ref_genome}.bed"),
-        temp2_file = temp("results/combined/bedfiles/temp2_combined_clusters__{env}__{analysis_name}__{ref_genome}.bed"),
-        merged_file = "results/combined/bedfiles/combined_clusters__{env}__{analysis_name}__{ref_genome}.bed"
+        temp1_file = temp(f"{RESULTS_DIR}/combined/bedfiles/temp1_combined_clusters__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        temp2_file = temp(f"{RESULTS_DIR}/combined/bedfiles/temp2_combined_clusters__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        merged_file = f"{RESULTS_DIR}/combined/bedfiles/combined_clusters__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
@@ -963,11 +838,6 @@ rule combine_clusterfiles:
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "combined_clusters_{env}"))
     conda: CONDA_ENV
-    threads: config["resources"]["combine_clusterfiles"]["threads"]
-    resources:
-        mem_mb=config["resources"]["combine_clusterfiles"]["mem_mb"],
-        tmp_mb=config["resources"]["combine_clusterfiles"]["tmp_mb"],
-        qos=config["resources"]["combine_clusterfiles"]["qos"]
     shell:
         """
         {{
@@ -985,12 +855,12 @@ rule combine_clusterfiles:
         
 rule combine_peakfiles:
     input:
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes",
         peakfiles = lambda wildcards: define_samples_for_upset(wildcards, "files")
     output:
-        temp1_file = temp("results/combined/bedfiles/temp1_combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"),
-        temp2_file = temp("results/combined/bedfiles/temp2_combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"),
-        merged_file = "results/combined/bedfiles/combined_peaks__{env}__{analysis_name}__{ref_genome}.bed"
+        temp1_file = temp(f"{RESULTS_DIR}/combined/bedfiles/temp1_combined_peaks__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        temp2_file = temp(f"{RESULTS_DIR}/combined/bedfiles/temp2_combined_peaks__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        merged_file = f"{RESULTS_DIR}/combined/bedfiles/combined_peaks__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
@@ -999,11 +869,6 @@ rule combine_peakfiles:
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "combined_peaks_{env}"))
     conda: CONDA_ENV
-    threads: config["resources"]["combine_peakfiles"]["threads"]
-    resources:
-        mem_mb=config["resources"]["combine_peakfiles"]["mem_mb"],
-        tmp_mb=config["resources"]["combine_peakfiles"]["tmp_mb"],
-        qos=config["resources"]["combine_peakfiles"]["qos"]
     shell:
         """
         {{
@@ -1021,12 +886,12 @@ rule combine_peakfiles:
         
 rule combine_TSS:
     input:
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes",
         peakfiles = lambda wildcards: define_samples_for_upset(wildcards, "files")
     output:
-        temp1_file = temp("results/combined/bedfiles/temp1_combined_TSS__{env}__{analysis_name}__{ref_genome}.bed"),
-        temp2_file = temp("results/combined/bedfiles/temp2_combined_TSS__{env}__{analysis_name}__{ref_genome}.bed"),
-        merged_file = "results/combined/bedfiles/combined_TSS__{env}__{analysis_name}__{ref_genome}.bed"
+        temp1_file = temp(f"{RESULTS_DIR}/combined/bedfiles/temp1_combined_TSS__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        temp2_file = temp(f"{RESULTS_DIR}/combined/bedfiles/temp2_combined_TSS__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        merged_file = f"{RESULTS_DIR}/combined/bedfiles/combined_TSS__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         env = lambda wildcards: wildcards.env,
@@ -1035,11 +900,6 @@ rule combine_TSS:
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "combined_TSS_{env}"))
     conda: CONDA_ENV
-    threads: config["resources"]["combine_TSS"]["threads"]
-    resources:
-        mem_mb=config["resources"]["combine_TSS"]["mem_mb"],
-        tmp_mb=config["resources"]["combine_TSS"]["tmp_mb"],
-        qos=config["resources"]["combine_TSS"]["qos"]
     shell:
         """
         {{
@@ -1058,22 +918,17 @@ rule combine_TSS:
 rule get_annotations_for_bedfile:
     input:
         bedfile = lambda wildcards: define_combined_target_file(wildcards),
-        region_file = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
+        region_file = lambda wildcards: f"{RESULTS_DIR}/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes",
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
-        temp_bedfile = temp("results/combined/bedfiles/temp__{target_name}__{ref_genome}.bed"),
-        annotated_file = "results/combined/bedfiles/annotated__{target_name}__{ref_genome}.bed"
+        temp_bedfile = temp(f"{RESULTS_DIR}/combined/bedfiles/temp__{{target_name}}__{{ref_genome}}.bed"),
+        annotated_file = f"{RESULTS_DIR}/combined/bedfiles/annotated__{{target_name}}__{{ref_genome}}.bed"
     params:
         target_name = lambda wildcards: wildcards.target_name,
     log:
         temp(return_log_combined("{target_name}", "{ref_genome}", "annotate_bedfile"))
     conda: CONDA_ENV
-    threads: config["resources"]["get_annotations_for_bedfile"]["threads"]
-    resources:
-        mem_mb=config["resources"]["get_annotations_for_bedfile"]["mem_mb"],
-        tmp_mb=config["resources"]["get_annotations_for_bedfile"]["tmp_mb"],
-        qos=config["resources"]["get_annotations_for_bedfile"]["qos"]
     shell:
         """
         {{
@@ -1091,22 +946,17 @@ rule get_annotations_for_bedfile:
 
 rule plotting_upset_regions:
     input:
-        mergedfile = "results/combined/bedfiles/{target_name}__{env}__{analysis_name}__{ref_genome}.bed",
-        annotatedfile = "results/combined/bedfiles/annotated__{target_name}__{env}__{analysis_name}__{ref_genome}.bed"
+        mergedfile = f"{RESULTS_DIR}/combined/bedfiles/{{target_name}}__{{env}}__{{analysis_name}}__{{ref_genome}}.bed",
+        annotatedfile = f"{RESULTS_DIR}/combined/bedfiles/annotated__{{target_name}}__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"
     output:
-        plot = "results/combined/plots/Upset_{target_name}__{env}__{analysis_name}__{ref_genome}.pdf"
+        plot = f"{RESULTS_DIR}/combined/plots/Upset_{{target_name}}__{{env}}__{{analysis_name}}__{{ref_genome}}.pdf"
     params:
         env = lambda wildcards: wildcards.env,
         types = lambda wildcards: define_samples_for_upset(wildcards, "types"),
         script = lambda wildcards: define_upset_script(wildcards)
     log:
         temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_upset_{target_name}_{env}"))
-    conda: CONDA_ENV_UPSET
-    threads: config["resources"]["plotting_upset_regions"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_upset_regions"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_upset_regions"]["tmp_mb"],
-        qos=config["resources"]["plotting_upset_regions"]["qos"]
+    conda: CONDA_ENV
     shell:
         """
         Rscript "{params.script}" "{input.mergedfile}" "{input.annotatedfile}" "{params.env}" "{params.types}" "{output.plot}"
@@ -1120,8 +970,8 @@ rule making_stranded_matrix_on_targetfile:
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
-        temp = temp("results/combined/matrix/temp_file_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}_{strand}.bed"),
-        matrix = temp("results/combined/matrix/matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}__{strand}.gz")
+        temp = temp(f"{RESULTS_DIR}/combined/matrix/temp_file_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}_{{strand}}.bed"),
+        matrix = temp(f"{RESULTS_DIR}/combined/matrix/matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}__{{strand}}.gz")
     wildcard_constraints:
         strand = "plus|minus|unstranded"
     params:
@@ -1143,11 +993,6 @@ rule making_stranded_matrix_on_targetfile:
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "making_matrix_{matrix_param}_{target_name}_{strand}"))
     conda: CONDA_ENV
-    threads: config["resources"]["making_stranded_matrix_on_targetfile"]["threads"]
-    resources:
-        mem_mb=config["resources"]["making_stranded_matrix_on_targetfile"]["mem_mb"],
-        tmp_mb=config["resources"]["making_stranded_matrix_on_targetfile"]["tmp_mb"],
-        qos=config["resources"]["making_stranded_matrix_on_targetfile"]["qos"]
     shell:
         """
         {{
@@ -1165,8 +1010,8 @@ rule making_stranded_matrix_on_targetfile:
             esac
             awk -v s=${{sign}} '$6==s' {input.target_file} > {output.temp}
         fi
-        echo "{params.labels}" | xargs -n1 > "results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
-        echo "{params.marks}" | xargs -n1 > "results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
+        echo "{params.labels}" | xargs -n1 > "{config[output_dir]}/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
+        echo "{params.marks}" | xargs -n1 > "{config[output_dir]}/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt"
         printf "Making {params.strand} strand {params.matrix} matrix for {params.env} {params.target_name} on {params.ref_genome}\n"
         if [[ "{params.env}" == "mC" ]]; then
             computeMatrix {params.base_mc} -R {output.temp} -S {input.bigwigs} --samplesLabel {params.labels} -bs {params.bs_mc} -b {params.before} -a {params.after} {params.middle} -p {threads} -o {output.matrix}
@@ -1180,7 +1025,7 @@ rule merging_matrix:
     input:
         get_matrix_inputs
     output:
-        "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz"
+        f"{RESULTS_DIR}/combined/matrix/final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -1190,11 +1035,6 @@ rule merging_matrix:
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "merging_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["merging_matrix"]["threads"]
-    resources:
-        mem_mb=config["resources"]["merging_matrix"]["mem_mb"],
-        tmp_mb=config["resources"]["merging_matrix"]["tmp_mb"],
-        qos=config["resources"]["merging_matrix"]["qos"]
     shell:
         """
         {{
@@ -1210,16 +1050,16 @@ rule merging_matrix:
 
 rule computing_matrix_scales:
     input:
-        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
+        matrix = f"{RESULTS_DIR}/combined/matrix/final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz",
         target_file = lambda wildcards: define_combined_target_file(wildcards),
         header = lambda wildcards: f"{define_combined_target_file(wildcards)}.header"
     output:
-        params_heatmap = temp("results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
-        params_profile = temp("results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
-        params_regions = temp("results/combined/matrix/params_regions_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
-        temp_values = temp("results/combined/matrix/temp_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"),
-        temp_profile = temp("results/combined/matrix/temp_profile_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf"),
-        temp_profile_values = temp("results/combined/matrix/temp_profile_values_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt")
+        params_heatmap = temp(f"{RESULTS_DIR}/combined/matrix/params_heatmap_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"),
+        params_profile = temp(f"{RESULTS_DIR}/combined/matrix/params_profile_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"),
+        params_regions = temp(f"{RESULTS_DIR}/combined/matrix/params_regions_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"),
+        temp_values = temp(f"{RESULTS_DIR}/combined/matrix/temp_values_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"),
+        temp_profile = temp(f"{RESULTS_DIR}/combined/matrix/temp_profile_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.pdf"),
+        temp_profile_values = temp(f"{RESULTS_DIR}/combined/matrix/temp_profile_values_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt")
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -1234,11 +1074,6 @@ rule computing_matrix_scales:
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "getting_scales_matrix_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["computing_matrix_scales"]["threads"]
-    resources:
-        mem_mb=config["resources"]["computing_matrix_scales"]["mem_mb"],
-        tmp_mb=config["resources"]["computing_matrix_scales"]["tmp_mb"],
-        qos=config["resources"]["computing_matrix_scales"]["qos"]
     shell:
         """
         {{        
@@ -1298,7 +1133,7 @@ rule computing_matrix_scales:
                     ymins+=("$ymini")
                     ymaxs+=("$ymaxi")
                 done
-            done < results/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
+            done < {config[output_dir]}/combined/matrix/marks_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
             awk -v ORS="" -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" 'BEGIN {{print "--zMin "a" --zMax "b}}' > {output.params_heatmap}
             awk -v ORS="" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--yMin "c" --yMax "d}}' > {output.params_profile}
@@ -1344,7 +1179,7 @@ rule computing_matrix_scales:
                     ymins+=("$ymini")
                     ymaxs+=("$ymaxi")
                 fi
-            done < results/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
+            done < {config[output_dir]}/combined/matrix/labels_{params.matrix}__{params.env}__{params.analysis_name}__{params.ref_genome}__{params.target_name}.txt
             
             awk -v ORS="" -v a="${{zmins[*]}}" -v b="${{zmaxs[*]}}" 'BEGIN {{print "--zMin "a" --zMax "b}}' > {output.params_heatmap}
             awk -v ORS="" -v c="${{ymins[*]}}" -v d="${{ymaxs[*]}}" 'BEGIN {{print "--yMin "c" --yMax "d}}' > {output.params_profile}
@@ -1361,13 +1196,13 @@ rule computing_matrix_scales:
 
 rule plotting_heatmap_on_targetfile:
     input:
-        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
-        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        params_heatmap = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        params_profile = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+        matrix = f"{RESULTS_DIR}/combined/matrix/final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz",
+        params_regions = f"{RESULTS_DIR}/combined/matrix/params_regions_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt",
+        params_heatmap = f"{RESULTS_DIR}/combined/matrix/params_heatmap_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt",
+        params_profile = f"{RESULTS_DIR}/combined/matrix/params_profile_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"
     output:
-        plot = "results/combined/plots/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf",
-        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed"
+        plot = f"{RESULTS_DIR}/combined/plots/Heatmap__{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.pdf",
+        sorted_regions = f"{RESULTS_DIR}/combined/matrix/Heatmap__{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}_sorted_regions.bed"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -1379,11 +1214,6 @@ rule plotting_heatmap_on_targetfile:
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_heatmap_on_targetfile"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_heatmap_on_targetfile"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_heatmap_on_targetfile"]["tmp_mb"],
-        qos=config["resources"]["plotting_heatmap_on_targetfile"]["qos"]
     shell:
         """
         if [[ "{params.matrix}" == "tes" ]]; then
@@ -1402,12 +1232,12 @@ rule plotting_heatmap_on_targetfile:
 
 rule sort_heatmap:
     input: 
-        matrix = "results/combined/matrix/final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz",
-        sorted_regions = "results/combined/matrix/Heatmap__{matrix_param}__most__{analysis_name}__{ref_genome}__{target_name}_sorted_regions.bed",
-        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__most__{analysis_name}__{ref_genome}__{target_name}.txt"
+        matrix = f"{RESULTS_DIR}/combined/matrix/final_matrix_{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz",
+        sorted_regions = f"{RESULTS_DIR}/combined/matrix/Heatmap__{{matrix_param}}__most__{{analysis_name}}__{{ref_genome}}__{{target_name}}_sorted_regions.bed",
+        params_regions = f"{RESULTS_DIR}/combined/matrix/params_regions_final_matrix_{{matrix_param}}__most__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"
     output:
-        temp_matrix = temp("results/combined/matrix/temp_sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"),
-        matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz"
+        temp_matrix = temp(f"{RESULTS_DIR}/combined/matrix/temp_sorted_final_matrix_{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz"),
+        matrix = f"{RESULTS_DIR}/combined/matrix/sorted_final_matrix_{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz"
     params:
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
@@ -1415,11 +1245,6 @@ rule sort_heatmap:
     log:
         temp(return_log_combined("{analysis_name}", "mC_{ref_genome}", "sort_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["sort_heatmap"]["threads"]
-    resources:
-        mem_mb=config["resources"]["sort_heatmap"]["mem_mb"],
-        tmp_mb=config["resources"]["sort_heatmap"]["tmp_mb"],
-        qos=config["resources"]["sort_heatmap"]["qos"]
     shell:
         """
         printf "Sorting heatmap {params.matrix} for mC {params.target_name} on {params.ref_genome}\n"
@@ -1430,11 +1255,11 @@ rule sort_heatmap:
 
 rule plotting_sorted_heatmap_on_targetfile:
     input:
-        matrix = "results/combined/matrix/sorted_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.gz",
-        params_heatmap = "results/combined/matrix/params_heatmap_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.txt",
-        params_profile = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.txt"
+        matrix = f"{RESULTS_DIR}/combined/matrix/sorted_final_matrix_{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz",
+        params_heatmap = f"{RESULTS_DIR}/combined/matrix/params_heatmap_final_matrix_{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt",
+        params_profile = f"{RESULTS_DIR}/combined/matrix/params_profile_final_matrix_{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"
     output:
-        plot = "results/combined/plots/Heatmap_sorted__{matrix_param}__mC__{analysis_name}__{ref_genome}__{target_name}.pdf"
+        plot = f"{RESULTS_DIR}/combined/plots/Heatmap_sorted__{{matrix_param}}__mC__{{analysis_name}}__{{ref_genome}}__{{target_name}}.pdf"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -1444,11 +1269,6 @@ rule plotting_sorted_heatmap_on_targetfile:
     log:
         temp(return_log_combined("{analysis_name}", "mC_{ref_genome}", "plot_sorted_heatmap_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_sorted_heatmap_on_targetfile"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["tmp_mb"],
-        qos=config["resources"]["plotting_sorted_heatmap_on_targetfile"]["qos"]
     shell:
         """
         if [[ "{params.matrix}" == "tes" ]]; then
@@ -1466,12 +1286,12 @@ rule plotting_sorted_heatmap_on_targetfile:
 
 rule plotting_profile_on_targetfile:
     input:
-        matrix = "results/combined/matrix/final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.gz",
-        params_regions = "results/combined/matrix/params_regions_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt",
-        params_profile = "results/combined/matrix/params_profile_final_matrix_{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.txt"
+        matrix = f"{RESULTS_DIR}/combined/matrix/final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.gz",
+        params_regions = f"{RESULTS_DIR}/combined/matrix/params_regions_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt",
+        params_profile = f"{RESULTS_DIR}/combined/matrix/params_profile_final_matrix_{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.txt"
     output:
-        plot1 = "results/combined/plots/Profile__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf",
-        plot2 = "results/combined/plots/Profile_pergroup__{matrix_param}__{env}__{analysis_name}__{ref_genome}__{target_name}.pdf"
+        plot1 = f"{RESULTS_DIR}/combined/plots/Profile__{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.pdf",
+        plot2 = f"{RESULTS_DIR}/combined/plots/Profile_pergroup__{{matrix_param}}__{{env}}__{{analysis_name}}__{{ref_genome}}__{{target_name}}.pdf"
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
@@ -1482,11 +1302,6 @@ rule plotting_profile_on_targetfile:
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "plot_profile_{matrix_param}_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["plotting_profile_on_targetfile"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plotting_profile_on_targetfile"]["mem_mb"],
-        tmp_mb=config["resources"]["plotting_profile_on_targetfile"]["tmp_mb"],
-        qos=config["resources"]["plotting_profile_on_targetfile"]["qos"]
     shell:
         """
         {{
@@ -1513,19 +1328,14 @@ rule plotting_profile_on_targetfile:
 # rules to plot browser shots
 rule prep_chromosomes_for_browser:
     input: 
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes"
     output:
-        bedfile = "results/combined/bedfiles/full_chromosomes__{ref_genome}.bed"
+        bedfile = f"{RESULTS_DIR}/combined/bedfiles/full_chromosomes__{{ref_genome}}.bed"
     params:
         chromosome_bs = config['chromosome_bs']
     log:
         temp(return_log_combined("bedfile", "{ref_genome}", "prep_chromosomes"))
     conda: CONDA_ENV
-    threads: config["resources"]["prep_chromosomes_for_browser"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prep_chromosomes_for_browser"]["mem_mb"],
-        tmp_mb=config["resources"]["prep_chromosomes_for_browser"]["tmp_mb"],
-        qos=config["resources"]["prep_chromosomes_for_browser"]["qos"]
     shell:
         """
         {{
@@ -1537,28 +1347,28 @@ rule prep_browser_on_region:
     input:
         bigwigs = lambda wildcards: define_key_for_plots(wildcards, "bigwigs"),
         target_file = lambda wildcards: define_combined_target_file(wildcards),
-        chrom_sizes = lambda wildcards: f"genomes/{wildcards.ref_genome}/chrom.sizes",
-        gff = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
-        all_genes = lambda wildcards: f"results/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
-        TE_file = lambda wildcards: f"genomes/{wildcards.ref_genome}/{wildcards.ref_genome}__TE_file.bed" if config['browser_TE_file'] else []
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/chrom.sizes",
+        gff = lambda wildcards: f"{GENOMES_DIR}/{wildcards.ref_genome}/{wildcards.ref_genome}.gff",
+        all_genes = lambda wildcards: f"{RESULTS_DIR}/combined/bedfiles/{wildcards.ref_genome}__all_genes.bed",
+        TE_file = lambda wildcards: get_TE_file(wildcards)
     output:
-        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
-        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
-        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        tempgenes = temp("results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"),
-        templocus = temp("results/combined/matrix/locus_{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed"),
-        temparray = temp("results/combined/matrix/array__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.npz"),
-        tempvalues = temp("results/combined/matrix/values__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.tab")
+        filenames = f"{RESULTS_DIR}/combined/matrix/filenames__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        genes = f"{RESULTS_DIR}/combined/matrix/genes_in_locus__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.gff",
+        tes = f"{RESULTS_DIR}/combined/matrix/tes_in_locus__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.bed",
+        htstart = f"{RESULTS_DIR}/combined/matrix/highlight_start__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        htwidth = f"{RESULTS_DIR}/combined/matrix/highlight_width__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        name = f"{RESULTS_DIR}/combined/matrix/name__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        tempgenes = temp(f"{RESULTS_DIR}/combined/matrix/genes_in_locus__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt"),
+        templocus = temp(f"{RESULTS_DIR}/combined/matrix/locus_{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.bed"),
+        temparray = temp(f"{RESULTS_DIR}/combined/matrix/array__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.npz"),
+        tempvalues = temp(f"{RESULTS_DIR}/combined/matrix/values__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.tab")
     params:
         analysis_name = config['analysis_name'],
         ref_genome = lambda wildcards: wildcards.ref_genome,
         target_name = lambda wildcards: wildcards.target_name,
         labels = lambda wildcards: define_key_for_plots(wildcards, "labels"),
         sample_table = lambda wildcards: define_key_for_plots(wildcards, "table"),
-        trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
+        trackfolder = lambda wildcards: f"{RESULTS_DIR}/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}",
         regionID = lambda wildcards: wildcards.regionID,
         browser_scales = config['browser_scales'],
         mc_scales = config['fixed_mc_scales'],
@@ -1568,11 +1378,6 @@ rule prep_browser_on_region:
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "prep_files_{target_name}_{regionID}"))
     conda: CONDA_ENV
-    threads: config["resources"]["prep_browser_on_region"]["threads"]
-    resources:
-        mem_mb=config["resources"]["prep_browser_on_region"]["mem_mb"],
-        tmp_mb=config["resources"]["prep_browser_on_region"]["tmp_mb"],
-        qos=config["resources"]["prep_browser_on_region"]["qos"]
     shell:
         """
         {{
@@ -1613,10 +1418,10 @@ rule prep_browser_on_region:
             touch {output.genes}
         fi
         ### To get the bed files of TEs. For now relying on a bed file of TEs (only one, needing to match the species).
-        if [[ -n {input.TE_file} && -s {input.TE_file} && "{params.target_name}" != "full_chromosomes" ]]; then
+        if [[ -n "{input.TE_file}" && -s "{input.TE_file}" && "{params.target_name}" != "full_chromosomes" ]]; then
             printf "Getting TE track\n"
             bedtools intersect -a {input.TE_file} -b {output.templocus} | awk -v OFS="\t" '{{if ($6!="+" && $6!="-") $6="*"; print $0}}' > {output.tes}
-        elif [[ -n {input.TE_file} ]]; then
+        else
             printf "No TE file to be included in browser\n"
             touch {output.tes}
         fi
@@ -1633,7 +1438,7 @@ rule prep_browser_on_region:
                 filelist2+=("${{bw}}")
             else
                 printf "${{lab}} is empty on ${{chr}}:${{start}}-${{end}}\n"
-                grep "${{chr}}" {input.chrom_sizes} | awk -v OFS="\t" '{{print $1,"1",$2,"0"}}' | bedtools sort -i - > "${{path}}.bg"
+                awk -v OFS="\t" -v c="${{chr}}" '$1==c {{print $1,"1",$2,"0"}}' {input.chrom_sizes} | bedtools sort -i - > "${{path}}.bg"
                 bedGraphToBigWig "${{path}}.bg" {input.chrom_sizes} "${{path}}.bw"
                 filelist2+=("${{path}}.bw")
             fi
@@ -1687,27 +1492,22 @@ rule prep_browser_on_region:
 
 rule make_single_loci_browser_plot:
     input:
-        filenames = "results/combined/matrix/filenames__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        genes = "results/combined/matrix/genes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.gff",
-        tes = "results/combined/matrix/tes_in_locus__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.bed",
-        name = "results/combined/matrix/name__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        htstart = "results/combined/matrix/highlight_start__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt",
-        htwidth = "results/combined/matrix/highlight_width__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.txt"
+        filenames = f"{RESULTS_DIR}/combined/matrix/filenames__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        genes = f"{RESULTS_DIR}/combined/matrix/genes_in_locus__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.gff",
+        tes = f"{RESULTS_DIR}/combined/matrix/tes_in_locus__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.bed",
+        name = f"{RESULTS_DIR}/combined/matrix/name__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        htstart = f"{RESULTS_DIR}/combined/matrix/highlight_start__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt",
+        htwidth = f"{RESULTS_DIR}/combined/matrix/highlight_width__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.txt"
     output:
-        browser_plot = temp("results/combined/plots/single_browser__{target_name}__{regionID}__{env}__{analysis_name}__{ref_genome}.pdf")
+        browser_plot = temp(f"{RESULTS_DIR}/combined/plots/single_browser__{{target_name}}__{{regionID}}__{{env}}__{{analysis_name}}__{{ref_genome}}.pdf")
     params:
         regionID = lambda wildcards: wildcards.regionID,
-        title = lambda wildcards: f"results/combined/plots/single_browser__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.pdf",
+        title = lambda wildcards: f"{RESULTS_DIR}/combined/plots/single_browser__{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}.pdf",
         script = os.path.join(REPO_FOLDER,"workflow","scripts","R_browser_plot.R"),
-        trackfolder = lambda wildcards: f"results/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}"
+        trackfolder = lambda wildcards: f"{RESULTS_DIR}/combined/matrix/tracks_{wildcards.target_name}__{wildcards.regionID}__{wildcards.env}__{wildcards.analysis_name}__{wildcards.ref_genome}"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "single_browser_{target_name}_{regionID}"))
     conda: CONDA_ENV
-    threads: config["resources"]["make_single_loci_browser_plot"]["threads"]
-    resources:
-        mem_mb=config["resources"]["make_single_loci_browser_plot"]["mem_mb"],
-        tmp_mb=config["resources"]["make_single_loci_browser_plot"]["tmp_mb"],
-        qos=config["resources"]["make_single_loci_browser_plot"]["qos"]
     shell:
         """
         {{
@@ -1727,15 +1527,10 @@ rule merge_region_browser_plots:
     input: 
         plots = lambda wildcards: define_individual_browser_plots(wildcards)
     output:
-        merged_plots = "results/combined/plots/Browser_{target_name}__{env}__{analysis_name}__{ref_genome}.pdf"
+        merged_plots = f"{RESULTS_DIR}/combined/plots/Browser_{{target_name}}__{{env}}__{{analysis_name}}__{{ref_genome}}.pdf"
     log:
         temp(return_log_combined("{analysis_name}", "{env}_{ref_genome}", "merging_browser_{target_name}"))
     conda: CONDA_ENV
-    threads: config["resources"]["merge_region_browser_plots"]["threads"]
-    resources:
-        mem_mb=config["resources"]["merge_region_browser_plots"]["mem_mb"],
-        tmp_mb=config["resources"]["merge_region_browser_plots"]["tmp_mb"],
-        qos=config["resources"]["merge_region_browser_plots"]["qos"]
     shell:
         """
         pdfunite {input.plots} {output.merged_plots}
@@ -1747,19 +1542,14 @@ rule summarize_tracks_pca:
     input:
         tracks = lambda wildcards: define_input_for_pca(wildcards, "tracks")
     output:
-        array = "results/combined/matrix/pca_matrix__{env}__{analysis_name}__{ref_genome}.npz"
+        array = f"{RESULTS_DIR}/combined/matrix/pca_matrix__{{env}}__{{analysis_name}}__{{ref_genome}}.npz"
     params:
         labels = lambda wildcards: define_input_for_pca(wildcards, "labels"),
         bs = config['pca_bs'],
         step = config['pca_step']
     log:
-        temp(return_log_mc("{analysis_name}__{ref_genome}", "summarize_tracks_pca", "{env}"))
+        temp(return_log_combined("{analysis_name}", "{ref_genome}", "summarize_tracks_pca_{env}"))
     conda: CONDA_ENV
-    threads: config["resources"]["summarize_tracks_pca"]["threads"]
-    resources:
-        mem_mb=config["resources"]["summarize_tracks_pca"]["mem_mb"],
-        tmp_mb=config["resources"]["summarize_tracks_pca"]["tmp_mb"],
-        qos=config["resources"]["summarize_tracks_pca"]["qos"]
     shell:
         """
         {{
@@ -1771,29 +1561,27 @@ rule summarize_tracks_pca:
             multiBamSummary bins -b {input.tracks} -o {output.array} -l {params.labels} -bs {params.bs} -n {params.step} -p {threads}
         fi
         }} 2>&1 | tee -a "{log}"
-        """    
+        """
 
 rule plot_PCA_correlation:
     input:
-        array = "results/combined/matrix/pca_matrix__{env}__{analysis_name}__{ref_genome}.npz"
+        array = f"{RESULTS_DIR}/combined/matrix/pca_matrix__{{env}}__{{analysis_name}}__{{ref_genome}}.npz"
     output:
-        plot = "results/combined/plots/PCA__{env}__{analysis_name}__{ref_genome}.pdf"
+        plot = f"{RESULTS_DIR}/combined/plots/PCA__{{env}}__{{analysis_name}}__{{ref_genome}}.pdf"
     params:
         colors = lambda wildcards: define_input_for_pca(wildcards, "colors"),
         bs = config['pca_bs']
     log:
-        temp(return_log_mc("{analysis_name}__{ref_genome}", "plot_PCA_correlation", "{env}"))
+        temp(return_log_combined("{analysis_name}", "{ref_genome}", "plot_PCA_correlation_{env}"))
     conda: CONDA_ENV
-    threads: config["resources"]["plot_PCA_correlation"]["threads"]
-    resources:
-        mem_mb=config["resources"]["plot_PCA_correlation"]["mem_mb"],
-        tmp_mb=config["resources"]["plot_PCA_correlation"]["tmp_mb"],
-        qos=config["resources"]["plot_PCA_correlation"]["qos"]
     shell:
         """
         {{
         printf "Plotting PCA for {wildcards.analysis_name} {wildcards.ref_genome} for {wildcards.env} samples\n"
-        plotPCA -in {input.array} -T "PCA for {wildcards.env} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose
+        if ! plotPCA -in {input.array} -T "PCA for {wildcards.env} in {params.bs}bp bins" -o {output.plot} --colors {params.colors:q} --transpose; then
+            printf "WARNING: plotPCA failed (insufficient data for PCA) — creating placeholder\n"
+            touch {output.plot}
+        fi
         }} 2>&1 | tee -a "{log}"
         """
 
@@ -1804,7 +1592,7 @@ rule all_combined:
         stats = define_final_stats_output(),
         final = lambda wildcards: define_final_combined_output(wildcards.ref_genome)
     output:
-        touch = "results/combined/chkpts/combined_analysis__{analysis_name}__{ref_genome}.done"
+        touch = f"{RESULTS_DIR}/combined/chkpts/combined_analysis__{{analysis_name}}__{{ref_genome}}.done"
     localrule: True
     shell:
         """

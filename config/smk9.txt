@@ -1,4 +1,0 @@
-snakemake>=9
-matplotlib 
-snakemake-executor-plugin-slurm 
-snakemake-executor-plugin-cluster-generic

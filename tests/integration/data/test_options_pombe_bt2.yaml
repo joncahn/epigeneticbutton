@@ -1,0 +1,30 @@
+# Test configuration for S. pombe — bowtie2 A/B test vs chromap baseline.
+# Compare proper-pair rates against test_runs/pombe (chromap default).
+
+analysis_name: "test_pombe_bt2"
+sample_file: "tests/integration/data/test_samples_pombe.tsv"
+
+output_dir: "test_runs/pombe_bt2/results"
+genome_dir: "test_runs/pombe/genomes"
+
+chip_aligner: "bowtie2"
+atac_aligner: "bowtie2"
+
+# Analysis options (same as baseline)
+full_analysis: true
+te_analysis: false
+QC_option: "none"
+GO: false
+trimmed_fastqs: false
+aligned_bams: false
+structural_rna_depletion: true
+browser_TE_file: false
+
+genomes:
+  Spombe:
+    species: "pombe"
+    fasta_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.fa.gz"
+    gff_file: "tests/integration/data/Spombe/Schizosaccharomyces_pombe_all_chromosomes.gff3.gz"
+    structural_rna_fafile: "tests/integration/data/Spombe/sp_structural_RNAs.fa.gz"
+    ncbi_taxid: "4896"
+    genus: "Schizosaccharomyces"

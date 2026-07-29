@@ -1,5 +1,7 @@
 # Structural RNA Database from Rfam
 
+> **Deprecated:** EPICC now auto-generates the structural RNA FASTA at runtime using Infernal/Rfam when `structural_rna_fafile` is not set in the options file. This manual procedure is no longer required for most users. It is retained here for reference.
+
 This guide explains how to download structural RNA sequences from the [Rfam database](https://rfam.org/) to filter from sRNA-seq data.
 
 For more details, see the [Rfam sequence extraction documentation](https://docs.rfam.org/en/latest/sequence-extraction.html).
@@ -107,7 +109,7 @@ esl-sfetch -f /path/to/Rfam.fa /path/to/good_accessions.txt > Rfam_ncRNAs.fa
    gzip Rfam_ncRNAs.fa
    ```
 
-2. Add the path to your config file:
+2. Add the path to your options file:
    ```yaml
    structural_rna_fafile: "/path/to/Rfam_ncRNAs.fa.gz"
    ```
