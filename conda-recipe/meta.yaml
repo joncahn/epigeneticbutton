@@ -1,12 +1,12 @@
 {% set name = "epicc" %}
-{% set version = "0.9.0" %}
+{% set version = "1.0.0" %}
 
 package:
   name: {{ name|lower }}
   version: {{ version }}
 
 source:
-  url: https://github.com/joncahn/epigeneticbutton/archive/refs/tags/v{{ version }}.tar.gz
+  url: https://github.com/joncahn/EPICC/archive/refs/tags/v{{ version }}.tar.gz
   sha256: 33dc671840723cacd3e21f27e81ff1ea15ede0583e600fb99aa2e9c40ecf2c3c
 
 build:
@@ -47,7 +47,7 @@ test:
     - epicc init-profile --help
 
 about:
-  home: https://github.com/joncahn/epigeneticbutton
+  home: https://github.com/joncahn/EPICC
   summary: "EPICC — Epigenetic Pipeline for Integrative Chromatin Characterization"
   description: |
     A Snakemake-based pipeline for ChIP-seq, CUT&RUN, CUT&Tag, ATAC-seq,

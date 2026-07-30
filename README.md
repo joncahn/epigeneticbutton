@@ -44,14 +44,14 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/joncahn/epigeneticbutton.git
+git clone https://github.com/joncahn/EPICC.git
 ```
 or for ssh connection
 ```bash
-git clone git@github.com:joncahn/epigeneticbutton.git
+git clone git@github.com:joncahn/EPICC.git
 ```
 ```bash
-cd epigeneticbutton
+cd EPICC
 ```
 
 2. Install snakemake and other required packages from the depency file:
@@ -477,7 +477,7 @@ If only the combined analysis needs to be redone (not the data-type-specific ste
 ## Output Structure
 
 ```
-epigeneticbutton/
+EPICC/
 ├── config/			# Main options file and recommended location for sample files and target files
 ├── data/			# Test material and examples (e.g. zm_structural_RNAs.fa.gz)
 ├── Help/			# Help files (e.g. Structural_RNAs_Rfam.md, Gene_Ontology.md)
