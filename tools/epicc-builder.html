@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EPICCbuilder</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔘</text></svg>">
-<link href="https://unpkg.com/tabulator-tables@6/dist/css/tabulator_midnight.min.css" rel="stylesheet">
-<script src="https://unpkg.com/tabulator-tables@6/dist/js/tabulator.min.js"></script>
-<script src="https://unpkg.com/js-yaml@4/dist/js-yaml.min.js"></script>
+<link href="https://unpkg.com/tabulator-tables@6.5.2/dist/css/tabulator_midnight.min.css" rel="stylesheet" integrity="sha384-IjPQxP4KslfqCUeR2++fWi5zeLwAG8boDCsM0yhyn08PoINK8bdzXatWy+KPm9UQ" crossorigin="anonymous">
+<script src="https://unpkg.com/tabulator-tables@6.5.2/dist/js/tabulator.min.js" integrity="sha384-ZlfxHB5fIn8MOAuKJe8YBMi7snQXYvhy+0b3K4rGBBY2UvrJwho2jciJ5NKt0WtC" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/js-yaml@4.3.0/dist/js-yaml.min.js" integrity="sha384-0zxS50HhMqXyT0WdkhYMK1yK+EpwgVEIHYc1RW1+JgesjsL7Rwqh0WfQSwEDyDH9" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #1a1a2e;
@@ -2279,9 +2279,13 @@ document.getElementById("btn-export-code").addEventListener("click", openCodeMod
 document.getElementById("export-filename").addEventListener("input", function() {
   syncSampleFilename(this.value.trim(), "toolbar");
 });
-// configState is the source of truth: seed the toolbar field from it at load so
-// the two never start out of step (independent of the static HTML value).
-syncSampleFilename(configState.sample_file);
+// NOTE: the initial seeding of this field from configState is done right after
+// the configState definition below — configState is declared later in this
+// script, so it is not yet available at this point. Calling it here threw
+// "Cannot read properties of undefined (reading 'sample_file')", which halted
+// the rest of top-level init and silently broke every handler defined after it
+// (modal Copy/Close, Delete/Undo/Redo/Duplicate, keyboard shortcuts) as well as
+// the configState definition itself (leaving the Options/Genomes tabs empty).
 
 // Code-block modal controls
 document.getElementById("code-modal-copy").addEventListener("click", copyCodeModal);
@@ -2466,6 +2470,12 @@ var configState = {
   // Dynamic — keyed by genome name
   genomes: {},
 };
+
+// Seed the toolbar sample-filename field from configState now that configState
+// is defined, so the toolbar field and configState.sample_file never start out
+// of step (independent of the static HTML value). Must run AFTER the configState
+// definition above.
+syncSampleFilename(configState.sample_file);
 
 // Shorthand DOM helper
 function el(tag, props, children) {
