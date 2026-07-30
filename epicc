@@ -270,7 +270,7 @@ def check_profile_placeholders(profile_arg):
     that placeholder value (once uncommented but not edited) makes sbatch
     silently reject every job and the run hangs at "Select jobs to
     execute..." with nothing visible in `squeue` — a debugging trap (see
-    e.g. github.com/joncahn/epigeneticbutton/issues/... for the original
+    e.g. github.com/joncahn/EPICC/issues/... for the original
     report). Surface the unedited value upfront with a pointer back at the
     offending file so the user knows exactly what to fix.
 

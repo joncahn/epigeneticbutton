@@ -1,5 +1,5 @@
 # Path to the repository (optional — auto-detected from Snakefile location if omitted)
-#repo_folder: "/path/to/epigeneticbutton"
+#repo_folder: "/path/to/EPICC"
 
 # Name of the run
 analysis_name: "epicc"
