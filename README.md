@@ -383,6 +383,18 @@ epicc output --plot-type go \
   --plot-label my_genes_of_interest \
   --ref-genome ColCEN
 ```
+By default the enrichment background (the reference gene set tested against) is
+all genes in the genome. To restrict it — e.g. to only the genes expressed in
+your experiment — pass a gene-ID file with `--background`:
+```bash
+epicc output --plot-type go \
+  --input-file data/target_genes.txt \
+  --plot-label my_genes_of_interest \
+  --ref-genome ColCEN \
+  --background data/expressed_genes.txt
+```
+(`--background` sets `rnaseq_background_file` for this run; it is a tab-delimited
+file whose first column is gene IDs matching the reference GFF.)
 Output includes two pdf treemaps (`topGO_<label>_BP_treemap.pdf` for biological process and `topGO_<label>_MF_treemap.pdf` for molecular function) and corresponding enrichment tables under `results/RNA/GO/`.
 
 ### **3. Finding motifs on target regions**

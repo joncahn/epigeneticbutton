@@ -1088,6 +1088,12 @@ def cmd_output(args, extra_args):
     # --- Validate input file format
     validate_output_input(args.input_file, spec["format"])
 
+    # --- Optional GO background file (--plot-type go only)
+    if getattr(args, "background", None):
+        if args.plot_type != "go":
+            sys.exit("Error: --background is only valid with --plot-type go.")
+        validate_output_input(args.background, "tsv_geneids")
+
     # --- Load options to resolve analysis_name / output_dir defaults
     try:
         import yaml
@@ -1143,6 +1149,8 @@ def cmd_output(args, extra_args):
         config_overrides.append(f"{cfg_key}={sources[source]}")
     if args.analysis_name:
         config_overrides.append(f"analysis_name={analysis_name}")
+    if getattr(args, "background", None):
+        config_overrides.append(f"rnaseq_background_file={args.background}")
 
     # --- Build snakemake command (re-uses the same execution-mode logic)
     cmd = ["snakemake"]
@@ -1653,6 +1661,13 @@ def build_parser():
         "--plot-label", metavar="LABEL",
         help="Label embedded in output filenames. Defaults to the input "
              "file's basename without extension.",
+    )
+    p_out.add_argument(
+        "--background", metavar="PATH",
+        help="Optional gene-ID background file for GO enrichment "
+             "(--plot-type go only): tab-delimited with gene IDs in the first "
+             "column. Sets rnaseq_background_file for this run. Default "
+             "background is all genes in the genome.",
     )
     p_out.add_argument(
         "--analysis-name", metavar="NAME",
