@@ -43,9 +43,9 @@ rule check_fasta:
                  --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 1800 \
                  --proto '=https,http' -o "$tmpfile" "$fasta_src"
             url_path="${{fasta_src%%\\?*}}"
-            if [[ "$url_path" == *.fa.gz || "$url_path" == *.fasta.gz ]]; then
+            if [[ "$url_path" == *.fa.gz || "$url_path" == *.fna.gz || "$url_path" == *.fasta.gz ]]; then
                 pigz -p {threads} -dc "$tmpfile" > {output.fasta}
-            elif [[ "$url_path" == *.fa || "$url_path" == *.fasta ]]; then
+            elif [[ "$url_path" == *.fa || "$url_path" == *.fna || "$url_path" == *.fasta ]]; then
                 mv "$tmpfile" {output.fasta}
             else
                 printf "\nExtension of downloaded fasta unknown: $fasta_src\n"
@@ -55,10 +55,10 @@ rule check_fasta:
         elif [[ ! -s "$fasta_src" ]]; then
             printf "\nFasta file for {params.ref_genome} does not exist:\n$fasta_src\n"
             exit 1
-        elif [[ "$fasta_src" == *.fa.gz || "$fasta_src" == *.fasta.gz ]]; then
+        elif [[ "$fasta_src" == *.fa.gz || "$fasta_src" == *.fna.gz || "$fasta_src" == *.fasta.gz ]]; then
             printf "\nGzipped fasta file found: $fasta_src\n"
             pigz -p {threads} -dc "$fasta_src" > {output.fasta}
-        elif [[ "$fasta_src" == *.fa || "$fasta_src" == *.fasta ]]; then
+        elif [[ "$fasta_src" == *.fa || "$fasta_src" == *.fna || "$fasta_src" == *.fasta ]]; then
             printf "\nUnzipped fasta file found: $fasta_src\n"
             cp "$fasta_src" {output.fasta}
         else
