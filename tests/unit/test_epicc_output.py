@@ -156,3 +156,26 @@ class TestValidateOutputInput:
         with gzip.open(f, "wt") as fh:
             fh.write("chrI\t10\t100\tn1\n")
         epicc.validate_output_input(str(f), "bed")
+
+
+# ---------------------------------------------------------------------------
+# `epicc output --background` (optional GO enrichment background file)
+# ---------------------------------------------------------------------------
+
+class TestBackgroundArg:
+    def test_background_parsed_for_go(self):
+        parser = epicc.build_parser()
+        args = parser.parse_args([
+            "output", "--plot-type", "go",
+            "--input-file", "genes.txt",
+            "--background", "bg.txt",
+        ])
+        assert args.background == "bg.txt"
+
+    def test_background_defaults_to_none(self):
+        parser = epicc.build_parser()
+        args = parser.parse_args([
+            "output", "--plot-type", "go",
+            "--input-file", "genes.txt",
+        ])
+        assert args.background is None
