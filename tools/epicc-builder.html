@@ -2949,8 +2949,12 @@ function buildConfigForm() {
   container.appendChild(tgtDet);
 
   // --- Footer ---
-  container.appendChild(el("div", { className: "cfg-footer",
-    textContent: "More options are available to those who can directly change the yamls... \uD83E\uDD13" }));
+  // Keep the trailing emoji upright \u2014 .cfg-footer italicizes its text, which
+  // synthetically slants the emoji on some platforms.
+  container.appendChild(el("div", { className: "cfg-footer" }, [
+    "More options are available to those who can directly change the yamls... ",
+    el("span", { style: "font-style: normal", textContent: "\uD83E\uDD13" })
+  ]));
   _configFormBuilt = true;
 }
 
