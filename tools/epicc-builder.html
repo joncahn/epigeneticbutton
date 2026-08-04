@@ -2467,6 +2467,19 @@ var configState = {
   profiles_plot_params: "--plotType lines",
   browser_TE_file: true,
   browser_scales: "sample",
+  // Target files for outputs & plots (per-output-type region/gene lists)
+  rnaseq_target_file_label: "target_genes",
+  rnaseq_target_file: "data/target_genes.txt",
+  rnaseq_background_file: "default",
+  motif_target_file_label: "target_motifs",
+  motif_target_file: "data/target_genes.bed",
+  motif_ref_genome: "",
+  srna_target_file_label: "miRNAs",
+  srna_target_file: "config/ath.gff3",
+  heatmap_target_file_label: "target_genes",
+  heatmap_target_file: "data/target_genes.bed",
+  browser_target_file_label: "target_loci",
+  browser_target_file: "data/target_loci.bed",
   // Dynamic — keyed by genome name
   genomes: {},
 };
@@ -2886,6 +2899,51 @@ function buildConfigForm() {
   plotDet.appendChild(plotBody);
   container.appendChild(plotDet);
 
+  // --- Target files for outputs & plots ---
+  // Region/gene lists that drive per-output-type products, both during a full
+  // run and via `epicc output --plot-type ...`. Each *_label is embedded in the
+  // output filenames; each *_file points at the input regions/genes.
+  var tgtDet = el("details", { className: "cfg-details" });
+  tgtDet.appendChild(el("summary", { textContent: "📄 Target Files for Outputs & Plots" }));
+  var tgtBody = el("div", { className: "cfg-details-body" });
+
+  tgtBody.appendChild(el("h3", { textContent: "RNA-seq / GO" }));
+  tgtBody.appendChild(buildTextRow("Gene list label:", "rnaseq_target_file_label", "target_genes",
+    "Embedded in RNA-seq expression / GO output filenames."));
+  tgtBody.appendChild(buildTextRow("Gene list file:", "rnaseq_target_file", "data/target_genes.txt",
+    "Tab-delimited; first column = gene IDs matching the reference GFF (optional 2nd column = labels)."));
+  tgtBody.appendChild(buildTextRow("GO background file:", "rnaseq_background_file", "default",
+    "Gene-ID file used as the GO enrichment background. \"default\" = all genes in the genome."));
+
+  tgtBody.appendChild(el("h3", { textContent: "Motifs" }));
+  tgtBody.appendChild(buildTextRow("Motif regions label:", "motif_target_file_label", "target_motifs",
+    "Embedded in motif-analysis output filenames."));
+  tgtBody.appendChild(buildTextRow("Motif regions file:", "motif_target_file", "data/target_genes.bed",
+    "BED file of regions to scan for motifs."));
+  tgtBody.appendChild(buildTextRow("Motif reference genome:", "motif_ref_genome", "e.g. ColCEN",
+    "Name of a configured genome (must match one defined in the Reference Genomes tab)."));
+
+  tgtBody.appendChild(el("h3", { textContent: "sRNA clusters" }));
+  tgtBody.appendChild(buildTextRow("sRNA regions label:", "srna_target_file_label", "miRNAs",
+    "Embedded in sRNA-cluster output folder names."));
+  tgtBody.appendChild(buildTextRow("sRNA regions file:", "srna_target_file", "config/ath.gff3",
+    "Target regions for sRNA analysis (tab-delimited, .bed, or .gff3)."));
+
+  tgtBody.appendChild(el("h3", { textContent: "Heatmap / metaplot" }));
+  tgtBody.appendChild(buildTextRow("Heatmap regions label:", "heatmap_target_file_label", "target_genes",
+    "Embedded in heatmap / metaplot output filenames."));
+  tgtBody.appendChild(buildTextRow("Heatmap regions file:", "heatmap_target_file", "data/target_genes.bed",
+    "BED file of regions for heatmaps/metaplots (may include a header)."));
+
+  tgtBody.appendChild(el("h3", { textContent: "Browser" }));
+  tgtBody.appendChild(buildTextRow("Browser regions label:", "browser_target_file_label", "target_loci",
+    "Embedded in browser-shot output filenames."));
+  tgtBody.appendChild(buildTextRow("Browser regions file:", "browser_target_file", "data/target_loci.bed",
+    "BED file of regions for browser shots; one region per PDF page (may include a header)."));
+
+  tgtDet.appendChild(tgtBody);
+  container.appendChild(tgtDet);
+
   // --- Footer ---
   container.appendChild(el("div", { className: "cfg-footer",
     textContent: "More options are available to those who can directly change the yamls... \uD83E\uDD13" }));
@@ -3085,6 +3143,20 @@ function configStateToYAML() {
   cfg.browser_TE_file = configState.browser_TE_file;
   cfg.browser_scales = configState.browser_scales;
 
+  // Target files for outputs & plots
+  cfg.rnaseq_target_file_label = configState.rnaseq_target_file_label;
+  cfg.rnaseq_target_file = configState.rnaseq_target_file;
+  cfg.rnaseq_background_file = configState.rnaseq_background_file;
+  cfg.motif_target_file_label = configState.motif_target_file_label;
+  cfg.motif_target_file = configState.motif_target_file;
+  cfg.motif_ref_genome = configState.motif_ref_genome;
+  cfg.srna_target_file_label = configState.srna_target_file_label;
+  cfg.srna_target_file = configState.srna_target_file;
+  cfg.heatmap_target_file_label = configState.heatmap_target_file_label;
+  cfg.heatmap_target_file = configState.heatmap_target_file;
+  cfg.browser_target_file_label = configState.browser_target_file_label;
+  cfg.browser_target_file = configState.browser_target_file;
+
   return cfg;
 }
 
@@ -3165,6 +3237,20 @@ function handleYAMLImport(text) {
   if (cfg.profiles_plot_params != null) configState.profiles_plot_params = cfg.profiles_plot_params;
   if (cfg.browser_TE_file != null) configState.browser_TE_file = !!cfg.browser_TE_file;
   if (cfg.browser_scales != null) configState.browser_scales = cfg.browser_scales;
+
+  // Target files for outputs & plots
+  if (cfg.rnaseq_target_file_label != null) configState.rnaseq_target_file_label = cfg.rnaseq_target_file_label;
+  if (cfg.rnaseq_target_file != null) configState.rnaseq_target_file = cfg.rnaseq_target_file;
+  if (cfg.rnaseq_background_file != null) configState.rnaseq_background_file = cfg.rnaseq_background_file;
+  if (cfg.motif_target_file_label != null) configState.motif_target_file_label = cfg.motif_target_file_label;
+  if (cfg.motif_target_file != null) configState.motif_target_file = cfg.motif_target_file;
+  if (cfg.motif_ref_genome != null) configState.motif_ref_genome = cfg.motif_ref_genome;
+  if (cfg.srna_target_file_label != null) configState.srna_target_file_label = cfg.srna_target_file_label;
+  if (cfg.srna_target_file != null) configState.srna_target_file = cfg.srna_target_file;
+  if (cfg.heatmap_target_file_label != null) configState.heatmap_target_file_label = cfg.heatmap_target_file_label;
+  if (cfg.heatmap_target_file != null) configState.heatmap_target_file = cfg.heatmap_target_file;
+  if (cfg.browser_target_file_label != null) configState.browser_target_file_label = cfg.browser_target_file_label;
+  if (cfg.browser_target_file != null) configState.browser_target_file = cfg.browser_target_file;
 
   // Trimming/adapter nested objects (fastp)
   if (cfg.quality_threshold) {
