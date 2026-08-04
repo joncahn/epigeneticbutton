@@ -2920,8 +2920,12 @@ function buildConfigForm() {
     "Embedded in motif-analysis output filenames."));
   tgtBody.appendChild(buildTextRow("Motif regions file:", "motif_target_file", "data/target_genes.bed",
     "BED file of regions to scan for motifs."));
-  tgtBody.appendChild(buildTextRow("Motif reference genome:", "motif_ref_genome", "e.g. ColCEN",
-    "Name of a configured genome (must match one defined in the Reference Genomes tab)."));
+  // Dropdown populated from the defined genomes; refreshed on each Options-tab
+  // visit by refreshMotifGenomeOptions() (the form itself is built only once).
+  tgtBody.appendChild(buildSelectRow("Motif reference genome:", "motif_ref_genome",
+    getDefinedGenomes(),
+    "Must match a genome defined in the Reference Genomes tab. This list "
+    + "refreshes each time you open the Options tab."));
 
   tgtBody.appendChild(el("h3", { textContent: "sRNA clusters" }));
   tgtBody.appendChild(buildTextRow("sRNA regions label:", "srna_target_file_label", "miRNAs",
@@ -2967,10 +2971,36 @@ function getGenomesFromSampleSheet() {
 
 // Get unique species names from genome config
 // Rebuild dynamic config sections (genomes are now in their own tab)
+// Repopulate the motif reference-genome dropdown from the currently-defined
+// genomes. Called on every switch to the Options tab: the config form is built
+// only once, so a static option list would go stale as genomes are added or
+// removed in the Reference Genomes tab.
+function refreshMotifGenomeOptions() {
+  var sel = document.getElementById("cfg-motif_ref_genome");
+  if (!sel) return;
+  var current = configState.motif_ref_genome || "";
+  var genomes = getDefinedGenomes();
+  // Preserve a stored value that isn't among the defined genomes (e.g. imported
+  // from a YAML, or a genome removed after selection) so it isn't silently lost.
+  if (current && genomes.indexOf(current) === -1) {
+    genomes = [current].concat(genomes);
+  }
+  while (sel.firstChild) sel.removeChild(sel.firstChild);
+  sel.appendChild(el("option", {
+    value: "",
+    textContent: genomes.length ? "— select genome —" : "— define a genome first —"
+  }));
+  for (var i = 0; i < genomes.length; i++) {
+    sel.appendChild(el("option", { value: genomes[i], textContent: genomes[i] }));
+  }
+  sel.value = current;
+}
+
 function updateConfigDynamicSections() {
   if (!_configFormBuilt) {
     buildConfigForm();
   }
+  refreshMotifGenomeOptions();
 }
 
 // ===========================================================================
