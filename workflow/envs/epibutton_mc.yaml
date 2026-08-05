@@ -4,7 +4,13 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - bismark
+  # Bismark 3.x is the Rust rewrite of the suite (single multi-call binary;
+  # classic tool names still work as aliases). Pin to it explicitly: leaving
+  # this unpinned let the solver drift onto 3.x silently, and the 3.x aligner
+  # recognises but does not yet implement --nucleotide_coverage (nucleotide
+  # stats are computed via a separate bam2nuc step in mC.smk instead). See
+  # dev/docs/upstream_blockers.md.
+  - bismark>=3.1.0,<4
   - mm2plus>=1.2
   - samtools>=1.17
   - htslib>=1.17
