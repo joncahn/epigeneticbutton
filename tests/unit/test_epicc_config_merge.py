@@ -126,3 +126,36 @@ class TestConfigMerge:
         assert f"sample_file={samples}" in vals
         assert "analysis_name=x" in vals
         assert "output_dir=out2" in vals
+
+    def test_passthrough_target_precedes_config(self, tmp_path):
+        # A positional target passed via `-- <target>` must be emitted BEFORE
+        # the --config block. Otherwise --config's greedy nargs="*" swallows it
+        # and Snakemake aborts ("Config entries have to be name=value pairs").
+        samples = tmp_path / "s.tsv"
+        samples.touch()
+        (tmp_path / "opts.yaml").touch()
+        args = _make_args(samples=str(samples), options=str(tmp_path / "opts.yaml"))
+        target = "results/mC/reports/final_report_pe__X.html"
+        cmd = epicc.build_snakemake_cmd(args, extra_args=[target], dry_run=True)
+        assert target in cmd, "passthrough target must be forwarded"
+        assert cmd.index(target) < cmd.index("--config"), \
+            "target must precede --config so it is not parsed as a config entry"
+        # and it must not be one of the --config key=value tokens
+        assert target not in _config_values(cmd)
+
+    def test_passthrough_target_with_flag_and_config(self, tmp_path):
+        # Mixed passthrough: a flag, a --config key, and a positional target.
+        samples = tmp_path / "s.tsv"
+        samples.touch()
+        (tmp_path / "opts.yaml").touch()
+        args = _make_args(samples=str(samples), options=str(tmp_path / "opts.yaml"))
+        target = "results/mC/reports/final_report_se__Y.html"
+        extra = ["--conda-create-envs-only", "--config", "analysis_name=z", target]
+        cmd = epicc.build_snakemake_cmd(args, extra_args=extra, dry_run=True)
+        assert "--conda-create-envs-only" in cmd
+        assert _config_count(cmd) == 1
+        vals = _config_values(cmd)
+        assert f"sample_file={samples}" in vals
+        assert "analysis_name=z" in vals
+        assert target not in vals, "target must not be captured as a config value"
+        assert cmd.index(target) < cmd.index("--config")

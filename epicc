@@ -604,10 +604,16 @@ def build_snakemake_cmd(args, extra_args, *, dry_run=False):
             filtered_extra.append(extra_args[i])
             i += 1
 
-    if config_overrides:
-        cmd += ["--config"] + config_overrides
+    # Passthrough args (positional targets + extra Snakemake flags) must be
+    # emitted BEFORE the --config block. --config uses nargs="*" and greedily
+    # consumes the tokens that follow it, so a target path placed after it gets
+    # mis-parsed as a key=value config entry and Snakemake aborts ("Config
+    # entries have to be defined as name=value pairs"). Putting --config last
+    # keeps its overrides self-contained.
     if filtered_extra:
         cmd += filtered_extra
+    if config_overrides:
+        cmd += ["--config"] + config_overrides
 
     return cmd
 
