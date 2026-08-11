@@ -240,7 +240,18 @@ rule bismark_map_pe:
         bamfile = maybe_temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplicated.bam", config.get('keep_final_bams', True)),
         cx_report = maybe_temp(f"{RESULTS_DIR}/mC/mapped/PE__{{sample_name}}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
         metrics_alignement = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_PE_report.txt"),
-        metrics_dedup = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplication_report.txt")
+        metrics_dedup = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplication_report.txt"),
+        # Companion reports consumed by bismark2report in make_mc_stats_pe.
+        # Declared here so Snakemake guarantees/tracks them (a missing one now
+        # fails this rule with a clear MissingOutputException instead of a
+        # cryptic bismark2report crash downstream). splitting/M-bias land at the
+        # methylation-extractor's -o dir (mapped/, no subdir); nucleotide_stats
+        # is produced by the explicit bam2nuc step below (Bismark 3.x Rust
+        # aligner recognises --nucleotide_coverage but does not yet implement
+        # it, so we compute it separately from the deduplicated BAM).
+        splitting_report = temp(f"{RESULTS_DIR}/mC/mapped/PE__{{sample_name}}.deduplicated_splitting_report.txt"),
+        mbias_report = temp(f"{RESULTS_DIR}/mC/mapped/PE__{{sample_name}}.deduplicated.M-bias.txt"),
+        nucleotide_stats = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplicated.nucleotide_stats.txt")
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     params:
@@ -264,9 +275,11 @@ rule bismark_map_pe:
         # gzip output omitted: bismark rejects gzipped output in PBAT mode,
         # and the flag only affects intermediate temp files (not the final
         # BAM), so the disk cost is small and consistent across all mC types.
-        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --nucleotide_coverage -1 {input.fastq1} -2 {input.fastq2}
+        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} -1 {input.fastq1} -2 {input.fastq2}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -p --output_dir {params.prefix}/ -o "PE__{params.sample_name}" --bam {output.temp_bamfile}
+        printf "\nComputing nucleotide-coverage stats (bam2nuc)\n"
+        bam2nuc --genome_folder {params.ref_genome_path} --dir {params.prefix} {output.bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -p --comprehensive -o {config[output_dir]}/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f {config[output_dir]}/mC/mapped/C*context_PE__{params.sample_name}*
@@ -284,7 +297,14 @@ rule bismark_map_se:
         bamfile = maybe_temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplicated.bam", config.get('keep_final_bams', True)),
         cx_report = maybe_temp(f"{RESULTS_DIR}/mC/mapped/SE__{{sample_name}}.deduplicated.CX_report.txt.gz", config.get('keep_cx_reports', False)),
         metrics_map = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2_SE_report.txt"),
-        metrics_dedup = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplication_report.txt")
+        metrics_dedup = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplication_report.txt"),
+        # Companion reports consumed by bismark2report in make_mc_stats_se (see
+        # the matching note in bismark_map_pe). nucleotide_stats comes from the
+        # explicit bam2nuc step (Bismark 3.x aligner does not yet implement
+        # --nucleotide_coverage).
+        splitting_report = temp(f"{RESULTS_DIR}/mC/mapped/SE__{{sample_name}}.deduplicated_splitting_report.txt"),
+        mbias_report = temp(f"{RESULTS_DIR}/mC/mapped/SE__{{sample_name}}.deduplicated.M-bias.txt"),
+        nucleotide_stats = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplicated.nucleotide_stats.txt")
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     params:
@@ -306,9 +326,11 @@ rule bismark_map_se:
         unset OMP_NUM_THREADS
         printf "\nAligning {params.sample_name} with bismark/bowtie2\n"
         # --gzip omitted for symmetry with bismark_map_pe (see that rule).
-        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} --nucleotide_coverage {input.fastq0}
+        bismark --genome {params.ref_genome_path} {params.mapping} --local --multicore {params.limthreads} -o {params.prefix} --temp_dir {params.prefix} {input.fastq0}
         printf "\nDeduplicating with bismark\n"
         deduplicate_bismark -s --output_dir {params.prefix} -o "SE__{params.sample_name}" --bam {output.temp_bamfile}
+        printf "\nComputing nucleotide-coverage stats (bam2nuc)\n"
+        bam2nuc --genome_folder {params.ref_genome_path} --dir {params.prefix} {output.bamfile}
         printf "\nCalling mC for {params.sample_name}"
         bismark_methylation_extractor -s --comprehensive -o {config[output_dir]}/mC/mapped/ {params.process} --gzip --multicore {params.limthreads} --cytosine_report --CX --genome_folder {params.ref_genome_path} {output.bamfile}
         rm -f {config[output_dir]}/mC/mapped/C*context_SE__{params.sample_name}*
@@ -338,7 +360,10 @@ rule make_mc_stats_pe:
         metrics_map = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_PE_report.txt",
         metrics_dedup = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplication_report.txt",
         cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",
-        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes",
+        splitting_report = f"{RESULTS_DIR}/mC/mapped/PE__{{sample_name}}.deduplicated_splitting_report.txt",
+        mbias_report = f"{RESULTS_DIR}/mC/mapped/PE__{{sample_name}}.deduplicated.M-bias.txt",
+        nucleotide_stats = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplicated.nucleotide_stats.txt"
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     output:
@@ -374,7 +399,7 @@ rule make_mc_stats_pe:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {config[output_dir]}/mC/mapped/PE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report {config[output_dir]}/mC/mapped/PE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R1_bismark_bt2_pe.nucleotide_stats.txt
+        bismark2report -o "final_report_pe__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {input.splitting_report} --mbias_report {input.mbias_report} --nucleotide_report {input.nucleotide_stats}
         cp {config[output_dir]}/mC/mapped/PE__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
         cp {params.prefix}/trim__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
         """
@@ -385,7 +410,10 @@ rule make_mc_stats_se:
         metrics_map = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2_SE_report.txt",
         metrics_dedup = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplication_report.txt",
         cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",
-        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes"
+        chrom_sizes = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/chrom.sizes",
+        splitting_report = f"{RESULTS_DIR}/mC/mapped/SE__{{sample_name}}.deduplicated_splitting_report.txt",
+        mbias_report = f"{RESULTS_DIR}/mC/mapped/SE__{{sample_name}}.deduplicated.M-bias.txt",
+        nucleotide_stats = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplicated.nucleotide_stats.txt"
     wildcard_constraints:
         sample_name = _NON_DMC_WC  # Exclude dmC (direct methylation) samples
     output:
@@ -421,9 +449,9 @@ rule make_mc_stats_se:
         zcat {input.cx_report} | awk -v OFS="\t" -v l={params.group} -v t={params.levels} -v s={params.sample_type} -v r={params.replicate} -v g={params.ref_genome} -v x=${{tot}} -v y=${{filt}} -v z=${{allmap}} -v u=${{uniq}} '{{a+=1; b=$4+$5; i+=b; if ($1 == "Pt" || $1 == "ChrC" || $1 == "chrC") {{m+=$4; n+=b;}}; if (b>0) {{c+=1; d+=b;}}; if (b>2) e+=1}} END {{if (n>0) {{o=m/n*100;}} else o="NA"; print l,t,s,r,g,x,y" ("y/x*100"%)",z" ("z/x*100"%)",u" ("u/x*100"%)",c/a*100,e/a*100,i/a,d/c,o}}' >> "{output.stat_file}"
 
         printf "\nMaking final html report for {params.sample_name}\n"
-        bismark2report -o "final_report_se__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {config[output_dir]}/mC/mapped/SE__{params.sample_name}.deduplicated_splitting_report.txt --mbias_report {config[output_dir]}/mC/mapped/SE__{params.sample_name}.deduplicated.M-bias.txt --nucleotide_report {params.prefix}/trim__{params.sample_name}__R0_bismark_bt2.nucleotide_stats.txt
-        mv {config[output_dir]}/mC/mapped/SE__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
-        mv {params.prefix}/trim__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
+        bismark2report -o "final_report_se__{params.sample_name}.html" --dir {config[output_dir]}/mC/reports/ --alignment_report {input.metrics_map} --dedup_report {input.metrics_dedup} --splitting_report {input.splitting_report} --mbias_report {input.mbias_report} --nucleotide_report {input.nucleotide_stats}
+        cp {config[output_dir]}/mC/mapped/SE__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
+        cp {params.prefix}/trim__"{params.sample_name}"*.txt {config[output_dir]}/mC/reports/
         """
 
 def get_cx_reports_for_merging(wildcards):

@@ -105,3 +105,27 @@ it before merging the entry; otherwise the file will rot.
 - **Remove when:** `makeOrgPackage()` exposes a `package_name=` (or
   similar) argument that lets us namespace by reference genome, OR we
   switch off AnnotationForge to a tool with no name-collision policy.
+
+## Bismark 3.x aligner `--nucleotide_coverage` not implemented
+
+- **Constraint:** Bismark 3.x (the Rust rewrite of the suite) recognises the
+  aligner's `--nucleotide_coverage` flag but no-ops it — the log prints
+  "these options are recognised but not yet active in this build (wired in a
+  later phase)" and no `*.nucleotide_stats.txt` is written. Passing the
+  resulting (nonexistent) file to `bismark2report --nucleotide_report` then
+  crashes it ("os error 2"). Perl Bismark ≤0.25 produced this file at align
+  time.
+- **Workaround:** `workflow/rules/mC.smk` drops `--nucleotide_coverage` from
+  the `bismark` align call and instead runs a separate `bam2nuc` step on the
+  deduplicated BAM (bam2nuc *is* implemented in 3.x). Output is named
+  `{PE,SE}__<sample>.deduplicated.nucleotide_stats.txt` (after the BAM, not the
+  align-time `..._bismark_bt2_pe.nucleotide_stats.txt`), declared as a rule
+  output and fed to `bismark2report --nucleotide_report`.
+- **Upstream:** <https://github.com/FelixKrueger/Bismark> (Rust suite; the flag
+  is staged "for a later phase").
+- **Check:** with a future Bismark, run `bismark ... --nucleotide_coverage`
+  on a small mC sample and confirm it writes `*_bismark_bt2_pe.nucleotide_stats.txt`
+  at align time (no "not yet active" note in the log).
+- **Remove when:** the 3.x aligner implements `--nucleotide_coverage`, at which
+  point the separate `bam2nuc` step can be dropped and the align-time flag +
+  original nucleotide-report path restored.
