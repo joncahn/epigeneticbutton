@@ -666,15 +666,40 @@ rule create_GO_database:
         """
         {{
         rm -rf {output.godb}
-        if file {params.gaffile} | grep -q 'gzip compressed'; then
-            gunzip -c {params.gaffile} > {output.gaf}
-        else
-            cp {params.gaffile} {output.gaf}
+        # gaf_file / gene_info_file may be HTTP(S) URLs (validation permits them,
+        # like the other genome-config fields). Fetch to a temp file first if so,
+        # then the content-based gzip-or-plain handling below proceeds on the
+        # local copy. curl flags mirror the genome-download rules in
+        # environment_setup.smk.
+        gaf_src="{params.gaffile}"
+        geneinfo_src="{params.geneinfofile}"
+        gaf_tmp="" ; geneinfo_tmp=""
+        trap 'rm -f "$gaf_tmp" "$geneinfo_tmp" 2>/dev/null || true' EXIT
+        if [[ "$gaf_src" == http://* || "$gaf_src" == https://* ]]; then
+            printf "\nDownloading GO gaf_file from URL: $gaf_src\n"
+            gaf_tmp=$(mktemp --suffix=.gaf.dl)
+            curl --fail --silent --show-error --location --max-redirs 5 \
+                 --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 1800 \
+                 --proto '=https,http' -o "$gaf_tmp" "$gaf_src"
+            gaf_src="$gaf_tmp"
         fi
-        if file {params.geneinfofile} | grep -q 'gzip compressed'; then
-            gunzip -c {params.geneinfofile} > {output.geneinfo}
+        if [[ "$geneinfo_src" == http://* || "$geneinfo_src" == https://* ]]; then
+            printf "\nDownloading GO gene_info_file from URL: $geneinfo_src\n"
+            geneinfo_tmp=$(mktemp --suffix=.geneinfo.dl)
+            curl --fail --silent --show-error --location --max-redirs 5 \
+                 --retry 3 --retry-delay 5 --connect-timeout 30 --max-time 1800 \
+                 --proto '=https,http' -o "$geneinfo_tmp" "$geneinfo_src"
+            geneinfo_src="$geneinfo_tmp"
+        fi
+        if file "$gaf_src" | grep -q 'gzip compressed'; then
+            gunzip -c "$gaf_src" > {output.gaf}
         else
-            cp {params.geneinfofile} {output.geneinfo}
+            cp "$gaf_src" {output.gaf}
+        fi
+        if file "$geneinfo_src" | grep -q 'gzip compressed'; then
+            gunzip -c "$geneinfo_src" > {output.geneinfo}
+        else
+            cp "$geneinfo_src" {output.geneinfo}
         fi
         ncbi_taxid=$(python3 -c "import json; print(json.load(open('{input.taxid_file}'))['ncbi_taxid'])")
         printf "Creating GO database for {params.ref_genome} (TaxId: $ncbi_taxid)\n"
