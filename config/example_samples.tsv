@@ -27,7 +27,10 @@
 #                from the assay. Required for ChIP / CUT_RUN / CUT_TAG (broad
 #                for histone domains like H3K9me2/H3K27me3; narrow for TFs and
 #                sharp marks like H3K4me3/H3K27ac). Blank for all other assays.
-#                Last column: it applies to only three assays.
+#                Applies to only three assays, so it sits near the end.
+#   Comments     Optional free text for your own notes (batch, library prep,
+#                sequencing run, anything). Completely ignored by the pipeline —
+#                it never affects analysis names or outputs. Last column.
 #
 # Legacy sheets that baked the peak type into the assay name (e.g. ChIP_broad,
 # with no Peak_type column) are still accepted and auto-split at load.
@@ -35,8 +38,8 @@
 # See dev/docs/sample-sheet-spec.md for the full per-field specification
 # and tools/epicc-builder.html for an interactive editor.
 
-Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control	Peak_type
-Col0_WT_H3K27ac_rep1	ChIP	ColCEN	genotype:Col0,tissue:WT	rep1	SRR27821885	PE	H3K27ac	Col0_WT_Input_rep1	narrow
+Sample_ID	Assay	Genome	Levels	Replicate_ID	Read_files	Read_layout	IP_target	Control	Peak_type	Comments
+Col0_WT_H3K27ac_rep1	ChIP	ColCEN	genotype:Col0,tissue:WT	rep1	SRR27821885	PE	H3K27ac	Col0_WT_Input_rep1	narrow	resequenced 2026-03; higher duplication than rep2
 Col0_WT_H3K4me1_rep1	ChIP	ColCEN	genotype:Col0,tissue:WT	rep1	SRR27821852	PE	H3K4me1	Col0_WT_Input_rep1	broad
 Col0_WT_Input_rep1	ChIP	ColCEN	genotype:Col0,tissue:WT	rep1	SRR27821932	PE	Input		narrow
 Col0_suvh1_WGBS_rep1	WGBS	ColCEN	genotype:Col0,tissue:suvh1	rep1	SRR27821959	SE

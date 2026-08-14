@@ -785,7 +785,7 @@
 // ergonomic — but keep it in step with NEW_COLNAMES in sample_sheet.py.
 const COLUMNS = [
   "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
-  "Read_files", "Read_layout", "IP_target", "Control", "Peak_type"
+  "Read_files", "Read_layout", "IP_target", "Control", "Peak_type", "Comments"
 ];
 
 // Assay is the experimental method only. Peak-calling type (broad/narrow) is a
@@ -897,7 +897,8 @@ const COLUMN_DESCRIPTIONS = {
   Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated SRA accessions for merging (SRA only). PE: comma-separated R1,R2 pair.",
   Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
   IP_target: "What was immunoprecipitated. Required for ChIP and CUT&RUN/CUT&Tag assays (e.g. H3K9me2, Input, WCE, IgG). Must be blank for non-IP assays.",
-  Control: "Sample_ID of the control sample (e.g. Input/WCE for ChIP, IgG for CUT&RUN/CUT&Tag, RNAseq for RAMPAGE). No chaining allowed."
+  Control: "Sample_ID of the control sample (e.g. Input/WCE for ChIP, IgG for CUT&RUN/CUT&Tag, RNAseq for RAMPAGE). No chaining allowed.",
+  Comments: "Free-text notes for your own use — batch, library prep, sequencing run, anything. Optional, unconstrained, and completely ignored by the pipeline: it never affects analysis names or outputs. Tabs and newlines are stripped on export so the TSV stays intact."
 };
 
 // Assay short names for Sample_ID suggestion (non-ChIP assays)
@@ -979,7 +980,7 @@ function suggestSampleId(rowData) {
 function emptyRow() {
   var row = {
     Sample_ID: "", Assay: "", Peak_type: "", Genome: "", Replicate_ID: "",
-    Read_files: "", Read_layout: "", IP_target: "", Control: "",
+    Read_files: "", Read_layout: "", IP_target: "", Control: "", Comments: "",
     _sid_user_edited: false
   };
   for (var i = 0; i < factors.length; i++) {
@@ -999,7 +1000,7 @@ function getVisibleFields() {
       fields.push(factorField(factors[i]));
     }
     fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target",
-                "Control", "Peak_type");
+                "Control", "Peak_type", "Comments");
     return fields;
   }
   return COLUMNS.slice();
@@ -1387,7 +1388,15 @@ function buildColumnDefs() {
       editor: "list",
       editorParams: { values: VALID_PEAK_TYPES, autocomplete: true, listOnEmpty: true, freetext: false },
       editable: assayGatedEditable("Peak_type"),
-    }, descHooks("Peak_type"))
+    }, descHooks("Peak_type")),
+    // Free-text annotation, always last. Deliberately NOT in ASSAY_GATED_FIELDS:
+    // it applies to every row regardless of assay, and nothing downstream reads
+    // it. Tabs/newlines are stripped on export by sanitizeCell so a stray
+    // paste cannot break the TSV.
+    Object.assign({
+      title: "Comments", field: "Comments", editor: "input", width: 200,
+      editorParams: { elementAttributes: { placeholder: "free text (ignored by the pipeline)" } },
+    }, descHooks("Comments"))
   );
 
   return defs;
@@ -2024,9 +2033,12 @@ function importTSV(text) {
   var header = lines[0].split("\t").map(function(s) { return s.trim(); });
   // Validate header
   // Peak_type is optional on import: legacy sheets encode it in the Assay name
-  // (e.g. ChIP_broad) and are split into Assay + Peak_type below.
+  // (e.g. ChIP_broad) and are split into Assay + Peak_type below. Comments is
+  // optional too — it is purely a user annotation, so a sheet written before
+  // the column existed must still import.
+  var OPTIONAL_ON_IMPORT = ["Peak_type", "Comments"];
   var missing = COLUMNS.filter(function(c) {
-    return c !== "Peak_type" && header.indexOf(c) === -1;
+    return OPTIONAL_ON_IMPORT.indexOf(c) === -1 && header.indexOf(c) === -1;
   });
   if (missing.length > 0) {
     alert("Import error: missing columns: " + missing.join(", ") +

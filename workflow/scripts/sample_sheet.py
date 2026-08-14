@@ -21,7 +21,13 @@ import pandas as pd
 NEW_COLNAMES = [
     "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
     "Read_files", "Read_layout", "IP_target", "Control", "Peak_type",
+    "Comments",
 ]
+
+# Columns that may be absent from a sheet; filled with "" when missing. Comments
+# is a free-text user annotation the pipeline never reads, so it is optional
+# both ways: old sheets lack it, new sheets may leave it blank.
+OPTIONAL_COLNAMES = ("Peak_type", "IP_target", "Control", "Comments")
 
 # Assay is the *experimental method*; the peak-calling type (broad/narrow) is a
 # separate analytical parameter carried in the Peak_type column, NOT baked into
@@ -273,18 +279,18 @@ def read_sample_sheet(filepath):
     df.columns = df.columns.str.strip()
 
     # Fill optional columns with empty strings. Peak_type is optional so legacy
-    # sheets (peak type baked into Assay, e.g. 'ChIP_broad') still parse.
+    # sheets (peak type baked into Assay, e.g. 'ChIP_broad') still parse, and
+    # Comments is optional so sheets written before it existed still parse.
     for col in NEW_COLNAMES:
         if col not in df.columns:
-            if col in ("Peak_type", "IP_target", "Control"):
+            if col in OPTIONAL_COLNAMES:
                 df[col] = ""
             else:
                 raise ValueError(f"Required column '{col}' missing from sample sheet")
 
     # Normalize NaN to empty string for optional columns
-    df["Peak_type"] = df["Peak_type"].fillna("")
-    df["IP_target"] = df["IP_target"].fillna("")
-    df["Control"] = df["Control"].fillna("")
+    for col in OPTIONAL_COLNAMES:
+        df[col] = df[col].fillna("")
 
     df = df.sort_values(
         by=["Genome", "Assay", "Levels", "Sample_ID"]

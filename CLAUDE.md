@@ -48,9 +48,9 @@ Nested settings (`dmr_thresholds.*`, `chip_callpeaks.params`, `cut_callpeaks.*`)
 
 ### Sample Sheet and Naming
 
-Sample metadata is defined in a TSV file with 10 columns:
+Sample metadata is defined in a TSV file with 11 columns:
 
-`Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control | Peak_type`
+`Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control | Peak_type | Comments`
 
 - **Sample_ID**: Unique identifier, used as filesystem name. Must be unique and filesystem-safe (no `__`, `/`, whitespace).
 - **Assay**: Controlled vocabulary (experimental method only): `ChIP`, `CUT_RUN`, `CUT_TAG`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, `dmC`. Legacy combined tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are still accepted and auto-split at load.
@@ -62,6 +62,7 @@ Sample metadata is defined in a TSV file with 10 columns:
 - **Read_layout**: `SE` or `PE`
 - **IP_target**: Required for pulldown assays (`ChIP`/`CUT_RUN`/`CUT_TAG`; e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
 - **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). No chaining.
+- **Comments**: Optional free text for the user's own notes. Unconstrained, not assay-gated, and completely inert — never read by the pipeline and never part of analysis keys, names, or output paths. The column may be absent entirely (filled with `""`). Tabs/newlines are stripped on builder export so the TSV stays intact.
 
 Control-row replicate merging keys on `(Levels, IP_target, Genome)` only — the `Assay` value on a control row is decorative for merging purposes, so a single biological Input/IgG/WCE serving multiple IP types (broad + narrow, ChIP + CUT&RUN) merges correctly regardless of how individual rep rows are labeled. See `build_control_merge_key` in `workflow/scripts/sample_sheet.py`.
 

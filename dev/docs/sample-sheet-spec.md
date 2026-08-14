@@ -23,6 +23,7 @@ Trailing whitespace on any field is stripped during parsing.
 | 8 | IP_target | Conditional | Freetext |
 | 9 | Control | Conditional | Reference |
 | 10 | Peak_type | Conditional | Controlled vocabulary |
+| 11 | Comments | Optional | Freetext |
 
 `Peak_type` is last because it applies to only three assays; column lookup is by
 header name on both sides, so the order is ergonomic rather than semantic.
@@ -216,6 +217,22 @@ References the Sample_ID of the control sample used for normalization.
   builder constrains the Control dropdown to same-family assays
   (`ChIP_*`, `CUT_RUN_*`, or `CUT_TAG_*`), but freetext entry is allowed
   for cross-family controls if a study uses one.
+
+### Comments
+
+Free-text annotation for the user's own reference — batch, library prep,
+sequencing run, caveats, anything. **The pipeline never reads it.**
+
+| Rule | Detail |
+|------|--------|
+| Optional | May be blank, and the column may be absent entirely — sheets written before it existed still load (filled with `""`) |
+| Unconstrained | Any text; no controlled vocabulary, no length limit, not assay-gated (unlike `Peak_type`/`IP_target`/`Control`, it is editable on every row) |
+| Inert | Never contributes to analysis keys, analysis names, merge keys, or output paths |
+| Tab/newline safe | The builder strips `\t`, `\r` and `\n` on export (`sanitizeCell`) so a pasted multi-line note cannot break the TSV |
+
+A `#` inside the field is preserved: `read_sample_sheet` drops only *full-line*
+comments, never truncating at a mid-field `#` (the same guarantee that keeps
+URLs with fragments intact in `Read_files`).
 
 ## Cross-Field Validation
 
