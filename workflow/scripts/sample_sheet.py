@@ -148,6 +148,28 @@ def parse_read_files(read_files_str, read_layout):
 
 _FASTQ_EXTENSIONS = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
 
+# Extensions that identify an input's type. Kept next to the FASTQ list so the
+# two cannot drift apart.
+_KNOWN_EXTENSIONS = (".bam", ".bed.gz", ".bedmethyl.gz") + _FASTQ_EXTENSIONS
+
+
+def _strip_version_suffix(name):
+    """Drop a trailing ``.<digits>`` version component from a filename.
+
+    SRA's "Original Format" objects carry one — the submitted BAM for a run is
+    served as e.g. ``Nvec_..._Nanopore.bam.1`` — which hides the real extension
+    from the type checks below.
+
+    Deliberately conservative: the suffix is removed ONLY when doing so exposes
+    a known extension. So ``reads.bam.1`` -> ``reads.bam``, while a file
+    genuinely named ``sample.1`` or ``chunk.12`` is left untouched and still
+    reported as unrecognized rather than being silently mistyped.
+    """
+    base, sep, tail = name.rpartition(".")
+    if not sep or not tail.isdigit():
+        return name
+    return base if base.endswith(_KNOWN_EXTENSIONS) else name
+
 
 def _is_url(path):
     """Return True if the path looks like an HTTP(S) URL."""
@@ -254,8 +276,10 @@ def get_seq_id_and_path(read_files_str, read_layout):
         import os
         first_file = parts[0].split(",")[0]  # first mate for PE
         # Strip query params for extension checks on remote inputs (URLs and
-        # s3:// URIs alike — an S3 key can carry a query string too).
+        # s3:// URIs alike — an S3 key can carry a query string too), then drop
+        # any SRA version suffix so the real extension is visible.
         check_name = _url_basename(first_file) if _is_remote(first_file) else first_file
+        check_name = _strip_version_suffix(check_name)
         if check_name.endswith(".bam"):
             # BAM input (local path or URL): path IS the file/URL
             seq_id = os.path.splitext(os.path.basename(check_name))[0]

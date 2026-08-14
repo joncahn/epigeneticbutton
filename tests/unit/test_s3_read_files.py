@@ -192,3 +192,41 @@ class TestS3Validation:
         df = pd.DataFrame([self._row("s1", "s3://bucket-only")])
         with pytest.raises(ValueError, match="malformed S3 URI"):
             check_table(df)
+
+
+class TestSraVersionSuffix:
+    """SRA "Original Format" objects carry a trailing .<digits> version suffix
+    (e.g. ``..._Nanopore.bam.1``), which otherwise hides the real extension.
+
+    Note these objects live in Requester-Pays buckets and so cannot actually be
+    fetched anonymously — see the follow-up issue. Type detection is fixed here
+    so the remaining gap is purely credentials, not parsing.
+    """
+
+    @pytest.mark.parametrize("name,expected_seq_id", [
+        ("Nvec_F1_Gastrula_GSKxUntreated_Nanopore.bam.1",
+         "Nvec_F1_Gastrula_GSKxUntreated_Nanopore"),
+        ("sample.bam.1", "sample"),
+        ("m.bed.gz.1", "m"),
+    ])
+    def test_version_suffix_reveals_real_extension(self, name, expected_seq_id):
+        seq_id, path = get_seq_id_and_path(f"s3://bucket/key/{name}", "SE")
+        assert seq_id == expected_seq_id
+        # The download path keeps the true object name, suffix and all.
+        assert path.endswith(name)
+
+    def test_versioned_fastq_uses_url_sentinel(self):
+        seq_id, path = get_seq_id_and_path("s3://bucket/k/reads.fastq.gz.2", "SE")
+        assert seq_id == "URL"
+        assert path.endswith("reads.fastq.gz.2")
+
+    def test_local_path_version_suffix_also_handled(self):
+        seq_id, path = get_seq_id_and_path("/data/sample.bam.1", "SE")
+        assert seq_id == "sample"
+        assert path == "/data/sample.bam.1"
+
+    @pytest.mark.parametrize("name", ["notafile.1", "chunk.12", "archive.7"])
+    def test_bare_numeric_suffix_still_rejected(self, name):
+        # Stripping must only ever *reveal* a known extension — never invent one.
+        with pytest.raises(ValueError, match="Unrecognized Read_files format"):
+            get_seq_id_and_path(f"s3://bucket/key/{name}", "SE")
