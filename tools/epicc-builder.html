@@ -1054,10 +1054,11 @@ function removeFactor(name) {
 // `factors`. So nothing per-row needs rewriting, and every row stays
 // consistent by construction, including example rows.
 //
-// The order is not cosmetic, though: buildLevelsFromFactors emits the pairs in
-// this order and levelsToLabel joins the level *values* in the same order to
-// form levels_label, which appears in analysis-level output names. Hence the
-// note surfaced by showFactorOrderNote.
+// The order is not cosmetic, and that is by design: buildLevelsFromFactors
+// emits the pairs in this order and levelsToLabel joins the level *values* in
+// the same order to form levels_label, which appears in analysis-level output
+// names. So reordering factors is the supported way to control how those
+// outputs are named — showFactorOrderNote reports the resulting label.
 function moveFactor(from, to) {
   if (from === to) return;
   if (from < 0 || from >= factors.length) return;
@@ -1398,22 +1399,37 @@ function buildColumnDefs() {
 // ===========================================================================
 
 const descPanel = document.getElementById("description-panel");
-// Reordering factors changes levels_label, and therefore the analysis-level
-// output names ({Assay}__{levels_label}__{IP_target}__{Genome}) — a real
-// consequence for an analysis whose results already exist on disk. Say so in
-// the existing aria-live description panel rather than adding a persistent
-// banner: the warning only matters immediately after a reorder, it is
-// announced to screen readers there, and it costs no permanent screen space.
+// Reordering factors changes levels_label and therefore the analysis-level
+// output names ({Assay}__{levels_label}__{IP_target}__{Genome}). That effect is
+// intended — factor order is how the user controls those names — so report it
+// as the outcome of the action rather than as a hazard, and show the actual
+// resulting label so the effect is visible instead of merely described. Uses
+// the existing aria-live description panel: the feedback matters right after
+// the reorder, is announced to screen readers there, and costs no permanent
+// screen space.
+function firstLevelsLabelExample() {
+  // The label from the first row that has enough values to produce one; rows
+  // are often partially filled while a sheet is being built.
+  var data = table ? table.getData() : [];
+  for (var i = 0; i < data.length; i++) {
+    var label = levelsToLabel(buildLevelsFromFactors(data[i]));
+    if (label && label.indexOf("_") !== -1) return label;
+  }
+  return "";
+}
+
 function showFactorOrderNote(movedName) {
   while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
   var strong = document.createElement("strong");
   strong.textContent = "Factor order changed";
   descPanel.appendChild(strong);
+  var example = firstLevelsLabelExample();
   descPanel.appendChild(document.createTextNode(
     " — moved '" + movedName + "'. Factors are now: " + factors.join(", ") + ". " +
-    "Level values are joined in this order to form the levels_label used in " +
-    "analysis names (e.g. ChIP_broad__WT_root__H3K9me2__ColCEN), so reordering " +
-    "changes those output names for an analysis that has already been run."
+    "Level values are joined in this order to form the levels_label in analysis " +
+    "output names" + (example ? ", which are now named '" + example + "'" : "") +
+    ", so factor order is how you control that naming. Results already written " +
+    "to disk keep the names they were created with."
   ));
 }
 
