@@ -11,7 +11,10 @@
 #   Assay        ChIP_broad | ChIP_narrow | ATAC | RNAseq | RAMPAGE |
 #                sRNA | WGBS | WGBS_nd | PBAT | EMseq | dmC
 #   Genome       Reference genome name (must match `genomes:` key in the
-#                options YAML, e.g. ColCEN, Spombe, hg38).
+#                options YAML). Comma-separate to map the same reads to
+#                several references (e.g. ColCEN,TAIR10): reads are downloaded
+#                and trimmed once, then aligned to each, and post-alignment
+#                files are tagged with the genome. Must not contain '__'.
 #   Levels       Comma-separated factor:level pairs (genotype:WT,tissue:leaf).
 #                All rows in the sheet must use the same factor keys.
 #   Replicate_ID Replicate label (rep1, rep2, repA, ...).

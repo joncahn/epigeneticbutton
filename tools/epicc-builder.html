@@ -783,7 +783,7 @@ function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
 const COLUMN_DESCRIPTIONS = {
   Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
   Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), CUT_RUN_broad / CUT_RUN_narrow (CUT&RUN), CUT_TAG_broad / CUT_TAG_narrow (CUT&Tag), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads).",
-  Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
+  Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/. Comma-separate to map the same sample to several references (e.g. B73,W22): the reads are downloaded and trimmed once, then aligned to each, and post-alignment outputs are tagged with the genome.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
   Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated SRA accessions for merging (SRA only). PE: comma-separated R1,R2 pair.",
@@ -977,10 +977,18 @@ function getDefinedGenomes() {
   if (typeof table !== "undefined") {
     var data = table.getData();
     for (var i = 0; i < data.length; i++) {
-      var g = (data[i].Genome || "").trim();
-      if (g && !seen[g]) {
-        seen[g] = true;
-        result.push(g);
+      // A Genome cell may list several references for one sample
+      // ("Spombe,Spombe2" — the reads are mapped to each). Split, or the whole
+      // string would be registered as one bogus genome and would then surface
+      // in this dropdown, in the Reference Genomes tab, and in the exported
+      // options YAML's genomes: block.
+      var cell = (data[i].Genome || "").split(",");
+      for (var j = 0; j < cell.length; j++) {
+        var g = cell[j].trim();
+        if (g && !seen[g]) {
+          seen[g] = true;
+          result.push(g);
+        }
       }
     }
   }
@@ -1377,8 +1385,31 @@ function runValidation() {
       addIssue(cellIssues, errors, rowKey, "Assay", "[X] Row #" + rowNum + " '" + sid + "': Assay '" + assay + "' not in [" + VALID_ASSAYS.join(", ") + "]");
 
     // Genome
-    if (!genome)
+    if (!genome) {
       addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': Genome is required");
+    } else {
+      // Genome may list several references ("Spombe,Spombe2"): the sample's
+      // reads are mapped to each. Check each token, since a stray or trailing
+      // comma would otherwise register an empty genome name downstream.
+      var gTokens = genome.split(",");
+      var gSeen = {};
+      for (var gi = 0; gi < gTokens.length; gi++) {
+        var gTok = gTokens[gi].trim();
+        if (!gTok) {
+          // The loader silently drops empty entries ("A,,B" -> A, B), so flag
+          // this as a likely typo rather than an error — staying consistent
+          // with what the pipeline actually accepts.
+          addIssue(cellIssues, warnings, rowKey, "Genome", "[!] Row #" + rowNum + " '" + sid + "': stray comma in Genome '" + genome + "' — the empty entry is ignored", "warnings");
+        } else if (DOUBLE_UNDERSCORE_RE.test(gTok)) {
+          // '__' delimits the genome in post-alignment filenames, so a genome
+          // name containing it would make those paths ambiguous.
+          addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': genome '" + gTok + "' must not contain '__'");
+        } else if (gSeen[gTok]) {
+          addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': genome '" + gTok + "' is listed twice");
+        }
+        gSeen[gTok] = true;
+      }
+    }
 
     // Levels / Factor validation
     if (factors.length > 0) {

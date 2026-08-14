@@ -83,6 +83,22 @@ Reference genome name. Must be non-empty. This value is used to locate genome
 files under `genomes/{Genome}/` and to group samples for comparative analyses.
 Examples: `ColCEN`, `Spombe`, `hg38`.
 
+**Multiple references per sample.** A comma-separated list maps the same reads
+to several genomes — e.g. `B73,W22`. The row is exploded internally into one
+`(Sample_ID, Genome)` entry per reference, so `Sample_ID` remains globally
+unique and does not encode the genome.
+
+| Rule | Detail |
+|------|--------|
+| Required | Must be non-empty |
+| Each entry must exist | Every listed genome needs an entry under `genomes:` in the options file |
+| No `__` | A genome name must not contain `__`; it delimits the genome in post-alignment filenames |
+| No duplicates / empties | `A,,B` or `A,A` is rejected |
+
+Read download, trimming and raw/trim QC happen **once per sample** and are
+genome-independent; alignment and everything after it run **once per genome**.
+See "Per-replicate naming" below.
+
 ### Levels
 
 Comma-separated list of `factor:level` pairs describing experimental conditions.
