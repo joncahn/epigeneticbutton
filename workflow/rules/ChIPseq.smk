@@ -400,8 +400,18 @@ def define_final_chip_output(ref_genome):
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R0_fastqc.html")
 
-    # Non-control samples for peak calling and bigwigs
-    filtered_rep_samples_no_input = filtered_rep_samples[~filtered_rep_samples['Sample_ID'].isin(controls)].copy()
+    # Non-control samples for peak calling and bigwigs. Excluding only the
+    # controls other rows *reference* is not enough: an Input/WCE/IgG row that
+    # no IP points at (an "orphan" control), and an IP with no Control at all,
+    # both survive that filter but cannot be peak-called — assign_chip_input
+    # then raises "No control found" while building the DAG. is_peak_call_target
+    # tests structurally (pulldown row must declare a Control) and drops both.
+    _peak_ok = ~filtered_rep_samples['Sample_ID'].isin(controls)
+    if len(filtered_rep_samples):
+        # .apply(axis=1) returns a DataFrame (not a Series) on an empty frame,
+        # so only combine the row-wise mask when there are rows.
+        _peak_ok &= filtered_rep_samples.apply(is_peak_call_target, axis=1).astype(bool)
+    filtered_rep_samples_no_input = filtered_rep_samples[_peak_ok].copy()
     for _, row in filtered_rep_samples_no_input.iterrows():
         assay = row['Assay']
         peaktype = ASSAY_TO_PEAKTYPE.get(assay, "broad")

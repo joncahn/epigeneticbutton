@@ -37,6 +37,11 @@ def _merge_component_kind(comp):
 # field semantics (Sample_ID reference, no chaining) are the same.
 _CONTROL_ASSAYS = IP_PEAK_ASSAYS | {"RAMPAGE"}
 
+# IP_target values that mark a row as a control rather than an IP. Used only to
+# soften warnings (a control row having no Control of its own is expected);
+# never to decide pipeline behavior, since IP_target is freetext.
+_CONTROL_IP_TARGETS = {"input", "wce", "igg", "control", "mock"}
+
 
 def _is_url(path):
     """Return True if the path looks like an HTTP(S) URL."""
@@ -289,6 +294,25 @@ def check_table(tab, check_paths=True):
                 errors.append(
                     f"[X] Row #{i} '{sid}': IP_target must be blank for {assay}"
                 )
+
+    # --- Control: warn when a pulldown IP has none (it can't be peak-called) ---
+    # Peak calling needs a control, so such a sample is silently dropped from
+    # the peak-target set (see is_peak_call_target). Control rows themselves
+    # (Input/WCE/IgG) legitimately have no Control, so they are not flagged.
+    for i, (_, row) in enumerate(tab.iterrows(), start=1):
+        assay = str(row.get("Assay", "")).strip()
+        if assay not in IP_PEAK_ASSAYS:
+            continue
+        ip_target = str(row.get("IP_target", "")).strip()
+        control = str(row.get("Control", "")).strip()
+        sid = str(row.get("Sample_ID", "")).strip()
+        if control in ("", "nan") and ip_target.lower() not in _CONTROL_IP_TARGETS:
+            warnings.append(
+                f"[!] Row #{i} '{sid}': {assay} sample with IP_target "
+                f"'{ip_target}' has no Control — it will not be peak-called. "
+                f"Set Control to the Sample_ID of its Input/WCE/IgG, or leave "
+                f"it out if this row is itself a control."
+            )
 
     # --- Control: reference validation ---
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
