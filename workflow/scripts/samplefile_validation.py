@@ -68,16 +68,23 @@ def resolve_data_path(path, repo_folder=None):
     return p
 
 
+def _is_s3_uri(path):
+    """Return True if the path is an ``s3://bucket/key`` URI."""
+    return path.startswith("s3://")
+
+
 def _is_local_path(token):
     """True if a Read_files component entry is a local filesystem path.
 
-    Excludes empty strings, SRA-style accessions, and HTTP(S) URLs.
+    Excludes empty strings, SRA-style accessions, HTTP(S) URLs, and s3:// URIs.
+    Remote inputs are never probed at validation time — we do not touch the
+    network to check whether they exist.
     """
     if not token:
         return False
     if _SRA_REGEX.match(token):
         return False
-    if _is_url(token):
+    if _is_url(token) or _is_s3_uri(token):
         return False
     return True
 
@@ -234,6 +241,18 @@ def check_table(tab, check_paths=True):
                         f"[X] Row #{i} '{sid}': Read_layout is SE but Read_files "
                         f"has multiple comma-separated paths"
                     )
+                # s3:// URIs must name both a bucket and a key. Caught here so a
+                # typo reports as a validation error rather than raising from
+                # s3_uri_to_https midway through DAG construction.
+                for f in files_in_comp:
+                    if not _is_s3_uri(f):
+                        continue
+                    bucket, sep, key = f[len("s3://"):].partition("/")
+                    if not (bucket and sep and key):
+                        errors.append(
+                            f"[X] Row #{i} '{sid}': malformed S3 URI '{f}' — "
+                            f"expected 's3://bucket/key'"
+                        )
 
     # --- Read_files: cross-row duplicate check ---
     seen_inputs = {}  # path/accession -> Sample_ID

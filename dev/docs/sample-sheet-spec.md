@@ -158,7 +158,8 @@ upstream. All components of a merge must be the same type.
 | PE comma pair required | PE layout with a single non-BAM path per component is an error |
 | SE single path required | SE layout with multiple comma-separated paths is an error |
 | No cross-row duplicates | The same file path or SRA accession must not appear in more than one sample's Read_files |
-| Local paths must exist | Each local-path entry must resolve to an existing file on disk before the run starts. SRA accessions and HTTP(S) URLs are not probed. |
+| Local paths must exist | Each local-path entry must resolve to an existing file on disk before the run starts. SRA accessions, HTTP(S) URLs and `s3://` URIs are not probed. |
+| S3 URIs well-formed | An `s3://` entry must name both a bucket and a key (`s3://bucket/key`). Public (authentication-free) objects only — credentials and request signing are not supported. |
 
 ### Read_layout
 

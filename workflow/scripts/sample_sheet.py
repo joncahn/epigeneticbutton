@@ -154,6 +154,72 @@ def _is_url(path):
     return path.startswith("http://") or path.startswith("https://")
 
 
+def _is_s3_uri(path):
+    """Return True if the path is an ``s3://bucket/key`` URI."""
+    return path.startswith("s3://")
+
+
+def _is_remote(path):
+    """True for anything fetched over the network rather than read from disk.
+
+    HTTP(S) URLs and s3:// URIs. Kept separate from ``_is_url`` so that helper
+    keeps its narrower "is literally an http(s) URL" meaning.
+    """
+    return _is_url(path) or _is_s3_uri(path)
+
+
+def s3_uri_to_https(uri):
+    """Translate ``s3://bucket/key`` to a public HTTPS URL.
+
+    EPICC supports *public* (authentication-free) S3 objects only: no signing,
+    no credentials, no aws CLI. Such objects are plain HTTPS GETs, so the whole
+    of S3 support is this string transform — every download path already knows
+    how to curl an HTTPS URL.
+
+    Region: we emit the region-less global endpoint rather than guessing a
+    region. S3 answers it with a 307 redirect to the bucket's real region, and
+    every curl in the workflow already passes ``--location``, so buckets in any
+    region resolve. Requiring users to spell out a region would be both more
+    typing and easy to get wrong.
+
+    Addressing style: virtual-hosted (``https://bucket.s3.amazonaws.com/key``)
+    normally, but path-style (``https://s3.amazonaws.com/bucket/key``) when the
+    bucket name contains a dot — the wildcard cert for ``*.s3.amazonaws.com``
+    does not match a dotted bucket label, so virtual-hosted style would fail
+    TLS verification for those buckets.
+
+    A non-s3:// value is returned unchanged, so this is safe to apply blindly.
+    """
+    if not _is_s3_uri(uri):
+        return uri
+    remainder = uri[len("s3://"):]
+    bucket, sep, key = remainder.partition("/")
+    if not bucket or not sep or not key:
+        raise ValueError(
+            f"Malformed S3 URI '{uri}' — expected 's3://bucket/key'"
+        )
+    if "." in bucket:
+        return f"https://s3.amazonaws.com/{bucket}/{key}"
+    return f"https://{bucket}.s3.amazonaws.com/{key}"
+
+
+def _resolve_remote(token):
+    """Map one Read_files token to the URL/path a download rule should use.
+
+    s3:// URIs become their public HTTPS equivalent; everything else is
+    unchanged.
+    """
+    return s3_uri_to_https(token) if _is_s3_uri(token) else token
+
+
+def _resolve_remote_parts(parts):
+    """Apply :func:`_resolve_remote` across '+'-joined, ','-paired components."""
+    return "+".join(
+        ",".join(_resolve_remote(mate.strip()) for mate in comp.split(","))
+        for comp in parts
+    )
+
+
 def _url_basename(url):
     """Extract the filename from a URL, stripping query parameters."""
     import os
@@ -175,6 +241,10 @@ def get_seq_id_and_path(read_files_str, read_layout):
     - bedMethyl URL: "https://host/file.bed.gz" → seq_id="file", path="https://..."
     - Explicit FASTQ paths: "r1.fq.gz,r2.fq.gz" → seq_id="EXPLICIT", path="r1.fq.gz,r2.fq.gz"
     - FASTQ URL(s): "https://host/r.fq.gz" → seq_id="URL", path="https://host/r.fq.gz"
+
+    Public S3 (``s3://bucket/key``) is treated as a remote URL and translated to
+    its public HTTPS endpoint here — the single boundary where the path handed
+    to the download rules is produced, so those rules need no S3 awareness.
     """
     parts, is_sra = parse_read_files(read_files_str, read_layout)
     if is_sra:
@@ -183,12 +253,13 @@ def get_seq_id_and_path(read_files_str, read_layout):
     else:
         import os
         first_file = parts[0].split(",")[0]  # first mate for PE
-        # Strip query params for extension checks on URLs
-        check_name = _url_basename(first_file) if _is_url(first_file) else first_file
+        # Strip query params for extension checks on remote inputs (URLs and
+        # s3:// URIs alike — an S3 key can carry a query string too).
+        check_name = _url_basename(first_file) if _is_remote(first_file) else first_file
         if check_name.endswith(".bam"):
             # BAM input (local path or URL): path IS the file/URL
             seq_id = os.path.splitext(os.path.basename(check_name))[0]
-            return seq_id, first_file
+            return seq_id, _resolve_remote(first_file)
         elif check_name.endswith(".bed.gz") or check_name.endswith(".bedmethyl.gz"):
             # bedMethyl input (local path or URL): path IS the file/URL
             base = os.path.basename(check_name)
@@ -196,13 +267,13 @@ def get_seq_id_and_path(read_files_str, read_layout):
                 if base.endswith(suffix):
                     seq_id = base[:-len(suffix)]
                     break
-            return seq_id, first_file
+            return seq_id, _resolve_remote(first_file)
         elif any(check_name.endswith(ext) for ext in _FASTQ_EXTENSIONS):
             # Carry ALL '+'-components so the download rules can merge them
             # (each component is one SE file or a comma-separated R1,R2 pair).
-            if _is_url(first_file):
+            if _is_remote(first_file):
                 # FASTQ URL(s): use "URL" sentinel so download rules can dispatch
-                return "URL", "+".join(parts)
+                return "URL", _resolve_remote_parts(parts)
             else:
                 # Explicit FASTQ path(s): pass through the full Read_files string
                 return "EXPLICIT", "+".join(parts)
@@ -210,7 +281,8 @@ def get_seq_id_and_path(read_files_str, read_layout):
             raise ValueError(
                 f"Unrecognized Read_files format: '{read_files_str}'. "
                 f"Expected SRA accession, .bam, .bed.gz, or explicit FASTQ "
-                f"path ending in .fastq.gz/.fq.gz/.fastq/.fq"
+                f"path ending in .fastq.gz/.fq.gz/.fastq/.fq (as a local path, "
+                f"an HTTP(S) URL, or a public s3://bucket/key URI)"
             )
 
 
