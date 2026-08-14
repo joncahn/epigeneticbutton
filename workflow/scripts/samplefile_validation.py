@@ -331,15 +331,34 @@ def check_table(tab, check_paths=True):
                     f"[X] Row #{i} '{sid}': Control '{control}' does not match "
                     f"any Sample_ID in the sheet"
                 )
-            # No chaining
+            # A sample cannot be its own control.
+            if control == sid:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Control refers to the sample itself"
+                )
+            # Control depth: at most one extra level. X -> Y is always fine, and
+            # Y may declare its own Control Z — that is the *dual-role* case: a
+            # sample serving as another row's control while also being analysed
+            # in its own right (e.g. an H3 ChIP that is both H3K9me2's control
+            # and normalized against Input). But Z must not have a Control of
+            # its own. Peak calling only ever resolves one step, so depth 2 is
+            # all the pipeline can express; bounding it here also makes cycles
+            # impossible, since any loop forces some row to be its own
+            # grandparent-with-a-Control and trips this check.
             ctrl_row = tab[tab["Sample_ID"] == control]
             if not ctrl_row.empty:
                 ctrl_ctrl = str(ctrl_row["Control"].iloc[0]).strip()
                 if ctrl_ctrl and ctrl_ctrl != "nan":
-                    errors.append(
-                        f"[X] Row #{i} '{sid}': Control '{control}' itself has "
-                        f"a Control (chaining not allowed)"
-                    )
+                    gp_row = tab[tab["Sample_ID"] == ctrl_ctrl]
+                    if not gp_row.empty:
+                        gp_ctrl = str(gp_row["Control"].iloc[0]).strip()
+                        if gp_ctrl and gp_ctrl != "nan":
+                            errors.append(
+                                f"[X] Row #{i} '{sid}': control chain is too "
+                                f"deep — '{control}' -> '{ctrl_ctrl}' -> "
+                                f"'{gp_ctrl}'. A control may have its own "
+                                f"Control (dual-role), but that one must not."
+                            )
 
     # --- Print warnings ---
     for w in warnings:

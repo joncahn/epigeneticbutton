@@ -20,9 +20,12 @@ sys.path.insert(0, os.path.join(_REPO_ROOT, "workflow"))
 
 from sample_sheet import (  # noqa: E402
     add_compat_columns,
+    build_analysis_name,
     get_analysis_samples,
+    get_replicate_sample_ids,
     identify_control_samples,
     is_peak_call_target,
+    peak_callable_rows,
     read_sample_sheet,
 )
 from scripts.samplefile_validation import check_table  # noqa: E402
@@ -215,3 +218,69 @@ class TestNoControlWarning:
         # Every IP there has a Control; the orphans are Input/WCE rows.
         df = read_sample_sheet(_CHIP_SHEET)
         assert self._warnings(df, capsys) == []
+
+
+class TestDualRoleControlAndTarget:
+    """A sample may serve as another row's control AND be analysed itself.
+
+    Real case: an H3 ChIP used both to see raw H3 distribution (its own peaks,
+    tracks, merged analysis, IDR) and as the peak-calling control for H3K9me2.
+    Qualifying is structural — the row must declare a ``Control`` of its own —
+    so being referenced by someone else is not disqualifying.
+    """
+
+    HEADER = ("Sample_ID\tAssay\tGenome\tLevels\tReplicate_ID\tRead_files\t"
+              "Read_layout\tIP_target\tControl")
+    ROWS = [
+        # Input: no Control of its own -> not analysable
+        "Input_rep1\tChIP_broad\tG\tgenotype:WT\trep1\tSRR1\tSE\tInput\t",
+        # H3: dual role -> control for H3K9me2, but has its own Control (Input)
+        "H3_rep1\tChIP_broad\tG\tgenotype:WT\trep1\tSRR2\tSE\tH3\tInput_rep1",
+        "H3_rep2\tChIP_broad\tG\tgenotype:WT\trep2\tSRR3\tSE\tH3\tInput_rep1",
+        # the IP that uses H3 as its control
+        "H3K9me2_rep1\tChIP_broad\tG\tgenotype:WT\trep1\tSRR4\tSE\tH3K9me2\tH3_rep1",
+        # orphan control (regression guard for the #53 fix)
+        "Orphan_WCE_rep1\tChIP_broad\tG\tgenotype:WT\trep1\tSRR5\tSE\tWCE\t",
+    ]
+
+    @pytest.fixture
+    def df(self, tmp_path):
+        f = tmp_path / "dual.tsv"
+        f.write_text("\n".join([self.HEADER] + self.ROWS) + "\n")
+        return add_compat_columns(read_sample_sheet(f))
+
+    def test_dual_role_sample_is_referenced_as_a_control(self, df):
+        # Precondition: H3_rep1 really is someone's control.
+        assert "H3_rep1" in identify_control_samples(df)
+
+    def test_dual_role_reps_get_peak_targets(self, df):
+        targets = set(peak_callable_rows(df)["Sample_ID"])
+        assert {"H3_rep1", "H3_rep2"} <= targets, \
+            "dual-role sample must get its own peak/FC targets"
+        assert "H3K9me2_rep1" in targets
+
+    def test_unanalysable_rows_still_excluded(self, df):
+        targets = set(peak_callable_rows(df)["Sample_ID"])
+        # Input has no Control; the orphan WCE is referenced by nobody and has
+        # no Control -- neither can be peak-called.
+        assert "Input_rep1" not in targets
+        assert "Orphan_WCE_rep1" not in targets
+
+    def test_dual_role_gets_analysis_level_treatment(self, df):
+        analysis = get_analysis_samples(df)
+        names = {build_analysis_name(r) for _, r in analysis.iterrows()}
+        assert "ChIP_broad__WT__H3__G" in names, \
+            "dual-role sample must get a merged analysis group (peaks/IDR/plots)"
+        assert "ChIP_broad__WT__H3K9me2__G" in names
+
+    def test_dual_role_analysis_group_has_both_replicates(self, df):
+        # Merged analysis / IDR need both H3 reps grouped under the analysis name.
+        assert sorted(get_replicate_sample_ids("ChIP_broad__WT__H3__G", df)) == \
+            ["H3_rep1", "H3_rep2"]
+
+    def test_dual_role_still_resolvable_as_a_control(self, df):
+        # Looking the sample up by Sample_ID must still hit the control-merge
+        # path, so H3K9me2's control resolution is unaffected. Sample_IDs cannot
+        # contain '__' while analysis names always do, so the two lookup key
+        # formats can never collide.
+        assert get_replicate_sample_ids("H3_rep1", df) == ["H3_rep1"]
