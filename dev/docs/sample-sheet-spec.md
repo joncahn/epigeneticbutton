@@ -15,13 +15,14 @@ Trailing whitespace on any field is stripped during parsing.
 |---|--------|----------|------|
 | 1 | Sample_ID | Yes | Controlled freetext |
 | 2 | Assay | Yes | Controlled vocabulary |
-| 3 | Genome | Yes | Freetext |
-| 4 | Levels | Yes | Structured freetext |
-| 5 | Replicate_ID | Yes | Freetext |
-| 6 | Read_files | Yes | Path / SRA ID |
-| 7 | Read_layout | Yes | Controlled vocabulary |
-| 8 | IP_target | Conditional | Freetext |
-| 9 | Control | Conditional | Reference |
+| 3 | Peak_type | Conditional | Controlled vocabulary |
+| 4 | Genome | Yes | Freetext |
+| 5 | Levels | Yes | Structured freetext |
+| 6 | Replicate_ID | Yes | Freetext |
+| 7 | Read_files | Yes | Path / SRA ID |
+| 8 | Read_layout | Yes | Controlled vocabulary |
+| 9 | IP_target | Conditional | Freetext |
+| 10 | Control | Conditional | Reference |
 
 ## Per-Field Validation Rules
 
@@ -45,37 +46,53 @@ other fields, but always allow manual editing.
 
 ### Assay
 
-Controlled vocabulary defining the experimental assay type. Determines pipeline
-routing, environment mapping, and peak-calling mode.
+Controlled vocabulary defining the experimental **method** only. The
+peak-calling type (broad/narrow) is a separate parameter — see **Peak_type**
+below. Determines pipeline routing and environment mapping.
 
 **Valid values:**
 
-| Assay | Env folder | Peak type | Description |
-|-------|------------|-----------|-------------|
-| `ChIP_broad` | `ChIP` | broad | Histone mark ChIP-seq (H3K9me2, H3K27me3, etc.) |
-| `ChIP_narrow` | `ChIP` | narrow | TF / sharp-mark ChIP-seq (H3K4me3, CTCF, etc.) |
-| `CUT_RUN_broad` | `ChIP` | broad | CUT&RUN for diffuse marks (H3K27me3, H3K9me2, etc.); default caller: epic2 |
-| `CUT_RUN_narrow` | `ChIP` | narrow | CUT&RUN for sharp marks/TFs; default caller: SEACR |
-| `CUT_TAG_broad` | `ChIP` | broad | CUT&Tag for diffuse marks; default caller: epic2 |
-| `CUT_TAG_narrow` | `ChIP` | narrow | CUT&Tag for sharp marks/TFs; default caller: SEACR |
-| `ATAC` | `ATAC` | narrow | ATAC-seq |
-| `RNAseq` | `RNA` | — | RNA-seq (mRNA/total RNA) |
-| `RAMPAGE` | `RNA` | — | RAMPAGE TSS profiling |
-| `sRNA` | `sRNA` | — | Small RNA-seq |
-| `WGBS` | `mC` | — | Whole-genome bisulfite sequencing |
-| `EMseq` | `mC` | — | Enzymatic methyl-seq |
-| `dmC` | `mC` | — | Direct methylation (nanopore modBAM or pre-computed bedMethyl) |
+| Assay | Env folder | Description |
+|-------|------------|-------------|
+| `ChIP` | `ChIP` | ChIP-seq (histone marks or TFs; set Peak_type) |
+| `CUT_RUN` | `ChIP` | CUT&RUN (set Peak_type; default caller broad→epic2, narrow→SEACR) |
+| `CUT_TAG` | `ChIP` | CUT&Tag (set Peak_type; default caller broad→epic2, narrow→SEACR) |
+| `ATAC` | `ATAC` | ATAC-seq (narrow peaks, fixed; no Peak_type / IP_target) |
+| `RNAseq` | `RNA` | RNA-seq (mRNA/total RNA) |
+| `RAMPAGE` | `RNA` | RAMPAGE TSS profiling |
+| `sRNA` | `sRNA` | Small RNA-seq |
+| `WGBS` | `mC` | Whole-genome bisulfite sequencing |
+| `WGBS_nd` | `mC` | Non-directional WGBS (e.g. Zymo Pico) |
+| `PBAT` | `mC` | Post-bisulfite adapter tagging |
+| `EMseq` | `mC` | Enzymatic methyl-seq |
+| `dmC` | `mC` | Direct methylation (nanopore modBAM or pre-computed bedMethyl) |
 
 These values are defined in `workflow/scripts/sample_sheet.py:VALID_ASSAYS`.
 
-**IP-with-peaks family.** The six broad/narrow assays (ChIP_broad/narrow,
-CUT_RUN_broad/narrow, CUT_TAG_broad/narrow) are collected in
-`IP_PEAK_ASSAYS` and share the same sample-sheet semantics: `IP_target`
-is required (must be non-empty for both IPs and their controls), and
-`Control` may reference another sample. The default peak caller is
-chosen per family + peak shape: ChIP* → MACS2, CUT&* broad → epic2,
-CUT&* narrow → SEACR. Override via `cut_callpeaks.broad_caller` /
+**Back-compat.** Legacy combined tokens (`ChIP_broad`, `ChIP_narrow`,
+`CUT_RUN_broad/narrow`, `CUT_TAG_broad/narrow`) are still accepted on input and
+auto-split into `Assay` + `Peak_type` at load (`combine_assay_peaktype`).
+
+**Pulldown family.** `ChIP`/`CUT_RUN`/`CUT_TAG` are collected in
+`IP_PEAK_ASSAYS` and share the same semantics: `IP_target` is required (for both
+IPs and their controls), `Peak_type` is required, and `Control` may reference
+another sample. Default peak caller by peak shape: ChIP → MACS2, CUT&* broad →
+epic2, CUT&* narrow → SEACR. Override via `cut_callpeaks.broad_caller` /
 `narrow_caller` in the options file (`epic2`, `seacr`, or `macs2`).
+
+### Peak_type
+
+The peak-calling type — a separate analytical parameter from Assay. Controlled
+vocabulary: `broad` or `narrow`.
+
+| Rule | Detail |
+|------|--------|
+| Required | Non-empty (`broad`/`narrow`) for `ChIP`/`CUT_RUN`/`CUT_TAG` |
+| Blank otherwise | Must be empty for all other assays (ATAC's type is fixed; the rest have no peaks) |
+| Legacy | With a legacy combined Assay (e.g. `ChIP_broad`), Peak_type must be blank — it is auto-split from the assay name |
+
+`broad` suits histone-domain marks (H3K9me2, H3K27me3, H3K36me3, …); `narrow`
+suits transcription factors and sharp marks (H3K4me3, H3K27ac, …).
 
 ### Genome
 

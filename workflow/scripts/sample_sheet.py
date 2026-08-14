@@ -15,14 +15,31 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 NEW_COLNAMES = [
-    "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
+    "Sample_ID", "Assay", "Peak_type", "Genome", "Levels", "Replicate_ID",
     "Read_files", "Read_layout", "IP_target", "Control",
 ]
 
-VALID_ASSAYS = [
+# Assay is the *experimental method*; the peak-calling type (broad/narrow) is a
+# separate analytical parameter carried in the Peak_type column, NOT baked into
+# the assay name. These three pulldown assays take a Peak_type. ATAC has peaks
+# but a fixed (narrow) type and no pulldown, so it carries no Peak_type.
+PEAK_TYPE_ASSAYS = {"ChIP", "CUT_RUN", "CUT_TAG"}
+VALID_PEAK_TYPES = {"broad", "narrow"}
+
+# Legacy tokens that baked the peak type into the assay name. Still accepted on
+# input (auto-split at load) and reused as the internal *combined* token that
+# downstream naming and env/peaktype lookups key on. See combine_assay_peaktype.
+_LEGACY_PEAK_ASSAYS = [
     "ChIP_broad", "ChIP_narrow",
     "CUT_RUN_broad", "CUT_RUN_narrow",
     "CUT_TAG_broad", "CUT_TAG_narrow",
+]
+
+VALID_ASSAYS = [
+    # Separated (canonical) pulldown assays — peak type lives in Peak_type
+    "ChIP", "CUT_RUN", "CUT_TAG",
+    # ...plus the legacy combined forms, still accepted for back-compat
+    *_LEGACY_PEAK_ASSAYS,
     "ATAC",
     "RNAseq", "RAMPAGE",
     "sRNA",
@@ -31,20 +48,18 @@ VALID_ASSAYS = [
 
 # Assays that pull down a target via antibody and call peaks against an
 # (Input/WCE/IgG) control. They share the ChIP env, peak-type machinery,
-# and IP_target/Control sample-sheet semantics.
+# and IP_target/Control sample-sheet semantics. Includes both the separated
+# and legacy combined forms so membership tests work pre- and post-combine.
 IP_PEAK_ASSAYS = {
-    "ChIP_broad", "ChIP_narrow",
-    "CUT_RUN_broad", "CUT_RUN_narrow",
-    "CUT_TAG_broad", "CUT_TAG_narrow",
+    "ChIP", "CUT_RUN", "CUT_TAG",
+    *_LEGACY_PEAK_ASSAYS,
 }
 
 ASSAY_TO_ENV = {
-    "ChIP_broad": "ChIP",
-    "ChIP_narrow": "ChIP",
-    "CUT_RUN_broad": "ChIP",
-    "CUT_RUN_narrow": "ChIP",
-    "CUT_TAG_broad": "ChIP",
-    "CUT_TAG_narrow": "ChIP",
+    "ChIP": "ChIP", "CUT_RUN": "ChIP", "CUT_TAG": "ChIP",
+    "ChIP_broad": "ChIP", "ChIP_narrow": "ChIP",
+    "CUT_RUN_broad": "ChIP", "CUT_RUN_narrow": "ChIP",
+    "CUT_TAG_broad": "ChIP", "CUT_TAG_narrow": "ChIP",
     "ATAC": "ATAC",
     "RNAseq": "RNA",
     "RAMPAGE": "RNA",
@@ -56,6 +71,7 @@ ASSAY_TO_ENV = {
     "dmC": "mC",
 }
 
+# Keyed on the internal *combined* token (produced by combine_assay_peaktype).
 ASSAY_TO_PEAKTYPE = {
     "ChIP_broad": "broad",
     "ChIP_narrow": "narrow",
@@ -65,6 +81,23 @@ ASSAY_TO_PEAKTYPE = {
     "CUT_TAG_narrow": "narrow",
     "ATAC": "narrow",
 }
+
+
+def combine_assay_peaktype(assay, peak_type):
+    """Fold a separated (Assay, Peak_type) pair into the internal combined
+    assay token used by downstream naming and lookups.
+
+    - Separated pulldown form ('ChIP' + 'broad')       -> 'ChIP_broad'
+    - Legacy combined form ('ChIP_broad', Peak_type '') -> 'ChIP_broad' (idempotent)
+    - Non-peak assays / ATAC / missing peak_type        -> assay unchanged
+      (a missing peak type on a separated pulldown assay is left as the bare
+      assay so validation surfaces a clear error rather than silently guessing).
+    """
+    assay = (assay or "").strip()
+    peak_type = (peak_type or "").strip()
+    if assay in PEAK_TYPE_ASSAYS and peak_type:
+        return f"{assay}_{peak_type}"
+    return assay
 
 # ---------------------------------------------------------------------------
 # Small helpers
@@ -235,15 +268,17 @@ def read_sample_sheet(filepath):
     df = pd.read_csv(io.StringIO("".join(lines)), sep="\t", header=0, dtype=str)
     df.columns = df.columns.str.strip()
 
-    # Fill optional columns with empty strings
+    # Fill optional columns with empty strings. Peak_type is optional so legacy
+    # sheets (peak type baked into Assay, e.g. 'ChIP_broad') still parse.
     for col in NEW_COLNAMES:
         if col not in df.columns:
-            if col in ("IP_target", "Control"):
+            if col in ("Peak_type", "IP_target", "Control"):
                 df[col] = ""
             else:
                 raise ValueError(f"Required column '{col}' missing from sample sheet")
 
     # Normalize NaN to empty string for optional columns
+    df["Peak_type"] = df["Peak_type"].fillna("")
     df["IP_target"] = df["IP_target"].fillna("")
     df["Control"] = df["Control"].fillna("")
 
@@ -482,6 +517,18 @@ def add_compat_columns(df):
           sample_type, extra_info, levels_label, env, sample_name
     """
     df = df.copy()
+
+    # Fold the separated (Assay, Peak_type) form into the internal *combined*
+    # assay token (e.g. 'ChIP' + 'broad' -> 'ChIP_broad') that every downstream
+    # rule, analysis name, and env/peaktype lookup keys on. Legacy sheets whose
+    # Assay already carries the peak type pass through unchanged (idempotent).
+    # Validation (check_table) runs on the separated form BEFORE this, so bad
+    # Peak_type values are reported there, not silently combined here.
+    if "Peak_type" not in df.columns:
+        df["Peak_type"] = ""
+    df["Assay"] = _row_apply(
+        df, lambda r: combine_assay_peaktype(r["Assay"], r.get("Peak_type", ""))
+    ) if len(df) else df["Assay"]
 
     # Direct mappings
     df["data_type"] = df["Assay"]

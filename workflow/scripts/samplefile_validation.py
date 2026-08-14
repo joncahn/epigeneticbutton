@@ -5,7 +5,10 @@ Implements the rules defined in dev/docs/sample-sheet-spec.md.
 
 import os
 import re
-from scripts.sample_sheet import VALID_ASSAYS, ASSAY_TO_ENV, IP_PEAK_ASSAYS
+from scripts.sample_sheet import (
+    VALID_ASSAYS, ASSAY_TO_ENV, IP_PEAK_ASSAYS,
+    PEAK_TYPE_ASSAYS, VALID_PEAK_TYPES,
+)
 
 # Characters that are unsafe for filesystem use in Sample_ID
 _UNSAFE_CHARS = re.compile(r'[/\\\s\'\";&|<>$`!{}()\[\]?*~#]')
@@ -117,6 +120,41 @@ def check_table(tab, check_paths=True):
                 f"[X] Row #{i} '{row.get('Sample_ID', '')}': "
                 f"Assay '{assay}' not in {VALID_ASSAYS}"
             )
+
+    # --- Peak_type: separated analytical parameter (broad/narrow) ---
+    # Required for the separated pulldown assays (ChIP/CUT_RUN/CUT_TAG); must be
+    # blank for everything else — the legacy combined assays already encode it,
+    # and non-peak / ATAC assays have no user-set peak type.
+    _legacy_combined = IP_PEAK_ASSAYS - PEAK_TYPE_ASSAYS
+    for i, (_, row) in enumerate(tab.iterrows(), start=1):
+        assay = str(row.get("Assay", "")).strip()
+        peak_type = str(row.get("Peak_type", "")).strip()
+        if peak_type == "nan":
+            peak_type = ""
+        sid = str(row.get("Sample_ID", "")).strip()
+        if assay in PEAK_TYPE_ASSAYS:
+            if not peak_type:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type is required for {assay} "
+                    f"(one of {sorted(VALID_PEAK_TYPES)})"
+                )
+            elif peak_type not in VALID_PEAK_TYPES:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type '{peak_type}' not in "
+                    f"{sorted(VALID_PEAK_TYPES)}"
+                )
+        elif peak_type:
+            if assay in _legacy_combined:
+                base, _, pt = assay.rpartition("_")
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type must be blank when the "
+                    f"Assay already encodes it ('{assay}'); use the separated "
+                    f"form (Assay={base}, Peak_type={pt})"
+                )
+            else:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
+                )
 
     # --- Genome: required ---
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
