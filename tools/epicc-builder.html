@@ -107,7 +107,9 @@
   .factor-panel .factor-label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-dim);
+    /* Same accent as the factor column headers in the table — the shared hue is
+       what ties the panel to its columns. Keep the two in step. */
+    color: var(--accent2);
     white-space: nowrap;
   }
   .factor-tile {
@@ -514,6 +516,47 @@
     font-style: italic;
   }
 
+  /* User-defined factor columns (from Levels). These are the only columns whose
+     names the user invents, so they get the accent2 hue shared with the
+     "Factors:" label in the panel above, plus bracketing edges on the first and
+     last of the run — enough to read as one group without a second header row. */
+  .tabulator .tabulator-header .tabulator-col.factor-col .tabulator-col-title {
+    color: var(--accent2);
+  }
+  .tabulator .tabulator-header .tabulator-col.factor-col {
+    background-color: rgba(83, 168, 182, 0.07);
+  }
+  .tabulator-row .tabulator-cell.factor-col {
+    background-color: rgba(83, 168, 182, 0.04);
+  }
+  .tabulator .tabulator-header .tabulator-col.factor-col-first,
+  .tabulator-row .tabulator-cell.factor-col-first {
+    border-left: 2px solid var(--accent2);
+  }
+  .tabulator .tabulator-header .tabulator-col.factor-col-last,
+  .tabulator-row .tabulator-cell.factor-col-last {
+    border-right: 2px solid var(--accent2);
+  }
+
+  /* Cells that do not apply to the row's assay (e.g. Peak type on an ATAC row,
+     IP target on RNAseq). Hatching + a dimmed background distinguish "not
+     applicable" from "applicable but not filled in yet" — an empty cell alone
+     reads as the latter. The em dash marks the cell as intentionally blank. */
+  .tabulator-row .tabulator-cell.cell-disabled {
+    color: var(--text-dim) !important;
+    background-color: rgba(0, 0, 0, 0.22);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent, transparent 4px,
+      rgba(255, 255, 255, 0.045) 4px, rgba(255, 255, 255, 0.045) 8px);
+    cursor: not-allowed;
+  }
+  .tabulator-row .tabulator-cell.cell-disabled:empty::after {
+    content: "—";
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+
   /* Action column */
   .row-action-btn {
     background: none;
@@ -698,9 +741,13 @@
 // Constants (mirroring workflow/scripts/sample_sheet.py & samplefile_validation.py)
 // ===========================================================================
 
+// Peak_type sits last: it applies to only three assays, so it stays out of the
+// way of the fields every row needs. Column lookup is by header name on both
+// sides (importTSV here, pandas in read_sample_sheet), so the order is purely
+// ergonomic — but keep it in step with NEW_COLNAMES in sample_sheet.py.
 const COLUMNS = [
-  "Sample_ID", "Assay", "Peak_type", "Genome", "Levels", "Replicate_ID",
-  "Read_files", "Read_layout", "IP_target", "Control"
+  "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
+  "Read_files", "Read_layout", "IP_target", "Control", "Peak_type"
 ];
 
 // Assay is the experimental method only. Peak-calling type (broad/narrow) is a
@@ -737,6 +784,29 @@ const IP_PEAK_ASSAYS = new Set([
 // ATAC has peaks but a fixed type and no pulldown, so it is not included.
 const PEAK_TYPE_ASSAYS = new Set([...IP_PEAK_ASSAYS]);
 const CONTROL_ASSAYS = new Set([...IP_PEAK_ASSAYS, "RAMPAGE"]);
+
+// Columns that only apply to certain assays. Single source of truth shared by
+// the editor gate (assayGatedEditable) and the greyed-out styling
+// (applyDisabledCellStyles), so a cell can never look editable but refuse
+// edits, or vice versa.
+const ASSAY_GATED_FIELDS = {
+  Peak_type: PEAK_TYPE_ASSAYS,
+  IP_target: IP_PEAK_ASSAYS,
+  Control:   CONTROL_ASSAYS,
+};
+
+function isFieldEditableForAssay(field, assay) {
+  var allowed = ASSAY_GATED_FIELDS[field];
+  if (!allowed) return true;
+  return allowed.has((assay || "").trim());
+}
+
+// Tabulator `editable` callback for an assay-gated column.
+function assayGatedEditable(field) {
+  return function(cell) {
+    return isFieldEditableForAssay(field, cell.getRow().getData().Assay);
+  };
+}
 
 // Which assays can provide a control for each control-bearing assay.
 // Controls are typically drawn from the same family (ChIP Input/WCE
@@ -886,11 +956,12 @@ function emptyRow() {
 
 function getVisibleFields() {
   if (factors.length > 0) {
-    var fields = ["Sample_ID", "Assay", "Peak_type", "Genome"];
+    var fields = ["Sample_ID", "Assay", "Genome"];
     for (var i = 0; i < factors.length; i++) {
       fields.push(factorField(factors[i]));
     }
-    fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target", "Control");
+    fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target",
+                "Control", "Peak_type");
     return fields;
   }
   return COLUMNS.slice();
@@ -1102,17 +1173,6 @@ function buildColumnDefs() {
       editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
     }, descHooks("Assay")),
     Object.assign({
-      title: "Peak type", field: "Peak_type", width: 100,
-      editor: "list",
-      editorParams: { values: VALID_PEAK_TYPES, autocomplete: true, listOnEmpty: true, freetext: false },
-      // Peak type is a per-sample analytical parameter for pulldown assays only;
-      // disable the cell for everything else (ATAC's type is fixed; others have none).
-      editable: function(cell) {
-        var assay = (cell.getRow().getData().Assay || "").trim();
-        return PEAK_TYPE_ASSAYS.has(assay);
-      },
-    }, descHooks("Peak_type")),
-    Object.assign({
       title: "Genome", field: "Genome", width: 120,
       editor: "list",
       editorParams: function() {
@@ -1124,16 +1184,23 @@ function buildColumnDefs() {
   // Factor columns (or placeholder/Levels fallback)
   if (factors.length > 0) {
     for (var i = 0; i < factors.length; i++) {
-      (function(fname) {
+      (function(fname, idx, last) {
+        // Mark the user-defined factor columns so they read as one group: the
+        // headers share the "Factors:" accent from the panel above, and the
+        // first/last carry the bracketing edges. See .factor-col CSS.
+        var groupClass = "factor-col"
+          + (idx === 0 ? " factor-col-first" : "")
+          + (idx === last ? " factor-col-last" : "");
         defs.push(Object.assign({
           title: fname, field: factorField(fname), editor: "input", width: 120,
+          cssClass: groupClass,
           editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
         }, {
           headerClick: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
           headerMouseEnter: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
           cellClick: (function(fn) { return function(e, cell) { showFactorDescription(fn); }; })(fname),
         }));
-      })(factors[i]);
+      })(factors[i], i, factors.length - 1);
     }
   } else {
     // No factors defined — show Levels column with guidance
@@ -1160,10 +1227,7 @@ function buildColumnDefs() {
     Object.assign({
       title: "IP target", field: "IP_target", editor: "input", width: 120,
       editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
-      editable: function(cell) {
-        var assay = (cell.getRow().getData().Assay || "").trim();
-        return IP_PEAK_ASSAYS.has(assay);
-      },
+      editable: assayGatedEditable("IP_target"),
     }, descHooks("IP_target")),
     Object.assign({
       title: "Control", field: "Control", width: 200,
@@ -1171,12 +1235,16 @@ function buildColumnDefs() {
       editorParams: function(cell) {
         return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
       },
-      // Control only applies to pulldown assays (+ RAMPAGE); disable otherwise.
-      editable: function(cell) {
-        var assay = (cell.getRow().getData().Assay || "").trim();
-        return CONTROL_ASSAYS.has(assay);
-      },
-    }, descHooks("Control"))
+      editable: assayGatedEditable("Control"),
+    }, descHooks("Control")),
+    // Peak type last: it applies to only three assays, so it stays clear of the
+    // fields every row needs (see COLUMNS).
+    Object.assign({
+      title: "Peak type", field: "Peak_type", width: 100,
+      editor: "list",
+      editorParams: { values: VALID_PEAK_TYPES, autocomplete: true, listOnEmpty: true, freetext: false },
+      editable: assayGatedEditable("Peak_type"),
+    }, descHooks("Peak_type"))
   );
 
   return defs;
@@ -1216,6 +1284,7 @@ function refreshUI() {
   runValidation();
   applySuggestions();
   applyExampleCellStyles();
+  applyDisabledCellStyles();
 }
 
 function clearSuggestion(el) {
@@ -2068,6 +2137,25 @@ function applyExampleCellStyles() {
   }
 }
 
+// Grey out assay-gated cells that don't apply to their row (see .cell-disabled).
+// Tabulator's `editable` callback blocks the edit but leaves the cell looking
+// like any other empty one, so mark it explicitly. Re-run whenever the data
+// changes — editing Assay flips which cells apply.
+function applyDisabledCellStyles() {
+  var rows = table.getRows();
+  var gated = Object.keys(ASSAY_GATED_FIELDS);
+  for (var ri = 0; ri < rows.length; ri++) {
+    var assay = rows[ri].getData().Assay;
+    for (var gi = 0; gi < gated.length; gi++) {
+      var cell = rows[ri].getCell(gated[gi]);
+      if (!cell) continue;
+      cell.getElement().classList.toggle(
+        "cell-disabled", !isFieldEditableForAssay(gated[gi], assay)
+      );
+    }
+  }
+}
+
 function hasAnyExampleRows() {
   var data = table.getData();
   for (var i = 0; i < data.length; i++) {
@@ -2283,6 +2371,7 @@ table.on("rowSelectionChanged", function(rows) {
 // Initial state
 table.on("tableBuilt", function() {
   applyExampleCellStyles();
+  applyDisabledCellStyles();
   // Only run validation on non-example data
   if (!hasAnyExampleRows()) {
     refreshUI();

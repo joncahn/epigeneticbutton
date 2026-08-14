@@ -14,9 +14,13 @@ import pandas as pd
 # Constants
 # ---------------------------------------------------------------------------
 
+# Peak_type sits last: it applies to only three assays, so it stays out of the
+# way of the fields every row needs. Column lookup is by header name (pandas
+# reads by header), so the order is ergonomic only — but keep it in step with
+# COLUMNS in tools/epicc-builder.html.
 NEW_COLNAMES = [
-    "Sample_ID", "Assay", "Peak_type", "Genome", "Levels", "Replicate_ID",
-    "Read_files", "Read_layout", "IP_target", "Control",
+    "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
+    "Read_files", "Read_layout", "IP_target", "Control", "Peak_type",
 ]
 
 # Assay is the *experimental method*; the peak-calling type (broad/narrow) is a
