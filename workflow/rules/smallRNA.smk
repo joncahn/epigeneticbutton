@@ -48,7 +48,8 @@ def define_input_for_grouped_analysis(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
-        bamfiles.append(f"{RESULTS_DIR}/sRNA/mapped/{sname}/clean__{sname}_condensed.bam")
+        mname = row['mapped_name']
+        bamfiles.append(f"{RESULTS_DIR}/sRNA/mapped/{mname}/clean__{mname}_condensed.bam")
     
     return bamfiles
     
@@ -91,8 +92,11 @@ def define_final_srna_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'sRNA') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         qc_files.append(f"{RESULTS_DIR}/sRNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed and potentially filtered fastq files
-        map_files.append(f"{RESULTS_DIR}/sRNA/reports/sizes_stats__{sname}.txt")
+        # Size stats are computed from the ALIGNED condensed BAM, not the FASTQ,
+        # so they are genome-specific despite sitting beside the QC reports.
+        map_files.append(f"{RESULTS_DIR}/sRNA/reports/sizes_stats__{mname}.txt")
         if not trimmed_fastqs:
             qc_files.append(f"{RESULTS_DIR}/sRNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw fastq file
             if nextflex_v3:
@@ -101,8 +105,8 @@ def define_final_srna_output(ref_genome):
                 qc_files.append(f"{RESULTS_DIR}/sRNA/reports/filtered__{sname}__R0_fastqc.html") # fastqc of structural RNA depleted fastq file
         
         for size in range(srna_min, srna_max + 1):
-            bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{sname}__{size}nt__plus.bw")
-            bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{sname}__{size}nt__minus.bw")
+            bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{mname}__{size}nt__plus.bw")
+            bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{mname}__{size}nt__minus.bw")
         
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'sRNA') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -110,8 +114,8 @@ def define_final_srna_output(ref_genome):
         rep_ids = get_replicate_sample_ids(row['sample_name'], samples)
         if len(rep_ids) >= 2:
             for size in range(srna_min, srna_max + 1):
-                bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{row['sample_name']}__{size}nt__plus.bw")
-                bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{row['sample_name']}__{size}nt__minus.bw")
+                bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{row['mapped_name']}__{size}nt__plus.bw")
+                bigwig_files.append(f"{RESULTS_DIR}/sRNA/tracks/{row['mapped_name']}__{size}nt__minus.bw")
     
     if len(filtered_analysis_samples) >= 2 and any(len(get_replicate_sample_ids(row['sample_name'], samples)) >= 2 for _, row in filtered_analysis_samples.iterrows()):
         analysis_files.append(f"{RESULTS_DIR}/sRNA/chkpts/calling_differential_sRNA_clusters__{analysis_name}__{ref_genome}__on_new_clusters.done")
@@ -265,7 +269,7 @@ rule make_bowtie1_indices_large:
         
 rule shortstack_map:
     input:
-        fastq = f"{RESULTS_DIR}/sRNA/fastq/clean__{{sample_name}}.fastq.gz",
+        fastq = lambda wildcards: f"{RESULTS_DIR}/sRNA/fastq/clean__{base_sample(wildcards.sample_name)}.fastq.gz",
         fasta = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/{parse_sample_name(wildcards.sample_name)['ref_genome']}.fa",
         indices = get_bt1_indices
     output:
@@ -317,7 +321,9 @@ rule make_srna_size_stats:
     input:
         bamfile = f"{RESULTS_DIR}/sRNA/mapped/{{sample_name}}/clean__{{sample_name}}_condensed.bam",
         baifile = f"{RESULTS_DIR}/sRNA/mapped/{{sample_name}}/clean__{{sample_name}}_condensed.bam.csi",
-        trimmed_fastq = f"{RESULTS_DIR}/sRNA/fastq/trim__{{sample_name}}__R0.fastq.gz"
+        # Pre-alignment input on a genome-qualified rule: the trimmed FASTQ is
+        # shared across references, so drop the genome (see base_sample).
+        trimmed_fastq = lambda wildcards: f"{RESULTS_DIR}/sRNA/fastq/trim__{base_sample(wildcards.sample_name)}__R0.fastq.gz"
     output:
         report = f"{RESULTS_DIR}/sRNA/reports/sizes_stats__{{sample_name}}.txt"
     params:

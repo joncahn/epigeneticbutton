@@ -94,7 +94,7 @@ def define_samples_for_upset(wildcards, string):
                     files.append(file)
                     types.add(row.sample_type)
             else:
-                file = f"{RESULTS_DIR}/{row.env}/peaks/selected_peaks__{row['sample_name']}.bedPeak"
+                file = f"{RESULTS_DIR}/{row.env}/peaks/selected_peaks__{row['mapped_name']}.bedPeak"
                 label = f"{row.levels_label}_{row.sample_type}"
                 names.append(f"{label}:{file}")
                 files.append(file)
@@ -213,7 +213,7 @@ def define_key_for_plots(wildcards, string):
         rep_ids = get_replicate_sample_ids(row['sample_name'], samples)
         if row.env == "ChIP":
             if not plot_allreps:
-                bw = f"{RESULTS_DIR}/{row.env}/tracks/FC__merged__{row['sample_name']}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/FC__final__{rep_ids[0]}.bw"
+                bw = f"{RESULTS_DIR}/{row.env}/tracks/FC__merged__{row['mapped_name']}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/FC__final__{rep_ids[0]}.bw"
                 label = f"{row.levels_label}_{row.sample_type}"
                 grouped_bw[f"chip_{row.sample_type}"].append(bw)
                 grouped_labs[f"chip_{row.sample_type}"].append(label)
@@ -237,7 +237,7 @@ def define_key_for_plots(wildcards, string):
             strandedness = config['rna_tracks'][row.data_type]['strandedness']
             if strandedness == "unstranded":
                 if not plot_allreps:
-                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__unstranded.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__unstranded.bw"
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__unstranded.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__unstranded.bw"
                     label = f"{row.levels_label}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].append(bw)
                     grouped_labs[f"{row.data_type}"].append(f"{label}")
@@ -258,8 +258,8 @@ def define_key_for_plots(wildcards, string):
                         label_to_track[label] = row.data_type
             elif strand == "unstranded":
                 if not plot_allreps:
-                    bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__plus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__plus.bw"
-                    bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__minus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__minus.bw"
+                    bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__plus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__plus.bw"
+                    bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__minus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__minus.bw"
                     label = f"{row.levels_label}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].extend([bw1, bw2])
                     grouped_labs[f"{row.data_type}"].extend([f"{label}_plus", f"{label}_minus"])
@@ -287,7 +287,7 @@ def define_key_for_plots(wildcards, string):
                         label_to_track[f"{label}_minus"] = f"{row.data_type}_minus"
             else:
                 if not plot_allreps:
-                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{strand}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{strand}.bw"
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__{strand}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{strand}.bw"
                     label = f"{row.levels_label}_{row.sample_type}"
                     grouped_bw[f"{row.data_type}"].append(bw)
                     grouped_labs[f"{row.data_type}"].append(f"{label}")
@@ -311,8 +311,8 @@ def define_key_for_plots(wildcards, string):
             for size in srna_sizes:
                 if strand == "unstranded":
                     if not plot_allreps:
-                        bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{size}nt__plus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__plus.bw"
-                        bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{size}nt__minus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__minus.bw"
+                        bw1 = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__{size}nt__plus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__plus.bw"
+                        bw2 = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__{size}nt__minus.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__minus.bw"
                         label = f"{row.levels_label}_sRNA_{size}nt"
                         grouped_bw[f"sRNA_{size}nt"].extend([bw1, bw2])
                         grouped_labs[f"sRNA_{size}nt"].extend([f"{label}_plus", f"{label}_minus"])
@@ -340,7 +340,7 @@ def define_key_for_plots(wildcards, string):
                             label_to_track[f"{label}_minus"] = f"sRNA_{size}nt_minus"
                 else:
                     if not plot_allreps:
-                        bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{size}nt__{strand}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__{strand}.bw"
+                        bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__{size}nt__{strand}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{size}nt__{strand}.bw"
                         label = f"{row.levels_label}_sRNA_{size}nt"
                         grouped_bw[f"sRNA_{size}nt"].append(bw)
                         grouped_labs[f"sRNA_{size}nt"].append(f"{label}")
@@ -363,7 +363,7 @@ def define_key_for_plots(wildcards, string):
         elif row.env == "mC":
             if not plot_allreps:
                 for context in mc_contexts:
-                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['sample_name']}__{context}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{context}.bw"
+                    bw = f"{RESULTS_DIR}/{row.env}/tracks/{row['mapped_name']}__{context}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/{row.env}/tracks/{rep_ids[0]}__{context}.bw"
                     label = f"{row.levels_label}_m{context}"
                     grouped_bw[f"m{context}"].append(bw)
                     grouped_labs[f"m{context}"].append(f"{label}")
@@ -386,7 +386,7 @@ def define_key_for_plots(wildcards, string):
 
         elif row.env == "ATAC":
             if not plot_allreps:
-                bw = f"{RESULTS_DIR}/ATAC/tracks/coverage__merged__{row['sample_name']}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{rep_ids[0]}.bw"
+                bw = f"{RESULTS_DIR}/ATAC/tracks/coverage__merged__{row['mapped_name']}.bw" if len(rep_ids) >=2 else f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{rep_ids[0]}.bw"
                 label = f"{row.levels_label}_{row.sample_type}"
                 grouped_bw["atac"].append(bw)
                 grouped_labs["atac"].append(label)
@@ -503,7 +503,7 @@ def define_input_for_pca(wildcards, string):
         filtered_samples = samples[ (samples['env'] == "mC") & (samples['ref_genome'] == ref_genome) ].copy()
         context = globenv[1:]
         for _, row in filtered_samples.iterrows():
-            bw = f"{RESULTS_DIR}/mC/tracks/{row['sample_name']}__{context}.bw"
+            bw = f"{RESULTS_DIR}/mC/tracks/{row['mapped_name']}__{context}.bw"
             label = f"{row.levels_label}_{row.replicate}"
             group = f"{row.levels_label}"
             tracks.append(bw)
@@ -513,7 +513,7 @@ def define_input_for_pca(wildcards, string):
     elif globenv in ["ChIP", "ATAC"]:
         filtered_samples = samples[ (samples['env'] == globenv) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
-            bam = f"{RESULTS_DIR}/{globenv}/mapped/final__{row['sample_name']}.bam"
+            bam = f"{RESULTS_DIR}/{globenv}/mapped/final__{row['mapped_name']}.bam"
             label = f"{row.sample_type}_{row.levels_label}_{row.data_type}_{row.replicate}"
             group = f"{row.sample_type}_{row.levels_label}"
             tracks.append(bam)
@@ -523,7 +523,7 @@ def define_input_for_pca(wildcards, string):
     elif globenv == "all_chip":
         filtered_samples = samples[ (samples['env'].isin(["ChIP","ATAC"])) & (samples['ref_genome'] == ref_genome) ].copy()
         for _, row in filtered_samples.iterrows():
-            bam = f"{RESULTS_DIR}/{row.env}/mapped/final__{row['sample_name']}.bam"
+            bam = f"{RESULTS_DIR}/{row.env}/mapped/final__{row['mapped_name']}.bam"
             label = f"{row.sample_type}_{row.levels_label}_{row.data_type}_{row.replicate}"
             group = f"{row.sample_type}_{row.levels_label}"
             tracks.append(bam)
@@ -711,7 +711,7 @@ checkpoint is_stranded:
 rule prepping_mapping_stats:
     input:
         sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/{wildcards.env}/reports/summary_{wildcards.env}_{get_sample_info_from_name(sample_name, samples, 'paired')}_mapping_stats_{sample_name}.txt"
-                                                for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
+                                                for sample_name in get_mapped_names_by_env(wildcards.env, samples) ]
     output:
         temp_stat_file = temp(f"{RESULTS_DIR}/combined/reports/temp_summary_mapping_stats_{{analysis_name}}_{{env}}.txt"),
         stat_file = f"{RESULTS_DIR}/combined/reports/summary_mapping_stats_{{analysis_name}}_{{env}}.txt"
@@ -747,7 +747,7 @@ rule plotting_mapping_stats:
 # Rules to prep and then plot the peak stats:
 rule prepping_peak_stats:
     input:
-        sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_sample_names_by_env(wildcards.env, analysis_samples) ]
+        sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/{wildcards.env}/reports/summary_{wildcards.env}_peak_stats_{sample_name}.txt" for sample_name in get_mapped_names_by_env(wildcards.env, analysis_samples) ]
     output:
         temp_stat_file = temp(f"{RESULTS_DIR}/combined/reports/temp_summary_peak_stats_{{analysis_name}}_{{env}}.txt"),
         stat_file = f"{RESULTS_DIR}/combined/reports/summary_peak_stats_{{analysis_name}}_{{env}}.txt"
@@ -785,7 +785,7 @@ rule plotting_peak_stats:
 rule prepping_srna_sizes_stats:
     input:
         sample_stat_files = lambda wildcards: [ f"{RESULTS_DIR}/sRNA/reports/sizes_stats__{sample_name}.txt"
-                                                for sample_name in get_sample_names_by_env(wildcards.env, samples) ]
+                                                for sample_name in get_mapped_names_by_env(wildcards.env, samples) ]
     output:
         temp_stat_file = temp(f"{RESULTS_DIR}/combined/reports/temp_summary_sizes_stats_{{analysis_name}}_{{env}}.txt"),
         stat_file = f"{RESULTS_DIR}/combined/reports/summary_sizes_stats_{{analysis_name}}_{{env}}.txt"

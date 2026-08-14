@@ -54,7 +54,7 @@ Sample metadata is defined in a TSV file with 9 columns:
 
 - **Sample_ID**: Unique identifier, used as filesystem name. Must be unique and filesystem-safe (no `__`, `/`, whitespace).
 - **Assay**: Controlled vocabulary: `ChIP_broad`, `ChIP_narrow`, `CUT_RUN_broad`, `CUT_RUN_narrow`, `CUT_TAG_broad`, `CUT_TAG_narrow`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, `dmC`
-- **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`)
+- **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`), or a comma-separated list (`B73,W22`) to map the same reads to several references. Multi-genome rows are exploded internally into one row per `(Sample_ID, Genome)`. A genome name must not contain `__`.
 - **Levels**: Comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:root`). All samples must have the same factors.
 - **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
 - **Read_files**: SRA accession (`SRR12345`), local path, HTTP(S) URL, or `+`-separated for merging multiple inputs (`+`-merge supported for SRA accessions and FASTQ files, local or URL; BAM/bedMethyl must be merged upstream)
@@ -64,7 +64,7 @@ Sample metadata is defined in a TSV file with 9 columns:
 
 Control-row replicate merging keys on `(Levels, IP_target, Genome)` only — the `Assay` value on a control row is decorative for merging purposes, so a single biological Input/IgG/WCE serving multiple IP types (broad + narrow, ChIP + CUT&RUN) merges correctly regardless of how individual rep rows are labeled. See `build_control_merge_key` in `workflow/scripts/sample_sheet.py`.
 
-Per-replicate files use `Sample_ID` directly (e.g. `final__WT_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`).
+Per-replicate naming splits at the alignment boundary. Everything up to and including read trimming is genome-independent and uses the bare `Sample_ID` (e.g. `trim__WT_H3K9me2_rep1__R1.fastq.gz`), so one download+trim serves every reference the sample is mapped to. From alignment onward the reference is part of what the file *is*, so paths use `mapped_name` = `{Sample_ID}__{Genome}` (e.g. `final__WT_H3K9me2_rep1__ColCEN.bam`). `parse_sample_name` accepts either form; `base_sample()` strips the genome for pre-alignment inputs of boundary rules. This is what lets one sample be mapped to several genomes without output collisions (issue #39). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`).
 
 Peak type is determined by Assay: `ChIP_broad`/`CUT_RUN_broad`/`CUT_TAG_broad` → broad peaks (histone marks), `ChIP_narrow`/`CUT_RUN_narrow`/`CUT_TAG_narrow` → narrow peaks (transcription factors, H3K4me3, etc.). All six "IP-with-peaks" assays share the `ChIP` env (`results/ChIP/`). Default peak callers: ChIP* → MACS2; CUT&* `_broad` → epic2; CUT&* `_narrow` → SEACR. Override via `cut_callpeaks.{broad,narrow}_caller` (`epic2`, `seacr`, `macs2`).
 

@@ -5,7 +5,8 @@ def return_log_rna(sample_name, step, paired):
 
 def define_RNA_input_for_degs(ref_genome):
     filtered_samples = samples[(samples['Assay'] == 'RNAseq') & (samples['Genome'] == ref_genome)]
-    return [f"{RESULTS_DIR}/RNA/DEG/counts__{sname}.tab" for sname in filtered_samples['sample_name']]
+    # Per-replicate counts come out of alignment, so they carry the genome.
+    return [f"{RESULTS_DIR}/RNA/DEG/counts__{mname}.tab" for mname in filtered_samples['mapped_name']]
 
 def define_rnaseq_target_file(wildcards):
     tname = config['rnaseq_target_file_label']
@@ -82,26 +83,27 @@ def define_final_rna_output(ref_genome):
 
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         paired = row['paired']
         if paired == "PE":
             qc_files.append(f"{RESULTS_DIR}/RNA/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
             qc_files.append(f"{RESULTS_DIR}/RNA/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
-            map_files.append(f"{RESULTS_DIR}/RNA/logs/process_rna_pe_sample__{sname}.log")
+            map_files.append(f"{RESULTS_DIR}/RNA/logs/process_rna_pe_sample__{mname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/RNA/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
                 qc_files.append(f"{RESULTS_DIR}/RNA/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
         elif paired == "SE":
             qc_files.append(f"{RESULTS_DIR}/RNA/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
-            map_files.append(f"{RESULTS_DIR}/RNA/logs/process_rna_se_sample__{sname}.log")
+            map_files.append(f"{RESULTS_DIR}/RNA/logs/process_rna_se_sample__{mname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/RNA/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
 
         strand = config['rna_tracks'][row['Assay']]['strandedness']
         if strand == "unstranded":
-            bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{sname}__unstranded.bw")
+            bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{mname}__unstranded.bw")
         else:
-            bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{sname}__plus.bw")
-            bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{sname}__minus.bw")
+            bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{mname}__plus.bw")
+            bigwig_files.append(f"{RESULTS_DIR}/RNA/tracks/{mname}__minus.bw")
 
     filtered_analysis_samples = analysis_samples[(analysis_samples['env'] == 'RNA') & (analysis_samples['Genome'] == ref_genome)].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -135,7 +137,7 @@ def define_final_rna_output(ref_genome):
     valid_samples = set(filtered_samples2['Sample'])
     for _, row in filtered_samples3.iterrows():
         if row['Sample'] in valid_samples:
-            tss_files.append(f"{RESULTS_DIR}/RNA/TSS/TSS__final__{row['sample_name']}_peaks.narrowPeak")
+            tss_files.append(f"{RESULTS_DIR}/RNA/TSS/TSS__final__{row['mapped_name']}_peaks.narrowPeak")
 
     filtered_analysis_samples2 = analysis_samples[(analysis_samples['Assay'] == 'RAMPAGE') & (analysis_samples['Genome'] == ref_genome)].copy()
     filtered_analysis_samples2['Sample'] = filtered_analysis_samples2['levels_label']
@@ -188,8 +190,8 @@ rule make_STAR_indices:
 
 rule STAR_map_pe:
     input:
-        fastq1 = f"{RESULTS_DIR}/RNA/fastq/trim__{{sample_name}}__R1.fastq.gz",
-        fastq2 = f"{RESULTS_DIR}/RNA/fastq/trim__{{sample_name}}__R2.fastq.gz",
+        fastq1 = lambda wildcards: f"{RESULTS_DIR}/RNA/fastq/trim__{base_sample(wildcards.sample_name)}__R1.fastq.gz",
+        fastq2 = lambda wildcards: f"{RESULTS_DIR}/RNA/fastq/trim__{base_sample(wildcards.sample_name)}__R2.fastq.gz",
         indices = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         bamfile = temp(f"{RESULTS_DIR}/RNA/mapped/star_pe__{{sample_name}}_Aligned.out.bam"),
@@ -229,7 +231,7 @@ rule STAR_map_pe:
 
 rule STAR_map_se:
     input:
-        fastq0 = f"{RESULTS_DIR}/RNA/fastq/trim__{{sample_name}}__R0.fastq.gz",
+        fastq0 = lambda wildcards: f"{RESULTS_DIR}/RNA/fastq/trim__{base_sample(wildcards.sample_name)}__R0.fastq.gz",
         indices = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/STAR_index"
     output:
         bamfile = temp(f"{RESULTS_DIR}/RNA/mapped/star_se__{{sample_name}}_Aligned.out.bam"),
@@ -346,9 +348,9 @@ rule filter_rna_se:
 
 rule make_rna_stats_pe:
     input:
-        metrics_trim = f"{RESULTS_DIR}/RNA/reports/trim_pe__{{sample_name}}.json",
+        metrics_trim = lambda wildcards: f"{RESULTS_DIR}/RNA/reports/trim_pe__{base_sample(wildcards.sample_name)}.json",
         metrics_map = f"{RESULTS_DIR}/RNA/reports/star_pe__{{sample_name}}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
+        logs = lambda wildcards: [ return_log_rna((base_sample(wildcards.sample_name) if step in ("downloading", "trimming") else wildcards.sample_name), step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
         stat_file = f"{RESULTS_DIR}/RNA/reports/summary_RNA_PE_mapping_stats_{{sample_name}}.txt",
         log = f"{RESULTS_DIR}/RNA/logs/process_rna_pe_sample__{{sample_name}}.log"
@@ -379,9 +381,9 @@ rule make_rna_stats_pe:
 
 rule make_rna_stats_se:
     input:
-        metrics_trim = f"{RESULTS_DIR}/RNA/reports/trim_se__{{sample_name}}.json",
+        metrics_trim = lambda wildcards: f"{RESULTS_DIR}/RNA/reports/trim_se__{base_sample(wildcards.sample_name)}.json",
         metrics_map = f"{RESULTS_DIR}/RNA/reports/star_se__{{sample_name}}.txt",
-        logs = lambda wildcards: [ return_log_rna(wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
+        logs = lambda wildcards: [ return_log_rna((base_sample(wildcards.sample_name) if step in ("downloading", "trimming") else wildcards.sample_name), step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "mappingSTAR", "filteringRNA"] ]
     output:
         stat_file = f"{RESULTS_DIR}/RNA/reports/summary_RNA_SE_mapping_stats_{{sample_name}}.txt",
         log = f"{RESULTS_DIR}/RNA/logs/process_rna_se_sample__{{sample_name}}.log"
