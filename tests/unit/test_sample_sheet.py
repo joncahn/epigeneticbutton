@@ -32,6 +32,7 @@ from sample_sheet import (
     get_peaktype,
     add_compat_columns,
     read_sample_sheet,
+    s3_uri_to_https,
     combine_assay_peaktype,
     PEAK_TYPE_ASSAYS,
 )
