@@ -802,12 +802,10 @@ def add_compat_columns(df):
     # sample_name = Sample_ID (the key bridge)
     df["sample_name"] = df["Sample_ID"]
 
-    # Post-alignment identity. Everything up to and including read trimming is
-    # genome-independent and keeps the bare sample_name, so one download+trim
-    # serves every reference. From alignment onward the reference is part of
-    # what the file *is*, so those paths use mapped_name and two genomes can no
-    # longer collide on one filename (issue #39). '__' is the reserved
-    # delimiter — Sample_ID and Genome are both validated to exclude it, so
+    # Post-alignment identity: pre-alignment paths keep the bare sample_name
+    # (one download+trim serves every reference), while alignment onward uses
+    # mapped_name so two genomes cannot collide on one filename (#39). '__' is
+    # the reserved delimiter and both halves are validated to exclude it, so
     # rsplit('__', 1) recovers the pair unambiguously.
     df["mapped_name"] = df["Sample_ID"].astype(str) + "__" + df["ref_genome"].astype(str)
 

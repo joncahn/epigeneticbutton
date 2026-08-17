@@ -1,12 +1,9 @@
 // Behavioral tests for the Genome column's multi-select editor in
 // tools/epicc-builder.html.
 //
-// The builder is a single self-contained HTML file with no build step and no
-// npm dependencies, which is deliberate (it has to open from a file:// URL or
-// a static host). So rather than pull in jsdom, this extracts the two
-// functions under test straight out of the shipped HTML and runs them against
-// the small DOM shim below. The code exercised is therefore the code that
-// ships -- if someone edits the editor in the HTML, this test sees the edit.
+// The builder has no build step and no npm dependencies, so instead of jsdom
+// this extracts the functions under test from the shipped HTML and runs them
+// against the DOM shim below.
 //
 // Run via tests/unit/test_builder_genome_picker.py, or directly:
 //   node tests/unit/js/genome_picker_test.js
@@ -166,8 +163,7 @@ function fireDocMouseDown(target) {
 console.log("parseGenomeList");
 eq(parseGenomeList("B73,W22"), ["B73", "W22"], "splits a pair");
 eq(parseGenomeList(" B73 , W22 "), ["B73", "W22"], "trims whitespace");
-// Matches read_sample_sheet's tolerance: it drops empty entries too, so the
-// builder must not turn a stray comma into a hard error.
+// read_sample_sheet drops empty entries too, so this must not be an error.
 eq(parseGenomeList("B73,,W22"), ["B73", "W22"], "drops stray comma");
 eq(parseGenomeList("B73,B73"), ["B73"], "dedupes");
 eq(parseGenomeList(""), [], "empty string -> []");
@@ -182,8 +178,7 @@ console.log("\npicker reflects the cell's current value");
   eq(e.input.value, "B73,W22", "cell input shows the comma list");
 }
 {
-  // A genome typed into this cell but never registered elsewhere must not
-  // vanish from the picker, or opening the editor would silently drop it.
+  // A genome present only in this cell must not vanish from the picker.
   const e = openEditor("Spombe", []);
   eq(boxesOf(e.panel).map(labelOf), ["Spombe"], "cell-only genome still listed");
   eq(boxesOf(e.panel)[0].checked, true, "and ticked");
@@ -223,7 +218,6 @@ console.log("\nthe text box stays live");
 
 console.log("\nadding a genome from the cell");
 {
-  // Replaces the old editor's freetext mode.
   const e = openEditor("B73", ["B73"]);
   const addInput = e.panel.find(
     (x) => x.tagName === "INPUT" && x.attrs["aria-label"] === "New genome name")[0];

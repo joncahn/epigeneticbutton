@@ -1,17 +1,10 @@
 """Tests for the builder's multi-select Genome column editor.
 
-The Genome cell holds a comma-separated list of references ("B73,W22") that
-``explode_genomes`` turns into one row per genome at load. A single-entry
-dropdown cannot express that, so the column uses a custom tick-box editor
-(``genomeMultiEditor``).
+The Genome cell holds a comma-separated list of references ("B73,W22"), which a
+single-entry dropdown cannot express, so the column uses ``genomeMultiEditor``.
 
-Two kinds of check here:
-
-- Source checks, which need nothing but the HTML.
-- A behavioral suite driven through node (``tests/unit/js/genome_picker_test.js``),
-  skipped where node is unavailable. It extracts the editor from the shipped
-  HTML and drives it against a DOM shim, so it fails if the widget's behavior
-  regresses rather than merely if the source text changes.
+Source checks run off the HTML alone. The behavioral suite runs through node
+(``tests/unit/js/genome_picker_test.js``) and is skipped where node is absent.
 """
 
 import os
@@ -52,11 +45,8 @@ class TestBuilderSource:
         assert "editor: genomeMultiEditor" in self._genome_column(html)
 
     def test_genome_column_is_not_a_single_entry_list(self, html):
-        """The old ``editor: "list"`` could hold one genome only (#61 review).
-
-        Regression guard: reverting the column to Tabulator's list editor would
-        silently make multi-genome rows unenterable through the UI, while the
-        sample-sheet layer kept accepting them from a hand-edited TSV.
+        """Tabulator's list editor holds one value, making multi-genome rows
+        unenterable through the UI even though the loader still accepts them.
         """
         col = self._genome_column(html)
         assert 'editor: "list"' not in col
@@ -67,10 +57,8 @@ class TestBuilderSource:
         assert re.search(r"^function parseGenomeList\(", html, re.M)
 
     def test_picker_styles_exist(self, html):
-        """The panel is appended to document.body, so it needs its own styles.
-
-        Without .genome-picker the panel renders unstyled at the top-left of the
-        page instead of under the cell.
+        """The panel is appended to document.body, so it needs its own styles;
+        without them it renders unstyled at the top-left of the page.
         """
         for cls in (
             ".genome-picker",

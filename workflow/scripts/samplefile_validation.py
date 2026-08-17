@@ -157,12 +157,10 @@ def check_table(tab, check_paths=True):
         if not names:
             errors.append(f"[X] Row #{i} '{sid}': Genome is required")
             continue
-        # NOTE: by the time check_table runs, read_sample_sheet has already
-        # exploded multi-genome rows, so `names` is normally a single entry
-        # here. The list handling is kept so a DataFrame built directly (tests,
-        # callers that skip read_sample_sheet) is still checked. Duplicate
-        # references inside one cell are caught in explode_genomes, which is the
-        # only place that still sees the unexploded list.
+        # `names` is normally a single entry: read_sample_sheet explodes
+        # multi-genome rows before this runs. The list handling covers frames
+        # built directly, e.g. in tests. Duplicates are caught in
+        # explode_genomes, the only place that sees the unexploded list.
         for g in names:
             if _DOUBLE_UNDERSCORE.search(g):
                 errors.append(

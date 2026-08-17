@@ -1304,18 +1304,13 @@ function getDefinedGenomes() {
 }
 
 // --- Genome column editor: multi-select tick boxes -------------------------
-// A sample may be mapped to several references, stored in the cell as a
-// comma-separated list ("B73,W22") and exploded into one row per genome at
-// load time by explode_genomes(). A single-entry <select> cannot express that,
-// so the Genome cell gets a tick-box picker instead.
-//
-// The picker is appended to document.body rather than to the cell: the column
-// is ~150px wide with overflow clipped, so a panel rendered inside the cell
-// would be unusable. It follows the same fixed-position + offscreen-flip
-// pattern as .ctx-menu.
+// The cell holds a comma-separated list of references ("B73,W22"), one per
+// genome the sample is mapped to. The picker is appended to document.body, not
+// the cell, since the column is ~150px with overflow clipped; it reuses the
+// fixed-position + offscreen-flip pattern of .ctx-menu.
 
 function parseGenomeList(value) {
-  // Tolerates the stray commas the loader also tolerates ("B73,,W22" -> 2).
+  // Stray commas are dropped, matching the loader ("B73,,W22" -> 2 entries).
   var out = [];
   var seen = {};
   var parts = String(value == null ? "" : value).split(",");
@@ -1332,9 +1327,8 @@ function genomeMultiEditor(cell, onRendered, success, cancel) {
   input.className = "genome-cell-input";
   input.value = cell.getValue() || "";
 
-  // Order matters only for readability, not semantics — each genome is mapped
-  // independently. Keep the user's existing order and append newly ticked
-  // names so toggling a box never reshuffles the rest of the cell.
+  // Existing order is preserved and new ticks appended, so toggling one box
+  // never reshuffles the cell.
   var selected = parseGenomeList(input.value);
 
   var panel = null;
@@ -1353,8 +1347,7 @@ function genomeMultiEditor(cell, onRendered, success, cancel) {
   function commit() {
     if (done) return;
     done = true;
-    // Re-parse the input so a typed/pasted value wins over the tick state:
-    // the text box stays live for keyboard and paste workflows.
+    // The text box stays live, so a typed/pasted value wins over the ticks.
     var value = parseGenomeList(input.value).join(",");
     teardown();
     success(value);
@@ -1427,7 +1420,6 @@ function genomeMultiEditor(cell, onRendered, success, cancel) {
       })(all[i]);
     }
 
-    // Adding a genome from the cell replaces the old editor's freetext mode.
     var addRow = document.createElement("div");
     addRow.className = "genome-picker-add";
     var addInput = document.createElement("input");
@@ -1441,8 +1433,7 @@ function genomeMultiEditor(cell, onRendered, success, cancel) {
     function addTyped() {
       var name = addInput.value.trim();
       if (!name) return;
-      // Registering it in definedGenomes makes it available to every other
-      // row (and to the Reference Genomes tab) even before this cell commits.
+      // Register it so other rows and the Reference Genomes tab see it too.
       if (definedGenomes.indexOf(name) < 0) definedGenomes.push(name);
       toggle(name, true);
       addInput.value = "";
