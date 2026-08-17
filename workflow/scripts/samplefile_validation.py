@@ -5,7 +5,10 @@ Implements the rules defined in dev/docs/sample-sheet-spec.md.
 
 import os
 import re
-from scripts.sample_sheet import VALID_ASSAYS, ASSAY_TO_ENV, IP_PEAK_ASSAYS
+from scripts.sample_sheet import (
+    VALID_ASSAYS, ASSAY_TO_ENV, IP_PEAK_ASSAYS,
+    PEAK_TYPE_ASSAYS, VALID_PEAK_TYPES,
+)
 
 # Characters that are unsafe for filesystem use in Sample_ID
 _UNSAFE_CHARS = re.compile(r'[/\\\s\'\";&|<>$`!{}()\[\]?*~#]')
@@ -36,6 +39,11 @@ def _merge_component_kind(comp):
 # an RNA-seq Control rather than an IP-style Input/IgG, but the Control
 # field semantics (Sample_ID reference, no chaining) are the same.
 _CONTROL_ASSAYS = IP_PEAK_ASSAYS | {"RAMPAGE"}
+
+# IP_target values that mark a row as a control rather than an IP. Used only to
+# soften warnings (a control row having no Control of its own is expected);
+# never to decide pipeline behavior, since IP_target is freetext.
+_CONTROL_IP_TARGETS = {"input", "wce", "igg", "control", "mock"}
 
 
 def _is_url(path):
@@ -68,16 +76,23 @@ def resolve_data_path(path, repo_folder=None):
     return p
 
 
+def _is_s3_uri(path):
+    """Return True if the path is an ``s3://bucket/key`` URI."""
+    return path.startswith("s3://")
+
+
 def _is_local_path(token):
     """True if a Read_files component entry is a local filesystem path.
 
-    Excludes empty strings, SRA-style accessions, and HTTP(S) URLs.
+    Excludes empty strings, SRA-style accessions, HTTP(S) URLs, and s3:// URIs.
+    Remote inputs are never probed at validation time — we do not touch the
+    network to check whether they exist.
     """
     if not token:
         return False
     if _SRA_REGEX.match(token):
         return False
-    if _is_url(token):
+    if _is_url(token) or _is_s3_uri(token):
         return False
     return True
 
@@ -265,6 +280,18 @@ def check_table(tab, check_paths=True):
                         f"[X] Row #{i} '{sid}': Read_layout is SE but Read_files "
                         f"has multiple comma-separated paths"
                     )
+                # s3:// URIs must name both a bucket and a key. Caught here so a
+                # typo reports as a validation error rather than raising from
+                # s3_uri_to_https midway through DAG construction.
+                for f in files_in_comp:
+                    if not _is_s3_uri(f):
+                        continue
+                    bucket, sep, key = f[len("s3://"):].partition("/")
+                    if not (bucket and sep and key):
+                        errors.append(
+                            f"[X] Row #{i} '{sid}': malformed S3 URI '{f}' — "
+                            f"expected 's3://bucket/key'"
+                        )
 
     # --- Read_files: cross-row duplicate check ---
     seen_inputs = {}  # path/accession -> Sample_ID
@@ -323,6 +350,25 @@ def check_table(tab, check_paths=True):
                     f"[X] Row #{i} '{sid}': IP_target must be blank for {assay}"
                 )
 
+    # --- Control: warn when a pulldown IP has none (it can't be peak-called) ---
+    # Peak calling needs a control, so such a sample is silently dropped from
+    # the peak-target set (see is_peak_call_target). Control rows themselves
+    # (Input/WCE/IgG) legitimately have no Control, so they are not flagged.
+    for i, (_, row) in enumerate(tab.iterrows(), start=1):
+        assay = str(row.get("Assay", "")).strip()
+        if assay not in IP_PEAK_ASSAYS:
+            continue
+        ip_target = str(row.get("IP_target", "")).strip()
+        control = str(row.get("Control", "")).strip()
+        sid = str(row.get("Sample_ID", "")).strip()
+        if control in ("", "nan") and ip_target.lower() not in _CONTROL_IP_TARGETS:
+            warnings.append(
+                f"[!] Row #{i} '{sid}': {assay} sample with IP_target "
+                f"'{ip_target}' has no Control — it will not be peak-called. "
+                f"Set Control to the Sample_ID of its Input/WCE/IgG, or leave "
+                f"it out if this row is itself a control."
+            )
+
     # --- Control: reference validation ---
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
         assay = str(row.get("Assay", "")).strip()
@@ -340,16 +386,70 @@ def check_table(tab, check_paths=True):
                     f"[X] Row #{i} '{sid}': Control '{control}' does not match "
                     f"any Sample_ID in the sheet"
                 )
-            # No chaining
+            # A sample cannot be its own control.
+            if control == sid:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Control refers to the sample itself"
+                )
+            # Control depth: at most one extra level. X -> Y is always fine, and
+            # Y may declare its own Control Z — that is the *dual-role* case: a
+            # sample serving as another row's control while also being analysed
+            # in its own right (e.g. an H3 ChIP that is both H3K9me2's control
+            # and normalized against Input). But Z must not have a Control of
+            # its own. Peak calling only ever resolves one step, so depth 2 is
+            # all the pipeline can express; bounding it here also makes cycles
+            # impossible, since any loop forces some row to be its own
+            # grandparent-with-a-Control and trips this check.
             ctrl_row = tab[tab["Sample_ID"] == control]
             if not ctrl_row.empty:
                 ctrl_ctrl = str(ctrl_row["Control"].iloc[0]).strip()
                 if ctrl_ctrl and ctrl_ctrl != "nan":
-                    errors.append(
-                        f"[X] Row #{i} '{sid}': Control '{control}' itself has "
-                        f"a Control (chaining not allowed)"
-                    )
+                    gp_row = tab[tab["Sample_ID"] == ctrl_ctrl]
+                    if not gp_row.empty:
+                        gp_ctrl = str(gp_row["Control"].iloc[0]).strip()
+                        if gp_ctrl and gp_ctrl != "nan":
+                            errors.append(
+                                f"[X] Row #{i} '{sid}': control chain is too "
+                                f"deep — '{control}' -> '{ctrl_ctrl}' -> "
+                                f"'{gp_ctrl}'. A control may have its own "
+                                f"Control (dual-role), but that one must not."
+                            )
 
+    # --- Peak_type: separated analytical parameter (broad/narrow) ---
+    # Required for the separated pulldown assays (ChIP/CUT_RUN/CUT_TAG); must be
+    # blank for everything else — the legacy combined assays already encode it,
+    # and non-peak / ATAC assays have no user-set peak type.
+    _legacy_combined = IP_PEAK_ASSAYS - PEAK_TYPE_ASSAYS
+    for i, (_, row) in enumerate(tab.iterrows(), start=1):
+        assay = str(row.get("Assay", "")).strip()
+        peak_type = str(row.get("Peak_type", "")).strip()
+        if peak_type == "nan":
+            peak_type = ""
+        sid = str(row.get("Sample_ID", "")).strip()
+        if assay in PEAK_TYPE_ASSAYS:
+            if not peak_type:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type is required for {assay} "
+                    f"(one of {sorted(VALID_PEAK_TYPES)})"
+                )
+            elif peak_type not in VALID_PEAK_TYPES:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type '{peak_type}' not in "
+                    f"{sorted(VALID_PEAK_TYPES)}"
+                )
+        elif peak_type:
+            if assay in _legacy_combined:
+                base, _, pt = assay.rpartition("_")
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type must be blank when the "
+                    f"Assay already encodes it ('{assay}'); use the separated "
+                    f"form (Assay={base}, Peak_type={pt})"
+                )
+            else:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
+                )
+                
     # --- Print warnings ---
     for w in warnings:
         print(w)

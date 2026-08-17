@@ -381,7 +381,6 @@ def define_final_chip_output(ref_genome):
     allrep_files = []
 
     # All ChIP samples (including controls) for mapping/QC
-    controls = identify_control_samples(samples)
     filtered_rep_samples = samples[(samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome)].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
@@ -401,8 +400,16 @@ def define_final_chip_output(ref_genome):
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R0_fastqc.html")
 
-    # Non-control samples for peak calling and bigwigs
-    filtered_rep_samples_no_input = filtered_rep_samples[~filtered_rep_samples['Sample_ID'].isin(controls)].copy()
+    # Samples that get peak calls and FC bigwigs. The test is structural — a
+    # pulldown row must declare a Control — rather than "is anyone using this row
+    # as their control?". That drops what cannot be peak-called (an Input/WCE/IgG
+    # row no IP points at, i.e. an "orphan" control, and an IP with no Control;
+    # both would make assign_chip_input raise "No control found" during DAG
+    # build) while still admitting *dual-role* samples: a row may serve as
+    # another sample's control AND be analysed in its own right, as long as it
+    # has a Control of its own (e.g. an H3 ChIP used as its own target and as the
+    # control for H3K9me2). See is_peak_call_target.
+    filtered_rep_samples_no_input = peak_callable_rows(filtered_rep_samples)
     for _, row in filtered_rep_samples_no_input.iterrows():
         assay = row['Assay']
         peaktype = ASSAY_TO_PEAKTYPE.get(assay, "broad")

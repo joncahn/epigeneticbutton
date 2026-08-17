@@ -492,7 +492,15 @@ def get_TE_file(wildcards):
     return []
 
 def define_input_for_pca(wildcards, string):
+    # `indexes` returns the .bam.bai companions of `tracks` for the BAM-based
+    # envs (empty for the mC contexts, which summarize bigwigs and need no
+    # index). summarize_tracks_pca declares them as inputs so the index is a
+    # tracked dependency: multiBamSummary requires it, but without the edge
+    # Snakemake neither rebuilds a missing index nor counts the PCA job as a
+    # consumer — so a temp() index can be reclaimed while the BAM it belongs to
+    # is still alive. See the note on that rule.
     tracks = []
+    indexes = []
     labels = []
     unique_group = set()
     label_to_group = {}
@@ -517,6 +525,7 @@ def define_input_for_pca(wildcards, string):
             label = f"{row.sample_type}_{row.levels_label}_{row.data_type}_{row.replicate}"
             group = f"{row.sample_type}_{row.levels_label}"
             tracks.append(bam)
+            indexes.append(bam + ".bai")
             labels.append(label)
             unique_group.add(group)
             label_to_group[label] = group
@@ -527,6 +536,7 @@ def define_input_for_pca(wildcards, string):
             label = f"{row.sample_type}_{row.levels_label}_{row.data_type}_{row.replicate}"
             group = f"{row.sample_type}_{row.levels_label}"
             tracks.append(bam)
+            indexes.append(bam + ".bai")
             labels.append(label)
             unique_group.add(group)
             label_to_group[label] = group
@@ -534,8 +544,10 @@ def define_input_for_pca(wildcards, string):
     palette = assign_colors(unique_group, "tab20")
     colors = [palette[label_to_group[lab]] for lab in labels]
     
-    if string == "tracks": 
+    if string == "tracks":
         return tracks
+    elif string == "indexes":
+        return indexes
     elif string == "labels":
         return labels
     elif string == "colors":
@@ -1540,7 +1552,14 @@ rule merge_region_browser_plots:
 
 rule summarize_tracks_pca:
     input:
-        tracks = lambda wildcards: define_input_for_pca(wildcards, "tracks")
+        tracks = lambda wildcards: define_input_for_pca(wildcards, "tracks"),
+        # multiBamSummary reads the .bai alongside each BAM, so the indexes must
+        # be declared even though the shell command never names them. Declaring
+        # them makes the dependency real in two ways Snakemake cannot infer:
+        # a missing index gets rebuilt (dispatch_final_bam produces both), and
+        # a temp() index is not reclaimed while this job still needs it. Empty
+        # for the mC contexts, which summarize bigwigs instead.
+        indexes = lambda wildcards: define_input_for_pca(wildcards, "indexes")
     output:
         array = f"{RESULTS_DIR}/combined/matrix/pca_matrix__{{env}}__{{analysis_name}}__{{ref_genome}}.npz"
     params:
