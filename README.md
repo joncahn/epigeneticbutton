@@ -44,11 +44,11 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/joncahn/EPICC.git
+git clone https://github.com/cahnlab/EPICC.git
 ```
 or for ssh connection
 ```bash
-git clone git@github.com:joncahn/EPICC.git
+git clone git@github.com:cahnlab/EPICC.git
 ```
 ```bash
 cd EPICC

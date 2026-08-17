@@ -32,7 +32,7 @@ chrs <- GRanges(seqnames = chromsizes$chr,
 # DMRcaller parallelizes its inner loop one task per chromosome; capping
 # workers at min(threads, n_chrs) avoids forking empty workers. SnowParam
 # (PSOCK) over MulticoreParam (fork) survives worker OOM cleanly — see
-# github.com/joncahn/EPICC/issues/23.
+# github.com/cahnlab/EPICC/issues/23.
 n_chrs <- nrow(chromsizes)
 workers <- max(1L, min(threads, n_chrs))
 if (workers > 1) {
