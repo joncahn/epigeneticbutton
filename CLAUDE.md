@@ -50,7 +50,7 @@ Nested settings (`dmr_thresholds.*`, `chip_callpeaks.params`, `cut_callpeaks.*`)
 
 Sample metadata is defined in a TSV file with 10 columns:
 
-`Sample_ID | Assay | Peak_type | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control`
+`Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control | Peak_type`
 
 - **Sample_ID**: Unique identifier, used as filesystem name. Must be unique and filesystem-safe (no `__`, `/`, whitespace).
 - **Assay**: Controlled vocabulary (experimental method only): `ChIP`, `CUT_RUN`, `CUT_TAG`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, `dmC`. Legacy combined tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are still accepted and auto-split at load.

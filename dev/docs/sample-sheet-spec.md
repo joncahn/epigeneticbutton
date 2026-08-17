@@ -15,14 +15,17 @@ Trailing whitespace on any field is stripped during parsing.
 |---|--------|----------|------|
 | 1 | Sample_ID | Yes | Controlled freetext |
 | 2 | Assay | Yes | Controlled vocabulary |
-| 3 | Peak_type | Conditional | Controlled vocabulary |
-| 4 | Genome | Yes | Freetext |
-| 5 | Levels | Yes | Structured freetext |
-| 6 | Replicate_ID | Yes | Freetext |
-| 7 | Read_files | Yes | Path / SRA ID |
-| 8 | Read_layout | Yes | Controlled vocabulary |
-| 9 | IP_target | Conditional | Freetext |
-| 10 | Control | Conditional | Reference |
+| 3 | Genome | Yes | Freetext |
+| 4 | Levels | Yes | Structured freetext |
+| 5 | Replicate_ID | Yes | Freetext |
+| 6 | Read_files | Yes | Path / SRA ID |
+| 7 | Read_layout | Yes | Controlled vocabulary |
+| 8 | IP_target | Conditional | Freetext |
+| 9 | Control | Conditional | Reference |
+| 10 | Peak_type | Conditional | Controlled vocabulary |
+
+`Peak_type` is last because it applies to only three assays; column lookup is by
+header name on both sides, so the order is ergonomic rather than semantic.
 
 ## Per-Field Validation Rules
 
