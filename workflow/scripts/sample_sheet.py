@@ -191,10 +191,98 @@ def parse_read_files(read_files_str, read_layout):
 
 _FASTQ_EXTENSIONS = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
 
+# Extensions that identify an input's type. Kept next to the FASTQ list so the
+# two cannot drift apart.
+_KNOWN_EXTENSIONS = (".bam", ".bed.gz", ".bedmethyl.gz") + _FASTQ_EXTENSIONS
+
+
+def _strip_version_suffix(name):
+    """Drop a trailing ``.<digits>`` version component from a filename.
+
+    SRA's "Original Format" objects carry one — the submitted BAM for a run is
+    served as e.g. ``Nvec_..._Nanopore.bam.1`` — which hides the real extension
+    from the type checks below.
+
+    Deliberately conservative: the suffix is removed ONLY when doing so exposes
+    a known extension. So ``reads.bam.1`` -> ``reads.bam``, while a file
+    genuinely named ``sample.1`` or ``chunk.12`` is left untouched and still
+    reported as unrecognized rather than being silently mistyped.
+    """
+    base, sep, tail = name.rpartition(".")
+    if not sep or not tail.isdigit():
+        return name
+    return base if base.endswith(_KNOWN_EXTENSIONS) else name
+
 
 def _is_url(path):
     """Return True if the path looks like an HTTP(S) URL."""
     return path.startswith("http://") or path.startswith("https://")
+
+
+def _is_s3_uri(path):
+    """Return True if the path is an ``s3://bucket/key`` URI."""
+    return path.startswith("s3://")
+
+
+def _is_remote(path):
+    """True for anything fetched over the network rather than read from disk.
+
+    HTTP(S) URLs and s3:// URIs. Kept separate from ``_is_url`` so that helper
+    keeps its narrower "is literally an http(s) URL" meaning.
+    """
+    return _is_url(path) or _is_s3_uri(path)
+
+
+def s3_uri_to_https(uri):
+    """Translate ``s3://bucket/key`` to a public HTTPS URL.
+
+    EPICC supports *public* (authentication-free) S3 objects only: no signing,
+    no credentials, no aws CLI. Such objects are plain HTTPS GETs, so the whole
+    of S3 support is this string transform — every download path already knows
+    how to curl an HTTPS URL.
+
+    Region: we emit the region-less global endpoint rather than guessing a
+    region. S3 answers it with a 307 redirect to the bucket's real region, and
+    every curl in the workflow already passes ``--location``, so buckets in any
+    region resolve. Requiring users to spell out a region would be both more
+    typing and easy to get wrong.
+
+    Addressing style: virtual-hosted (``https://bucket.s3.amazonaws.com/key``)
+    normally, but path-style (``https://s3.amazonaws.com/bucket/key``) when the
+    bucket name contains a dot — the wildcard cert for ``*.s3.amazonaws.com``
+    does not match a dotted bucket label, so virtual-hosted style would fail
+    TLS verification for those buckets.
+
+    A non-s3:// value is returned unchanged, so this is safe to apply blindly.
+    """
+    if not _is_s3_uri(uri):
+        return uri
+    remainder = uri[len("s3://"):]
+    bucket, sep, key = remainder.partition("/")
+    if not bucket or not sep or not key:
+        raise ValueError(
+            f"Malformed S3 URI '{uri}' — expected 's3://bucket/key'"
+        )
+    if "." in bucket:
+        return f"https://s3.amazonaws.com/{bucket}/{key}"
+    return f"https://{bucket}.s3.amazonaws.com/{key}"
+
+
+def _resolve_remote(token):
+    """Map one Read_files token to the URL/path a download rule should use.
+
+    s3:// URIs become their public HTTPS equivalent; everything else is
+    unchanged.
+    """
+    return s3_uri_to_https(token) if _is_s3_uri(token) else token
+
+
+def _resolve_remote_parts(parts):
+    """Apply :func:`_resolve_remote` across '+'-joined, ','-paired components."""
+    return "+".join(
+        ",".join(_resolve_remote(mate.strip()) for mate in comp.split(","))
+        for comp in parts
+    )
 
 
 def _url_basename(url):
@@ -218,6 +306,10 @@ def get_seq_id_and_path(read_files_str, read_layout):
     - bedMethyl URL: "https://host/file.bed.gz" → seq_id="file", path="https://..."
     - Explicit FASTQ paths: "r1.fq.gz,r2.fq.gz" → seq_id="EXPLICIT", path="r1.fq.gz,r2.fq.gz"
     - FASTQ URL(s): "https://host/r.fq.gz" → seq_id="URL", path="https://host/r.fq.gz"
+
+    Public S3 (``s3://bucket/key``) is treated as a remote URL and translated to
+    its public HTTPS endpoint here — the single boundary where the path handed
+    to the download rules is produced, so those rules need no S3 awareness.
     """
     parts, is_sra = parse_read_files(read_files_str, read_layout)
     if is_sra:
@@ -226,12 +318,15 @@ def get_seq_id_and_path(read_files_str, read_layout):
     else:
         import os
         first_file = parts[0].split(",")[0]  # first mate for PE
-        # Strip query params for extension checks on URLs
-        check_name = _url_basename(first_file) if _is_url(first_file) else first_file
+        # Strip query params for extension checks on remote inputs (URLs and
+        # s3:// URIs alike — an S3 key can carry a query string too), then drop
+        # any SRA version suffix so the real extension is visible.
+        check_name = _url_basename(first_file) if _is_remote(first_file) else first_file
+        check_name = _strip_version_suffix(check_name)
         if check_name.endswith(".bam"):
             # BAM input (local path or URL): path IS the file/URL
             seq_id = os.path.splitext(os.path.basename(check_name))[0]
-            return seq_id, first_file
+            return seq_id, _resolve_remote(first_file)
         elif check_name.endswith(".bed.gz") or check_name.endswith(".bedmethyl.gz"):
             # bedMethyl input (local path or URL): path IS the file/URL
             base = os.path.basename(check_name)
@@ -239,13 +334,13 @@ def get_seq_id_and_path(read_files_str, read_layout):
                 if base.endswith(suffix):
                     seq_id = base[:-len(suffix)]
                     break
-            return seq_id, first_file
+            return seq_id, _resolve_remote(first_file)
         elif any(check_name.endswith(ext) for ext in _FASTQ_EXTENSIONS):
             # Carry ALL '+'-components so the download rules can merge them
             # (each component is one SE file or a comma-separated R1,R2 pair).
-            if _is_url(first_file):
+            if _is_remote(first_file):
                 # FASTQ URL(s): use "URL" sentinel so download rules can dispatch
-                return "URL", "+".join(parts)
+                return "URL", _resolve_remote_parts(parts)
             else:
                 # Explicit FASTQ path(s): pass through the full Read_files string
                 return "EXPLICIT", "+".join(parts)
@@ -253,7 +348,8 @@ def get_seq_id_and_path(read_files_str, read_layout):
             raise ValueError(
                 f"Unrecognized Read_files format: '{read_files_str}'. "
                 f"Expected SRA accession, .bam, .bed.gz, or explicit FASTQ "
-                f"path ending in .fastq.gz/.fq.gz/.fastq/.fq"
+                f"path ending in .fastq.gz/.fq.gz/.fastq/.fq (as a local path, "
+                f"an HTTP(S) URL, or a public s3://bucket/key URI)"
             )
 
 
@@ -344,9 +440,13 @@ def build_control_merge_key(row):
 def build_analysis_to_replicates(df):
     """Build a dict mapping analysis_key → list of Replicate_IDs.
 
-    Only includes non-control samples.
+    Includes every row that can be analysed in its own right, i.e. every row
+    ``is_peak_call_target`` accepts. A sample that serves as another row's
+    control is NOT excluded: as long as it declares a ``Control`` of its own it
+    is a legitimate analysis target too (dual-role samples — e.g. an H3 ChIP
+    used both as its own target and as the control for H3K9me2).
     """
-    non_control = df[~df["Sample_ID"].isin(identify_control_samples(df))]
+    non_control = peak_callable_rows(df)
     result = {}
     for _, row in non_control.iterrows():
         key = build_analysis_key(row)
@@ -364,7 +464,11 @@ def get_replicate_sample_ids(analysis_name, df):
     Returns the list of Sample_IDs that belong to that analysis group.
     """
     controls = identify_control_samples(df)
-    non_control = df[~df["Sample_ID"].isin(controls)]
+    # Analysable rows (dual-role samples included — see build_analysis_to_replicates).
+    # A dual-role sample is reachable BOTH ways: by its analysis name here, and
+    # by its Sample_ID through the control-merge fallback below. The two lookups
+    # use different key formats, so they cannot collide.
+    non_control = peak_callable_rows(df)
 
     # Try matching non-control analysis names first
     result = []
@@ -397,12 +501,57 @@ def get_replicate_sample_ids(analysis_name, df):
 # ---------------------------------------------------------------------------
 
 def identify_control_samples(df):
-    """Return the set of Sample_IDs that are referenced as controls."""
+    """Return the set of Sample_IDs that are referenced as controls.
+
+    Note: this only finds controls that some *other* row points at. Use
+    ``is_peak_call_target`` to decide whether a row can be peak-called — a
+    control that no IP references ("orphan control") is absent from this set.
+    """
     controls = set()
     for val in df["Control"]:
         if pd.notna(val) and str(val).strip():
             controls.add(str(val).strip())
     return controls
+
+
+def is_peak_call_target(row):
+    """True if a row may be enumerated as a peak-calling target.
+
+    Peak calling for the pulldown assays (``IP_PEAK_ASSAYS``) requires a
+    control, so a pulldown row is a valid target only when it declares a
+    non-empty ``Control``. This is a *structural* test, unlike
+    ``identify_control_samples`` which only recognizes controls that some
+    other row references by Sample_ID. Two cases it catches that the
+    reference-based test misses:
+
+    - **Orphan controls**: an Input/WCE/IgG row that no IP points at. It has
+      no ``Control`` of its own, so ``assign_chip_input`` cannot resolve one
+      and peak calling raises "No control found".
+    - **IPs missing a control**: equally un-peak-callable, and they would
+      fail in exactly the same way.
+
+    Rows of non-pulldown assays (ATAC, RNAseq, sRNA, mC, ...) return True:
+    the ``Control`` column does not apply to them, and their own target
+    enumeration handles them (ATAC calls peaks without a control).
+    """
+    if row.get("Assay") not in IP_PEAK_ASSAYS:
+        return True
+    control = row.get("Control")
+    if control is None or pd.isna(control):
+        return False
+    return bool(str(control).strip())
+
+
+def peak_callable_rows(df):
+    """Return the subset of ``df`` that ``is_peak_call_target`` accepts.
+
+    Single place for the row-wise mask so every caller agrees on which rows are
+    analysable. Note ``.apply(axis=1)`` returns a DataFrame rather than a Series
+    on an empty frame, so guard the empty case.
+    """
+    if not len(df):
+        return df.copy()
+    return df[_row_apply(df, is_peak_call_target).astype(bool)].copy()
 
 
 def get_control_sample_id(sample_id, df):
@@ -433,8 +582,12 @@ def get_analysis_samples(df):
     """
     import sys
 
-    controls = identify_control_samples(df)
-    non_control = df[~df["Sample_ID"].isin(controls)].copy()
+    # Keep every row that can be peak-called: a pulldown row must declare a
+    # Control (this drops orphan controls and IPs with no Control, which would
+    # otherwise earn selected_peaks/IDR targets they can never satisfy). Being
+    # referenced as someone else's control is NOT disqualifying — dual-role
+    # samples get the full analysis treatment. See is_peak_call_target.
+    non_control = peak_callable_rows(df)
 
     # Deduplicate by analysis key
     non_control["_analysis_key"] = _row_apply(

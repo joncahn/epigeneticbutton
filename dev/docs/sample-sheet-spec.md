@@ -179,7 +179,8 @@ upstream. All components of a merge must be the same type.
 | PE comma pair required | PE layout with a single non-BAM path per component is an error |
 | SE single path required | SE layout with multiple comma-separated paths is an error |
 | No cross-row duplicates | The same file path or SRA accession must not appear in more than one sample's Read_files |
-| Local paths must exist | Each local-path entry must resolve to an existing file on disk before the run starts. SRA accessions and HTTP(S) URLs are not probed. |
+| Local paths must exist | Each local-path entry must resolve to an existing file on disk before the run starts. SRA accessions, HTTP(S) URLs and `s3://` URIs are not probed. |
+| S3 URIs well-formed | An `s3://` entry must name both a bucket and a key (`s3://bucket/key`). Public (authentication-free) objects only — credentials and request signing are not supported. |
 
 ### Read_layout
 
@@ -205,7 +206,8 @@ References the Sample_ID of the control sample used for normalization.
 |------|--------|
 | Valid reference | Must match an existing Sample_ID in the sheet |
 | Allowed assays only | May only be specified for IP-peak assays (`ChIP_*`, `CUT_RUN_*`, `CUT_TAG_*`) and `RAMPAGE` samples |
-| No chaining | The referenced control sample must not itself have a Control value |
+| Not itself | A sample may not list itself as its own Control |
+| Chain depth ≤ 2 | The referenced control **may** declare its own Control (the *dual-role* case below), but that one must not. Deeper chains are rejected; the bound also makes control cycles impossible |
 | Sharing allowed | Multiple IP samples may reference the same control (typical CUT&RUN convention: one IgG per batch) |
 | Optional | Blank/absent is valid (sample has no associated control) |
 
@@ -217,6 +219,26 @@ References the Sample_ID of the control sample used for normalization.
   builder constrains the Control dropdown to same-family assays
   (`ChIP_*`, `CUT_RUN_*`, or `CUT_TAG_*`), but freetext entry is allowed
   for cross-family controls if a study uses one.
+
+**Dual-role samples.** A sample can serve as another row's control *and* be
+analysed in its own right, as long as it declares a `Control` of its own. The
+motivating case is an H3 ChIP used both to examine raw H3 distribution (its own
+peaks, tracks, merged-replicate analysis, IDR and plots — normalized against
+Input) and as the peak-calling control for H3K9me2:
+
+```
+Input_rep1     IP_target: Input      Control: (blank)
+H3_rep1        IP_target: H3         Control: Input_rep1   <- dual role
+H3K9me2_rep1   IP_target: H3K9me2    Control: H3_rep1
+```
+
+Dual-role samples receive the full analysis treatment. Qualification is
+structural — *does this row declare a Control?* — not *is anyone using this row
+as their control?*; see `is_peak_call_target` / `peak_callable_rows` in
+`workflow/scripts/sample_sheet.py`. A pulldown row with **no** `Control` is not
+analysable (peak calling requires one) and is dropped from peak/FC and
+analysis-level targets, which is also what excludes an unreferenced
+Input/WCE/IgG row.
 
 ### Comments
 

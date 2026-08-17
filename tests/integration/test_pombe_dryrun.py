@@ -50,6 +50,9 @@ CHIP_NARROW_ANALYSIS = "ChIP_narrow__WT__H3K4me3__Spombe"
 RNA_ANALYSIS_WT = "RNAseq__WT__Spombe"
 SRNA_ANALYSIS_WT = "sRNA__WT__Spombe"
 
+# PCA matrix over the ChIP BAM tracks (issue #50)
+CHIP_PCA_TARGET = f"{_OUTPUT_DIR}/combined/matrix/pca_matrix__ChIP__test_pombe__Spombe.npz"
+
 # Env checkpoint targets
 CHIP_CHECKPOINT = f"{_OUTPUT_DIR}/ChIP/chkpts/ChIP_analysis__test_pombe__Spombe.done"
 RNA_CHECKPOINT = f"{_OUTPUT_DIR}/RNA/chkpts/RNA_analysis__test_pombe__Spombe.done"
@@ -475,3 +478,68 @@ class TestMapOnly:
         result = run_snakemake_dryrun(repo_root, test_options, "coverage_chip")
 
         assert result.returncode == 0, f"coverage_chip failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+def _pca_rule_inputs(debug_dag_output):
+    """Extract the input file list of the summarize_tracks_pca job.
+
+    `--debug-dag` prints each resolved job as a `rule <name>:` block whose
+    `input:` line is a comma-separated file list.
+    """
+    lines = debug_dag_output.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip().startswith("rule summarize_tracks_pca:"):
+            for follow in lines[i + 1:i + 6]:
+                stripped = follow.strip()
+                if stripped.startswith("input:"):
+                    return [f.strip() for f in
+                            stripped[len("input:"):].split(",") if f.strip()]
+    return []
+
+
+class TestPCATrackIndexes:
+    """PCA over BAM tracks must declare the .bai indexes (issue #50).
+
+    multiBamSummary reads each BAM's index, but the shell command never names
+    it. Without a declared input edge Snakemake can neither rebuild a missing
+    index nor keep a temp() one alive for this job, which surfaced as
+    intermittent "missing an index" failures in summarize_tracks_pca.
+    """
+
+    def test_chip_pca_declares_bam_indexes(self, snakemake_available, repo_root, test_options):
+        """Every BAM input of summarize_tracks_pca has its .bai declared too."""
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+
+        result = run_snakemake_dryrun(
+            repo_root, test_options, CHIP_PCA_TARGET, ["--debug-dag"]
+        )
+        assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
+
+        inputs = _pca_rule_inputs(result.stdout + result.stderr)
+        assert inputs, "summarize_tracks_pca job not found in the DAG"
+
+        bams = [f for f in inputs if f.endswith(".bam")]
+        bais = {f for f in inputs if f.endswith(".bam.bai")}
+        assert bams, "expected BAM tracks for the ChIP PCA"
+        missing = [b for b in bams if b + ".bai" not in bais]
+        assert not missing, f"BAM inputs without a declared index: {missing}"
+
+    def test_chip_pca_inputs_are_only_bams_and_indexes(self, snakemake_available, repo_root, test_options):
+        """The index list is scoped to BAM envs, not appended blindly.
+
+        The mC contexts summarize bigwigs and must get no indexes; pombe has no
+        mC samples, so assert the ChIP job's inputs are exclusively BAM/BAI.
+        """
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+
+        result = run_snakemake_dryrun(
+            repo_root, test_options, CHIP_PCA_TARGET, ["--debug-dag"]
+        )
+        assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
+
+        inputs = _pca_rule_inputs(result.stdout + result.stderr)
+        assert inputs, "summarize_tracks_pca job not found in the DAG"
+        assert all(f.endswith((".bam", ".bam.bai")) for f in inputs), \
+            f"unexpected non-BAM inputs for a ChIP PCA: {inputs}"
