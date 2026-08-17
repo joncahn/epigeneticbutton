@@ -133,11 +133,9 @@ def check_table(tab, check_paths=True):
                 f"Assay '{assay}' not in {VALID_ASSAYS}"
             )
 
-    # --- Peak_type: separated analytical parameter (broad/narrow) ---
-    # Required for the separated pulldown assays (ChIP/CUT_RUN/CUT_TAG); must be
-    # blank for everything else — the legacy combined assays already encode it,
-    # and non-peak / ATAC assays have no user-set peak type.
-    _legacy_combined = IP_PEAK_ASSAYS - PEAK_TYPE_ASSAYS
+    # --- Peak_type: analytical parameter (broad/narrow) ---
+    # Required for the pulldown assays (ChIP/CUT_RUN/CUT_TAG); must be blank for
+    # everything else, since non-peak and ATAC assays have no user-set peak type.
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
         assay = str(row.get("Assay", "")).strip()
         peak_type = str(row.get("Peak_type", "")).strip()
@@ -156,17 +154,9 @@ def check_table(tab, check_paths=True):
                     f"{sorted(VALID_PEAK_TYPES)}"
                 )
         elif peak_type:
-            if assay in _legacy_combined:
-                base, _, pt = assay.rpartition("_")
-                errors.append(
-                    f"[X] Row #{i} '{sid}': Peak_type must be blank when the "
-                    f"Assay already encodes it ('{assay}'); use the separated "
-                    f"form (Assay={base}, Peak_type={pt})"
-                )
-            else:
-                errors.append(
-                    f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
-                )
+            errors.append(
+                f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
+            )
 
     # --- Genome: required ---
     for i, (_, row) in enumerate(tab.iterrows(), start=1):

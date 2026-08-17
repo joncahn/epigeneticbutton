@@ -36,20 +36,21 @@ OPTIONAL_COLNAMES = ("Peak_type", "IP_target", "Control", "Comments")
 PEAK_TYPE_ASSAYS = {"ChIP", "CUT_RUN", "CUT_TAG"}
 VALID_PEAK_TYPES = {"broad", "narrow"}
 
-# Legacy tokens that baked the peak type into the assay name. Still accepted on
-# input (auto-split at load) and reused as the internal *combined* token that
-# downstream naming and env/peaktype lookups key on. See combine_assay_peaktype.
-_LEGACY_PEAK_ASSAYS = [
+# Internal combined tokens, produced from (Assay, Peak_type) by
+# combine_assay_peaktype and written back over the Assay column in
+# add_compat_columns. Downstream naming and the env/peaktype lookups below key
+# on these, so they are part of the internal vocabulary — they are NOT accepted
+# in a sample sheet's Assay column.
+_COMBINED_PEAK_ASSAYS = [
     "ChIP_broad", "ChIP_narrow",
     "CUT_RUN_broad", "CUT_RUN_narrow",
     "CUT_TAG_broad", "CUT_TAG_narrow",
 ]
 
+# Accepted in the Assay column. Validation (check_table) runs on this list
+# before add_compat_columns folds in the peak type.
 VALID_ASSAYS = [
-    # Separated (canonical) pulldown assays — peak type lives in Peak_type
     "ChIP", "CUT_RUN", "CUT_TAG",
-    # ...plus the legacy combined forms, still accepted for back-compat
-    *_LEGACY_PEAK_ASSAYS,
     "ATAC",
     "RNAseq", "RAMPAGE",
     "sRNA",
@@ -57,12 +58,13 @@ VALID_ASSAYS = [
 ]
 
 # Assays that pull down a target via antibody and call peaks against an
-# (Input/WCE/IgG) control. They share the ChIP env, peak-type machinery,
-# and IP_target/Control sample-sheet semantics. Includes both the separated
-# and legacy combined forms so membership tests work pre- and post-combine.
+# (Input/WCE/IgG) control. They share the ChIP env, peak-type machinery, and
+# IP_target/Control sample-sheet semantics. Holds the separated and combined
+# forms both: add_compat_columns overwrites Assay with the combined token, so
+# membership tests run against either form depending on the caller.
 IP_PEAK_ASSAYS = {
     "ChIP", "CUT_RUN", "CUT_TAG",
-    *_LEGACY_PEAK_ASSAYS,
+    *_COMBINED_PEAK_ASSAYS,
 }
 
 ASSAY_TO_ENV = {
@@ -97,11 +99,13 @@ def combine_assay_peaktype(assay, peak_type):
     """Fold a separated (Assay, Peak_type) pair into the internal combined
     assay token used by downstream naming and lookups.
 
-    - Separated pulldown form ('ChIP' + 'broad')       -> 'ChIP_broad'
-    - Legacy combined form ('ChIP_broad', Peak_type '') -> 'ChIP_broad' (idempotent)
-    - Non-peak assays / ATAC / missing peak_type        -> assay unchanged
-      (a missing peak type on a separated pulldown assay is left as the bare
-      assay so validation surfaces a clear error rather than silently guessing).
+    - Pulldown form ('ChIP' + 'broad')          -> 'ChIP_broad'
+    - Non-peak assays / ATAC / missing peak_type -> assay unchanged
+
+    A missing peak type on a pulldown assay is left as the bare assay so
+    validation surfaces a clear error rather than silently guessing. Applying
+    this to an already-combined token is a no-op, since the combined form is
+    not in PEAK_TYPE_ASSAYS.
     """
     assay = (assay or "").strip()
     peak_type = (peak_type or "").strip()
@@ -374,9 +378,9 @@ def read_sample_sheet(filepath):
     df = pd.read_csv(io.StringIO("".join(lines)), sep="\t", header=0, dtype=str)
     df.columns = df.columns.str.strip()
 
-    # Fill optional columns with empty strings. Peak_type is optional so legacy
-    # sheets (peak type baked into Assay, e.g. 'ChIP_broad') still parse, and
-    # Comments is optional so sheets written before it existed still parse.
+    # Fill optional columns with empty strings: Peak_type applies to only the
+    # three pulldown assays and Comments to none, so a sheet may omit either
+    # column outright (e.g. an all-WGBS sheet needs neither).
     for col in NEW_COLNAMES:
         if col not in df.columns:
             if col in OPTIONAL_COLNAMES:
@@ -681,12 +685,11 @@ def add_compat_columns(df):
     """
     df = df.copy()
 
-    # Fold the separated (Assay, Peak_type) form into the internal *combined*
-    # assay token (e.g. 'ChIP' + 'broad' -> 'ChIP_broad') that every downstream
-    # rule, analysis name, and env/peaktype lookup keys on. Legacy sheets whose
-    # Assay already carries the peak type pass through unchanged (idempotent).
-    # Validation (check_table) runs on the separated form BEFORE this, so bad
-    # Peak_type values are reported there, not silently combined here.
+    # Fold (Assay, Peak_type) into the internal *combined* assay token (e.g.
+    # 'ChIP' + 'broad' -> 'ChIP_broad') that every downstream rule, analysis
+    # name, and env/peaktype lookup keys on. check_table runs on the separated
+    # form BEFORE this, so bad Peak_type values are reported there rather than
+    # silently combined here.
     if "Peak_type" not in df.columns:
         df["Peak_type"] = ""
     df["Assay"] = _row_apply(

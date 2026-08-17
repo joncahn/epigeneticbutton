@@ -35,6 +35,9 @@ _CHIP_SHEET = os.path.join(
 
 
 def _row(**kw):
+    # Post-add_compat_columns shape: Assay carries the *combined* token, which is
+    # what is_peak_call_target actually receives at runtime. Sheet-level fixtures
+    # (which go through check_table) use the separated Assay + Peak_type form.
     base = {"Sample_ID": "s", "Assay": "ChIP_broad", "IP_target": "", "Control": ""}
     base.update(kw)
     return pd.Series(base)
@@ -185,6 +188,7 @@ class TestNoControlWarning:
                     "Read_layout": "SE",
                     "IP_target": ip,
                     "Control": ctrl,
+                    "Peak_type": "broad",
                 }
                 for n, (sid, assay, ip, ctrl) in enumerate(specs)
             ]
@@ -195,7 +199,7 @@ class TestNoControlWarning:
         return [l for l in capsys.readouterr().out.splitlines() if l.startswith("[!]")]
 
     def test_warns_for_ip_without_control(self, capsys):
-        df = self._sheet(("IP1", "ChIP_broad", "H3K9me2", ""))
+        df = self._sheet(("IP1", "ChIP", "H3K9me2", ""))
         warns = self._warnings(df, capsys)
         assert len(warns) == 1
         assert "will not be peak-called" in warns[0]
@@ -204,13 +208,13 @@ class TestNoControlWarning:
     @pytest.mark.parametrize("ip_target", ["Input", "WCE", "IgG", "input", "igg"])
     def test_no_warning_for_control_rows(self, ip_target, capsys):
         # Control rows legitimately have no Control of their own.
-        df = self._sheet(("C1", "ChIP_broad", ip_target, ""))
+        df = self._sheet(("C1", "ChIP", ip_target, ""))
         assert self._warnings(df, capsys) == []
 
     def test_no_warning_for_proper_ip_control_pair(self, capsys):
         df = self._sheet(
-            ("IP1", "ChIP_broad", "H3K9me2", "IN1"),
-            ("IN1", "ChIP_broad", "Input", ""),
+            ("IP1", "ChIP", "H3K9me2", "IN1"),
+            ("IN1", "ChIP", "Input", ""),
         )
         assert self._warnings(df, capsys) == []
 

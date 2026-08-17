@@ -240,7 +240,7 @@ N.B. we'll work on plotting improvements in a separate branch after the Big Refa
 
 * [x] Old format TSVs didn't always have headers, so we can't rely on column names for detection. Let's just get rid of the detection routine and make sure the README.md informs users that they can run migrate_sample_sheet.py if they're using the old format. **Done**: Removed old-format detection from `samplefile_validation.py` and `sample_sheet.py`. Removed `OLD_COLNAMES` constant (migration script defines its own). Added usage example to README.md and sample-sheet-spec.md.
 
-* [x] Ensure migrate_sample_sheet.py is up to date and remember to update it if any changes are made to the new sample sheet format. **Done**: Verified — handles all 9 new columns, all assay types, Control linking, and Sample_ID generation.
+* [x] Ensure migrate_sample_sheet.py is up to date and remember to update it if any changes are made to the new sample sheet format. **Done**: Verified — handles all 9 new columns, all assay types, Control linking, and Sample_ID generation. **Superseded**: the script was removed ahead of 1.0.0 along with legacy assay-token support; there is no longer a migration path to maintain.
 
 ##### Derived Names
 

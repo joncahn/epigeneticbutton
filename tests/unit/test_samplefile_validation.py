@@ -392,8 +392,8 @@ class TestControlChainDepth:
     def _ip(cls, sample_id, ip_target, control=""):
         # Unique accession per row: Read_files must not repeat across samples.
         cls._counter[0] += 1
-        return _row(sample_id, "ChIP_broad", f"SRR100000{cls._counter[0]}",
-                    IP_target=ip_target, Control=control)
+        return _row(sample_id, "ChIP", f"SRR100000{cls._counter[0]}",
+                    IP_target=ip_target, Control=control, Peak_type="broad")
 
     def test_depth_one_classic_pair_passes(self):
         df = pd.DataFrame([

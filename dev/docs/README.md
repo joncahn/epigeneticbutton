@@ -99,7 +99,6 @@ tests/
 scripts/
     validate_pombe.sh         # S. pombe integration test orchestrator
     subset_test_data.sh       # SLURM-based chromosome subsetting for test data prep
-    migrate_sample_sheet.py   # Old → new sample sheet format migration
 tools/
     epicc-builder.html        # Sample sheet and config builder app
 ```

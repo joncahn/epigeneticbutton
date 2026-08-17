@@ -2048,10 +2048,9 @@ function importTSV(text) {
 
   var header = lines[0].split("\t").map(function(s) { return s.trim(); });
   // Validate header
-  // Peak_type is optional on import: legacy sheets encode it in the Assay name
-  // (e.g. ChIP_broad) and are split into Assay + Peak_type below. Comments is
-  // optional too — it is purely a user annotation, so a sheet written before
-  // the column existed must still import.
+  // Peak_type and Comments are optional on import: both apply to only some
+  // rows (Peak_type to the pulldown assays, Comments to none), so a sheet may
+  // legitimately omit the column entirely.
   var OPTIONAL_ON_IMPORT = ["Peak_type", "Comments"];
   var missing = COLUMNS.filter(function(c) {
     return OPTIONAL_ON_IMPORT.indexOf(c) === -1 && header.indexOf(c) === -1;
@@ -2076,10 +2075,6 @@ function importTSV(text) {
       var c = COLUMNS[ci];
       row[c] = (fields[colIdx[c]] || "").trim();
     }
-    // Back-compat: split a legacy combined assay (e.g. ChIP_broad) into the
-    // separated Assay + Peak_type form.
-    var legacyM = /^(ChIP|CUT_RUN|CUT_TAG)_(broad|narrow)$/.exec(row.Assay);
-    if (legacyM) { row.Assay = legacyM[1]; if (!row.Peak_type) row.Peak_type = legacyM[2]; }
     rows.push(row);
   }
 
