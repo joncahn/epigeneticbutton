@@ -48,25 +48,26 @@ Nested settings (`dmr_thresholds.*`, `chip_callpeaks.params`, `cut_callpeaks.*`)
 
 ### Sample Sheet and Naming
 
-Sample metadata is defined in a TSV file with 9 columns:
+Sample metadata is defined in a TSV file with 10 columns:
 
-`Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control`
+`Sample_ID | Assay | Peak_type | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control`
 
 - **Sample_ID**: Unique identifier, used as filesystem name. Must be unique and filesystem-safe (no `__`, `/`, whitespace).
-- **Assay**: Controlled vocabulary: `ChIP_broad`, `ChIP_narrow`, `CUT_RUN_broad`, `CUT_RUN_narrow`, `CUT_TAG_broad`, `CUT_TAG_narrow`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, `dmC`
+- **Assay**: Controlled vocabulary (experimental method only): `ChIP`, `CUT_RUN`, `CUT_TAG`, `ATAC`, `RNAseq`, `RAMPAGE`, `sRNA`, `WGBS`, `WGBS_nd`, `PBAT`, `EMseq`, `dmC`. Legacy combined tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are still accepted and auto-split at load.
+- **Peak_type**: `broad` or `narrow` — the peak-calling type, separate from Assay. Required for `ChIP`/`CUT_RUN`/`CUT_TAG` (broad for histone domains, narrow for TFs/sharp marks); blank for all other assays.
 - **Genome**: Reference genome name (e.g. `Spombe`, `ColCEN`)
 - **Levels**: Comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:root`). All samples must have the same factors.
 - **Replicate_ID**: Replicate identifier (e.g. `rep1`, `rep2`)
 - **Read_files**: SRA accession (`SRR12345`), local path, HTTP(S) URL, or `+`-separated for merging multiple inputs (`+`-merge supported for SRA accessions and FASTQ files, local or URL; BAM/bedMethyl must be merged upstream)
 - **Read_layout**: `SE` or `PE`
-- **IP_target**: Required for ChIP assays (e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
+- **IP_target**: Required for pulldown assays (`ChIP`/`CUT_RUN`/`CUT_TAG`; e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
 - **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). Chain depth is capped at 2: a control may declare its own Control — the *dual-role* case, where a sample is both another row's control and an analysis target itself (e.g. H3 as H3K9me2's control while normalized against Input) — but that one must not. A pulldown row with no Control is not peak-callable and is dropped from peak/analysis targets (`is_peak_call_target`).
 
 Control-row replicate merging keys on `(Levels, IP_target, Genome)` only — the `Assay` value on a control row is decorative for merging purposes, so a single biological Input/IgG/WCE serving multiple IP types (broad + narrow, ChIP + CUT&RUN) merges correctly regardless of how individual rep rows are labeled. See `build_control_merge_key` in `workflow/scripts/sample_sheet.py`.
 
-Per-replicate files use `Sample_ID` directly (e.g. `final__WT_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`).
+Per-replicate files use `Sample_ID` directly (e.g. `final__WT_H3K9me2_rep1.bam`). Analysis-level (merged replicate) files use a derived name: `{Assay}__{levels_label}__{IP_target}__{Genome}`. For pulldown assays the `{Assay}` component is the **combined** assay+peak-type token reconstructed internally from `Assay`+`Peak_type` (e.g. `ChIP_broad__WT__H3K9me2__Spombe`), so peak type stays in output paths.
 
-Peak type is determined by Assay: `ChIP_broad`/`CUT_RUN_broad`/`CUT_TAG_broad` → broad peaks (histone marks), `ChIP_narrow`/`CUT_RUN_narrow`/`CUT_TAG_narrow` → narrow peaks (transcription factors, H3K4me3, etc.). All six "IP-with-peaks" assays share the `ChIP` env (`results/ChIP/`). Default peak callers: ChIP* → MACS2; CUT&* `_broad` → epic2; CUT&* `_narrow` → SEACR. Override via `cut_callpeaks.{broad,narrow}_caller` (`epic2`, `seacr`, `macs2`).
+Peak type is set in the **Peak_type** column: `broad` (histone-domain marks: H3K9me2, H3K27me3, …) or `narrow` (TFs, H3K4me3, H3K27ac, …). The three pulldown assays (`ChIP`/`CUT_RUN`/`CUT_TAG`) share the `ChIP` env (`results/ChIP/`). Internally, `sample_sheet.py` folds `Assay`+`Peak_type` into a combined token (`ChIP_broad`, …) used for env/peaktype lookups and output naming (`add_compat_columns` / `combine_assay_peaktype`); validation runs on the separated form, and legacy combined sheets pass straight through. Default peak callers: ChIP → MACS2; CUT&* broad → epic2; CUT&* narrow → SEACR. Override via `cut_callpeaks.{broad,narrow}_caller` (`epic2`, `seacr`, `macs2`).
 
 Central sample-sheet logic lives in `workflow/scripts/sample_sheet.py`.
 
@@ -126,7 +127,7 @@ scripts/validate_pombe.sh --all
 
 - Snakemake 9.0+. Results go to `{output_dir}/{env}/` (`ChIP`, `ATAC`, `RNA`, `sRNA`, `mC`, `combined`); genomes to `{genome_dir}/{ref_genome}/`. Both directories default to `results` and `genomes` respectively, configurable via `output_dir`/`genome_dir` config keys or `epicc --output-dir`/`--genome-dir` CLI flags.
 - In Python context (input/output/params), paths use `RESULTS_DIR`/`GENOMES_DIR` variables. In shell blocks, paths use `{config[output_dir]}`/`{config[genome_dir]}` Snakemake substitution.
-- Env mapping: `ChIP_broad`/`ChIP_narrow`/`CUT_RUN_broad`/`CUT_RUN_narrow`/`CUT_TAG_broad`/`CUT_TAG_narrow` → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`WGBS_nd`/`PBAT`/`EMseq`/`dmC` → `mC`
+- Env mapping: `ChIP`/`CUT_RUN`/`CUT_TAG` (and their legacy `_broad`/`_narrow` forms) → `ChIP`, `ATAC` → `ATAC`, `RNAseq`/`RAMPAGE` → `RNA`, `sRNA` → `sRNA`, `WGBS`/`WGBS_nd`/`PBAT`/`EMseq`/`dmC` → `mC`
 - Checkpoint files in `{output_dir}/*/chkpts/` control re-running analyses; delete to force rerun.
 - Read_files supports HTTP(S) URLs for FASTQ, BAM, and bedMethyl inputs. Genome config fields (`fasta_file`, `gff_file`, `te_file`, `gaf_file`, `gene_info_file`) also accept URLs — downloaded automatically via curl at rule execution time.
 - `te_file` accepts `.bed(.gz)` (pass-through) or `.gff3(.gz)` (auto-converted to BED6 using the GFF3 `ID=` attribute as the name column).
