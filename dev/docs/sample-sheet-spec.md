@@ -114,11 +114,17 @@ unique and does not encode the genome.
 | Required | Must be non-empty |
 | Each entry must exist | Every listed genome needs an entry under `genomes:` in the options file |
 | No `__` | A genome name must not contain `__`; it delimits the genome in post-alignment filenames |
-| No duplicates / empties | `A,,B` or `A,A` is rejected |
+| No duplicates | `A,A` is rejected (`explode_genomes`) |
+| Empties tolerated | `A,,B` parses as two references; the builder flags the stray comma as a warning, not an error |
 
 Read download, trimming and raw/trim QC happen **once per sample** and are
 genome-independent; alignment and everything after it run **once per genome**.
 See "Per-replicate naming" below.
+
+In the builder, the Genome cell is a tick-box picker (`genomeMultiEditor`)
+listing every genome known from the Reference Genomes tab and from the other
+rows, plus an inline field for adding a new one. Ticks are written back as the
+comma-separated list; the cell also stays typeable so paste still works.
 
 ### Levels
 

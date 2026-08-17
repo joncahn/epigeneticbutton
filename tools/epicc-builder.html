@@ -639,6 +639,98 @@
     color: inherit !important;
   }
 
+  /* Genome multi-select picker (Genome column editor) */
+  .genome-picker {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 10001;         /* above .ctx-menu (10000) */
+    min-width: 200px;
+    max-height: 320px;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .genome-picker-hint {
+    padding: 4px 12px 6px;
+    color: var(--text-dim);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .genome-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .genome-picker-item:hover {
+    background: var(--surface2);
+  }
+  .genome-picker-item input {
+    cursor: pointer;
+    accent-color: var(--accent2);
+    margin: 0;
+  }
+  .genome-picker-empty {
+    padding: 6px 12px;
+    color: var(--text-dim);
+    font-style: italic;
+    white-space: nowrap;
+  }
+  .genome-picker-add {
+    display: flex;
+    gap: 4px;
+    padding: 6px 12px 2px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .genome-picker-add input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .genome-picker-add button,
+  .genome-picker-done button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .genome-picker-add button:hover,
+  .genome-picker-done button:hover {
+    background: var(--accent2);
+    color: var(--bg);
+  }
+  .genome-picker-done {
+    padding: 6px 12px 2px;
+    text-align: right;
+  }
+  /* The in-cell input while the picker is open */
+  .genome-cell-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg);
+    border: 1px solid var(--accent2);
+    color: var(--text);
+    padding: 3px 4px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
   /* Tabulator list editor dropdown styling */
   .tabulator-edit-list {
     background: var(--surface) !important;
@@ -1211,6 +1303,207 @@ function getDefinedGenomes() {
   return result;
 }
 
+// --- Genome column editor: multi-select tick boxes -------------------------
+// A sample may be mapped to several references, stored in the cell as a
+// comma-separated list ("B73,W22") and exploded into one row per genome at
+// load time by explode_genomes(). A single-entry <select> cannot express that,
+// so the Genome cell gets a tick-box picker instead.
+//
+// The picker is appended to document.body rather than to the cell: the column
+// is ~150px wide with overflow clipped, so a panel rendered inside the cell
+// would be unusable. It follows the same fixed-position + offscreen-flip
+// pattern as .ctx-menu.
+
+function parseGenomeList(value) {
+  // Tolerates the stray commas the loader also tolerates ("B73,,W22" -> 2).
+  var out = [];
+  var seen = {};
+  var parts = String(value == null ? "" : value).split(",");
+  for (var i = 0; i < parts.length; i++) {
+    var g = parts[i].trim();
+    if (g && !seen[g]) { seen[g] = true; out.push(g); }
+  }
+  return out;
+}
+
+function genomeMultiEditor(cell, onRendered, success, cancel) {
+  var input = document.createElement("input");
+  input.type = "text";
+  input.className = "genome-cell-input";
+  input.value = cell.getValue() || "";
+
+  // Order matters only for readability, not semantics — each genome is mapped
+  // independently. Keep the user's existing order and append newly ticked
+  // names so toggling a box never reshuffles the rest of the cell.
+  var selected = parseGenomeList(input.value);
+
+  var panel = null;
+  var done = false;
+
+  function currentValue() { return selected.join(","); }
+
+  function syncInput() { input.value = currentValue(); }
+
+  function teardown() {
+    document.removeEventListener("mousedown", onDocMouseDown, true);
+    window.removeEventListener("resize", commit, true);
+    if (panel) { panel.remove(); panel = null; }
+  }
+
+  function commit() {
+    if (done) return;
+    done = true;
+    // Re-parse the input so a typed/pasted value wins over the tick state:
+    // the text box stays live for keyboard and paste workflows.
+    var value = parseGenomeList(input.value).join(",");
+    teardown();
+    success(value);
+  }
+
+  function abort() {
+    if (done) return;
+    done = true;
+    teardown();
+    cancel();
+  }
+
+  function onDocMouseDown(e) {
+    // Capture phase, so this runs before Tabulator's own click handling and
+    // the edit is committed rather than cancelled when the user clicks away.
+    if (panel && panel.contains(e.target)) return;
+    if (cell.getElement() && cell.getElement().contains(e.target)) return;
+    commit();
+  }
+
+  function toggle(genome, on) {
+    // Re-read the input first: the user may have typed since the panel opened.
+    selected = parseGenomeList(input.value);
+    var idx = selected.indexOf(genome);
+    if (on && idx < 0) selected.push(genome);
+    if (!on && idx >= 0) selected.splice(idx, 1);
+    syncInput();
+  }
+
+  function buildPanel() {
+    if (panel) panel.remove();
+    panel = document.createElement("div");
+    panel.className = "genome-picker";
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Reference genomes for this sample");
+
+    var hint = document.createElement("div");
+    hint.className = "genome-picker-hint";
+    hint.textContent = "Tick every reference to map this sample to";
+    panel.appendChild(hint);
+
+    // Union of the Reference Genomes tab and every Genome cell, so a name
+    // typed into one row becomes tickable in all the others.
+    var all = getDefinedGenomes();
+    // A name only present in this cell must still show as ticked.
+    for (var s = 0; s < selected.length; s++) {
+      if (all.indexOf(selected[s]) < 0) all.push(selected[s]);
+    }
+
+    if (all.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "genome-picker-empty";
+      empty.textContent = "No genomes defined yet — add one below";
+      panel.appendChild(empty);
+    }
+
+    for (var i = 0; i < all.length; i++) {
+      (function(genome) {
+        var label = document.createElement("label");
+        label.className = "genome-picker-item";
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = selected.indexOf(genome) >= 0;
+        box.addEventListener("change", function() { toggle(genome, box.checked); });
+        label.appendChild(box);
+        var name = document.createElement("span");
+        name.textContent = genome;
+        label.appendChild(name);
+        panel.appendChild(label);
+      })(all[i]);
+    }
+
+    // Adding a genome from the cell replaces the old editor's freetext mode.
+    var addRow = document.createElement("div");
+    addRow.className = "genome-picker-add";
+    var addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.placeholder = "new genome name";
+    addInput.setAttribute("aria-label", "New genome name");
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.textContent = "Add";
+
+    function addTyped() {
+      var name = addInput.value.trim();
+      if (!name) return;
+      // Registering it in definedGenomes makes it available to every other
+      // row (and to the Reference Genomes tab) even before this cell commits.
+      if (definedGenomes.indexOf(name) < 0) definedGenomes.push(name);
+      toggle(name, true);
+      addInput.value = "";
+      buildPanel();
+      position();
+    }
+    addBtn.addEventListener("click", addTyped);
+    addInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); addTyped(); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); abort(); }
+    });
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    panel.appendChild(addRow);
+
+    var doneRow = document.createElement("div");
+    doneRow.className = "genome-picker-done";
+    var doneBtn = document.createElement("button");
+    doneBtn.type = "button";
+    doneBtn.textContent = "Done";
+    doneBtn.addEventListener("click", commit);
+    doneRow.appendChild(doneBtn);
+    panel.appendChild(doneRow);
+
+    document.body.appendChild(panel);
+  }
+
+  function position() {
+    if (!panel) return;
+    var el = cell.getElement();
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    panel.style.left = r.left + "px";
+    panel.style.top = (r.bottom + 2) + "px";
+    var pr = panel.getBoundingClientRect();
+    if (pr.right > window.innerWidth) {
+      panel.style.left = Math.max(8, window.innerWidth - pr.width - 8) + "px";
+    }
+    if (pr.bottom > window.innerHeight) {
+      // Flip above the cell; clamp to the viewport if it still does not fit.
+      panel.style.top = Math.max(8, r.top - pr.height - 2) + "px";
+    }
+  }
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { e.preventDefault(); abort(); }
+  });
+
+  onRendered(function() {
+    input.focus();
+    input.select();
+    buildPanel();
+    position();
+    document.addEventListener("mousedown", onDocMouseDown, true);
+    window.addEventListener("resize", commit, true);
+  });
+
+  return input;
+}
+
 function addGenomeFromInput() {
   var input = document.getElementById("genome-input");
   var name = (input.value || "").trim();
@@ -1326,11 +1619,10 @@ function buildColumnDefs() {
       editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
     }, descHooks("Assay")),
     Object.assign({
-      title: "Genome", field: "Genome", width: 120,
-      editor: "list",
-      editorParams: function() {
-        return { values: getDefinedGenomes(), autocomplete: true, listOnEmpty: true, freetext: true };
-      },
+      title: "Genome", field: "Genome", width: 150,
+      // Multi-select: a sample may be mapped to several references, held in the
+      // cell as a comma-separated list. See genomeMultiEditor.
+      editor: genomeMultiEditor,
     }, descHooks("Genome")),
   ];
 
