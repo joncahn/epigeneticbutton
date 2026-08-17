@@ -14,15 +14,36 @@ import pandas as pd
 # Constants
 # ---------------------------------------------------------------------------
 
+# Peak_type sits last: it applies to only three assays, so it stays out of the
+# way of the fields every row needs. Column lookup is by header name (pandas
+# reads by header), so the order is ergonomic only — but keep it in step with
+# COLUMNS in tools/epicc-builder.html.
 NEW_COLNAMES = [
     "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
-    "Read_files", "Read_layout", "IP_target", "Control",
+    "Read_files", "Read_layout", "IP_target", "Control", "Peak_type",
 ]
 
-VALID_ASSAYS = [
+# Assay is the *experimental method*; the peak-calling type (broad/narrow) is a
+# separate analytical parameter carried in the Peak_type column, NOT baked into
+# the assay name. These three pulldown assays take a Peak_type. ATAC has peaks
+# but a fixed (narrow) type and no pulldown, so it carries no Peak_type.
+PEAK_TYPE_ASSAYS = {"ChIP", "CUT_RUN", "CUT_TAG"}
+VALID_PEAK_TYPES = {"broad", "narrow"}
+
+# Legacy tokens that baked the peak type into the assay name. Still accepted on
+# input (auto-split at load) and reused as the internal *combined* token that
+# downstream naming and env/peaktype lookups key on. See combine_assay_peaktype.
+_LEGACY_PEAK_ASSAYS = [
     "ChIP_broad", "ChIP_narrow",
     "CUT_RUN_broad", "CUT_RUN_narrow",
     "CUT_TAG_broad", "CUT_TAG_narrow",
+]
+
+VALID_ASSAYS = [
+    # Separated (canonical) pulldown assays — peak type lives in Peak_type
+    "ChIP", "CUT_RUN", "CUT_TAG",
+    # ...plus the legacy combined forms, still accepted for back-compat
+    *_LEGACY_PEAK_ASSAYS,
     "ATAC",
     "RNAseq", "RAMPAGE",
     "sRNA",
@@ -31,20 +52,18 @@ VALID_ASSAYS = [
 
 # Assays that pull down a target via antibody and call peaks against an
 # (Input/WCE/IgG) control. They share the ChIP env, peak-type machinery,
-# and IP_target/Control sample-sheet semantics.
+# and IP_target/Control sample-sheet semantics. Includes both the separated
+# and legacy combined forms so membership tests work pre- and post-combine.
 IP_PEAK_ASSAYS = {
-    "ChIP_broad", "ChIP_narrow",
-    "CUT_RUN_broad", "CUT_RUN_narrow",
-    "CUT_TAG_broad", "CUT_TAG_narrow",
+    "ChIP", "CUT_RUN", "CUT_TAG",
+    *_LEGACY_PEAK_ASSAYS,
 }
 
 ASSAY_TO_ENV = {
-    "ChIP_broad": "ChIP",
-    "ChIP_narrow": "ChIP",
-    "CUT_RUN_broad": "ChIP",
-    "CUT_RUN_narrow": "ChIP",
-    "CUT_TAG_broad": "ChIP",
-    "CUT_TAG_narrow": "ChIP",
+    "ChIP": "ChIP", "CUT_RUN": "ChIP", "CUT_TAG": "ChIP",
+    "ChIP_broad": "ChIP", "ChIP_narrow": "ChIP",
+    "CUT_RUN_broad": "ChIP", "CUT_RUN_narrow": "ChIP",
+    "CUT_TAG_broad": "ChIP", "CUT_TAG_narrow": "ChIP",
     "ATAC": "ATAC",
     "RNAseq": "RNA",
     "RAMPAGE": "RNA",
@@ -56,6 +75,7 @@ ASSAY_TO_ENV = {
     "dmC": "mC",
 }
 
+# Keyed on the internal *combined* token (produced by combine_assay_peaktype).
 ASSAY_TO_PEAKTYPE = {
     "ChIP_broad": "broad",
     "ChIP_narrow": "narrow",
@@ -65,6 +85,23 @@ ASSAY_TO_PEAKTYPE = {
     "CUT_TAG_narrow": "narrow",
     "ATAC": "narrow",
 }
+
+
+def combine_assay_peaktype(assay, peak_type):
+    """Fold a separated (Assay, Peak_type) pair into the internal combined
+    assay token used by downstream naming and lookups.
+
+    - Separated pulldown form ('ChIP' + 'broad')       -> 'ChIP_broad'
+    - Legacy combined form ('ChIP_broad', Peak_type '') -> 'ChIP_broad' (idempotent)
+    - Non-peak assays / ATAC / missing peak_type        -> assay unchanged
+      (a missing peak type on a separated pulldown assay is left as the bare
+      assay so validation surfaces a clear error rather than silently guessing).
+    """
+    assay = (assay or "").strip()
+    peak_type = (peak_type or "").strip()
+    if assay in PEAK_TYPE_ASSAYS and peak_type:
+        return f"{assay}_{peak_type}"
+    return assay
 
 # ---------------------------------------------------------------------------
 # Small helpers
@@ -331,15 +368,17 @@ def read_sample_sheet(filepath):
     df = pd.read_csv(io.StringIO("".join(lines)), sep="\t", header=0, dtype=str)
     df.columns = df.columns.str.strip()
 
-    # Fill optional columns with empty strings
+    # Fill optional columns with empty strings. Peak_type is optional so legacy
+    # sheets (peak type baked into Assay, e.g. 'ChIP_broad') still parse.
     for col in NEW_COLNAMES:
         if col not in df.columns:
-            if col in ("IP_target", "Control"):
+            if col in ("Peak_type", "IP_target", "Control"):
                 df[col] = ""
             else:
                 raise ValueError(f"Required column '{col}' missing from sample sheet")
 
     # Normalize NaN to empty string for optional columns
+    df["Peak_type"] = df["Peak_type"].fillna("")
     df["IP_target"] = df["IP_target"].fillna("")
     df["Control"] = df["Control"].fillna("")
 
@@ -395,9 +434,13 @@ def build_control_merge_key(row):
 def build_analysis_to_replicates(df):
     """Build a dict mapping analysis_key → list of Replicate_IDs.
 
-    Only includes non-control samples.
+    Includes every row that can be analysed in its own right, i.e. every row
+    ``is_peak_call_target`` accepts. A sample that serves as another row's
+    control is NOT excluded: as long as it declares a ``Control`` of its own it
+    is a legitimate analysis target too (dual-role samples — e.g. an H3 ChIP
+    used both as its own target and as the control for H3K9me2).
     """
-    non_control = df[~df["Sample_ID"].isin(identify_control_samples(df))]
+    non_control = peak_callable_rows(df)
     result = {}
     for _, row in non_control.iterrows():
         key = build_analysis_key(row)
@@ -415,7 +458,11 @@ def get_replicate_sample_ids(analysis_name, df):
     Returns the list of Sample_IDs that belong to that analysis group.
     """
     controls = identify_control_samples(df)
-    non_control = df[~df["Sample_ID"].isin(controls)]
+    # Analysable rows (dual-role samples included — see build_analysis_to_replicates).
+    # A dual-role sample is reachable BOTH ways: by its analysis name here, and
+    # by its Sample_ID through the control-merge fallback below. The two lookups
+    # use different key formats, so they cannot collide.
+    non_control = peak_callable_rows(df)
 
     # Try matching non-control analysis names first
     result = []
@@ -448,12 +495,57 @@ def get_replicate_sample_ids(analysis_name, df):
 # ---------------------------------------------------------------------------
 
 def identify_control_samples(df):
-    """Return the set of Sample_IDs that are referenced as controls."""
+    """Return the set of Sample_IDs that are referenced as controls.
+
+    Note: this only finds controls that some *other* row points at. Use
+    ``is_peak_call_target`` to decide whether a row can be peak-called — a
+    control that no IP references ("orphan control") is absent from this set.
+    """
     controls = set()
     for val in df["Control"]:
         if pd.notna(val) and str(val).strip():
             controls.add(str(val).strip())
     return controls
+
+
+def is_peak_call_target(row):
+    """True if a row may be enumerated as a peak-calling target.
+
+    Peak calling for the pulldown assays (``IP_PEAK_ASSAYS``) requires a
+    control, so a pulldown row is a valid target only when it declares a
+    non-empty ``Control``. This is a *structural* test, unlike
+    ``identify_control_samples`` which only recognizes controls that some
+    other row references by Sample_ID. Two cases it catches that the
+    reference-based test misses:
+
+    - **Orphan controls**: an Input/WCE/IgG row that no IP points at. It has
+      no ``Control`` of its own, so ``assign_chip_input`` cannot resolve one
+      and peak calling raises "No control found".
+    - **IPs missing a control**: equally un-peak-callable, and they would
+      fail in exactly the same way.
+
+    Rows of non-pulldown assays (ATAC, RNAseq, sRNA, mC, ...) return True:
+    the ``Control`` column does not apply to them, and their own target
+    enumeration handles them (ATAC calls peaks without a control).
+    """
+    if row.get("Assay") not in IP_PEAK_ASSAYS:
+        return True
+    control = row.get("Control")
+    if control is None or pd.isna(control):
+        return False
+    return bool(str(control).strip())
+
+
+def peak_callable_rows(df):
+    """Return the subset of ``df`` that ``is_peak_call_target`` accepts.
+
+    Single place for the row-wise mask so every caller agrees on which rows are
+    analysable. Note ``.apply(axis=1)`` returns a DataFrame rather than a Series
+    on an empty frame, so guard the empty case.
+    """
+    if not len(df):
+        return df.copy()
+    return df[_row_apply(df, is_peak_call_target).astype(bool)].copy()
 
 
 def get_control_sample_id(sample_id, df):
@@ -484,8 +576,12 @@ def get_analysis_samples(df):
     """
     import sys
 
-    controls = identify_control_samples(df)
-    non_control = df[~df["Sample_ID"].isin(controls)].copy()
+    # Keep every row that can be peak-called: a pulldown row must declare a
+    # Control (this drops orphan controls and IPs with no Control, which would
+    # otherwise earn selected_peaks/IDR targets they can never satisfy). Being
+    # referenced as someone else's control is NOT disqualifying — dual-role
+    # samples get the full analysis treatment. See is_peak_call_target.
+    non_control = peak_callable_rows(df)
 
     # Deduplicate by analysis key
     non_control["_analysis_key"] = _row_apply(
@@ -578,6 +674,18 @@ def add_compat_columns(df):
           sample_type, extra_info, levels_label, env, sample_name
     """
     df = df.copy()
+
+    # Fold the separated (Assay, Peak_type) form into the internal *combined*
+    # assay token (e.g. 'ChIP' + 'broad' -> 'ChIP_broad') that every downstream
+    # rule, analysis name, and env/peaktype lookup keys on. Legacy sheets whose
+    # Assay already carries the peak type pass through unchanged (idempotent).
+    # Validation (check_table) runs on the separated form BEFORE this, so bad
+    # Peak_type values are reported there, not silently combined here.
+    if "Peak_type" not in df.columns:
+        df["Peak_type"] = ""
+    df["Assay"] = _row_apply(
+        df, lambda r: combine_assay_peaktype(r["Assay"], r.get("Peak_type", ""))
+    ) if len(df) else df["Assay"]
 
     # Direct mappings
     df["data_type"] = df["Assay"]

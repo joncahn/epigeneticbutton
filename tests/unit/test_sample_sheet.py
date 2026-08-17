@@ -33,6 +33,8 @@ from sample_sheet import (
     add_compat_columns,
     read_sample_sheet,
     s3_uri_to_https,
+    combine_assay_peaktype,
+    PEAK_TYPE_ASSAYS,
 )
 
 
@@ -585,3 +587,60 @@ class TestReadSampleSheet:
         f.write_text("\n".join([self.HEADER, self.ROW_A, self.ROW_B, self.ROW_C]) + "\n")
         df = read_sample_sheet(f)
         assert sorted(df["Sample_ID"]) == ["A", "B", "InputA"]
+
+
+class TestPeakTypeSeparation:
+    """Separated Assay + Peak_type schema and its back-compat with the legacy
+    combined form (Action item: separate peak-calling type from assay type)."""
+
+    HEADER = ("Sample_ID\tAssay\tPeak_type\tGenome\tLevels\tReplicate_ID\t"
+              "Read_files\tRead_layout\tIP_target\tControl")
+
+    def _read(self, tmp_path, rows):
+        f = tmp_path / "s.tsv"
+        f.write_text("\n".join([self.HEADER] + rows) + "\n")
+        return read_sample_sheet(f)
+
+    def test_combine_helper(self):
+        assert combine_assay_peaktype("ChIP", "broad") == "ChIP_broad"
+        assert combine_assay_peaktype("CUT_TAG", "narrow") == "CUT_TAG_narrow"
+        # idempotent on legacy combined tokens
+        assert combine_assay_peaktype("ChIP_broad", "") == "ChIP_broad"
+        # non-peak / ATAC / missing peak type: unchanged
+        assert combine_assay_peaktype("ATAC", "") == "ATAC"
+        assert combine_assay_peaktype("RNAseq", "") == "RNAseq"
+        assert combine_assay_peaktype("ChIP", "") == "ChIP"
+
+    def test_peak_type_assays_collapsed(self):
+        assert PEAK_TYPE_ASSAYS == {"ChIP", "CUT_RUN", "CUT_TAG"}
+
+    def test_separated_form_combines_and_keeps_peak_in_name(self, tmp_path):
+        df = self._read(tmp_path, [
+            "IP1\tChIP\tbroad\tG\tgenotype:WT\trep1\tSRR1\tSE\tH3K9me2\tIN1",
+            "IN1\tChIP\tbroad\tG\tgenotype:WT\trep1\tSRR2\tSE\tInput\t",
+        ])
+        c = add_compat_columns(df)
+        assert list(c["Assay"]) == ["ChIP_broad", "ChIP_broad"]
+        assert set(c["env"]) == {"ChIP"}
+        ip = c[c["Sample_ID"] == "IP1"].iloc[0]
+        assert build_analysis_name(ip) == "ChIP_broad__WT__H3K9me2__G"
+
+    def test_legacy_combined_still_works(self, tmp_path):
+        # Legacy sheet: peak type baked into Assay, no Peak_type column.
+        f = tmp_path / "legacy.tsv"
+        f.write_text(
+            "Sample_ID\tAssay\tGenome\tLevels\tReplicate_ID\tRead_files\t"
+            "Read_layout\tIP_target\tControl\n"
+            "IP1\tChIP_narrow\tG\tgenotype:WT\trep1\tSRR1\tSE\tH3K4me3\tIN1\n"
+            "IN1\tChIP_narrow\tG\tgenotype:WT\trep1\tSRR2\tSE\tInput\t\n"
+        )
+        c = add_compat_columns(read_sample_sheet(f))
+        assert list(c["Assay"]) == ["ChIP_narrow", "ChIP_narrow"]
+        assert get_peaktype("ChIP_narrow") == "narrow"
+
+    def test_new_form_peaktype_via_combined(self, tmp_path):
+        df = self._read(tmp_path, [
+            "IP1\tCUT_TAG\tnarrow\tG\tgenotype:WT\trep1\tSRR1\tSE\tCTCF\t",
+        ])
+        c = add_compat_columns(df)
+        assert get_peaktype(c.iloc[0]["Assay"]) == "narrow"

@@ -107,7 +107,9 @@
   .factor-panel .factor-label {
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-dim);
+    /* Same accent as the factor column headers in the table — the shared hue is
+       what ties the panel to its columns. Keep the two in step. */
+    color: var(--accent2);
     white-space: nowrap;
   }
   .factor-tile {
@@ -514,6 +516,47 @@
     font-style: italic;
   }
 
+  /* User-defined factor columns (from Levels). These are the only columns whose
+     names the user invents, so they get the accent2 hue shared with the
+     "Factors:" label in the panel above, plus bracketing edges on the first and
+     last of the run — enough to read as one group without a second header row. */
+  .tabulator .tabulator-header .tabulator-col.factor-col .tabulator-col-title {
+    color: var(--accent2);
+  }
+  .tabulator .tabulator-header .tabulator-col.factor-col {
+    background-color: rgba(83, 168, 182, 0.07);
+  }
+  .tabulator-row .tabulator-cell.factor-col {
+    background-color: rgba(83, 168, 182, 0.04);
+  }
+  .tabulator .tabulator-header .tabulator-col.factor-col-first,
+  .tabulator-row .tabulator-cell.factor-col-first {
+    border-left: 2px solid var(--accent2);
+  }
+  .tabulator .tabulator-header .tabulator-col.factor-col-last,
+  .tabulator-row .tabulator-cell.factor-col-last {
+    border-right: 2px solid var(--accent2);
+  }
+
+  /* Cells that do not apply to the row's assay (e.g. Peak type on an ATAC row,
+     IP target on RNAseq). Hatching + a dimmed background distinguish "not
+     applicable" from "applicable but not filled in yet" — an empty cell alone
+     reads as the latter. The em dash marks the cell as intentionally blank. */
+  .tabulator-row .tabulator-cell.cell-disabled {
+    color: var(--text-dim) !important;
+    background-color: rgba(0, 0, 0, 0.22);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent, transparent 4px,
+      rgba(255, 255, 255, 0.045) 4px, rgba(255, 255, 255, 0.045) 8px);
+    cursor: not-allowed;
+  }
+  .tabulator-row .tabulator-cell.cell-disabled:empty::after {
+    content: "—";
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+
   /* Action column */
   .row-action-btn {
     background: none;
@@ -698,25 +741,29 @@
 // Constants (mirroring workflow/scripts/sample_sheet.py & samplefile_validation.py)
 // ===========================================================================
 
+// Peak_type sits last: it applies to only three assays, so it stays out of the
+// way of the fields every row needs. Column lookup is by header name on both
+// sides (importTSV here, pandas in read_sample_sheet), so the order is purely
+// ergonomic — but keep it in step with NEW_COLNAMES in sample_sheet.py.
 const COLUMNS = [
   "Sample_ID", "Assay", "Genome", "Levels", "Replicate_ID",
-  "Read_files", "Read_layout", "IP_target", "Control"
+  "Read_files", "Read_layout", "IP_target", "Control", "Peak_type"
 ];
 
+// Assay is the experimental method only. Peak-calling type (broad/narrow) is a
+// separate analytical parameter in the Peak_type column.
 const VALID_ASSAYS = [
-  "ChIP_broad", "ChIP_narrow",
-  "CUT_RUN_broad", "CUT_RUN_narrow",
-  "CUT_TAG_broad", "CUT_TAG_narrow",
+  "ChIP", "CUT_RUN", "CUT_TAG",
   "ATAC",
   "RNAseq", "RAMPAGE",
   "sRNA",
   "WGBS", "WGBS_nd", "PBAT", "EMseq", "dmC"
 ];
 
+const VALID_PEAK_TYPES = ["broad", "narrow"];
+
 const ASSAY_TO_ENV = {
-  ChIP_broad: "ChIP", ChIP_narrow: "ChIP",
-  CUT_RUN_broad: "ChIP", CUT_RUN_narrow: "ChIP",
-  CUT_TAG_broad: "ChIP", CUT_TAG_narrow: "ChIP",
+  ChIP: "ChIP", CUT_RUN: "ChIP", CUT_TAG: "ChIP",
   ATAC: "ATAC",
   RNAseq: "RNA", RAMPAGE: "RNA",
   sRNA: "sRNA",
@@ -725,28 +772,50 @@ const ASSAY_TO_ENV = {
 
 const VALID_ASSAYS_SET = new Set(VALID_ASSAYS);
 // Per-family subsets — used to constrain Control-source dropdowns
-const CHIP_ASSAYS    = new Set(["ChIP_broad", "ChIP_narrow"]);
-const CUT_RUN_ASSAYS = new Set(["CUT_RUN_broad", "CUT_RUN_narrow"]);
-const CUT_TAG_ASSAYS = new Set(["CUT_TAG_broad", "CUT_TAG_narrow"]);
-// Assays that pull down a target via antibody and call peaks against an
-// (Input/WCE/IgG) control. Share the ChIP env, peak-calling machinery,
-// and IP_target/Control sample-sheet semantics.
+const CHIP_ASSAYS    = new Set(["ChIP"]);
+const CUT_RUN_ASSAYS = new Set(["CUT_RUN"]);
+const CUT_TAG_ASSAYS = new Set(["CUT_TAG"]);
+// Pulldown assays: antibody pull-down + peak calling against an (Input/WCE/IgG)
+// control. They take an IP_target, a Control, and a Peak_type (broad/narrow).
 const IP_PEAK_ASSAYS = new Set([
   ...CHIP_ASSAYS, ...CUT_RUN_ASSAYS, ...CUT_TAG_ASSAYS
 ]);
+// Assays for which the Peak_type column applies (user-chosen broad/narrow).
+// ATAC has peaks but a fixed type and no pulldown, so it is not included.
+const PEAK_TYPE_ASSAYS = new Set([...IP_PEAK_ASSAYS]);
 const CONTROL_ASSAYS = new Set([...IP_PEAK_ASSAYS, "RAMPAGE"]);
+
+// Columns that only apply to certain assays. Single source of truth shared by
+// the editor gate (assayGatedEditable) and the greyed-out styling
+// (applyDisabledCellStyles), so a cell can never look editable but refuse
+// edits, or vice versa.
+const ASSAY_GATED_FIELDS = {
+  Peak_type: PEAK_TYPE_ASSAYS,
+  IP_target: IP_PEAK_ASSAYS,
+  Control:   CONTROL_ASSAYS,
+};
+
+function isFieldEditableForAssay(field, assay) {
+  var allowed = ASSAY_GATED_FIELDS[field];
+  if (!allowed) return true;
+  return allowed.has((assay || "").trim());
+}
+
+// Tabulator `editable` callback for an assay-gated column.
+function assayGatedEditable(field) {
+  return function(cell) {
+    return isFieldEditableForAssay(field, cell.getRow().getData().Assay);
+  };
+}
 
 // Which assays can provide a control for each control-bearing assay.
 // Controls are typically drawn from the same family (ChIP Input/WCE
 // for ChIP IPs; IgG CUT&RUN for CUT&RUN IPs; etc.).
 const CONTROL_SOURCE_ASSAYS = {
-  ChIP_broad:    CHIP_ASSAYS,
-  ChIP_narrow:   CHIP_ASSAYS,
-  CUT_RUN_broad: CUT_RUN_ASSAYS,
-  CUT_RUN_narrow: CUT_RUN_ASSAYS,
-  CUT_TAG_broad: CUT_TAG_ASSAYS,
-  CUT_TAG_narrow: CUT_TAG_ASSAYS,
-  RAMPAGE:       new Set(["RNAseq"]),
+  ChIP:    CHIP_ASSAYS,
+  CUT_RUN: CUT_RUN_ASSAYS,
+  CUT_TAG: CUT_TAG_ASSAYS,
+  RAMPAGE: new Set(["RNAseq"]),
 };
 
 // Known marks and recommended *peaktype* (derived from config/epicc-options.yaml peaktype).
@@ -765,10 +834,10 @@ function getRecommendedPeaktype(ipTarget) {
   return null;
 }
 
-function assayPeaktype(assay) {
-  if (/_broad$/.test(assay)) return "broad";
-  if (/_narrow$/.test(assay)) return "narrow";
-  return null;
+// The declared peak type now comes from the Peak_type column, not the assay.
+function assayPeaktype(peakType) {
+  var pt = (peakType || "").trim();
+  return (pt === "broad" || pt === "narrow") ? pt : null;
 }
 
 const UNSAFE_CHARS_RE = /[/\\\s'";&|<>$`!{}()\[\]?*~#]/;
@@ -782,7 +851,8 @@ function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
 
 const COLUMN_DESCRIPTIONS = {
   Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
-  Assay: "Experimental assay type. Determines pipeline routing: ChIP_broad (histone marks), ChIP_narrow (TFs, H3K4me3), CUT_RUN_broad / CUT_RUN_narrow (CUT&RUN), CUT_TAG_broad / CUT_TAG_narrow (CUT&Tag), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads).",
+  Assay: "Experimental assay type (the method, not the analysis). Determines pipeline routing: ChIP, CUT_RUN (CUT&RUN), CUT_TAG (CUT&Tag), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads). Peak-calling type (broad/narrow) is set separately in the Peak_type column.",
+  Peak_type: "Peak-calling type for pulldown assays (ChIP / CUT_RUN / CUT_TAG): 'broad' for histone-domain marks (H3K9me2, H3K27me3, ...), 'narrow' for TFs and sharp marks (H3K4me3, H3K27ac, ...). Required for those assays; leave blank for all others (ATAC's type is fixed; the rest have no peaks).",
   Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
@@ -870,7 +940,7 @@ function suggestSampleId(rowData) {
 
 function emptyRow() {
   var row = {
-    Sample_ID: "", Assay: "", Genome: "", Replicate_ID: "",
+    Sample_ID: "", Assay: "", Peak_type: "", Genome: "", Replicate_ID: "",
     Read_files: "", Read_layout: "", IP_target: "", Control: "",
     _sid_user_edited: false
   };
@@ -890,7 +960,8 @@ function getVisibleFields() {
     for (var i = 0; i < factors.length; i++) {
       fields.push(factorField(factors[i]));
     }
-    fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target", "Control");
+    fields.push("Replicate_ID", "Read_files", "Read_layout", "IP_target",
+                "Control", "Peak_type");
     return fields;
   }
   return COLUMNS.slice();
@@ -1113,16 +1184,23 @@ function buildColumnDefs() {
   // Factor columns (or placeholder/Levels fallback)
   if (factors.length > 0) {
     for (var i = 0; i < factors.length; i++) {
-      (function(fname) {
+      (function(fname, idx, last) {
+        // Mark the user-defined factor columns so they read as one group: the
+        // headers share the "Factors:" accent from the panel above, and the
+        // first/last carry the bracketing edges. See .factor-col CSS.
+        var groupClass = "factor-col"
+          + (idx === 0 ? " factor-col-first" : "")
+          + (idx === last ? " factor-col-last" : "");
         defs.push(Object.assign({
           title: fname, field: factorField(fname), editor: "input", width: 120,
+          cssClass: groupClass,
           editorParams: { elementAttributes: { placeholder: "e.g. WT, mutant" } },
         }, {
           headerClick: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
           headerMouseEnter: (function(fn) { return function() { showFactorDescription(fn); }; })(fname),
           cellClick: (function(fn) { return function(e, cell) { showFactorDescription(fn); }; })(fname),
         }));
-      })(factors[i]);
+      })(factors[i], i, factors.length - 1);
     }
   } else {
     // No factors defined — show Levels column with guidance
@@ -1149,10 +1227,7 @@ function buildColumnDefs() {
     Object.assign({
       title: "IP target", field: "IP_target", editor: "input", width: 120,
       editorParams: { elementAttributes: { placeholder: "e.g. H3K9me2, Input" } },
-      editable: function(cell) {
-        var assay = (cell.getRow().getData().Assay || "").trim();
-        return IP_PEAK_ASSAYS.has(assay);
-      },
+      editable: assayGatedEditable("IP_target"),
     }, descHooks("IP_target")),
     Object.assign({
       title: "Control", field: "Control", width: 200,
@@ -1160,7 +1235,16 @@ function buildColumnDefs() {
       editorParams: function(cell) {
         return { values: controlListValues(cell), autocomplete: true, listOnEmpty: true, freetext: true };
       },
-    }, descHooks("Control"))
+      editable: assayGatedEditable("Control"),
+    }, descHooks("Control")),
+    // Peak type last: it applies to only three assays, so it stays clear of the
+    // fields every row needs (see COLUMNS).
+    Object.assign({
+      title: "Peak type", field: "Peak_type", width: 100,
+      editor: "list",
+      editorParams: { values: VALID_PEAK_TYPES, autocomplete: true, listOnEmpty: true, freetext: false },
+      editable: assayGatedEditable("Peak_type"),
+    }, descHooks("Peak_type"))
   );
 
   return defs;
@@ -1200,6 +1284,7 @@ function refreshUI() {
   runValidation();
   applySuggestions();
   applyExampleCellStyles();
+  applyDisabledCellStyles();
 }
 
 function clearSuggestion(el) {
@@ -1357,6 +1442,7 @@ function runValidation() {
     var readLayout = (row.Read_layout || "").trim();
     var ipTarget = (row.IP_target || "").trim();
     var control = (row.Control || "").trim();
+    var peakType = (row.Peak_type || "").trim();
     var rowKey = rows[i] ? rows[i].getIndex() : i;
 
     // Sample_ID
@@ -1475,15 +1561,25 @@ function runValidation() {
         // own broad/narrow suffix. Warn only on peaktype mismatch — the
         // assay family (ChIP vs CUT_RUN vs CUT_TAG) is the user's choice.
         var recommendedPt = getRecommendedPeaktype(ipTarget);
-        var assayPt = assayPeaktype(assay);
+        var assayPt = assayPeaktype(peakType);
         if (recommendedPt && assayPt && recommendedPt !== assayPt) {
-          addIssue(cellIssues, warnings, rowKey, "IP_target",
-            "[!] Row #" + rowNum + " '" + sid + "': IP_target '" + ipTarget + "' is typically called as a " + recommendedPt + " peak, but Assay '" + assay + "' is " + assayPt, "warnings");
+          addIssue(cellIssues, warnings, rowKey, "Peak_type",
+            "[!] Row #" + rowNum + " '" + sid + "': IP_target '" + ipTarget + "' is typically called as a " + recommendedPt + " peak, but Peak_type is " + assayPt, "warnings");
         }
       }
     } else if (assay) {
       if (ipTarget)
         addIssue(cellIssues, errors, rowKey, "IP_target", "[X] Row #" + rowNum + " '" + sid + "': IP_target must be blank for " + assay);
+    }
+
+    // Peak_type: required (broad/narrow) for pulldown assays, blank otherwise
+    if (PEAK_TYPE_ASSAYS.has(assay)) {
+      if (!peakType)
+        addIssue(cellIssues, errors, rowKey, "Peak_type", "[X] Row #" + rowNum + " '" + sid + "': Peak_type is required for " + assay + " (broad or narrow)");
+      else if (VALID_PEAK_TYPES.indexOf(peakType) === -1)
+        addIssue(cellIssues, errors, rowKey, "Peak_type", "[X] Row #" + rowNum + " '" + sid + "': Peak_type must be 'broad' or 'narrow', got '" + peakType + "'");
+    } else if (peakType && assay) {
+      addIssue(cellIssues, errors, rowKey, "Peak_type", "[X] Row #" + rowNum + " '" + sid + "': Peak_type must be blank for " + assay);
     }
 
     // Control (assay check only - reference checks below)
@@ -1765,7 +1861,11 @@ function importTSV(text) {
 
   var header = lines[0].split("\t").map(function(s) { return s.trim(); });
   // Validate header
-  var missing = COLUMNS.filter(function(c) { return header.indexOf(c) === -1; });
+  // Peak_type is optional on import: legacy sheets encode it in the Assay name
+  // (e.g. ChIP_broad) and are split into Assay + Peak_type below.
+  var missing = COLUMNS.filter(function(c) {
+    return c !== "Peak_type" && header.indexOf(c) === -1;
+  });
   if (missing.length > 0) {
     alert("Import error: missing columns: " + missing.join(", ") +
       "\n\nExpected: " + COLUMNS.join(", ") +
@@ -1786,6 +1886,10 @@ function importTSV(text) {
       var c = COLUMNS[ci];
       row[c] = (fields[colIdx[c]] || "").trim();
     }
+    // Back-compat: split a legacy combined assay (e.g. ChIP_broad) into the
+    // separated Assay + Peak_type form.
+    var legacyM = /^(ChIP|CUT_RUN|CUT_TAG)_(broad|narrow)$/.exec(row.Assay);
+    if (legacyM) { row.Assay = legacyM[1]; if (!row.Peak_type) row.Peak_type = legacyM[2]; }
     rows.push(row);
   }
 
@@ -1954,7 +2058,7 @@ function copyCodeModal() {
 // ===========================================================================
 
 // Build a filtered list of compatible Control candidates for a given row's Assay.
-// ChIP_broad/ChIP_narrow: controls must be ChIP_broad or ChIP_narrow samples.
+// ChIP: controls must be ChIP samples (Input/WCE).
 // RAMPAGE: controls must be RNAseq samples.
 function controlListValues(cell) {
   var rowData = cell.getRow().getData();
@@ -1987,9 +2091,9 @@ function controlListValues(cell) {
 // Example rows — valid data shown dimmed per-row until that row is edited.
 // The _example flag marks rows as examples; removed when the row is first edited.
 var EXAMPLE_DATA = [
-  { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1_R1.fq.gz,/path/to/fastqs/WT_Input_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
-  { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2_R1.fq.gz,/path/to/fastqs/WT_Input_Rep2_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
-  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP_broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R1.fq.gz,/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "CenH3", Control: "WT_leaf_Input_rep1" },
+  { _example: true, Sample_ID: "WT_leaf_Input_rep1", Assay: "ChIP", Peak_type: "broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/WT_Input_Rep1_R1.fq.gz,/path/to/fastqs/WT_Input_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "WT_leaf_Input_rep2", Assay: "ChIP", Peak_type: "broad", Genome: "ColCEN", Levels: "genotype:WT,tissue:leaf", Replicate_ID: "rep2", Read_files: "/path/to/fastqs/WT_Input_Rep2_R1.fq.gz,/path/to/fastqs/WT_Input_Rep2_R2.fq.gz", Read_layout: "PE", IP_target: "Input", Control: "" },
+  { _example: true, Sample_ID: "rdr126ddm1_leaf_CenH3_rep1", Assay: "ChIP", Peak_type: "broad", Genome: "ColCEN", Levels: "genotype:rdr126ddm1,tissue:leaf", Replicate_ID: "rep1", Read_files: "/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R1.fq.gz,/path/to/fastqs/ddm1rdr126_CenH3_IP_Rep1_R2.fq.gz", Read_layout: "PE", IP_target: "CenH3", Control: "WT_leaf_Input_rep1" },
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep1", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep1", Read_files: "SRR12362026", Read_layout: "PE", IP_target: "", Control: "" },
   { _example: true, Sample_ID: "ddm1_leaf_ATAC_Rep2", Assay: "ATAC", Genome: "ColCEN", Levels: "genotype:ddm1,tissue:leaf", Replicate_ID: "Rep2", Read_files: "SRR12362027", Read_layout: "PE", IP_target: "", Control: "" },
 ];
@@ -2029,6 +2133,25 @@ function applyExampleCellStyles() {
       } else {
         cellEl.classList.remove("cell-example");
       }
+    }
+  }
+}
+
+// Grey out assay-gated cells that don't apply to their row (see .cell-disabled).
+// Tabulator's `editable` callback blocks the edit but leaves the cell looking
+// like any other empty one, so mark it explicitly. Re-run whenever the data
+// changes — editing Assay flips which cells apply.
+function applyDisabledCellStyles() {
+  var rows = table.getRows();
+  var gated = Object.keys(ASSAY_GATED_FIELDS);
+  for (var ri = 0; ri < rows.length; ri++) {
+    var assay = rows[ri].getData().Assay;
+    for (var gi = 0; gi < gated.length; gi++) {
+      var cell = rows[ri].getCell(gated[gi]);
+      if (!cell) continue;
+      cell.getElement().classList.toggle(
+        "cell-disabled", !isFieldEditableForAssay(gated[gi], assay)
+      );
     }
   }
 }
@@ -2248,6 +2371,7 @@ table.on("rowSelectionChanged", function(rows) {
 // Initial state
 table.on("tableBuilt", function() {
   applyExampleCellStyles();
+  applyDisabledCellStyles();
   // Only run validation on non-example data
   if (!hasAnyExampleRows()) {
     refreshUI();
