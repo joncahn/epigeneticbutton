@@ -61,7 +61,7 @@ Sample metadata is defined in a TSV file with 10 columns:
 - **Read_files**: SRA accession (`SRR12345`), local path, HTTP(S) URL, or `+`-separated for merging multiple inputs (`+`-merge supported for SRA accessions and FASTQ files, local or URL; BAM/bedMethyl must be merged upstream)
 - **Read_layout**: `SE` or `PE`
 - **IP_target**: Required for pulldown assays (`ChIP`/`CUT_RUN`/`CUT_TAG`; e.g. `H3K9me2`, `WCE`, `Input`). Blank for others.
-- **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). No chaining.
+- **Control**: Sample_ID of the control sample (e.g. WCE or Input for ChIP). Chain depth is capped at 2: a control may declare its own Control — the *dual-role* case, where a sample is both another row's control and an analysis target itself (e.g. H3 as H3K9me2's control while normalized against Input) — but that one must not. A pulldown row with no Control is not peak-callable and is dropped from peak/analysis targets (`is_peak_call_target`).
 
 Control-row replicate merging keys on `(Levels, IP_target, Genome)` only — the `Assay` value on a control row is decorative for merging purposes, so a single biological Input/IgG/WCE serving multiple IP types (broad + narrow, ChIP + CUT&RUN) merges correctly regardless of how individual rep rows are labeled. See `build_control_merge_key` in `workflow/scripts/sample_sheet.py`.
 

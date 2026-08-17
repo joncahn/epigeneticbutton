@@ -370,3 +370,71 @@ class TestOtherExtraTargetFiles:
         cfg = {"full_analysis": True,
                "browser_target_file": str(tmp_path / "absent.bed")}
         check_extra_output_files(cfg, check_paths=False)
+
+
+# ---------------------------------------------------------------------------
+# Control chain depth (dual-role samples)
+# ---------------------------------------------------------------------------
+
+class TestControlChainDepth:
+    """A control may declare its own Control (depth 2) but no deeper.
+
+    Depth 2 is the *dual-role* case: a sample that is another row's control while
+    also being analysed itself (e.g. an H3 ChIP used as H3K9me2's control and
+    normalized against Input). Peak calling only resolves one step, so deeper
+    chains cannot be expressed — and bounding the depth also makes cycles
+    impossible.
+    """
+
+    _counter = [0]
+
+    @classmethod
+    def _ip(cls, sample_id, ip_target, control=""):
+        # Unique accession per row: Read_files must not repeat across samples.
+        cls._counter[0] += 1
+        return _row(sample_id, "ChIP_broad", f"SRR100000{cls._counter[0]}",
+                    IP_target=ip_target, Control=control)
+
+    def test_depth_one_classic_pair_passes(self):
+        df = pd.DataFrame([
+            self._ip("Input_rep1", "Input"),
+            self._ip("K9_rep1", "H3K9me2", "Input_rep1"),
+        ])
+        check_table(df, check_paths=False)  # no raise
+
+    def test_depth_two_dual_role_passes(self):
+        # H3K9me2 -> H3 -> Input: H3 is both a control and an analysis target.
+        df = pd.DataFrame([
+            self._ip("Input_rep1", "Input"),
+            self._ip("H3_rep1", "H3", "Input_rep1"),
+            self._ip("K9_rep1", "H3K9me2", "H3_rep1"),
+        ])
+        check_table(df, check_paths=False)  # no raise
+
+    def test_depth_three_rejected(self):
+        df = pd.DataFrame([
+            self._ip("A", "Input"),
+            self._ip("B", "H3", "A"),
+            self._ip("C", "H3K9me2", "B"),
+            self._ip("D", "H3K27me3", "C"),
+        ])
+        with pytest.raises(ValueError) as excinfo:
+            check_table(df, check_paths=False)
+        assert "too deep" in str(excinfo.value)
+
+    def test_two_cycle_rejected(self):
+        # Bounding depth at 2 makes loops impossible: A is its own grandparent
+        # and still declares a Control, so the depth check fires.
+        df = pd.DataFrame([
+            self._ip("A", "H3", "B"),
+            self._ip("B", "H3K9me2", "A"),
+        ])
+        with pytest.raises(ValueError) as excinfo:
+            check_table(df, check_paths=False)
+        assert "too deep" in str(excinfo.value)
+
+    def test_self_control_rejected(self):
+        df = pd.DataFrame([self._ip("A", "H3", "A")])
+        with pytest.raises(ValueError) as excinfo:
+            check_table(df, check_paths=False)
+        assert "refers to the sample itself" in str(excinfo.value)
