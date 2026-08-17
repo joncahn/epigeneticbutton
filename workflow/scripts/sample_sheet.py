@@ -299,9 +299,13 @@ def build_control_merge_key(row):
 def build_analysis_to_replicates(df):
     """Build a dict mapping analysis_key → list of Replicate_IDs.
 
-    Only includes non-control samples.
+    Includes every row that can be analysed in its own right, i.e. every row
+    ``is_peak_call_target`` accepts. A sample that serves as another row's
+    control is NOT excluded: as long as it declares a ``Control`` of its own it
+    is a legitimate analysis target too (dual-role samples — e.g. an H3 ChIP
+    used both as its own target and as the control for H3K9me2).
     """
-    non_control = df[~df["Sample_ID"].isin(identify_control_samples(df))]
+    non_control = peak_callable_rows(df)
     result = {}
     for _, row in non_control.iterrows():
         key = build_analysis_key(row)
@@ -319,7 +323,11 @@ def get_replicate_sample_ids(analysis_name, df):
     Returns the list of Sample_IDs that belong to that analysis group.
     """
     controls = identify_control_samples(df)
-    non_control = df[~df["Sample_ID"].isin(controls)]
+    # Analysable rows (dual-role samples included — see build_analysis_to_replicates).
+    # A dual-role sample is reachable BOTH ways: by its analysis name here, and
+    # by its Sample_ID through the control-merge fallback below. The two lookups
+    # use different key formats, so they cannot collide.
+    non_control = peak_callable_rows(df)
 
     # Try matching non-control analysis names first
     result = []
@@ -393,6 +401,18 @@ def is_peak_call_target(row):
     return bool(str(control).strip())
 
 
+def peak_callable_rows(df):
+    """Return the subset of ``df`` that ``is_peak_call_target`` accepts.
+
+    Single place for the row-wise mask so every caller agrees on which rows are
+    analysable. Note ``.apply(axis=1)`` returns a DataFrame rather than a Series
+    on an empty frame, so guard the empty case.
+    """
+    if not len(df):
+        return df.copy()
+    return df[_row_apply(df, is_peak_call_target).astype(bool)].copy()
+
+
 def get_control_sample_id(sample_id, df):
     """Get the Control sample_id for a given sample.
 
@@ -421,15 +441,12 @@ def get_analysis_samples(df):
     """
     import sys
 
-    controls = identify_control_samples(df)
-    # Drop referenced controls, then also drop pulldown rows that cannot be
-    # peak-called (orphan controls no IP references, and IPs with no Control).
-    # Without the second filter those rows become analysis samples and get
-    # selected_peaks/IDR targets they can never satisfy — see is_peak_call_target.
-    keep = ~df["Sample_ID"].isin(controls)
-    if len(df):
-        keep &= _row_apply(df, is_peak_call_target).astype(bool)
-    non_control = df[keep].copy()
+    # Keep every row that can be peak-called: a pulldown row must declare a
+    # Control (this drops orphan controls and IPs with no Control, which would
+    # otherwise earn selected_peaks/IDR targets they can never satisfy). Being
+    # referenced as someone else's control is NOT disqualifying — dual-role
+    # samples get the full analysis treatment. See is_peak_call_target.
+    non_control = peak_callable_rows(df)
 
     # Deduplicate by analysis key
     non_control["_analysis_key"] = _row_apply(
