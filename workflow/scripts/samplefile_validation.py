@@ -449,7 +449,7 @@ def check_table(tab, check_paths=True):
                 errors.append(
                     f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
                 )
-                
+
     # --- Print warnings ---
     for w in warnings:
         print(w)

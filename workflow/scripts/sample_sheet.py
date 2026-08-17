@@ -575,6 +575,8 @@ def match_sample_rows(df, name):
     if match.empty and "mapped_name" in df.columns:
         match = df.loc[df["mapped_name"] == name]
     return match
+
+
 def is_peak_call_target(row):
     """True if a row may be enumerated as a peak-calling target.
 
