@@ -139,6 +139,44 @@
     color: var(--accent);
     background: rgba(233,69,96,0.15);
   }
+  /* Reordering affordances. Only the factor tiles are draggable: Tabulator's
+     movableColumns is all-or-nothing and would also let the fixed schema
+     columns (Sample_ID, Assay, ...) be dragged out of position. */
+  .factor-tile.reorderable {
+    padding-left: 4px;
+    cursor: grab;
+  }
+  .factor-tile.factor-dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+  }
+  /* Which side the tile would land on, drawn as an edge bar in the factor
+     accent so it reads as part of the same group. */
+  .factor-tile.factor-drop-before { box-shadow: -3px 0 0 var(--accent2); }
+  .factor-tile.factor-drop-after  { box-shadow:  3px 0 0 var(--accent2); }
+  .factor-tile .factor-move {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 3px;
+    border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+  }
+  /* Outrank `.factor-panel button:hover`, which paints buttons with the red
+     --accent: moving a factor is navigation, not a destructive action like
+     removing one. */
+  .factor-tile .factor-move:hover:not(:disabled) {
+    color: var(--accent2);
+    background: rgba(83, 168, 182, 0.18);
+  }
+  .factor-tile .factor-move:disabled {
+    opacity: 0.25;
+    cursor: default;
+    background: none;
+  }
   .factor-panel input[type="text"] {
     background: var(--bg);
     color: var(--text);
@@ -1007,15 +1045,120 @@ function removeFactor(name) {
   refreshUI();
 }
 
+// Move a factor to a new position in the ordering.
+//
+// Reordering the `factors` array is the WHOLE data change: per-row factor
+// values live in _factor_* fields keyed by factor NAME, and the Levels string
+// is never stored authoritatively — it is derived from `factors` on demand
+// (buildExportMatrix, suggestSampleId) and validated field-by-field against
+// `factors`. So nothing per-row needs rewriting, and every row stays
+// consistent by construction, including example rows.
+//
+// The order is not cosmetic, and that is by design: buildLevelsFromFactors
+// emits the pairs in this order and levelsToLabel joins the level *values* in
+// the same order to form levels_label, which appears in analysis-level output
+// names. So reordering factors is the supported way to control how those
+// outputs are named — showFactorOrderNote reports the resulting label.
+function moveFactor(from, to) {
+  if (from === to) return;
+  if (from < 0 || from >= factors.length) return;
+  if (to < 0 || to >= factors.length) return;
+  var moved = factors.splice(from, 1)[0];
+  factors.splice(to, 0, moved);
+  rebuildTableColumns();
+  renderFactorTiles();
+  refreshUI();
+  showFactorOrderNote(moved);
+}
+
+// ‹ / › buttons. HTML5 drag-and-drop is pointer-only, so these are the
+// keyboard-accessible path to reordering — and they give exact single-step
+// moves, which dragging between narrow tiles does not.
+function makeFactorMoveButton(index, delta) {
+  var target = index + delta;
+  var name = factors[index];
+  var canMove = target >= 0 && target < factors.length;
+  var b = document.createElement("button");
+  b.className = "factor-move";
+  b.textContent = delta < 0 ? "‹" : "›";
+  b.disabled = !canMove;
+  b.title = canMove
+    ? "Move '" + name + "' " + (delta < 0 ? "left" : "right")
+    : "'" + name + "' is already " + (delta < 0 ? "first" : "last");
+  b.setAttribute("aria-label", b.title);
+  // index/target are parameters, so each button closes over its own values.
+  b.addEventListener("click", function() { moveFactor(index, target); });
+  return b;
+}
+
+// Index of the tile currently being dragged, or null.
+var _factorDragIndex = null;
+
+function clearFactorDropMarkers() {
+  var tiles = document.querySelectorAll("#factor-tiles .factor-tile");
+  for (var i = 0; i < tiles.length; i++) {
+    tiles[i].classList.remove("factor-drop-before", "factor-drop-after");
+  }
+}
+
+function attachFactorDragHandlers(tile, index) {
+  tile.addEventListener("dragstart", function(e) {
+    _factorDragIndex = index;
+    tile.classList.add("factor-dragging");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      // Firefox refuses to start a drag unless some data is set.
+      e.dataTransfer.setData("text/plain", String(index));
+    }
+  });
+  tile.addEventListener("dragend", function() {
+    _factorDragIndex = null;
+    tile.classList.remove("factor-dragging");
+    clearFactorDropMarkers();
+  });
+  tile.addEventListener("dragover", function(e) {
+    if (_factorDragIndex === null || _factorDragIndex === index) return;
+    e.preventDefault();  // required, or the drop never fires
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    clearFactorDropMarkers();
+    tile.classList.add(
+      _factorDragIndex < index ? "factor-drop-after" : "factor-drop-before"
+    );
+  });
+  tile.addEventListener("dragleave", function() {
+    tile.classList.remove("factor-drop-before", "factor-drop-after");
+  });
+  tile.addEventListener("drop", function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var from = _factorDragIndex;
+    // Reset before moving: moveFactor re-renders the tiles, destroying this
+    // element, so its dragend may never fire.
+    _factorDragIndex = null;
+    clearFactorDropMarkers();
+    if (from !== null && from !== index) moveFactor(from, index);
+  });
+}
+
 function renderFactorTiles() {
   var container = document.getElementById("factor-tiles");
   while (container.firstChild) container.removeChild(container.firstChild);
+  // Reordering only means anything with two or more factors; with one, the
+  // arrows would render permanently disabled and the drag would be a no-op.
+  var reorderable = factors.length > 1;
   for (var i = 0; i < factors.length; i++) {
     var tile = document.createElement("span");
-    tile.className = "factor-tile";
+    tile.className = "factor-tile" + (reorderable ? " reorderable" : "");
+    if (reorderable) {
+      tile.draggable = true;
+      tile.title = "Drag to reorder '" + factors[i] + "'";
+      // Arrows flank the name so the control maps to the direction it moves.
+      tile.appendChild(makeFactorMoveButton(i, -1));
+    }
     var nameSpan = document.createElement("span");
     nameSpan.textContent = factors[i];
     tile.appendChild(nameSpan);
+    if (reorderable) tile.appendChild(makeFactorMoveButton(i, 1));
     var btn = document.createElement("button");
     btn.className = "factor-remove";
     btn.textContent = "\u00d7";
@@ -1025,6 +1168,7 @@ function renderFactorTiles() {
       btn.addEventListener("click", function() { removeFactor(fname); });
     })(factors[i]);
     tile.appendChild(btn);
+    if (reorderable) attachFactorDragHandlers(tile, i);
     container.appendChild(tile);
   }
 }
@@ -1255,6 +1399,40 @@ function buildColumnDefs() {
 // ===========================================================================
 
 const descPanel = document.getElementById("description-panel");
+// Reordering factors changes levels_label and therefore the analysis-level
+// output names ({Assay}__{levels_label}__{IP_target}__{Genome}). That effect is
+// intended — factor order is how the user controls those names — so report it
+// as the outcome of the action rather than as a hazard, and show the actual
+// resulting label so the effect is visible instead of merely described. Uses
+// the existing aria-live description panel: the feedback matters right after
+// the reorder, is announced to screen readers there, and costs no permanent
+// screen space.
+function firstLevelsLabelExample() {
+  // The label from the first row that has enough values to produce one; rows
+  // are often partially filled while a sheet is being built.
+  var data = table ? table.getData() : [];
+  for (var i = 0; i < data.length; i++) {
+    var label = levelsToLabel(buildLevelsFromFactors(data[i]));
+    if (label && label.indexOf("_") !== -1) return label;
+  }
+  return "";
+}
+
+function showFactorOrderNote(movedName) {
+  while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
+  var strong = document.createElement("strong");
+  strong.textContent = "Factor order changed";
+  descPanel.appendChild(strong);
+  var example = firstLevelsLabelExample();
+  descPanel.appendChild(document.createTextNode(
+    " — moved '" + movedName + "'. Factors are now: " + factors.join(", ") + ". " +
+    "Level values are joined in this order to form the levels_label in analysis " +
+    "output names" + (example ? ", which are now named '" + example + "'" : "") +
+    ", so factor order is how you control that naming. Results already written " +
+    "to disk keep the names they were created with."
+  ));
+}
+
 function showFactorDescription(factorName) {
   while (descPanel.firstChild) descPanel.removeChild(descPanel.firstChild);
   var strong = document.createElement("strong");
