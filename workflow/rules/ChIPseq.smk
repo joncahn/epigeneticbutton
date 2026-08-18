@@ -48,14 +48,14 @@ def get_mapq_filter(env):
 def get_peaktype_for_env(sample_name_or_assay, env):
     """Return peaktype using the appropriate config for the environment.
 
-    Accepts an Assay value (e.g. "ChIP_broad"), a sample_name/Sample_ID,
-    or a legacy sample_type (e.g. "H3K9me2") -- in the last case the Assay
-    is resolved via _resolve_assay.
+    Accepts an internal assay token (e.g. "ChIP_broad") or a sample/analysis
+    name, which _resolve_assay looks up. ATAC takes its type from
+    atac_callpeaks.peaktype so the setting stays user-overridable.
     """
     if env == "ATAC":
         return config["atac_callpeaks"]["peaktype"]
     assay = _resolve_assay(sample_name_or_assay)
-    return ASSAY_TO_PEAKTYPE.get(assay, "broad")
+    return _peaktype_for_assay(assay)
 
 def _resolve_peakcaller(sample_name_or_assay):
     """Return the peak-calling tool for a sample: ``macs2``, ``seacr``, or ``epic2``.
@@ -75,20 +75,47 @@ def _resolve_peakcaller(sample_name_or_assay):
 
 
 def _resolve_assay(sample_name_or_assay):
-    """Resolve a sample_name or Assay value to its Assay.
+    """Resolve an internal assay token or a sample/analysis name to its Assay.
 
-    If the argument is already a valid Assay in ASSAY_TO_PEAKTYPE, return it.
-    Otherwise look it up in samples or analysis_samples.
+    Per-replicate callers pass a genome-qualified ``mapped_name``, so the
+    per-replicate lookup goes through match_sample_rows, which accepts the bare
+    and qualified forms both. Analysis names are matched directly, since they
+    already carry the genome.
+
+    Raises rather than returning the input unchanged: an unresolved name used to
+    fall through to a "broad"/macs2 default, which silently mis-called peaks
+    instead of failing.
     """
     if sample_name_or_assay in ASSAY_TO_PEAKTYPE:
         return sample_name_or_assay
-    match = samples.loc[samples["sample_name"] == sample_name_or_assay]
+    match = match_sample_rows(samples, sample_name_or_assay)
     if not match.empty:
         return match.iloc[0]["Assay"]
     match2 = analysis_samples.loc[analysis_samples["sample_name"] == sample_name_or_assay]
     if not match2.empty:
         return match2.iloc[0]["Assay"]
-    return sample_name_or_assay
+    raise ValueError(
+        f"Cannot resolve '{sample_name_or_assay}' to an assay: it is not an "
+        f"internal assay token, a Sample_ID/mapped_name in the sample sheet, "
+        f"or a known analysis name."
+    )
+
+
+def _peaktype_for_assay(assay):
+    """broad/narrow for an internal combined assay token (or ATAC).
+
+    Raises on an unknown token. The previous ``.get(assay, "broad")`` default
+    meant a resolution failure produced broad-called peaks written to a
+    narrow-named path, with nothing in the log to say so.
+    """
+    try:
+        return ASSAY_TO_PEAKTYPE[assay]
+    except KeyError:
+        raise ValueError(
+            f"No peak type for assay '{assay}'. Expected one of "
+            f"{sorted(ASSAY_TO_PEAKTYPE)}; pulldown rows need Assay + Peak_type "
+            f"(e.g. Assay=ChIP, Peak_type=broad)."
+        ) from None
 
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
@@ -412,7 +439,7 @@ def define_final_chip_output(ref_genome):
     filtered_rep_samples_no_input = peak_callable_rows(filtered_rep_samples)
     for _, row in filtered_rep_samples_no_input.iterrows():
         assay = row['Assay']
-        peaktype = ASSAY_TO_PEAKTYPE.get(assay, "broad")
+        peaktype = _peaktype_for_assay(assay)
         sname = row['sample_name']
         mname = row['mapped_name']
         paired = row['paired']
@@ -442,7 +469,7 @@ def define_final_chip_output(ref_genome):
     # ASSAY_TO_PEAKTYPE. Motif-around-summit is meaningful for narrow
     # (point-source) peaks, not broad histone domains.
     def _is_narrow(assay):
-        return ASSAY_TO_PEAKTYPE.get(assay, "broad") == "narrow"
+        return _peaktype_for_assay(assay) == "narrow"
 
     narrow_analysis = filtered_analysis_samples[
         filtered_analysis_samples['Assay'].map(_is_narrow)
@@ -474,8 +501,8 @@ def define_final_chip_output(ref_genome):
                 sample2 = b.sample_name
                 assay1 = a.Assay
                 assay2 = b.Assay
-                peaktype1 = ASSAY_TO_PEAKTYPE.get(assay1, "broad")
-                peaktype2 = ASSAY_TO_PEAKTYPE.get(assay2, "broad")
+                peaktype1 = _peaktype_for_assay(assay1)
+                peaktype2 = _peaktype_for_assay(assay2)
                 if peaktype1 == peaktype2:
                     peak_files.append(f"{RESULTS_DIR}/ChIP/peaks/{sample1}_vs_{sample2}/{sample1}_vs_{sample2}_all_MAvalues.xls")
 
@@ -881,7 +908,7 @@ rule calling_peaks_pe:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_chip_input(wildcards),
-        peaktype = lambda wildcards: ASSAY_TO_PEAKTYPE.get(_resolve_assay(wildcards.sample_name), "broad"),
+        peaktype = lambda wildcards: _peaktype_for_assay(_resolve_assay(wildcards.sample_name)),
         caller = lambda wildcards: _resolve_peakcaller(wildcards.sample_name),
         is_cut = lambda wildcards: "1" if _resolve_assay(wildcards.sample_name).startswith(("CUT_RUN", "CUT_TAG")) else "0",
         file_type = lambda wildcards: wildcards.file_type,
@@ -975,7 +1002,7 @@ rule calling_peaks_se:
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_chip_input(wildcards),
-        peaktype = lambda wildcards: ASSAY_TO_PEAKTYPE.get(_resolve_assay(wildcards.sample_name), "broad"),
+        peaktype = lambda wildcards: _peaktype_for_assay(_resolve_assay(wildcards.sample_name)),
         caller = lambda wildcards: _resolve_peakcaller(wildcards.sample_name),
         is_cut = lambda wildcards: "1" if _resolve_assay(wildcards.sample_name).startswith(("CUT_RUN", "CUT_TAG")) else "0",
         file_type = lambda wildcards: wildcards.file_type,

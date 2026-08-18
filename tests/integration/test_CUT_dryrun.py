@@ -13,6 +13,7 @@ Test samples (from test_samples_CUT.tsv):
   CUT_TAG_narrow (TF1 SE)       WT × 2 reps      (shared CT IgG)
 """
 
+import re
 import pytest
 from pathlib import Path
 
@@ -29,10 +30,15 @@ _OUTPUT_DIR = load_output_dir("test_options_CUT.yaml")
 # ---------------------------------------------------------------------------
 # Per-replicate peak targets (one per assay-variant × layout)
 # ---------------------------------------------------------------------------
-CR_BROAD_PE_PEAKS  = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_pe__final__WT_CR_H3K27me3_rep1_peaks.broadPeak"
-CR_NARROW_PE_PEAKS = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_pe__final__WT_CR_TF1_rep1_peaks.narrowPeak"
-CT_BROAD_SE_PEAKS  = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_se__final__WT_CT_H3K27me3_rep1_peaks.broadPeak"
-CT_NARROW_SE_PEAKS = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_se__final__WT_CT_TF1_rep1_peaks.narrowPeak"
+# Post-alignment paths carry the genome (mapped_name), so these must be
+# qualified — a bare name is still constructible via wildcards but is not what
+# the pipeline actually builds, which is how a peak-type regression once slipped
+# past these tests.
+_G = "test_genome"
+CR_BROAD_PE_PEAKS  = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_pe__final__WT_CR_H3K27me3_rep1__{_G}_peaks.broadPeak"
+CR_NARROW_PE_PEAKS = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_pe__final__WT_CR_TF1_rep1__{_G}_peaks.narrowPeak"
+CT_BROAD_SE_PEAKS  = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_se__final__WT_CT_H3K27me3_rep1__{_G}_peaks.broadPeak"
+CT_NARROW_SE_PEAKS = f"{_OUTPUT_DIR}/ChIP/peaks/peaks_se__final__WT_CT_TF1_rep1__{_G}_peaks.narrowPeak"
 
 # Analysis-level (merged) peak targets — exercise replicate merging
 CR_BROAD_ANALYSIS  = "CUT_RUN_broad__WT__H3K27me3__test_genome"
@@ -223,3 +229,59 @@ class TestCallerOverride:
         output = result.stdout + result.stderr
         assert "caller=macs2" in output or "macs2 callpeak" in output, \
             "CUT_RUN_narrow with narrow_caller=macs2 override should use MACS2"
+
+
+# ===========================================================================
+# Per-replicate peak calling must agree with its analysis group
+# ===========================================================================
+
+class TestPerReplicatePeakTypeMatchesAnalysis:
+    """A replicate and its merged group must use the same peak type and caller.
+
+    They are resolved by different paths — the replicate through a
+    genome-qualified mapped_name, the group through its analysis name — so they
+    can disagree. When they did, replicates were called broad/macs2 while the
+    output kept the narrow name from the target generator.
+    """
+
+    _BANNER = re.compile(
+        r"Calling (?P<peaktype>broad|narrow) peaks \(caller=(?P<caller>\w+)\) "
+        r"for (?:paired|single)-end (?P<name>\S+)"
+    )
+
+    @pytest.fixture(scope="class")
+    def banners(self, snakemake_available, repo_root, test_options):
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+        result = run_snakemake_dryrun(repo_root, test_options, None, ["--printshellcmds"])
+        assert result.returncode == 0, f"Dry-run failed: {result.stderr}"
+        out = result.stdout + result.stderr
+        found = {}
+        for m in self._BANNER.finditer(out):
+            found[m.group("name")] = (m.group("peaktype"), m.group("caller"))
+        assert found, "no peak-calling banners in the dry-run output"
+        return found
+
+    @pytest.mark.parametrize("analysis,replicates", [
+        (CR_BROAD_ANALYSIS,  ["WT_CR_H3K27me3_rep1", "WT_CR_H3K27me3_rep2"]),
+        (CR_NARROW_ANALYSIS, ["WT_CR_TF1_rep1", "WT_CR_TF1_rep2"]),
+        (CT_BROAD_ANALYSIS,  ["WT_CT_H3K27me3_rep1", "WT_CT_H3K27me3_rep2"]),
+        (CT_NARROW_ANALYSIS, ["WT_CT_TF1_rep1", "WT_CT_TF1_rep2"]),
+    ])
+    def test_replicates_match_their_group(self, banners, analysis, replicates):
+        assert analysis in banners, f"no peak call planned for {analysis}"
+        expected = banners[analysis]
+        for rep in replicates:
+            key = f"{rep}__test_genome"
+            assert key in banners, f"no peak call planned for replicate {key}"
+            assert banners[key] == expected, (
+                f"{key} called as {banners[key]} but its group {analysis} "
+                f"is {expected}"
+            )
+
+    def test_narrow_cut_replicates_do_not_fall_back_to_macs2(self, banners):
+        """The specific regression: narrow CUT replicates using macs2/broad."""
+        for rep in ("WT_CR_TF1_rep1__test_genome", "WT_CT_TF1_rep1__test_genome"):
+            peaktype, caller = banners[rep]
+            assert (peaktype, caller) == ("narrow", "seacr"), \
+                f"{rep} should be narrow/seacr, got {peaktype}/{caller}"
