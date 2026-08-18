@@ -639,6 +639,98 @@
     color: inherit !important;
   }
 
+  /* Genome multi-select picker (Genome column editor) */
+  .genome-picker {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 10001;         /* above .ctx-menu (10000) */
+    min-width: 200px;
+    max-height: 320px;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .genome-picker-hint {
+    padding: 4px 12px 6px;
+    color: var(--text-dim);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .genome-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .genome-picker-item:hover {
+    background: var(--surface2);
+  }
+  .genome-picker-item input {
+    cursor: pointer;
+    accent-color: var(--accent2);
+    margin: 0;
+  }
+  .genome-picker-empty {
+    padding: 6px 12px;
+    color: var(--text-dim);
+    font-style: italic;
+    white-space: nowrap;
+  }
+  .genome-picker-add {
+    display: flex;
+    gap: 4px;
+    padding: 6px 12px 2px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+  }
+  .genome-picker-add input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .genome-picker-add button,
+  .genome-picker-done button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .genome-picker-add button:hover,
+  .genome-picker-done button:hover {
+    background: var(--accent2);
+    color: var(--bg);
+  }
+  .genome-picker-done {
+    padding: 6px 12px 2px;
+    text-align: right;
+  }
+  /* The in-cell input while the picker is open */
+  .genome-cell-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg);
+    border: 1px solid var(--accent2);
+    color: var(--text);
+    padding: 3px 4px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+
   /* Tabulator list editor dropdown styling */
   .tabulator-edit-list {
     background: var(--surface) !important;
@@ -890,14 +982,14 @@ function isFactorField(f) { return f.indexOf(FACTOR_PREFIX) === 0; }
 const COLUMN_DESCRIPTIONS = {
   Sample_ID: "Unique identifier for each sample row. Used as a filesystem path component. Must not contain '__' or unsafe characters (/ \\ whitespace '\";&|<>$`!{}()[]?*~#). Concise descriptive IDs like 'WT_leaf_H3K9me2_rep1' are recommended.",
   Assay: "Experimental assay type (the method, not the analysis). Determines pipeline routing: ChIP, CUT_RUN (CUT&RUN), CUT_TAG (CUT&Tag), ATAC, RNAseq, RAMPAGE, sRNA, WGBS (directional), WGBS_nd (non-directional, e.g. Zymo Pico), PBAT, EMseq (enzymatic), dmC (direct methylation from long reads). Peak-calling type (broad/narrow) is set separately in the Peak_type column.",
-  Peak_type: "Peak-calling type for pulldown assays (ChIP / CUT_RUN / CUT_TAG): 'broad' for histone-domain marks (H3K9me2, H3K27me3, ...), 'narrow' for TFs and sharp marks (H3K4me3, H3K27ac, ...). Required for those assays; leave blank for all others (ATAC's type is fixed; the rest have no peaks).",
-  Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/.",
+  Genome: "Reference genome name (e.g. Spombe, ColCEN, hg38). Used to locate genome files under genomes/{Genome}/. Tick several genomes to map the same sample to each reference (e.g. B73,W22): the reads are downloaded and trimmed once, then aligned to each, and post-alignment outputs are tagged with the genome.",
   Levels: "Comma-separated factor:level pairs (e.g. genotype:WT,tissue:root). All rows must have the same factors. Level values form the 'levels_label' in analysis names.",
   Replicate_ID: "Replicate identifier (e.g. rep1, rep2). Replicates are mapped independently then merged for downstream analysis.",
   Read_files: "SRA accession (SRR12345678), local path, URL (https://...), or '+'-separated SRA accessions for merging (SRA only). PE: comma-separated R1,R2 pair.",
   Read_layout: "Sequencing layout: SE (single-end) or PE (paired-end).",
   IP_target: "What was immunoprecipitated. Required for ChIP and CUT&RUN/CUT&Tag assays (e.g. H3K9me2, Input, WCE, IgG). Must be blank for non-IP assays.",
   Control: "Sample_ID of the control sample (e.g. Input/WCE for ChIP, IgG for CUT&RUN/CUT&Tag, RNAseq for RAMPAGE). The referenced control **may** declare its own Control (*dual-role* case), but that one must not.",
+  Peak_type: "Peak-calling type for pulldown assays (ChIP / CUT_RUN / CUT_TAG): 'broad' for histone-domain marks (H3K9me2, H3K27me3, ...), 'narrow' for TFs and sharp marks (H3K4me3, H3K27ac, ...). Required for those assays; leave blank for all others (ATAC's type is fixed; the rest have no peaks).",
   Comments: "Free-text notes for your own use — batch, library prep, sequencing run, anything. Optional, unconstrained, and completely ignored by the pipeline: it never affects analysis names or outputs. Tabs and newlines are stripped on export so the TSV stays intact."
 };
 
@@ -1193,14 +1285,214 @@ function getDefinedGenomes() {
   if (typeof table !== "undefined") {
     var data = table.getData();
     for (var i = 0; i < data.length; i++) {
-      var g = (data[i].Genome || "").trim();
-      if (g && !seen[g]) {
-        seen[g] = true;
-        result.push(g);
+      // A Genome cell may list several references for one sample
+      // ("Spombe,Spombe2" — the reads are mapped to each). Split, or the whole
+      // string would be registered as one bogus genome and would then surface
+      // in this dropdown, in the Reference Genomes tab, and in the exported
+      // options YAML's genomes: block.
+      var cell = (data[i].Genome || "").split(",");
+      for (var j = 0; j < cell.length; j++) {
+        var g = cell[j].trim();
+        if (g && !seen[g]) {
+          seen[g] = true;
+          result.push(g);
+        }
       }
     }
   }
   return result;
+}
+
+// --- Genome column editor: multi-select tick boxes -------------------------
+// The cell holds a comma-separated list of references ("B73,W22"), one per
+// genome the sample is mapped to. The picker is appended to document.body, not
+// the cell, since the column is ~150px with overflow clipped; it reuses the
+// fixed-position + offscreen-flip pattern of .ctx-menu.
+
+function parseGenomeList(value) {
+  // Stray commas are dropped, matching the loader ("B73,,W22" -> 2 entries).
+  var out = [];
+  var seen = {};
+  var parts = String(value == null ? "" : value).split(",");
+  for (var i = 0; i < parts.length; i++) {
+    var g = parts[i].trim();
+    if (g && !seen[g]) { seen[g] = true; out.push(g); }
+  }
+  return out;
+}
+
+function genomeMultiEditor(cell, onRendered, success, cancel) {
+  var input = document.createElement("input");
+  input.type = "text";
+  input.className = "genome-cell-input";
+  input.value = cell.getValue() || "";
+
+  // Existing order is preserved and new ticks appended, so toggling one box
+  // never reshuffles the cell.
+  var selected = parseGenomeList(input.value);
+
+  var panel = null;
+  var done = false;
+
+  function currentValue() { return selected.join(","); }
+
+  function syncInput() { input.value = currentValue(); }
+
+  function teardown() {
+    document.removeEventListener("mousedown", onDocMouseDown, true);
+    window.removeEventListener("resize", commit, true);
+    if (panel) { panel.remove(); panel = null; }
+  }
+
+  function commit() {
+    if (done) return;
+    done = true;
+    // The text box stays live, so a typed/pasted value wins over the ticks.
+    var value = parseGenomeList(input.value).join(",");
+    teardown();
+    success(value);
+  }
+
+  function abort() {
+    if (done) return;
+    done = true;
+    teardown();
+    cancel();
+  }
+
+  function onDocMouseDown(e) {
+    // Capture phase, so this runs before Tabulator's own click handling and
+    // the edit is committed rather than cancelled when the user clicks away.
+    if (panel && panel.contains(e.target)) return;
+    if (cell.getElement() && cell.getElement().contains(e.target)) return;
+    commit();
+  }
+
+  function toggle(genome, on) {
+    // Re-read the input first: the user may have typed since the panel opened.
+    selected = parseGenomeList(input.value);
+    var idx = selected.indexOf(genome);
+    if (on && idx < 0) selected.push(genome);
+    if (!on && idx >= 0) selected.splice(idx, 1);
+    syncInput();
+  }
+
+  function buildPanel() {
+    if (panel) panel.remove();
+    panel = document.createElement("div");
+    panel.className = "genome-picker";
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Reference genomes for this sample");
+
+    var hint = document.createElement("div");
+    hint.className = "genome-picker-hint";
+    hint.textContent = "Tick every reference to map this sample to";
+    panel.appendChild(hint);
+
+    // Union of the Reference Genomes tab and every Genome cell, so a name
+    // typed into one row becomes tickable in all the others.
+    var all = getDefinedGenomes();
+    // A name only present in this cell must still show as ticked.
+    for (var s = 0; s < selected.length; s++) {
+      if (all.indexOf(selected[s]) < 0) all.push(selected[s]);
+    }
+
+    if (all.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "genome-picker-empty";
+      empty.textContent = "No genomes defined yet — add one below";
+      panel.appendChild(empty);
+    }
+
+    for (var i = 0; i < all.length; i++) {
+      (function(genome) {
+        var label = document.createElement("label");
+        label.className = "genome-picker-item";
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = selected.indexOf(genome) >= 0;
+        box.addEventListener("change", function() { toggle(genome, box.checked); });
+        label.appendChild(box);
+        var name = document.createElement("span");
+        name.textContent = genome;
+        label.appendChild(name);
+        panel.appendChild(label);
+      })(all[i]);
+    }
+
+    var addRow = document.createElement("div");
+    addRow.className = "genome-picker-add";
+    var addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.placeholder = "new genome name";
+    addInput.setAttribute("aria-label", "New genome name");
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.textContent = "Add";
+
+    function addTyped() {
+      var name = addInput.value.trim();
+      if (!name) return;
+      // Register it so other rows and the Reference Genomes tab see it too.
+      if (definedGenomes.indexOf(name) < 0) definedGenomes.push(name);
+      toggle(name, true);
+      addInput.value = "";
+      buildPanel();
+      position();
+    }
+    addBtn.addEventListener("click", addTyped);
+    addInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); addTyped(); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); abort(); }
+    });
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    panel.appendChild(addRow);
+
+    var doneRow = document.createElement("div");
+    doneRow.className = "genome-picker-done";
+    var doneBtn = document.createElement("button");
+    doneBtn.type = "button";
+    doneBtn.textContent = "Done";
+    doneBtn.addEventListener("click", commit);
+    doneRow.appendChild(doneBtn);
+    panel.appendChild(doneRow);
+
+    document.body.appendChild(panel);
+  }
+
+  function position() {
+    if (!panel) return;
+    var el = cell.getElement();
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    panel.style.left = r.left + "px";
+    panel.style.top = (r.bottom + 2) + "px";
+    var pr = panel.getBoundingClientRect();
+    if (pr.right > window.innerWidth) {
+      panel.style.left = Math.max(8, window.innerWidth - pr.width - 8) + "px";
+    }
+    if (pr.bottom > window.innerHeight) {
+      // Flip above the cell; clamp to the viewport if it still does not fit.
+      panel.style.top = Math.max(8, r.top - pr.height - 2) + "px";
+    }
+  }
+
+  input.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { e.preventDefault(); abort(); }
+  });
+
+  onRendered(function() {
+    input.focus();
+    input.select();
+    buildPanel();
+    position();
+    document.addEventListener("mousedown", onDocMouseDown, true);
+    window.addEventListener("resize", commit, true);
+  });
+
+  return input;
 }
 
 function addGenomeFromInput() {
@@ -1318,11 +1610,10 @@ function buildColumnDefs() {
       editorParams: { values: VALID_ASSAYS, autocomplete: true, listOnEmpty: true, freetext: false },
     }, descHooks("Assay")),
     Object.assign({
-      title: "Genome", field: "Genome", width: 120,
-      editor: "list",
-      editorParams: function() {
-        return { values: getDefinedGenomes(), autocomplete: true, listOnEmpty: true, freetext: true };
-      },
+      title: "Genome", field: "Genome", width: 150,
+      // Multi-select: a sample may be mapped to several references, held in the
+      // cell as a comma-separated list. See genomeMultiEditor.
+      editor: genomeMultiEditor,
     }, descHooks("Genome")),
   ];
 
@@ -1650,8 +1941,31 @@ function runValidation() {
       addIssue(cellIssues, errors, rowKey, "Assay", "[X] Row #" + rowNum + " '" + sid + "': Assay '" + assay + "' not in [" + VALID_ASSAYS.join(", ") + "]");
 
     // Genome
-    if (!genome)
+    if (!genome) {
       addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': Genome is required");
+    } else {
+      // Genome may list several references ("Spombe,Spombe2"): the sample's
+      // reads are mapped to each. Check each token, since a stray or trailing
+      // comma would otherwise register an empty genome name downstream.
+      var gTokens = genome.split(",");
+      var gSeen = {};
+      for (var gi = 0; gi < gTokens.length; gi++) {
+        var gTok = gTokens[gi].trim();
+        if (!gTok) {
+          // The loader silently drops empty entries ("A,,B" -> A, B), so flag
+          // this as a likely typo rather than an error — staying consistent
+          // with what the pipeline actually accepts.
+          addIssue(cellIssues, warnings, rowKey, "Genome", "[!] Row #" + rowNum + " '" + sid + "': stray comma in Genome '" + genome + "' — the empty entry is ignored", "warnings");
+        } else if (DOUBLE_UNDERSCORE_RE.test(gTok)) {
+          // '__' delimits the genome in post-alignment filenames, so a genome
+          // name containing it would make those paths ambiguous.
+          addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': genome '" + gTok + "' must not contain '__'");
+        } else if (gSeen[gTok]) {
+          addIssue(cellIssues, errors, rowKey, "Genome", "[X] Row #" + rowNum + " '" + sid + "': genome '" + gTok + "' is listed twice");
+        }
+        gSeen[gTok] = true;
+      }
+    }
 
     // Levels / Factor validation
     if (factors.length > 0) {

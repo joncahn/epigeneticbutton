@@ -384,18 +384,19 @@ def define_final_chip_output(ref_genome):
     filtered_rep_samples = samples[(samples['env'] == 'ChIP') & (samples['ref_genome'] == ref_genome)].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         paired = row['paired']
         env = row['env']
         if paired == "PE" and not aligned_bams:
             qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R1_fastqc.html")
             qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R2_fastqc.html")
-            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_pe_sample__{sname}.log")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_pe_sample__{mname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R1_fastqc.html")
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R2_fastqc.html")
         elif paired == "SE" and not aligned_bams:
             qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R0_fastqc.html")
-            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_se_sample__{sname}.log")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_se_sample__{mname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R0_fastqc.html")
 
@@ -413,15 +414,16 @@ def define_final_chip_output(ref_genome):
         assay = row['Assay']
         peaktype = ASSAY_TO_PEAKTYPE.get(assay, "broad")
         sname = row['sample_name']
+        mname = row['mapped_name']
         paired = row['paired']
         env = row['env']
-        bigwig_files.append(f"{RESULTS_DIR}/{env}/tracks/FC__final__{sname}.bw")
+        bigwig_files.append(f"{RESULTS_DIR}/{env}/tracks/FC__final__{mname}.bw")
         if config.get("chip_fingerprint_plots", True):
-            stat_files.append(f"{RESULTS_DIR}/{env}/plots/Fingerprint__final__{sname}.png")
+            stat_files.append(f"{RESULTS_DIR}/{env}/plots/Fingerprint__final__{mname}.png")
         if paired == "PE":
-            peak_files.append(f"{RESULTS_DIR}/{env}/peaks/peaks_pe__final__{sname}_peaks.{peaktype}Peak")
+            peak_files.append(f"{RESULTS_DIR}/{env}/peaks/peaks_pe__final__{mname}_peaks.{peaktype}Peak")
         else:
-            peak_files.append(f"{RESULTS_DIR}/{env}/peaks/peaks_se__final__{sname}_peaks.{peaktype}Peak")
+            peak_files.append(f"{RESULTS_DIR}/{env}/peaks/peaks_se__final__{mname}_peaks.{peaktype}Peak")
 
     # Analysis-level outputs (merged, IDR, best peaks)
     filtered_analysis_samples = analysis_samples[(analysis_samples['env'] == 'ChIP') & (analysis_samples['ref_genome'] == ref_genome)].copy()
@@ -458,9 +460,10 @@ def define_final_chip_output(ref_genome):
     ]
     for _, row in narrow_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         env = row['env']
         pe = "pe" if row['paired'] == "PE" else "se"
-        allrep_files.append(f"{RESULTS_DIR}/{env}/chkpts/motifs__peaks_{pe}__final__{sname}_peaks.done")
+        allrep_files.append(f"{RESULTS_DIR}/{env}/chkpts/motifs__peaks_{pe}__final__{mname}_peaks.done")
 
     # Pairwise differential peaks (MAnorm) for ChIP
     chip_analysis_samples = analysis_samples[(analysis_samples["env"] == "ChIP") & (analysis_samples["ref_genome"] == ref_genome)].copy()
@@ -528,8 +531,8 @@ rule make_chromap_index:
 
 rule filter_bam_pe:
     input:
-        fastq1 = f"{RESULTS_DIR}/{{env}}/fastq/trim__{{sample_name}}__R1.fastq.gz",
-        fastq2 = f"{RESULTS_DIR}/{{env}}/fastq/trim__{{sample_name}}__R2.fastq.gz",
+        fastq1 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/fastq/trim__{base_sample(wildcards.sample_name)}__R1.fastq.gz",
+        fastq2 = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/fastq/trim__{base_sample(wildcards.sample_name)}__R2.fastq.gz",
         index = get_mapping_index,
         fasta = get_mapping_fasta
     output:
@@ -602,7 +605,7 @@ rule filter_bam_pe:
 
 rule filter_bam_se:
     input:
-        fastq = f"{RESULTS_DIR}/{{env}}/fastq/trim__{{sample_name}}__R0.fastq.gz",
+        fastq = lambda wildcards: f"{RESULTS_DIR}/{wildcards.env}/fastq/trim__{base_sample(wildcards.sample_name)}__R0.fastq.gz",
         index = get_mapping_index,
         fasta = get_mapping_fasta
     output:
@@ -666,9 +669,9 @@ rule filter_bam_se:
 
 rule make_mapping_stats_pe:
     input:
-        metrics_trim = f"{RESULTS_DIR}/{{env}}/reports/trim_pe__{{sample_name}}.json",
+        metrics_trim = lambda wildcards: f"{RESULTS_DIR}/{{env}}/reports/trim_pe__{base_sample(wildcards.sample_name)}.json",
         metrics_map = f"{RESULTS_DIR}/{{env}}/reports/bt2_pe__{{sample_name}}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, (base_sample(wildcards.sample_name) if step in ("downloading", "trimming") else wildcards.sample_name), step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
         stat_file = f"{RESULTS_DIR}/{{env}}/reports/summary_{{env}}_PE_mapping_stats_{{sample_name}}.txt",
         log = f"{RESULTS_DIR}/{{env}}/logs/process_chip_pe_sample__{{sample_name}}.log"
@@ -716,9 +719,9 @@ rule make_mapping_stats_pe:
 
 rule make_mapping_stats_se:
     input:
-        metrics_trim = f"{RESULTS_DIR}/{{env}}/reports/trim_se__{{sample_name}}.json",
+        metrics_trim = lambda wildcards: f"{RESULTS_DIR}/{{env}}/reports/trim_se__{base_sample(wildcards.sample_name)}.json",
         metrics_map = f"{RESULTS_DIR}/{{env}}/reports/bt2_se__{{sample_name}}.txt",
-        logs = lambda wildcards: [ return_log_chip(wildcards.env, wildcards.sample_name, step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
+        logs = lambda wildcards: [ return_log_chip(wildcards.env, (base_sample(wildcards.sample_name) if step in ("downloading", "trimming") else wildcards.sample_name), step, get_sample_info_from_name(wildcards.sample_name, samples, 'paired')) for step in ["downloading", "trimming", "map_filter"] ]
     output:
         stat_file = f"{RESULTS_DIR}/{{env}}/reports/summary_{{env}}_SE_mapping_stats_{{sample_name}}.txt",
         log = f"{RESULTS_DIR}/{{env}}/logs/process_chip_se_sample__{{sample_name}}.log"

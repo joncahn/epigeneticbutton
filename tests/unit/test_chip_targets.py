@@ -22,6 +22,7 @@ from sample_sheet import (  # noqa: E402
     add_compat_columns,
     build_analysis_name,
     get_analysis_samples,
+    get_control_sample_id,
     get_replicate_sample_ids,
     identify_control_samples,
     is_peak_call_target,
@@ -279,12 +280,23 @@ class TestDualRoleControlAndTarget:
 
     def test_dual_role_analysis_group_has_both_replicates(self, df):
         # Merged analysis / IDR need both H3 reps grouped under the analysis name.
+        # The returned names are genome-qualified (mapped_name): every caller
+        # uses them to build post-alignment paths, where the reference is part
+        # of the file's identity.
         assert sorted(get_replicate_sample_ids("ChIP_broad__WT__H3__G", df)) == \
-            ["H3_rep1", "H3_rep2"]
+            ["H3_rep1__G", "H3_rep2__G"]
 
     def test_dual_role_still_resolvable_as_a_control(self, df):
         # Looking the sample up by Sample_ID must still hit the control-merge
         # path, so H3K9me2's control resolution is unaffected. Sample_IDs cannot
         # contain '__' while analysis names always do, so the two lookup key
-        # formats can never collide.
-        assert get_replicate_sample_ids("H3_rep1", df) == ["H3_rep1"]
+        # formats can never collide. The *key* stays bare; the returned names
+        # are genome-qualified.
+        assert get_replicate_sample_ids("H3_rep1", df) == ["H3_rep1__G"]
+
+    def test_dual_role_control_resolution_stays_genome_matched(self, df):
+        # The qualified name a caller got from get_replicate_sample_ids must
+        # round-trip through control lookup with the genome preserved — a
+        # control aligned to a different reference would be the wrong BAM.
+        assert get_control_sample_id("H3K9me2_rep1__G", df) == "H3_rep1__G"
+        assert get_control_sample_id("H3_rep1__G", df) == "Input_rep1__G"
