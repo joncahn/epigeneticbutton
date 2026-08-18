@@ -147,16 +147,20 @@ rule calling_peaks_atac:
         bedfile = f"{RESULTS_DIR}/ATAC/mapped/shifted_{{file_type}}__{{sample_name}}.bed.gz",
         genome_stats = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/genome_stats.json"
     output:
-        peakfile = f"{RESULTS_DIR}/ATAC/peaks/peaks_atac__{{file_type}}__{{sample_name}}_peaks.narrowPeak"
+        peakfile = f"{RESULTS_DIR}/ATAC/peaks/peaks_atac__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
-        file_type = "final|merged|pseudo1|pseudo2"
+        file_type = "final|merged|pseudo1|pseudo2",
+        peaktype = "broad|narrow"
     params:
         ipname = lambda wildcards: wildcards.sample_name,
         filetype = lambda wildcards: wildcards.file_type,
         params = config["atac_callpeaks"]['params'],
+        peaktype = lambda wildcards: _checked_peaktype(
+            wildcards.sample_name, "ATAC", wildcards.peaktype),
+        broad_flag = lambda wildcards: "--broad" if wildcards.peaktype == "broad" else "",
         genomesize_override = lambda wildcards: config["genomes"][parse_sample_name(wildcards.sample_name)['ref_genome']].get('genomesize', '')
     log:
-        temp(return_log_chip("ATAC","{sample_name}", "{file_type}__narrowpeak_calling", ""))
+        temp(return_log_chip("ATAC","{sample_name}", "{file_type}__{peaktype}peak_calling", ""))
     conda: CONDA_ENV_ATAC
     shell:
         """
@@ -166,10 +170,10 @@ rule calling_peaks_atac:
         else
             gsize=$(python3 -c "import json; print(json.load(open('{input.genome_stats}'))['effective_size'])")
         fi
-        printf "\nCalling narrow peaks for ATAC-seq {params.ipname} using macs2 version:\n"
+        printf "\nCalling {params.peaktype} peaks for ATAC-seq {params.ipname} using macs2 version:\n"
         macs2 --version
         macs2 callpeak -t {input.bedfile} -f BED \
-            -g $gsize {params.params} \
+            -g $gsize {params.params} {params.broad_flag} \
             -n peaks_atac__{params.filetype}__{params.ipname} \
             --outdir {config[output_dir]}/ATAC/peaks/
         }} 2>&1 | tee -a "{log}"
