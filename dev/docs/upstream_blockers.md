@@ -69,7 +69,7 @@ it before merging the entry; otherwise the file will rot.
   directly via `cores=`).
 - **Upstream:**
   - GitHub issue tracking the regression in this repo:
-    <https://github.com/joncahn/EPICC/issues/23>
+    <https://github.com/cahnlab/EPICC/issues/23>
   - DMRcaller upstream:
     <https://bioconductor.org/packages/DMRcaller/> (no flag has been added
     to make registered BPPARAM the default again).

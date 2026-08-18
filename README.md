@@ -17,7 +17,7 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 
 - **Multiple Data Types Support**:
   - ChIP-seq — histone marks (broad peaks) and transcription factors (narrow peaks)
-  - CUT&RUN / CUT&Tag — broad and narrow peak variants
+  - CUT&RUN / CUT&Tag — broad and narrow peak calling
   - ATAC-seq
   - RNA-seq
   - RAMPAGE
@@ -44,11 +44,11 @@ EpigeneticButton is a comprehensive pipeline that processes and analyzes multipl
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/joncahn/EPICC.git
+git clone https://github.com/cahnlab/EPICC.git
 ```
 or for ssh connection
 ```bash
-git clone git@github.com:joncahn/EPICC.git
+git clone git@github.com:cahnlab/EPICC.git
 ```
 ```bash
 cd EPICC
@@ -69,14 +69,16 @@ For new users, it is recommended to use the local HTML builder at `tools/epicc-b
 
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
-   - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `CUT_RUN_broad` | `CUT_RUN_narrow` | `CUT_TAG_broad` | `CUT_TAG_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`]
+   - `Assay`: Type of assay — the experimental method only [`ChIP` | `CUT_RUN` | `CUT_TAG` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`]. The legacy combined tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are still accepted and split automatically at load.
    - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`), or a comma-separated list (e.g. `B73,W22`) to map the same reads to several references
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
-   - `Read_files`: Path to FASTQ/BAM files, or SRA accession (e.g. `SRR12345678`). For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple SRA accessions or FASTQ files (e.g. `SRR111+SRR222`, or `a.fq.gz+b.fq.gz`); BAM/bedMethyl inputs must be merged upstream.
+   - `Read_files`: Path to FASTQ/BAM files, SRA accession (e.g. `SRR12345678`), HTTP(S) URL, or public `s3://bucket/key` URI. For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple SRA accessions or FASTQ files (e.g. `SRR111+SRR222`, or `a.fq.gz+b.fq.gz`); BAM/bedMethyl inputs must be merged upstream.
    - `Read_layout`: [`PE` | `SE`]
-   - `IP_target`: Required for ChIP assays — the IP target (e.g. `H3K9me2`) or control type (e.g. `Input`, `WCE`). Leave blank for other assays.
-   - `Control`: Sample_ID of the control sample for this IP (e.g. the Input sample's Sample_ID). Required for ChIP and RAMPAGE IP samples. Leave blank for controls and non-ChIP assays.
+   - `IP_target`: Required for pulldown assays (`ChIP`/`CUT_RUN`/`CUT_TAG`) — the IP target (e.g. `H3K9me2`) or control type (e.g. `Input`, `WCE`, `IgG`). Leave blank for other assays.
+   - `Control`: Sample_ID of the control sample for this IP (e.g. the Input sample's Sample_ID). Required for pulldown and RAMPAGE IP samples. Leave blank for plain controls and non-pulldown assays.
+   - `Peak_type`: [`broad` | `narrow`] — the peak-calling type, kept separate from the assay. Required for `ChIP`/`CUT_RUN`/`CUT_TAG`; leave blank for everything else.
+   - `Comments`: Optional free text for your own notes. Never read by the pipeline. The column may be omitted entirely.
 
 2. Update `config/epicc-options.yaml` with your paths and parameters:
    - Sample file: pass via `epicc run --samples` on the command line, or set `sample_file:` in the options file
@@ -182,10 +184,12 @@ To disable this override and inherit whatever `TMPDIR` the cluster provides (e.g
 
 ### Overview
 
-The sample metadata file is a tab-separated file (TSV) with 9 columns. Each row defines one biological sample.
+The sample metadata file is a tab-separated file (TSV) with 11 columns. Each row defines one biological sample.
 
-| Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control |
-|-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|
+| Sample_ID | Assay | Genome | Levels | Replicate_ID | Read_files | Read_layout | IP_target | Control | Peak_type | Comments |
+|-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|-----------|----------|
+
+The four trailing columns (`IP_target`, `Control`, `Peak_type`, `Comments`) are optional and may be left blank or omitted from the right-hand end of a row — a WGBS row can stop after `Read_layout`. See the documented template at `config/example_samples.tsv`.
 
 A migration script is available to convert old-format sample sheets:
 
@@ -203,7 +207,11 @@ python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
   - Multiple SRA accessions to merge: `SRR27821931+SRR27821932` (separated by `+`)
   - Local FASTQ path: `/archive/fastq/sample_R1.fq.gz` (SE) or `/archive/fastq/sample_R1.fq.gz,/archive/fastq/sample_R2.fq.gz` (PE, comma-separated)
   - Local BAM path for dmC: `/archive/bams/sample.bam`
+  - HTTP(S) URL: `https://example.org/data/sample_R1.fq.gz`
+  - Public S3 URI: `s3://bucket/key/sample.bam`. **Public (authentication-free) objects only** — there is no request signing, no credentials, and no dependency on the `aws` CLI. Requester-Pays buckets (including SRA's Original-Format buckets such as `s3://sra-pub-src-*`) therefore will not work; use the plain SRA accession instead.
 - **Read_layout**: `PE` for paired-end data or `SE` for single-end data.
+- **Peak_type**: `broad` or `narrow`, for the three pulldown assays only (`ChIP`, `CUT_RUN`, `CUT_TAG`). This is an *analytical* choice — how peaks are called — kept separate from the assay, which records what was done at the bench. The same libraries can therefore be re-analyzed under the other peak type by editing one column. Leave blank for every other assay: ATAC's peak type is fixed, and the rest call no peaks. Peak type still appears in output filenames.
+- **Comments**: Free text for your own notes (e.g. `resequenced 2026-03; higher duplication than rep2`). Completely inert — never read by the pipeline and never part of analysis names or output paths. Tabs and newlines are stripped on builder export so the TSV stays intact.
 - **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). To map one sample to several references, comma-separate them (e.g. `B73,W22`) — or tick them in the builder's Genome cell. The reads are downloaded and trimmed once, then aligned to each reference; every output from alignment onward is tagged with the genome (`final__WT_H3K9me2_rep1__B73.bam`), so the two analyses never collide. A genome name must not contain `__`. Each genome is defined under the `genomes:` namespace in `config/epicc-options.yaml`:
 ```yaml
 genomes:
@@ -229,44 +237,46 @@ Reference genomes must be defined under the `genomes:` namespace shown above.
 
 ### ChIP-seq (Histones and Transcription Factors)
 
-- **Assay**: `ChIP_broad` for histone marks with broad peaks (e.g. H3K9me2, H3K27me3) or `ChIP_narrow` for marks with narrow peaks (e.g. H3K4me3) and transcription factors (e.g. TB1, FLC). The [ENCODE histone ChIP-seq target categorization](https://www.encodeproject.org/chip-seq/histone/) is a good starting point: broad-domain marks (H3K27me3, H3K36me3, H3K9me1/2, H3K79me2/3, H4K20me1, H3K4me1) use `ChIP_broad`; punctate marks and TFs (H3K4me2/3, H3K27ac, H3K9ac, H2AFZ) use `ChIP_narrow`. **Note that H3K27ac is narrow** despite being on the same residue as the broad mark H3K27me3. H3K9me3 is nominally broad but heavily enriched in repeats and benefits from a focused analysis — see ENCODE's note. Some targets profit from running both passes and comparing: RNA Pol II has sharp TSS peaks plus broader gene-body coverage, and H3K27me3 Polycomb domains can contain internal islands.
+- **Assay**: `ChIP`.
+- **Peak_type**: `broad` for histone marks with broad peaks (e.g. H3K9me2, H3K27me3) or `narrow` for marks with narrow peaks (e.g. H3K4me3) and transcription factors (e.g. TB1, FLC). The [ENCODE histone ChIP-seq target categorization](https://www.encodeproject.org/chip-seq/histone/) is a good starting point: broad-domain marks (H3K27me3, H3K36me3, H3K9me1/2, H3K79me2/3, H4K20me1, H3K4me1) use `broad`; punctate marks and TFs (H3K4me2/3, H3K27ac, H3K9ac, H2AFZ) use `narrow`. **Note that H3K27ac is narrow** despite being on the same residue as the broad mark H3K27me3. H3K9me3 is nominally broad but heavily enriched in repeats and benefits from a focused analysis — see ENCODE's note. Some targets profit from running both passes and comparing: RNA Pol II has sharp TSS peaks plus broader gene-body coverage, and H3K27me3 Polycomb domains can contain internal islands. Because peak type is its own column, running both passes means copying the rows and changing `Peak_type` — the assay label stays `ChIP`.
 - **IP_target**: Required for all ChIP samples including controls. The name of what was pulled down — e.g. `H3K9me2` or `TB1` for IP, or `Input`/`WCE`/`IgG` for controls.
-- **Control**: For IP samples, the Sample_ID of the control sample. Leave blank for control samples themselves. Multiple IP samples can share the same control.
+- **Control**: For IP samples, the Sample_ID of the control sample. Multiple IP samples can share the same control. A control may itself declare a `Control` — the *dual-role* case, where a sample is both another row's control and an analysis target in its own right (e.g. H3 serving as H3K9me2's control while itself being normalized against Input). Such a sample gets the full analysis treatment: peaks, fold-change tracks, and a merged analysis group. Chaining stops there: the control's control must not declare one. A pulldown row with no `Control` at all is not peak-callable and is dropped from peak and analysis targets.
 
 Histone example:
 ```
-WT_leaf_H3K9me2_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12345	PE	H3K9me2	WT_leaf_Input_rep1
-WT_leaf_Input_rep1	ChIP_broad	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12346	PE	Input
+WT_leaf_H3K9me2_rep1	ChIP	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12345	PE	H3K9me2	WT_leaf_Input_rep1	broad
+WT_leaf_Input_rep1	ChIP	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12346	PE	Input		broad
 ```
 
 Transcription factor example:
 ```
-WT_leaf_TB1_rep1	ChIP_narrow	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12347	PE	TB1	WT_leaf_Input_rep1
-WT_leaf_Input_rep1	ChIP_narrow	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12348	PE	Input
+WT_leaf_TB1_rep1	ChIP	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12347	PE	TB1	WT_leaf_Input_rep1	narrow
+WT_leaf_Input_rep1	ChIP	ColCEN	genotype:WT,tissue:leaf	rep1	SRR12348	PE	Input		narrow
 ```
 
 To use different controls for different marks (e.g. H3 for one mark, H4 for another), simply assign the appropriate control Sample_ID in the `Control` column.
 
-- Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `ChIP_broad`, using `MNase` as IP_target for the light digest and `Input` for the heavy digest.
+- Option: Differential nucleosome sensitivity (DNS-seq) can be analyzed with `Assay=ChIP` and `Peak_type=broad`, using `MNase` as IP_target for the light digest and `Input` for the heavy digest.
 
 ### CUT&RUN / CUT&Tag
 
-- **Assay**: `CUT_RUN_broad` / `CUT_TAG_broad` for diffuse marks (H3K27me3, H3K9me2, etc.); `CUT_RUN_narrow` / `CUT_TAG_narrow` for sharp marks and TFs (H3K4me3, CTCF, etc.). All four route through the ChIP env.
+- **Assay**: `CUT_RUN` or `CUT_TAG`. Both route through the ChIP env.
+- **Peak_type**: `broad` for diffuse marks (H3K27me3, H3K9me2, etc.); `narrow` for sharp marks and TFs (H3K4me3, CTCF, etc.).
 - **IP_target**: Required for all CUT&x samples including controls. Use the antibody target (e.g. `H3K27me3`, `CTCF`) for IPs and `IgG` for controls.
-- **Control**: For IP samples, the Sample_ID of the IgG control sample. Multiple IPs commonly share a single IgG (the typical CUT&RUN convention is one IgG per batch, not per replicate).
-- **Peak callers**: defaults are peak-shape-aware — `*_broad` → epic2, `*_narrow` → SEACR. MACS2 is available as a fallback. Override via `cut_callpeaks.broad_caller` / `narrow_caller` in `config/epicc-options.yaml`.
+- **Control**: For IP samples, the Sample_ID of the IgG control sample. Multiple IPs commonly share a single IgG (the typical CUT&RUN convention is one IgG per batch, not per replicate). Because control-row replicate merging keys on `(Levels, IP_target, Genome)` and ignores the assay label, one biological IgG can serve broad and narrow IPs — and CUT&RUN and CUT&Tag IPs — at once.
+- **Peak callers**: defaults are peak-shape-aware — `broad` → epic2, `narrow` → SEACR. MACS2 is available as a fallback. Override via `cut_callpeaks.broad_caller` / `narrow_caller` in `config/epicc-options.yaml`.
 
 CUT&RUN example (sharing a single IgG across reps):
 ```
-WT_endo_H3K27me3_rep1	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310960	PE	H3K27me3	WT_endo_IgG_rep1
-WT_endo_H3K27me3_rep2	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep2	SRR8310958	PE	H3K27me3	WT_endo_IgG_rep1
-WT_endo_IgG_rep1	CUT_RUN_broad	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310961	PE	IgG
+WT_endo_H3K27me3_rep1	CUT_RUN	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310960	PE	H3K27me3	WT_endo_IgG_rep1	broad
+WT_endo_H3K27me3_rep2	CUT_RUN	ColCEN	genotype:WT,tissue:endosperm	rep2	SRR8310958	PE	H3K27me3	WT_endo_IgG_rep1	broad
+WT_endo_IgG_rep1	CUT_RUN	ColCEN	genotype:WT,tissue:endosperm	rep1	SRR8310961	PE	IgG		broad
 ```
 
 CUT&Tag for a TF (single-end, defaulting to SEACR for narrow peak calling):
 ```
-WT_leaf_CTCF_rep1	CUT_TAG_narrow	hg38	genotype:WT,tissue:leaf	rep1	SRR12345	SE	CTCF	WT_leaf_IgG_rep1
-WT_leaf_IgG_rep1	CUT_TAG_broad	hg38	genotype:WT,tissue:leaf	rep1	SRR12346	SE	IgG
+WT_leaf_CTCF_rep1	CUT_TAG	hg38	genotype:WT,tissue:leaf	rep1	SRR12345	SE	CTCF	WT_leaf_IgG_rep1	narrow
+WT_leaf_IgG_rep1	CUT_TAG	hg38	genotype:WT,tissue:leaf	rep1	SRR12346	SE	IgG		narrow
 ```
 
 ### RNA-seq

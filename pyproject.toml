@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/joncahn/EPICC"
+Homepage = "https://github.com/cahnlab/EPICC"
 Documentation = "https://epicc-documentation.readthedocs.io"
 
 # ----------------------------------------------------------------------------
