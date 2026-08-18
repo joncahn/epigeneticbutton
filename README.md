@@ -70,7 +70,7 @@ For new users, it is recommended to use the local HTML builder at `tools/epicc-b
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
    - `Assay`: Type of assay [`ChIP_broad` | `ChIP_narrow` | `CUT_RUN_broad` | `CUT_RUN_narrow` | `CUT_TAG_broad` | `CUT_TAG_narrow` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`]
-   - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)
+   - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`), or a comma-separated list (e.g. `B73,W22`) to map the same reads to several references
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
    - `Read_files`: Path to FASTQ/BAM files, or SRA accession (e.g. `SRR12345678`). For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple SRA accessions or FASTQ files (e.g. `SRR111+SRR222`, or `a.fq.gz+b.fq.gz`); BAM/bedMethyl inputs must be merged upstream.
@@ -204,7 +204,7 @@ python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
   - Local FASTQ path: `/archive/fastq/sample_R1.fq.gz` (SE) or `/archive/fastq/sample_R1.fq.gz,/archive/fastq/sample_R2.fq.gz` (PE, comma-separated)
   - Local BAM path for dmC: `/archive/bams/sample.bam`
 - **Read_layout**: `PE` for paired-end data or `SE` for single-end data.
-- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). Each genome is defined under the `genomes:` namespace in `config/epicc-options.yaml`:
+- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). To map one sample to several references, comma-separate them (e.g. `B73,W22`) — or tick them in the builder's Genome cell. The reads are downloaded and trimmed once, then aligned to each reference; every output from alignment onward is tagged with the genome (`final__WT_H3K9me2_rep1__B73.bam`), so the two analyses never collide. A genome name must not contain `__`. Each genome is defined under the `genomes:` namespace in `config/epicc-options.yaml`:
 ```yaml
 genomes:
   ColCEN:

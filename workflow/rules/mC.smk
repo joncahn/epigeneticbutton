@@ -4,7 +4,13 @@ CONDA_ENV_MC=os.path.join(REPO_FOLDER,"workflow","envs","epibutton_mc.yaml")
 
 # Build wildcard constraint patterns for dmC vs bisulfite rule routing.
 # dmC samples (Assay == "dmC") use modkit/ONT pipeline; all others use Bismark.
-_dmc_ids = sorted(samples.loc[samples["Assay"] == "dmC", "Sample_ID"].unique())
+# Both the bare Sample_ID (pre-alignment paths) and the genome-qualified
+# mapped_name (post-alignment paths) must match, or a qualified token silently
+# fails the constraint and its producing rule never fires.
+_dmc_ids = sorted(set(samples.loc[samples["Assay"] == "dmC", "Sample_ID"]).union(
+    samples.loc[samples["Assay"] == "dmC", "mapped_name"]
+    if "mapped_name" in samples.columns else []
+))
 if _dmc_ids:
     _DMC_WC = "(?:" + "|".join(re.escape(s) for s in _dmc_ids) + ")"
     _NON_DMC_WC = "(?!(?:" + "|".join(re.escape(s) for s in _dmc_ids) + ")$).*"
@@ -160,25 +166,26 @@ def define_final_mC_output(ref_genome):
 
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         paired = row['paired']
         assay = row['Assay']
 
         # dmC samples use direct methylation workflow
         if assay == "dmC":
-            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{sname}.done")
-            ont_files.append(f"{RESULTS_DIR}/mC/dmc/summary__{sname}.txt")  # modkit summary
+            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{mname}.done")
+            ont_files.append(f"{RESULTS_DIR}/mC/dmc/summary__{mname}.txt")  # modkit summary
         else:
             # Bismark workflow
-            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{sname}.done")
+            bigwig_files.append(f"{RESULTS_DIR}/mC/chkpts/bigwig__{mname}.done")
             if paired == "PE":
-                map_files.append(f"{RESULTS_DIR}/mC/reports/final_report_pe__{sname}.html")
+                map_files.append(f"{RESULTS_DIR}/mC/reports/final_report_pe__{mname}.html")
                 qc_files.append(f"{RESULTS_DIR}/mC/reports/trim__{sname}__R1_fastqc.html") # fastqc of trimmed Read1 fastq files
                 qc_files.append(f"{RESULTS_DIR}/mC/reports/trim__{sname}__R2_fastqc.html") # fastqc of trimmed Read2 fastq files
                 if not trimmed_fastqs:
                     qc_files.append(f"{RESULTS_DIR}/mC/reports/raw__{sname}__R1_fastqc.html") # fastqc of raw Read1 fastq file
                     qc_files.append(f"{RESULTS_DIR}/mC/reports/raw__{sname}__R2_fastqc.html") # fastqc of raw Read2 fastq file
             else:
-                map_files.append(f"{RESULTS_DIR}/mC/reports/final_report_se__{sname}.html")
+                map_files.append(f"{RESULTS_DIR}/mC/reports/final_report_se__{mname}.html")
                 qc_files.append(f"{RESULTS_DIR}/mC/reports/trim__{sname}__R0_fastqc.html") # fastqc of trimmed (Read0) fastq files
                 if not trimmed_fastqs:
                     qc_files.append(f"{RESULTS_DIR}/mC/reports/raw__{sname}__R0_fastqc.html") # fastqc of raw (Read0) fastq file
@@ -232,8 +239,8 @@ rule make_bismark_indices:
 
 rule bismark_map_pe:
     input:
-        fastq1 = f"{RESULTS_DIR}/mC/fastq/trim__{{sample_name}}__R1.fastq.gz",
-        fastq2 = f"{RESULTS_DIR}/mC/fastq/trim__{{sample_name}}__R2.fastq.gz",
+        fastq1 = lambda wildcards: f"{RESULTS_DIR}/mC/fastq/trim__{base_sample(wildcards.sample_name)}__R1.fastq.gz",
+        fastq2 = lambda wildcards: f"{RESULTS_DIR}/mC/fastq/trim__{base_sample(wildcards.sample_name)}__R2.fastq.gz",
         indices = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
         temp_bamfile = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_pe.bam"),
@@ -290,7 +297,7 @@ rule bismark_map_pe:
 
 rule bismark_map_se:
     input:
-        fastq0 = f"{RESULTS_DIR}/mC/fastq/trim__{{sample_name}}__R0.fastq.gz",
+        fastq0 = lambda wildcards: f"{RESULTS_DIR}/mC/fastq/trim__{base_sample(wildcards.sample_name)}__R0.fastq.gz",
         indices = lambda wildcards: f"{GENOMES_DIR}/{parse_sample_name(wildcards.sample_name)['ref_genome']}/Bisulfite_Genome"
     output:
         temp_bamfile = temp(f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2.bam"),
@@ -356,7 +363,7 @@ rule pe_or_se_mc_dispatch:
 
 rule make_mc_stats_pe:
     input:
-        metrics_trim = f"{RESULTS_DIR}/mC/reports/trim_pe__{{sample_name}}.json",
+        metrics_trim = lambda wildcards: f"{RESULTS_DIR}/mC/reports/trim_pe__{base_sample(wildcards.sample_name)}.json",
         metrics_map = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R1_bismark_bt2_PE_report.txt",
         metrics_dedup = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/PE__{{sample_name}}.deduplication_report.txt",
         cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",
@@ -406,7 +413,7 @@ rule make_mc_stats_pe:
 
 rule make_mc_stats_se:
     input:
-        metrics_trim = f"{RESULTS_DIR}/mC/reports/trim_se__{{sample_name}}.json",
+        metrics_trim = lambda wildcards: f"{RESULTS_DIR}/mC/reports/trim_se__{base_sample(wildcards.sample_name)}.json",
         metrics_map = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/trim__{{sample_name}}__R0_bismark_bt2_SE_report.txt",
         metrics_dedup = f"{RESULTS_DIR}/mC/mapped/{{sample_name}}/SE__{{sample_name}}.deduplication_report.txt",
         cx_report = f"{RESULTS_DIR}/mC/methylcall/{{sample_name}}.deduplicated.CX_report.txt.gz",

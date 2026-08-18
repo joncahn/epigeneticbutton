@@ -388,11 +388,54 @@ def read_sample_sheet(filepath):
     for col in OPTIONAL_COLNAMES:
         df[col] = df[col].fillna("")
 
+    df = explode_genomes(df)
+
     df = df.sort_values(
         by=["Genome", "Assay", "Levels", "Sample_ID"]
     ).reset_index(drop=True)
 
     return df
+
+
+def parse_genomes(genome_str):
+    """Split a Genome cell into its list of reference genomes.
+
+    ``Genome`` accepts a comma-separated list so one sample can be mapped to
+    several references (e.g. ``B73,W22``) — the reads are identical, only the
+    alignment target differs. A single genome is just a one-element list.
+    """
+    return [g.strip() for g in str(genome_str or "").split(",") if g.strip()]
+
+
+def explode_genomes(df):
+    """One input row per sample becomes one internal row per (sample, genome).
+
+    Downstream code — env mapping, analysis keys, every rule — assumes exactly
+    one reference genome per row. Exploding here keeps that assumption intact
+    while letting the sheet express multi-genome mapping on a single line, so
+    the reads are declared (and fetched, and trimmed) only once.
+
+    ``Sample_ID`` is deliberately NOT made unique per genome: it identifies the
+    library, not the alignment. Post-alignment paths are disambiguated by the
+    separate ``mapped_name`` token (see add_compat_columns).
+    """
+    if not len(df):
+        return df
+    if not df["Genome"].astype(str).str.contains(",").any():
+        return df  # fast path: nothing to explode
+    df = df.copy()
+    df["Genome"] = df["Genome"].apply(parse_genomes)
+    # Duplicates must be caught here: after the explode they are indistinguishable
+    # from two legitimately separate rows, and would silently produce a doubled
+    # DAG for the same (sample, genome).
+    for _, row in df.iterrows():
+        names = row["Genome"]
+        if len(set(names)) != len(names):
+            raise ValueError(
+                f"Sample '{row['Sample_ID']}': Genome lists the same reference "
+                f"more than once ({', '.join(names)})"
+            )
+    return df.explode("Genome", ignore_index=True)
 
 
 # ---------------------------------------------------------------------------
@@ -455,7 +498,13 @@ def build_analysis_to_replicates(df):
 
 
 def get_replicate_sample_ids(analysis_name, df):
-    """Get list of replicate Sample_IDs for a given analysis group.
+    """Get the genome-qualified replicate names for an analysis group.
+
+    Returns ``mapped_name`` values ('{Sample_ID}__{Genome}'), not bare
+    Sample_IDs: every caller uses these to build post-alignment paths, where the
+    reference is part of the file's identity. The *lookup key* is still a bare
+    analysis name or control Sample_ID.
+
 
     The analysis_name can be:
     - An analysis name like "ChIP_broad__WT_cell__H3K9me2__Spombe"
@@ -474,7 +523,7 @@ def get_replicate_sample_ids(analysis_name, df):
     result = []
     for _, row in non_control.iterrows():
         if build_analysis_name(row) == analysis_name:
-            result.append(row["Sample_ID"])
+            result.append(row.get("mapped_name", row["Sample_ID"]))
     if result:
         return result
 
@@ -491,7 +540,7 @@ def get_replicate_sample_ids(analysis_name, df):
             ctrl_key = build_control_merge_key(match.iloc[0])
             for _, row in control_df.iterrows():
                 if build_control_merge_key(row) == ctrl_key:
-                    result.append(row["Sample_ID"])
+                    result.append(row.get("mapped_name", row["Sample_ID"]))
 
     return result
 
@@ -512,6 +561,20 @@ def identify_control_samples(df):
         if pd.notna(val) and str(val).strip():
             controls.add(str(val).strip())
     return controls
+
+
+def match_sample_rows(df, name):
+    """Rows for a sample named either bare or genome-qualified.
+
+    Pre-alignment code passes a bare ``Sample_ID``; post-alignment code passes
+    the ``mapped_name`` ('{Sample_ID}__{Genome}'). Accepting both here means the
+    lookup helpers work on either side of the alignment boundary without every
+    caller having to know which token it holds.
+    """
+    match = df.loc[df["Sample_ID"] == name]
+    if match.empty and "mapped_name" in df.columns:
+        match = df.loc[df["mapped_name"] == name]
+    return match
 
 
 def is_peak_call_target(row):
@@ -555,16 +618,23 @@ def peak_callable_rows(df):
 
 
 def get_control_sample_id(sample_id, df):
-    """Get the Control sample_id for a given sample.
+    """Get the control for a given sample.
 
-    Returns the Sample_ID of the control, or None if no control.
+    The returned name matches the form of the input: asked with a
+    genome-qualified name, the control comes back qualified with the SAME
+    genome, because the caller is building a post-alignment path (the control's
+    BAM) and a control aligned to a different reference would be wrong.
     """
-    match = df.loc[df["Sample_ID"] == sample_id]
+    match = match_sample_rows(df, sample_id)
     if match.empty:
         return None
-    control = str(match["Control"].iloc[0]).strip()
-    if not control:
+    row = match.iloc[0]
+    control = str(row["Control"]).strip()
+    if not control or control == "nan":
         return None
+    # Qualify the control iff the caller used a qualified name.
+    if "mapped_name" in df.columns and sample_id == row.get("mapped_name"):
+        return f"{control}__{row['ref_genome']}"
     return control
 
 
@@ -628,8 +698,8 @@ def get_analysis_samples(df):
 # ---------------------------------------------------------------------------
 
 def get_sample_field(sample_id, df, field):
-    """Look up a single field value for a sample by Sample_ID."""
-    match = df.loc[df["Sample_ID"] == sample_id]
+    """Look up a single field value by bare or genome-qualified sample name."""
+    match = match_sample_rows(df, sample_id)
     if match.empty:
         return None
     return match[field].iloc[0]
@@ -731,6 +801,13 @@ def add_compat_columns(df):
 
     # sample_name = Sample_ID (the key bridge)
     df["sample_name"] = df["Sample_ID"]
+
+    # Post-alignment identity: pre-alignment paths keep the bare sample_name
+    # (one download+trim serves every reference), while alignment onward uses
+    # mapped_name so two genomes cannot collide on one filename (#39). '__' is
+    # the reserved delimiter and both halves are validated to exclude it, so
+    # rsplit('__', 1) recovers the pair unambiguously.
+    df["mapped_name"] = df["Sample_ID"].astype(str) + "__" + df["ref_genome"].astype(str)
 
     # Derive seq_id and fastq_path from Read_files
     def _derive_seq_id(row):

@@ -18,18 +18,19 @@ def define_final_atac_output(ref_genome):
     filtered_rep_samples = samples[ (samples['env'] == 'ATAC') & (samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         paired = get_sample_info_from_name(sname, samples, 'paired')
         env = "ATAC"
         if paired == "PE" and not aligned_bams:
             qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R1_fastqc.html")
             qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R2_fastqc.html")
-            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_pe_sample__{sname}.log")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_pe_sample__{mname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R1_fastqc.html")
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R2_fastqc.html")
         elif paired == "SE" and not aligned_bams:
             qc_files.append(f"{RESULTS_DIR}/{env}/reports/trim__{sname}__R0_fastqc.html")
-            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_se_sample__{sname}.log")
+            map_files.append(f"{RESULTS_DIR}/{env}/logs/process_chip_se_sample__{mname}.log")
             if not trimmed_fastqs:
                 qc_files.append(f"{RESULTS_DIR}/{env}/reports/raw__{sname}__R0_fastqc.html")
 
@@ -37,9 +38,10 @@ def define_final_atac_output(ref_genome):
     peaktype = config["atac_callpeaks"]["peaktype"]
     for _, row in filtered_rep_samples.iterrows():
         sname = row['sample_name']
+        mname = row['mapped_name']
         paired = get_sample_info_from_name(sname, samples, 'paired')
-        bigwig_files.append(f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{sname}.bw")
-        peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/peaks_atac__final__{sname}_peaks.{peaktype}Peak")
+        bigwig_files.append(f"{RESULTS_DIR}/ATAC/tracks/coverage__final__{mname}.bw")
+        peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/peaks_atac__final__{mname}_peaks.{peaktype}Peak")
 
     filtered_analysis_samples = analysis_samples[ (analysis_samples['env'] == 'ATAC') & (analysis_samples['ref_genome'] == ref_genome) ].copy()
     for _, row in filtered_analysis_samples.iterrows():
@@ -47,7 +49,7 @@ def define_final_atac_output(ref_genome):
         peak_files.append(f"{RESULTS_DIR}/ATAC/peaks/selected_peaks__{spname}.bedPeak")
         reps = get_replicate_sample_ids(row['sample_name'], samples)
         if len(reps) >= 2:
-            bigwig_files.append(f"{RESULTS_DIR}/ATAC/tracks/coverage__merged__{row['sample_name']}.bw")
+            bigwig_files.append(f"{RESULTS_DIR}/ATAC/tracks/coverage__merged__{row['mapped_name']}.bw")
             stat_files.append(f"{RESULTS_DIR}/ATAC/chkpts/idr__{spname}.done")
             
     for a, b in combinations(filtered_analysis_samples.itertuples(index=False), 2):
@@ -66,7 +68,8 @@ def define_final_atac_output(ref_genome):
                 motif_files.append(f"{RESULTS_DIR}/ATAC/chkpts/motifs__idr_peaks__{spname}.done")
         for _, row in filtered_rep_samples.iterrows():
             sname = row['sample_name']
-            allrep_files.append(f"{RESULTS_DIR}/ATAC/chkpts/motifs__peaks_atac__final__{sname}_peaks.done")
+            mname = row['mapped_name']
+            allrep_files.append(f"{RESULTS_DIR}/ATAC/chkpts/motifs__peaks_atac__final__{mname}_peaks.done")
 
     results = map_files + bigwig_files
 
