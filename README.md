@@ -70,7 +70,7 @@ For new users, it is recommended to use the local HTML builder at `tools/epicc-b
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
    - `Assay`: Type of assay — the experimental method only [`ChIP` | `CUT_RUN` | `CUT_TAG` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`]. The legacy combined tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are still accepted and split automatically at load.
-   - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`)
+   - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`), or a comma-separated list (e.g. `B73,W22`) to map the same reads to several references
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
    - `Read_files`: Path to FASTQ/BAM files, SRA accession (e.g. `SRR12345678`), HTTP(S) URL, or public `s3://bucket/key` URI. For PE FASTQs, comma-separate R1 and R2 paths. Use `+` to merge multiple SRA accessions or FASTQ files (e.g. `SRR111+SRR222`, or `a.fq.gz+b.fq.gz`); BAM/bedMethyl inputs must be merged upstream.
@@ -212,7 +212,7 @@ python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
 - **Read_layout**: `PE` for paired-end data or `SE` for single-end data.
 - **Peak_type**: `broad` or `narrow`, for the three pulldown assays only (`ChIP`, `CUT_RUN`, `CUT_TAG`). This is an *analytical* choice — how peaks are called — kept separate from the assay, which records what was done at the bench. The same libraries can therefore be re-analyzed under the other peak type by editing one column. Leave blank for every other assay: ATAC's peak type is fixed, and the rest call no peaks. Peak type still appears in output filenames.
 - **Comments**: Free text for your own notes (e.g. `resequenced 2026-03; higher duplication than rep2`). Completely inert — never read by the pipeline and never part of analysis names or output paths. Tabs and newlines are stripped on builder export so the TSV stays intact.
-- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). Each genome is defined under the `genomes:` namespace in `config/epicc-options.yaml`:
+- **Genome**: Name of the reference genome (e.g. `ColCEN`, `Spombe`). To map one sample to several references, comma-separate them (e.g. `B73,W22`) — or tick them in the builder's Genome cell. The reads are downloaded and trimmed once, then aligned to each reference; every output from alignment onward is tagged with the genome (`final__WT_H3K9me2_rep1__B73.bam`), so the two analyses never collide. A genome name must not contain `__`. Each genome is defined under the `genomes:` namespace in `config/epicc-options.yaml`:
 ```yaml
 genomes:
   ColCEN:

@@ -111,6 +111,7 @@ def check_table(tab, check_paths=True):
 
     # --- Sample_ID: required, unique, filesystem-safe ---
     sample_ids = set()
+    sample_id_genome_pairs = set()
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
         sid = str(row.get("Sample_ID", "")).strip()
         if not sid or sid == "nan":
@@ -120,8 +121,16 @@ def check_table(tab, check_paths=True):
             errors.append(f"[X] Row #{i} '{sid}': Sample_ID contains unsafe characters")
         if _DOUBLE_UNDERSCORE.search(sid):
             errors.append(f"[X] Row #{i} '{sid}': Sample_ID must not contain '__'")
-        if sid in sample_ids:
-            errors.append(f"[X] Row #{i} '{sid}': duplicate Sample_ID")
+        # Keyed on (Sample_ID, Genome): one sheet row mapped to several
+        # references is exploded into one row per reference upstream, and those
+        # legitimately share a Sample_ID. Two rows with the same ID AND the same
+        # genome are still a genuine duplicate.
+        genome_key = str(row.get("Genome", "")).strip()
+        if (sid, genome_key) in sample_id_genome_pairs:
+            errors.append(
+                f"[X] Row #{i} '{sid}': duplicate Sample_ID for genome '{genome_key}'"
+            )
+        sample_id_genome_pairs.add((sid, genome_key))
         sample_ids.add(sid)
 
     # --- Assay: controlled vocabulary ---
@@ -133,46 +142,31 @@ def check_table(tab, check_paths=True):
                 f"Assay '{assay}' not in {VALID_ASSAYS}"
             )
 
-    # --- Peak_type: separated analytical parameter (broad/narrow) ---
-    # Required for the separated pulldown assays (ChIP/CUT_RUN/CUT_TAG); must be
-    # blank for everything else — the legacy combined assays already encode it,
-    # and non-peak / ATAC assays have no user-set peak type.
-    _legacy_combined = IP_PEAK_ASSAYS - PEAK_TYPE_ASSAYS
+    # --- Genome: required; may be a comma-separated list of references ---
+    # A sample mapped to several genomes is one row with one set of reads, so
+    # the reads are fetched and trimmed once. Each name must be free of '__':
+    # post-alignment paths are '{Sample_ID}__{Genome}' and are split on the last
+    # '__', which only parses if neither half contains the delimiter.
     for i, (_, row) in enumerate(tab.iterrows(), start=1):
-        assay = str(row.get("Assay", "")).strip()
-        peak_type = str(row.get("Peak_type", "")).strip()
-        if peak_type == "nan":
-            peak_type = ""
-        sid = str(row.get("Sample_ID", "")).strip()
-        if assay in PEAK_TYPE_ASSAYS:
-            if not peak_type:
+        raw = str(row.get("Genome", "")).strip()
+        sid = row.get("Sample_ID", "")
+        if not raw or raw == "nan":
+            errors.append(f"[X] Row #{i} '{sid}': Genome is required")
+            continue
+        names = [g.strip() for g in raw.split(",") if g.strip()]
+        if not names:
+            errors.append(f"[X] Row #{i} '{sid}': Genome is required")
+            continue
+        # `names` is normally a single entry: read_sample_sheet explodes
+        # multi-genome rows before this runs. The list handling covers frames
+        # built directly, e.g. in tests. Duplicates are caught in
+        # explode_genomes, the only place that sees the unexploded list.
+        for g in names:
+            if _DOUBLE_UNDERSCORE.search(g):
                 errors.append(
-                    f"[X] Row #{i} '{sid}': Peak_type is required for {assay} "
-                    f"(one of {sorted(VALID_PEAK_TYPES)})"
+                    f"[X] Row #{i} '{sid}': Genome '{g}' must not contain '__' "
+                    f"(reserved as a delimiter in output filenames)"
                 )
-            elif peak_type not in VALID_PEAK_TYPES:
-                errors.append(
-                    f"[X] Row #{i} '{sid}': Peak_type '{peak_type}' not in "
-                    f"{sorted(VALID_PEAK_TYPES)}"
-                )
-        elif peak_type:
-            if assay in _legacy_combined:
-                base, _, pt = assay.rpartition("_")
-                errors.append(
-                    f"[X] Row #{i} '{sid}': Peak_type must be blank when the "
-                    f"Assay already encodes it ('{assay}'); use the separated "
-                    f"form (Assay={base}, Peak_type={pt})"
-                )
-            else:
-                errors.append(
-                    f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
-                )
-
-    # --- Genome: required ---
-    for i, (_, row) in enumerate(tab.iterrows(), start=1):
-        genome = str(row.get("Genome", "")).strip()
-        if not genome or genome == "nan":
-            errors.append(f"[X] Row #{i} '{row.get('Sample_ID', '')}': Genome is required")
 
     # --- Levels: required, consistent factors ---
     all_factors = []
@@ -310,12 +304,14 @@ def check_table(tab, check_paths=True):
             for f in files_in_comp:
                 if not f:
                     continue
-                if f in seen_inputs:
+                if f in seen_inputs and seen_inputs[f] != sid:
                     errors.append(
                         f"[X] Row #{i} '{sid}': Read_files entry '{f}' is also "
                         f"used by '{seen_inputs[f]}'"
                     )
                 else:
+                    # Same Sample_ID reusing its own reads is the multi-genome
+                    # case (one library, several references), not a clash.
                     seen_inputs[f] = sid
 
     # --- Read_files: local path existence check ---
@@ -416,6 +412,41 @@ def check_table(tab, check_paths=True):
                                 f"'{gp_ctrl}'. A control may have its own "
                                 f"Control (dual-role), but that one must not."
                             )
+
+    # --- Peak_type: separated analytical parameter (broad/narrow) ---
+    # Required for the separated pulldown assays (ChIP/CUT_RUN/CUT_TAG); must be
+    # blank for everything else — the legacy combined assays already encode it,
+    # and non-peak / ATAC assays have no user-set peak type.
+    _legacy_combined = IP_PEAK_ASSAYS - PEAK_TYPE_ASSAYS
+    for i, (_, row) in enumerate(tab.iterrows(), start=1):
+        assay = str(row.get("Assay", "")).strip()
+        peak_type = str(row.get("Peak_type", "")).strip()
+        if peak_type == "nan":
+            peak_type = ""
+        sid = str(row.get("Sample_ID", "")).strip()
+        if assay in PEAK_TYPE_ASSAYS:
+            if not peak_type:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type is required for {assay} "
+                    f"(one of {sorted(VALID_PEAK_TYPES)})"
+                )
+            elif peak_type not in VALID_PEAK_TYPES:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type '{peak_type}' not in "
+                    f"{sorted(VALID_PEAK_TYPES)}"
+                )
+        elif peak_type:
+            if assay in _legacy_combined:
+                base, _, pt = assay.rpartition("_")
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type must be blank when the "
+                    f"Assay already encodes it ('{assay}'); use the separated "
+                    f"form (Assay={base}, Peak_type={pt})"
+                )
+            else:
+                errors.append(
+                    f"[X] Row #{i} '{sid}': Peak_type must be blank for {assay}"
+                )
 
     # --- Print warnings ---
     for w in warnings:
