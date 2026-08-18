@@ -285,3 +285,18 @@ class TestPerReplicatePeakTypeMatchesAnalysis:
             peaktype, caller = banners[rep]
             assert (peaktype, caller) == ("narrow", "seacr"), \
                 f"{rep} should be narrow/seacr, got {peaktype}/{caller}"
+
+    def test_mismatched_peak_type_request_is_rejected(
+            self, snakemake_available, repo_root, test_options):
+        """A contradictory request must fail rather than be quietly honoured.
+
+        The peak type in the filename is what the shell uses, so asking for a
+        broadPeak path for a narrow sample would otherwise broad-call it.
+        """
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+        wrong = CR_NARROW_PE_PEAKS.replace("narrowPeak", "broadPeak")
+        result = run_snakemake_dryrun(repo_root, test_options, wrong)
+        assert result.returncode != 0, \
+            "requesting a broadPeak path for a narrow sample should fail"
+        assert "Peak type mismatch" in (result.stdout + result.stderr)

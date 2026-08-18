@@ -117,6 +117,25 @@ def _peaktype_for_assay(assay):
             f"(e.g. Assay=ChIP, Peak_type=broad)."
         ) from None
 
+
+def _checked_peaktype(sample_name, env, requested):
+    """Return the peak type from the output filename, checked against the sheet.
+
+    The filename carries the peak type, so returning ``requested`` is what makes
+    the name and the contents the same value — they cannot drift. The check
+    catches the other direction: a path requested by hand that contradicts the
+    sample's Peak_type fails instead of being quietly honoured.
+    """
+    expected = get_peaktype_for_env(sample_name, env)
+    if requested != expected:
+        raise ValueError(
+            f"Peak type mismatch for '{sample_name}': the requested file is "
+            f"'{requested}Peak' but its Peak_type resolves to '{expected}'. "
+            f"Ask for the '{expected}Peak' path, or change Peak_type in the "
+            f"sample sheet."
+        )
+    return requested
+
 def assign_mapping_paired(wildcards, rulename, outputfile):
     sname = wildcards.sample_name
     env = get_sample_info_from_name(sname, samples, 'env')
@@ -904,11 +923,13 @@ rule calling_peaks_pe:
         peakfile = f"{RESULTS_DIR}/{{env}}/peaks/peaks_pe__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
         env = "ChIP",
-        file_type = "final|merged|pseudo1|pseudo2"
+        file_type = "final|merged|pseudo1|pseudo2",
+        peaktype = "broad|narrow"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_chip_input(wildcards),
-        peaktype = lambda wildcards: _peaktype_for_assay(_resolve_assay(wildcards.sample_name)),
+        peaktype = lambda wildcards: _checked_peaktype(
+            wildcards.sample_name, wildcards.env, wildcards.peaktype),
         caller = lambda wildcards: _resolve_peakcaller(wildcards.sample_name),
         is_cut = lambda wildcards: "1" if _resolve_assay(wildcards.sample_name).startswith(("CUT_RUN", "CUT_TAG")) else "0",
         file_type = lambda wildcards: wildcards.file_type,
@@ -998,11 +1019,13 @@ rule calling_peaks_se:
         peakfile = f"{RESULTS_DIR}/{{env}}/peaks/peaks_se__{{file_type}}__{{sample_name}}_peaks.{{peaktype}}Peak"
     wildcard_constraints:
         env = "ChIP",
-        file_type = "final|merged|pseudo1|pseudo2"
+        file_type = "final|merged|pseudo1|pseudo2",
+        peaktype = "broad|narrow"
     params:
         sample_name = lambda wildcards: wildcards.sample_name,
         inputname = lambda wildcards: assign_chip_input(wildcards),
-        peaktype = lambda wildcards: _peaktype_for_assay(_resolve_assay(wildcards.sample_name)),
+        peaktype = lambda wildcards: _checked_peaktype(
+            wildcards.sample_name, wildcards.env, wildcards.peaktype),
         caller = lambda wildcards: _resolve_peakcaller(wildcards.sample_name),
         is_cut = lambda wildcards: "1" if _resolve_assay(wildcards.sample_name).startswith(("CUT_RUN", "CUT_TAG")) else "0",
         file_type = lambda wildcards: wildcards.file_type,
