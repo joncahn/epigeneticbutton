@@ -73,10 +73,6 @@ below. Determines pipeline routing and environment mapping.
 
 These values are defined in `workflow/scripts/sample_sheet.py:VALID_ASSAYS`.
 
-**Back-compat.** Legacy combined tokens (`ChIP_broad`, `ChIP_narrow`,
-`CUT_RUN_broad/narrow`, `CUT_TAG_broad/narrow`) are still accepted on input and
-auto-split into `Assay` + `Peak_type` at load (`combine_assay_peaktype`).
-
 **Pulldown family.** `ChIP`/`CUT_RUN`/`CUT_TAG` are collected in
 `IP_PEAK_ASSAYS` and share the same semantics: `IP_target` is required (for both
 IPs and their controls), `Peak_type` is required, and `Control` may reference
@@ -93,7 +89,6 @@ vocabulary: `broad` or `narrow`.
 |------|--------|
 | Required | Non-empty (`broad`/`narrow`) for `ChIP`/`CUT_RUN`/`CUT_TAG` |
 | Blank otherwise | Must be empty for all other assays (ATAC's type is fixed; the rest have no peaks) |
-| Legacy | With a legacy combined Assay (e.g. `ChIP_broad`), Peak_type must be blank — it is auto-split from the assay name |
 
 `broad` suits histone-domain marks (H3K9me2, H3K27me3, H3K36me3, …); `narrow`
 suits transcription factors and sharp marks (H3K4me3, H3K27ac, …).
@@ -286,15 +281,6 @@ URLs with fragments intact in `Read_files`).
 | Read_layout vs Read_files (SE with multiple paths) | Error | SE layout but Read_files has multiple comma-separated paths |
 | Duplicate Read_files entries | Error | Same file path or SRA accession used by more than one Sample_ID |
 
-## Old-Format Migration
-
-If you have an old-format sample sheet (with columns `data_type`, `line`,
-`tissue`, etc.), use the migration script to convert it:
-
-```bash
-python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
-```
-
 ## Derived Names
 
 These are not user-specified columns but are computed from the sample sheet:
@@ -311,4 +297,3 @@ These are not user-specified columns but are computed from the sample sheet:
 
 - Validation: `workflow/scripts/samplefile_validation.py`
 - Constants and helpers: `workflow/scripts/sample_sheet.py`
-- Migration from old format: `scripts/migrate_sample_sheet.py`

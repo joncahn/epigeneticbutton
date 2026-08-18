@@ -35,9 +35,6 @@
 #                sequencing run, anything). Completely ignored by the pipeline —
 #                it never affects analysis names or outputs. Last column.
 #
-# Legacy sheets that baked the peak type into the assay name (e.g. ChIP_broad,
-# with no Peak_type column) are still accepted and auto-split at load.
-#
 # See dev/docs/sample-sheet-spec.md for the full per-field specification
 # and tools/epicc-builder.html for an interactive editor.
 

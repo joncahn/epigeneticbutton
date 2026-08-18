@@ -69,7 +69,7 @@ For new users, it is recommended to use the local HTML builder at `tools/epicc-b
 
 1. Prepare your sample metadata file (start from the documented template at `config/example_samples.tsv` and pass yours via `epicc run --samples ...`) with the required columns below (see Input requirements for more details specific to each data-type):
    - `Sample_ID`: Unique identifier for the sample (e.g. `WT_leaf_H3K9me2_rep1`). Must be filesystem-safe.
-   - `Assay`: Type of assay — the experimental method only [`ChIP` | `CUT_RUN` | `CUT_TAG` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`]. The legacy combined tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are still accepted and split automatically at load.
+   - `Assay`: Type of assay — the experimental method only [`ChIP` | `CUT_RUN` | `CUT_TAG` | `ATAC` | `RNAseq` | `RAMPAGE` | `sRNA` | `WGBS` | `WGBS_nd` | `PBAT` | `EMseq` | `dmC`].
    - `Genome`: Reference genome name (e.g. `ColCEN`, `Spombe`), or a comma-separated list (e.g. `B73,W22`) to map the same reads to several references
    - `Levels`: Experimental conditions as comma-separated `factor:level` pairs (e.g. `genotype:WT,tissue:leaf`)
    - `Replicate_ID`: Replicate identifier (e.g. `rep1`, `rep2`)
@@ -190,12 +190,6 @@ The sample metadata file is a tab-separated file (TSV) with 11 columns. Each row
 |-----------|-------|--------|--------|--------------|------------|-------------|-----------|---------|-----------|----------|
 
 The four trailing columns (`IP_target`, `Control`, `Peak_type`, `Comments`) are optional and may be left blank or omitted from the right-hand end of a row — a WGBS row can stop after `Read_layout`. See the documented template at `config/example_samples.tsv`.
-
-A migration script is available to convert old-format sample sheets:
-
-```bash
-python scripts/migrate_sample_sheet.py old_samples.tsv -o new_samples.tsv
-```
 
 ### Common to all types of samples
 

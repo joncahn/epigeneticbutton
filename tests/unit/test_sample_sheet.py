@@ -8,6 +8,11 @@ import os
 
 # Add the workflow/scripts directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "workflow", "scripts"))
+# samplefile_validation imports `from scripts.sample_sheet import ...`, which
+# only resolves with the parent of the workflow/ tree on sys.path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "workflow"))
+
+from scripts.samplefile_validation import check_table  # noqa: E402
 
 from sample_sheet import (
     VALID_ASSAYS,
@@ -472,13 +477,58 @@ class TestGetPeaktype:
             get_peaktype("RNAseq")
 
 
+class TestCombinedAssayTokensRejectedOnInput:
+    """The combined token is internal only — a sheet must use Assay + Peak_type.
+
+    It is still the key that output paths and env/peaktype lookups are built
+    from, so these tests pin the boundary: rejected as input, required
+    internally.
+    """
+
+    HEADER = ("Sample_ID\tAssay\tGenome\tLevels\tReplicate_ID\tRead_files\t"
+              "Read_layout\tIP_target\tControl\tPeak_type")
+
+    def _sheet(self, tmp_path, assay, peak_type):
+        f = tmp_path / "s.tsv"
+        f.write_text("\n".join([
+            self.HEADER,
+            f"IN1\t{assay}\tG\tgenotype:WT\trep1\tSRR1\tSE\tInput\t\t{peak_type}",
+            f"IP1\t{assay}\tG\tgenotype:WT\trep1\tSRR2\tSE\tH3K9me2\tIN1\t{peak_type}",
+        ]) + "\n")
+        return read_sample_sheet(f)
+
+    @pytest.mark.parametrize("assay", [
+        "ChIP_broad", "ChIP_narrow", "CUT_RUN_broad", "CUT_TAG_narrow",
+    ])
+    def test_combined_assay_is_a_validation_error(self, tmp_path, assay):
+        df = self._sheet(tmp_path, assay, "")
+        with pytest.raises(ValueError, match="not in"):
+            check_table(df, check_paths=False)
+
+    def test_separated_form_passes(self, tmp_path):
+        df = self._sheet(tmp_path, "ChIP", "broad")
+        check_table(df, check_paths=False)  # no raise
+
+    def test_combine_still_produces_the_internal_token(self, tmp_path):
+        """Rejecting it as input must not stop add_compat_columns making it."""
+        df = add_compat_columns(self._sheet(tmp_path, "ChIP", "broad"))
+        assert set(df["Assay"]) == {"ChIP_broad"}
+        assert set(df["env"]) == {"ChIP"}
+
+
 class TestCUTAssayVocabulary:
     """Sample_sheet should treat CUT&RUN/CUT&Tag as IP_PEAK_ASSAYS routed to the ChIP env."""
 
-    def test_all_four_in_valid_assays(self):
-        for a in ("CUT_RUN_broad", "CUT_RUN_narrow",
-                  "CUT_TAG_broad", "CUT_TAG_narrow"):
+    def test_both_in_valid_assays(self):
+        for a in ("CUT_RUN", "CUT_TAG"):
             assert a in VALID_ASSAYS
+
+    def test_combined_tokens_are_not_accepted_input(self):
+        """The combined form is internal only; a sheet must use Assay+Peak_type."""
+        for a in ("ChIP_broad", "ChIP_narrow",
+                  "CUT_RUN_broad", "CUT_RUN_narrow",
+                  "CUT_TAG_broad", "CUT_TAG_narrow"):
+            assert a not in VALID_ASSAYS
 
     def test_all_four_route_to_chip_env(self):
         for a in ("CUT_RUN_broad", "CUT_RUN_narrow",

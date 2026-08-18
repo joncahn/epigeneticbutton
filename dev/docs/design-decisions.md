@@ -38,19 +38,19 @@ A reference for architectural choices in the pipeline. Intended for contributors
 
 **Alternatives considered**: Keeping implicit matching by name convention. Rejected because it cannot handle multiple control types in the same experiment (Input, WCE, IgG) or different controls per mark.
 
-### Peak type from Assay, not from IP_target name
+### Peak type from an explicit column, not from the IP_target name
 
-**Decision**: `ChIP_broad` triggers broad peak calling (suitable for histone marks such as H3K9me2, H3K27me3); `ChIP_narrow` triggers narrow peak calling (suitable for transcription factors and H3K4me3). The IP_target name is not inspected to determine peak type.
+**Decision**: Peak type comes from the `Peak_type` column (`broad` for histone-domain marks, `narrow` for transcription factors and sharp marks). The IP_target name is not inspected to determine it.
 
-**Rationale**: The previous approach pattern-matched `IP_target` strings against a regex list in the options file to assign peak type. This required users to maintain the regex list and could silently mis-classify marks not in the list. Encoding peak type in the Assay field makes the decision explicit at sample-sheet entry time and eliminates the regex config entirely.
+**Rationale**: The original approach pattern-matched `IP_target` strings against a regex list in the options file. This required users to maintain the regex list and could silently mis-classify marks not in it. An explicit column makes the decision explicit at sample-sheet entry time and eliminates the regex config entirely.
 
-**Alternatives considered**: Retaining the regex approach. Rejected because it is error-prone for novel marks and obscures the peak type setting from the sample sheet itself.
+**Alternatives considered**: (1) Retaining the regex approach. Rejected because it is error-prone for novel marks and obscures the setting from the sample sheet. (2) Encoding it in the Assay token (`ChIP_broad`), which is what shipped first. Rejected because it conflates an analytical parameter with an experimental invariant: the assay records what happened at the bench and cannot change, while peak type is a choice that can be revisited on the same libraries.
 
 ### No backward compatibility with old-format sheets
 
-**Decision**: The new 9-column format (`Sample_ID`, `Assay`, `Genome`, `Levels`, `Replicate_ID`, `Read_files`, `Read_layout`, `IP_target`, `Control`) is a clean break. A migration script (`scripts/migrate_sample_sheet.py`) is provided; old-format detection was removed from the validation code.
+**Decision**: The sample-sheet format is a clean break from the old one; old-format detection was removed from the validation code. A migration script was provided for a time and then dropped ahead of 1.0.0 — see "No legacy assay tokens" below.
 
-**Rationale**: Maintaining dual-format support would require the validation and parsing code to branch on format detection, and the old format could not be reliably detected by column names (old sheets did not always include headers). The migration script makes the upgrade path explicit and testable.
+**Rationale**: Maintaining dual-format support would require the validation and parsing code to branch on format detection, and the old format could not be reliably detected by column names (old sheets did not always include headers).
 
 ---
 
@@ -349,3 +349,13 @@ A reference for architectural choices in the pipeline. Intended for contributors
 **Decision**: When neither `--profile` nor `--cores` is specified, the wrapper auto-detects SLURM by checking for `sbatch` in PATH. If found, it uses `profiles/slurm`; otherwise it runs locally with half of `nproc` cores.
 
 **Rationale**: Users shouldn't need to remember different invocations for different environments. The explicit `--profile` and `--cores` flags serve as overrides for non-standard setups. This pattern matches the existing `validate_pombe.sh` script.
+
+### No legacy assay tokens
+
+**Decision**: Ahead of 1.0.0, the combined assay tokens (`ChIP_broad`, `CUT_RUN_narrow`, …) are no longer accepted in a sheet's `Assay` column, the builder no longer splits them on import, and `scripts/migrate_sample_sheet.py` is removed. `Assay` takes the method only; `Peak_type` carries broad/narrow.
+
+The combined tokens remain as an **internal** representation: `add_compat_columns` folds `(Assay, Peak_type)` into one via `combine_assay_peaktype` and writes it back over the `Assay` column, and `ASSAY_TO_ENV`, `ASSAY_TO_PEAKTYPE` and the analysis-name builder all key on that form. They are listed in `_COMBINED_PEAK_ASSAYS`, not in `VALID_ASSAYS`.
+
+**Rationale**: Dual-form input meant two ways to express one thing, and the validation code carried a branch whose only job was to tell users which form to switch to. A 1.0.0 release is the point to require the canonical form. Keeping the combined token internally is unrelated to back-compat — it is the key that output paths and env lookups are built from, and removing it would rename every ChIP output.
+
+**Alternatives considered**: Removing the combined token throughout and keying lookups on `(Assay, Peak_type)` pairs. Rejected for this release: it renames every post-alignment ChIP path on top of the rename already coming from the Genome split, for no user-visible gain.
