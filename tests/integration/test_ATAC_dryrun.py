@@ -13,6 +13,7 @@ Test samples (from test_samples_ATAC.tsv):
   mutant2_ATAC_rep2   ATAC  PE  genotype:mutant2
 """
 
+import yaml
 import pytest
 from pathlib import Path
 
@@ -335,3 +336,55 @@ class TestErrorHandling:
         target = f"{_OUTPUT_DIR}/ChIP/tracks/coverage__final__WT_ATAC_rep1.bw"
         result = run_snakemake_dryrun(repo_root, test_options, target)
         assert result.returncode != 0, "Should fail for wrong environment target"
+
+
+# ===========================================================================
+# atac_callpeaks.peaktype
+# ===========================================================================
+
+class TestPeakTypeOption:
+    """The config knob must actually change how peaks are called.
+
+    calling_peaks_atac hardcoded narrowPeak while the target generator built
+    the path from the config, so setting broad failed the DAG rather than
+    calling broad peaks.
+    """
+
+    @pytest.fixture(scope="class")
+    def broad_options(self, tmp_path_factory, repo_root):
+        src = repo_root / "tests" / "integration" / "data" / "test_options_ATAC.yaml"
+        cfg = yaml.safe_load(src.read_text())
+        cfg.setdefault("atac_callpeaks", {})["peaktype"] = "broad"
+        dst = tmp_path_factory.mktemp("atac_broad") / "options.yaml"
+        dst.write_text(yaml.safe_dump(cfg))
+        return str(dst)
+
+    def test_broad_dag_builds(self, snakemake_available, repo_root, broad_options):
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+        result = run_snakemake_dryrun(repo_root, broad_options)
+        assert result.returncode == 0, (
+            "peaktype=broad should plan cleanly:\n" + result.stdout + result.stderr
+        )
+
+    def test_broad_calls_macs2_with_the_broad_flag(
+            self, snakemake_available, repo_root, broad_options):
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+        result = run_snakemake_dryrun(repo_root, broad_options, None, ["--printshellcmds"])
+        assert result.returncode == 0, result.stderr
+        out = result.stdout + result.stderr
+        assert "Calling broad peaks for ATAC-seq" in out
+        assert "--broad" in out, "macs2 needs --broad to emit broadPeak output"
+        assert "_peaks.broadPeak" in out
+
+    def test_default_is_narrow_and_omits_the_flag(
+            self, snakemake_available, repo_root, test_options):
+        if not snakemake_available:
+            pytest.skip("Snakemake not installed")
+        result = run_snakemake_dryrun(repo_root, test_options, None, ["--printshellcmds"])
+        assert result.returncode == 0, result.stderr
+        out = result.stdout + result.stderr
+        assert "Calling narrow peaks for ATAC-seq" in out
+        assert "--broad" not in out
+        assert "_peaks.narrowPeak" in out
