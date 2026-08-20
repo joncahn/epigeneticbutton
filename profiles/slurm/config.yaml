@@ -35,34 +35,33 @@ default-resources:
   - runtime="1h"
   #- slurm_account="<your-slurm-account>"   # EDIT: uncomment and replace with your cluster's SLURM account if --account is required.
 
-# precommand runs in every job's shell before the rule body. Use it to
-# wire TMPDIR for the cluster's local-scratch convention. Two common
-# situations require attention:
+# precommand runs in every job's shell on the compute node, before the rule
+# body. It is OFF by default -- most sites need no precommand at all.
 #
-#   1. Plain SLURM (no JobContainerType): default TMPDIR may be /tmp
-#      on the node, shared across jobs. Per-job subdir under /tmp
-#      avoids collisions:
+# TMPDIR is already handled by the workflow: workflow/Snakefile installs a
+# shell.prefix pointing TMPDIR at {output_dir}/.tmp/<job>.<pid> for every rule.
+# That runs *after* precommand and wins, so setting TMPDIR here does nothing
+# unless you also set use_node_tmpdir: true in the options file (or pass
+# --use-node-tmpdir). Only then is precommand the place to wire local scratch:
 #
-#        precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR"
-#          && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID
-#          && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
+#   precommand: 'test -n "\$SLURM_JOB_ID" && export TMPDIR=/path/to/scratch/\$USER/\$SLURM_JOB_ID && mkdir -p \$TMPDIR || true'
 #
-#   2. JobContainerType=job_container/tmpfs (common at HPCs that want
-#      strong /tmp isolation): each job gets a private /tmp tmpfs
-#      whose size is bounded by the job's RAM allocation, NOT by the
-#      node's TmpDisk. Heavy-temp rules (e.g. deeptools bamCompare
-#      --binSize 1 on a plant genome) easily exceed 16G and hit ENOSPC
-#      even when --tmp= is requested at the scheduler. Route TMPDIR
-#      to a path *outside* the container, e.g. on a shared filesystem
-#      that's NFS-mounted everywhere:
-#
-#        precommand: 'test -n "\$SLURM_JOB_ID"
-#          && export TMPDIR=/path/to/shared/scratch/\$USER/slurm_\$SLURM_JOB_ID
-#          && mkdir -p \$TMPDIR || true'
-#
-# To detect whether your cluster uses job_container/tmpfs, run
+# Beware sites with JobContainerType=job_container/tmpfs, where /tmp is a
+# RAM-backed tmpfs sized off the job's mem allocation rather than by TmpDisk --
+# routing TMPDIR to /tmp there trades an NFS bottleneck for ENOSPC. Detect with
 # `scontrol show config | grep JobContainerType` on a login node.
-precommand: 'test -n "\$SLURM_JOB_ID" && test -z "\$SLURM_TMPDIR" && export SLURM_TMPDIR=/tmp/slurm_tmp/\$SLURM_JOB_ID && export TMPDIR=\$SLURM_TMPDIR && mkdir -p \$TMPDIR || true'
+#
+# SLURM_CONF: launching epicc from *inside* a SLURM allocation (sbatch, salloc)
+# makes snakemake-executor-plugin-slurm delete every SLURM_* variable from its
+# environment, SLURM_CONF included. On clusters where SLURM_CONF is the only
+# route to slurm.conf, every job then dies with
+#   srun: fatal: Could not establish a configuration source
+# Prefer launching from a login/dev node. If you must submit from within a job,
+# restore the path here -- precommand runs downstream of the wipe:
+#
+#   precommand: 'export SLURM_CONF=/path/to/slurm.conf'
+#
+# See dev/docs/upstream_blockers.md.
 
 # Per-rule cluster-specific overrides go here if any rule needs different
 # resources/threads on this cluster than profiles/default/config.yaml

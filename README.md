@@ -178,7 +178,13 @@ This runs the standard configuration checks and dry-run, then calls `snakemake -
 
 By default, every pipeline job sets `TMPDIR` to a per-job subdirectory under `{output_dir}/.tmp/` (e.g. `results/.tmp/<SLURM_JOB_ID>.<PID>`). Tools that spill large temporary data through `TMPDIR` — such as samtools sort, STAR, fasterq-dump, and deeptools — therefore write to the project filesystem rather than the cluster's `/tmp`. This avoids `ENOSPC` errors on sites where `/tmp` is a tmpfs sized to the job's RAM allocation.
 
-To disable this override and inherit whatever `TMPDIR` the cluster provides (e.g. when `/tmp` is fast local NVMe scratch with adequate capacity), pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. The shipped SLURM profile also documents a `precommand` approach for sites that need per-job scratch under a shared path (see `profiles/slurm/config.yaml`).
+To disable this override and inherit whatever `TMPDIR` the cluster provides (e.g. when `/tmp` is fast local NVMe scratch with adequate capacity), pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. Only then does the SLURM profile's `precommand` become the place to wire local scratch — it runs before the rule body, so otherwise the routing above overrides it (see `profiles/slurm/config.yaml`).
+
+### Launching from a login node, not from inside a job
+
+Start `epicc run` from a login or dev node rather than wrapping it in `sbatch`. When Snakemake detects it is already inside a SLURM allocation, `snakemake-executor-plugin-slurm` deletes every `SLURM_*` environment variable — `SLURM_CONF` included. On clusters where `SLURM_CONF` is the only route to `slurm.conf`, every submitted job then fails with `srun: fatal: Could not establish a configuration source`. If submitting from within a job is unavoidable, restore the path via the profile's `precommand`; see the comments in `profiles/slurm/config.yaml` and `dev/docs/upstream_blockers.md`.
+
+Note that this interacts with the pre-building step above: if `conda env create` fails inside allocations on your cluster, run `epicc validate --build-envs` from the login node and then launch the run from the login node too.
 
 ## Sample file configuration
 

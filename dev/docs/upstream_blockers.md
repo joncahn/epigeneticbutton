@@ -129,3 +129,41 @@ it before merging the entry; otherwise the file will rot.
 - **Remove when:** the 3.x aligner implements `--nucleotide_coverage`, at which
   point the separate `bam2nuc` step can be dropped and the align-time flag +
   original nucleotide-report path restored.
+
+## `delete_slurm_environment()` strips `SLURM_CONF`
+
+- **Constraint:** when Snakemake is launched from inside a SLURM allocation,
+  `snakemake-executor-plugin-slurm` calls `delete_slurm_environment()`
+  (`utils.py`), which deletes *every* variable starting with `SLURM_` — with no
+  exclusions. `SLURM_CONF` is one of them. On clusters where `SLURM_CONF` is the
+  only route to `slurm.conf` (no `/etc/slurm/slurm.conf`; the path comes from an
+  environment module, as on Bright Cluster Manager sites), the wipe propagates
+  through `os.environ` into every submitted job, and the inner `srun` the
+  jobstep executor uses falls through to a DNS SRV lookup and dies:
+
+  ```
+  srun: error: resolve_ctls_from_dns_srv: res_nsearch error: Unknown host
+  srun: error: fetch_config: DNS SRV lookup failed
+  srun: fatal: Could not establish a configuration source
+  ```
+
+  It hits the first rule scheduled, so it reads as a rule-specific bug when it
+  is actually cluster-wide. Note every rule runs under an inner `srun`: the
+  submit plugin hardcodes `--executor slurm-jobstep`, which builds
+  `srun -n1 --cpu-bind=q ...`. There is no option to disable it.
+- **Workaround:** run `epicc run --profile <slurm>` from a login/dev node rather
+  than wrapping it in `sbatch` — the plugin warns against the nested case
+  itself. Where an sbatch-wrapped launch is unavoidable, re-export the path in
+  the profile's `precommand`, which runs inside each job downstream of the wipe:
+  `precommand: 'export SLURM_CONF=/path/to/slurm.conf && ...'`. Both are
+  documented in `profiles/slurm/config.yaml`.
+- **Upstream:** <https://github.com/snakemake/snakemake-executor-plugin-slurm/issues/164>
+  — reported 2024-11-04 and **closed without the fix landing**; the report names
+  `SLURM_CONFIG`, which is not a real SLURM variable (the real one is
+  `SLURM_CONF`), so the actual bug was likely never reproduced. Verified against
+  plugin 2.7.0 and upstream `main` on 2026-08-19: the function still has no
+  exclusion list.
+- **Check:** `python -c "import snakemake_executor_plugin_slurm.utils as u, inspect; print('SLURM_CONF' in inspect.getsource(u.delete_slurm_environment))"`
+  — prints `True` once the function grows an exclusion.
+- **Remove when:** the plugin preserves `SLURM_CONF` (or offers an opt-out), at
+  which point the `precommand` note in the SLURM profile can go.
