@@ -128,6 +128,96 @@ def check_snakemake_version():
         )
 
 
+def active_slurm_job_ids():
+    """IDs of the user's queued/running SLURM jobs, or None if unknowable.
+
+    None means "no SLURM answer available" (no squeue, or it failed) and must
+    be treated as "cannot rule out a live job", not as "nothing is running".
+    """
+    if shutil.which("squeue") is None:
+        return None
+    try:
+        proc = subprocess.run(
+            ["squeue", "--noheader", "--me", "--format=%i"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    ids = set()
+    for line in proc.stdout.split():
+        # Array tasks appear as "12345_7"; the scratch dir is named from
+        # SLURM_JOB_ID, so key on the leading numeric component.
+        ids.add(line.strip().split("_")[0])
+    return ids
+
+
+def parse_tmp_dir_name(name):
+    """Split a scratch dir name into (slurm_job_id, pid).
+
+    The shell.prefix names these "${SLURM_JOB_ID:-local}.$$", so a SLURM job
+    gives "3060216.12345" and a local run gives "local.12345". Returns
+    (None, None) for anything that doesn't match, so unknown entries are left
+    alone rather than guessed at.
+    """
+    parts = name.rsplit(".", 1)
+    if len(parts) != 2 or not parts[1].isdigit():
+        return (None, None)
+    job, pid = parts
+    if job == "local":
+        return (None, pid)
+    if job.isdigit():
+        return (job, pid)
+    return (None, None)
+
+
+def sweep_tmp_dirs(tmp_root, min_age_hours, active_jobs):
+    """Classify scratch dirs under tmp_root into (reclaimable, skipped).
+
+    Two independent gates, both of which must pass before a directory is
+    considered reclaimable, because deleting scratch from under a live job
+    would corrupt it:
+
+      1. It must not belong to a SLURM job that is still queued or running.
+         If the job list is unknowable, every SLURM-named dir is skipped.
+      2. It must not have been modified within min_age_hours.
+
+    `skipped` entries carry a reason so the caller can say why.
+    """
+    reclaimable, skipped = [], []
+    cutoff = time.time() - (min_age_hours * 3600)
+
+    for entry in sorted(tmp_root.iterdir()):
+        if not entry.is_dir():
+            continue
+        job, pid = parse_tmp_dir_name(entry.name)
+
+        if job is not None:
+            if active_jobs is None:
+                skipped.append((entry, "SLURM job status unknown"))
+                continue
+            if job in active_jobs:
+                skipped.append((entry, f"SLURM job {job} still active"))
+                continue
+        elif pid is None:
+            skipped.append((entry, "unrecognized name"))
+            continue
+
+        try:
+            mtime = entry.stat().st_mtime
+        except OSError as exc:
+            skipped.append((entry, f"cannot stat ({exc.strerror})"))
+            continue
+        if mtime > cutoff:
+            skipped.append((entry, f"modified < {min_age_hours:g}h ago"))
+            continue
+
+        reclaimable.append(entry)
+
+    return reclaimable, skipped
+
+
 def find_repo_root():
     """Find the repository root (directory containing workflow/Snakefile)."""
     # Start from the script's own location (git-clone install)
@@ -1352,9 +1442,10 @@ def cmd_clean(args, extra_args):
     if not _is_installed_mode():
         os.chdir(repo)
 
-    if not any([args.intermediates, args.conda_envs, args.logs, args.all]):
+    if not any([args.intermediates, args.conda_envs, args.logs, args.tmp,
+                args.all]):
         print("Nothing to clean. Specify --intermediates, --conda-envs, "
-              "--logs, or --all.", file=sys.stderr)
+              "--logs, --tmp, or --all.", file=sys.stderr)
         return 1
 
     if args.logs or args.all:
@@ -1399,6 +1490,45 @@ def cmd_clean(args, extra_args):
                   file=sys.stderr)
         else:
             print("No checkpoint files found.", file=sys.stderr)
+
+    if args.tmp or args.all:
+        # The shell.prefix traps EXIT to clean these up, but SIGKILL escapes
+        # the trap -- so SLURM timeouts, OOM kills and node failures leak a
+        # scratch dir each. Nothing else ever reclaims them.
+        output_dir = args.output_dir or "results"
+        tmp_root = run_dir / output_dir / ".tmp"
+        if not tmp_root.is_dir():
+            print("No scratch directory to reclaim.", file=sys.stderr)
+        else:
+            reclaimable, skipped = sweep_tmp_dirs(
+                tmp_root, args.tmp_min_age, active_slurm_job_ids()
+            )
+            if not reclaimable:
+                print(f"No reclaimable scratch dirs in {tmp_root}.",
+                      file=sys.stderr)
+            else:
+                print(f"Reclaiming {len(reclaimable)} leaked scratch "
+                      f"dir(s) from {tmp_root}...", file=sys.stderr)
+                freed = 0
+                for d in reclaimable:
+                    try:
+                        shutil.rmtree(d)
+                        freed += 1
+                    except OSError as exc:
+                        # Metadata contention on a shared filesystem shows up
+                        # here as EAGAIN; report it rather than dying, so the
+                        # remaining dirs still get a chance.
+                        print(f"  Could not remove {d.name}: {exc.strerror}",
+                              file=sys.stderr)
+                print(f"  Reclaimed {freed} of {len(reclaimable)}.",
+                      file=sys.stderr)
+            if skipped:
+                print(f"  Left {len(skipped)} in place:", file=sys.stderr)
+                for d, reason in skipped[:10]:
+                    print(f"    {d.name} ({reason})", file=sys.stderr)
+                if len(skipped) > 10:
+                    print(f"    ... and {len(skipped) - 10} more",
+                          file=sys.stderr)
 
     return 0
 
@@ -1872,6 +2002,17 @@ def build_parser():
     p_clean.add_argument(
         "--logs", action="store_true",
         help="Remove old snakemake log files (keeps most recent)",
+    )
+    p_clean.add_argument(
+        "--tmp", action="store_true",
+        help="Reclaim leaked per-job scratch dirs under <output_dir>/.tmp/ "
+             "(left behind by jobs killed with SIGKILL, e.g. SLURM timeouts)",
+    )
+    p_clean.add_argument(
+        "--tmp-min-age", metavar="HOURS", type=float, default=6.0,
+        help="With --tmp, only reclaim scratch dirs untouched for this many "
+             "hours (default: 6). Guards against deleting scratch out from "
+             "under a running job.",
     )
     p_clean.add_argument(
         "--all", action="store_true",
