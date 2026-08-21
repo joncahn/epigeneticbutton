@@ -39,6 +39,14 @@ DEFAULT_WORKFLOW_PROFILE = "profiles/default"
 # workflow additionally calls min_version("9.0").
 MIN_SNAKEMAKE = (9, 0, 0)
 
+# Subcommands that always shell out to snakemake, and so are worth
+# version-checking up front. Deliberately excluded: `init-profile` (copies a
+# template), `perf` (runs dev/profile_snakemake_log.py under sys.executable),
+# and `clean` (filesystem work; it checks separately in its --conda-envs
+# branch, the only path that needs snakemake). Those must keep working on a
+# machine with no epicc environment at all.
+SNAKEMAKE_COMMANDS = frozenset({"run", "validate", "output", "unlock"})
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1365,6 +1373,8 @@ def cmd_clean(args, extra_args):
                 print("No old logs to clean.", file=sys.stderr)
 
     if args.conda_envs or args.all:
+        # The only path in `clean` that needs snakemake.
+        check_snakemake_version()
         print("Cleaning unused conda environments...", file=sys.stderr)
         result = subprocess.run(
             ["snakemake", "--sdm", "conda", "--conda-cleanup-envs"],
@@ -1901,9 +1911,7 @@ def main():
         parser.print_help()
         return 1
 
-    # init-profile only copies a template, so it must keep working before any
-    # environment exists. Everything else shells out to snakemake.
-    if args.command != "init-profile":
+    if args.command in SNAKEMAKE_COMMANDS:
         check_snakemake_version()
 
     return handler(args, extra_args)

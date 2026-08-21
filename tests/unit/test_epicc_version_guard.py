@@ -163,3 +163,28 @@ class TestCheckSnakemakeVersion:
         monkeypatch.setattr(epicc.subprocess, "run", _timeout)
         with pytest.raises(SystemExit):
             epicc.check_snakemake_version()
+
+
+# ---------------------------------------------------------------------------
+# Which subcommands the guard applies to
+# ---------------------------------------------------------------------------
+
+class TestGuardScope:
+    """The guard must not block subcommands that never call snakemake.
+
+    `perf` runs dev/profile_snakemake_log.py under sys.executable, and
+    `clean` does filesystem work (only its --conda-envs branch needs
+    snakemake). Both have to keep working on a machine with no epicc
+    environment -- e.g. profiling a log fetched from a cluster.
+    """
+
+    def test_guarded_commands(self):
+        assert epicc.SNAKEMAKE_COMMANDS == {"run", "validate", "output", "unlock"}
+
+    @pytest.mark.parametrize("command", ["perf", "clean", "init-profile"])
+    def test_unguarded_commands(self, command):
+        assert command not in epicc.SNAKEMAKE_COMMANDS
+
+    def test_output_is_guarded(self):
+        # cmd_output builds `["snakemake", ...]`, so it does need the check.
+        assert "output" in epicc.SNAKEMAKE_COMMANDS
