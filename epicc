@@ -35,10 +35,188 @@ DEFAULT_OPTIONS = "config/epicc-options.yaml"
 DEFAULT_PROFILE = "profiles/slurm"
 DEFAULT_WORKFLOW_PROFILE = "profiles/default"
 
+# Snakemake 8 introduced the executor-plugin interface (`--executor`); the
+# workflow additionally calls min_version("9.0").
+MIN_SNAKEMAKE = (9, 0, 0)
+
+# Subcommands that always shell out to snakemake, and so are worth
+# version-checking up front. Deliberately excluded: `init-profile` (copies a
+# template), `perf` (runs dev/profile_snakemake_log.py under sys.executable),
+# and `clean` (filesystem work; it checks separately in its --conda-envs
+# branch, the only path that needs snakemake). Those must keep working on a
+# machine with no epicc environment at all.
+SNAKEMAKE_COMMANDS = frozenset({"run", "validate", "output", "unlock"})
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def parse_version(text):
+    """Leading numeric components of a version string, padded to three.
+
+    '9.21.0' -> (9, 21, 0); '9' -> (9, 0, 0); '9.1.0rc1' -> (9, 1, 0).
+    Returns None if no leading number can be read.
+    """
+    head = text.split()[0] if text.split() else ""
+    nums = []
+    for part in head.lstrip("vV").split(".")[:3]:
+        digits = ""
+        for ch in part:
+            if not ch.isdigit():
+                break
+            digits += ch
+        if not digits:
+            break
+        nums.append(int(digits))
+    if not nums:
+        return None
+    return tuple(nums + [0] * (3 - len(nums)))
+
+
+def check_snakemake_version():
+    """Fail early if the snakemake on PATH is too old to run this workflow.
+
+    The workflow's own min_version() guard cannot catch this: snakemake 7
+    rejects `--executor` while parsing arguments, long before it reads the
+    Snakefile, so the user sees "unrecognized arguments: --executor=slurm"
+    instead of a version complaint. The resolved path is reported alongside
+    the version because the usual cause is a stale environment shadowing the
+    intended one on PATH.
+    """
+    exe = shutil.which("snakemake")
+    if exe is None:
+        sys.exit(
+            "Error: snakemake not found on PATH. Activate the epicc conda "
+            "environment first:\n"
+            "    conda activate epicc\n"
+            "  To build it:  conda create -n epicc -y --file config/epicc-env.txt"
+        )
+
+    try:
+        proc = subprocess.run(
+            [exe, "--version"], capture_output=True, text=True, timeout=120
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        sys.exit(f"Error: could not run '{exe} --version': {exc}")
+
+    raw = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    found = parse_version(raw)
+    if found is None:
+        # Don't turn an unreadable version into a hard stop -- a git checkout
+        # or dev build should still run.
+        print(
+            f"Warning: could not read a version from '{exe} --version' "
+            f"(got {raw!r}); skipping the snakemake version check.",
+            file=sys.stderr,
+        )
+        return
+
+    if found < MIN_SNAKEMAKE:
+        need = ".".join(str(n) for n in MIN_SNAKEMAKE)
+        shown = ".".join(str(n) for n in found)
+        sys.exit(
+            f"Error: epicc needs snakemake >= {need}, but found {shown} at\n"
+            f"    {exe}\n"
+            "  Older snakemake rejects the flags epicc passes (e.g.\n"
+            "  \"unrecognized arguments: --executor=slurm\").\n"
+            "  A stale environment earlier on PATH is the usual cause -- note that\n"
+            "  environment names are case-sensitive, so 'EPICC' and 'epicc' are\n"
+            "  different environments. Check which one is active:\n"
+            "    conda activate epicc && snakemake --version\n"
+            "  To rebuild:  conda create -n epicc -y --file config/epicc-env.txt"
+        )
+
+
+def active_slurm_job_ids():
+    """IDs of the user's queued/running SLURM jobs, or None if unknowable.
+
+    None means "no SLURM answer available" (no squeue, or it failed) and must
+    be treated as "cannot rule out a live job", not as "nothing is running".
+    """
+    if shutil.which("squeue") is None:
+        return None
+    try:
+        proc = subprocess.run(
+            ["squeue", "--noheader", "--me", "--format=%i"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    ids = set()
+    for line in proc.stdout.split():
+        # Array tasks appear as "12345_7"; the scratch dir is named from
+        # SLURM_JOB_ID, so key on the leading numeric component.
+        ids.add(line.strip().split("_")[0])
+    return ids
+
+
+def parse_tmp_dir_name(name):
+    """Split a scratch dir name into (slurm_job_id, pid).
+
+    The shell.prefix names these "${SLURM_JOB_ID:-local}.$$", so a SLURM job
+    gives "3060216.12345" and a local run gives "local.12345". Returns
+    (None, None) for anything that doesn't match, so unknown entries are left
+    alone rather than guessed at.
+    """
+    parts = name.rsplit(".", 1)
+    if len(parts) != 2 or not parts[1].isdigit():
+        return (None, None)
+    job, pid = parts
+    if job == "local":
+        return (None, pid)
+    if job.isdigit():
+        return (job, pid)
+    return (None, None)
+
+
+def sweep_tmp_dirs(tmp_root, min_age_hours, active_jobs):
+    """Classify scratch dirs under tmp_root into (reclaimable, skipped).
+
+    Two independent gates, both of which must pass before a directory is
+    considered reclaimable, because deleting scratch from under a live job
+    would corrupt it:
+
+      1. It must not belong to a SLURM job that is still queued or running.
+         If the job list is unknowable, every SLURM-named dir is skipped.
+      2. It must not have been modified within min_age_hours.
+
+    `skipped` entries carry a reason so the caller can say why.
+    """
+    reclaimable, skipped = [], []
+    cutoff = time.time() - (min_age_hours * 3600)
+
+    for entry in sorted(tmp_root.iterdir()):
+        if not entry.is_dir():
+            continue
+        job, pid = parse_tmp_dir_name(entry.name)
+
+        if job is not None:
+            if active_jobs is None:
+                skipped.append((entry, "SLURM job status unknown"))
+                continue
+            if job in active_jobs:
+                skipped.append((entry, f"SLURM job {job} still active"))
+                continue
+        elif pid is None:
+            skipped.append((entry, "unrecognized name"))
+            continue
+
+        try:
+            mtime = entry.stat().st_mtime
+        except OSError as exc:
+            skipped.append((entry, f"cannot stat ({exc.strerror})"))
+            continue
+        if mtime > cutoff:
+            skipped.append((entry, f"modified < {min_age_hours:g}h ago"))
+            continue
+
+        reclaimable.append(entry)
+
+    return reclaimable, skipped
+
 
 def find_repo_root():
     """Find the repository root (directory containing workflow/Snakefile)."""
@@ -1264,9 +1442,10 @@ def cmd_clean(args, extra_args):
     if not _is_installed_mode():
         os.chdir(repo)
 
-    if not any([args.intermediates, args.conda_envs, args.logs, args.all]):
+    if not any([args.intermediates, args.conda_envs, args.logs, args.tmp,
+                args.all]):
         print("Nothing to clean. Specify --intermediates, --conda-envs, "
-              "--logs, or --all.", file=sys.stderr)
+              "--logs, --tmp, or --all.", file=sys.stderr)
         return 1
 
     if args.logs or args.all:
@@ -1285,6 +1464,8 @@ def cmd_clean(args, extra_args):
                 print("No old logs to clean.", file=sys.stderr)
 
     if args.conda_envs or args.all:
+        # The only path in `clean` that needs snakemake.
+        check_snakemake_version()
         print("Cleaning unused conda environments...", file=sys.stderr)
         result = subprocess.run(
             ["snakemake", "--sdm", "conda", "--conda-cleanup-envs"],
@@ -1309,6 +1490,45 @@ def cmd_clean(args, extra_args):
                   file=sys.stderr)
         else:
             print("No checkpoint files found.", file=sys.stderr)
+
+    if args.tmp or args.all:
+        # The shell.prefix traps EXIT to clean these up, but SIGKILL escapes
+        # the trap -- so SLURM timeouts, OOM kills and node failures leak a
+        # scratch dir each. Nothing else ever reclaims them.
+        output_dir = args.output_dir or "results"
+        tmp_root = run_dir / output_dir / ".tmp"
+        if not tmp_root.is_dir():
+            print("No scratch directory to reclaim.", file=sys.stderr)
+        else:
+            reclaimable, skipped = sweep_tmp_dirs(
+                tmp_root, args.tmp_min_age, active_slurm_job_ids()
+            )
+            if not reclaimable:
+                print(f"No reclaimable scratch dirs in {tmp_root}.",
+                      file=sys.stderr)
+            else:
+                print(f"Reclaiming {len(reclaimable)} leaked scratch "
+                      f"dir(s) from {tmp_root}...", file=sys.stderr)
+                freed = 0
+                for d in reclaimable:
+                    try:
+                        shutil.rmtree(d)
+                        freed += 1
+                    except OSError as exc:
+                        # Metadata contention on a shared filesystem shows up
+                        # here as EAGAIN; report it rather than dying, so the
+                        # remaining dirs still get a chance.
+                        print(f"  Could not remove {d.name}: {exc.strerror}",
+                              file=sys.stderr)
+                print(f"  Reclaimed {freed} of {len(reclaimable)}.",
+                      file=sys.stderr)
+            if skipped:
+                print(f"  Left {len(skipped)} in place:", file=sys.stderr)
+                for d, reason in skipped[:10]:
+                    print(f"    {d.name} ({reason})", file=sys.stderr)
+                if len(skipped) > 10:
+                    print(f"    ... and {len(skipped) - 10} more",
+                          file=sys.stderr)
 
     return 0
 
@@ -1347,7 +1567,7 @@ def cmd_init_profile(args, extra_args):
           file=sys.stderr)
     print(f"  Edit the EDIT: markers in that file for your cluster (account,",
           file=sys.stderr)
-    print(f"  TMPDIR path, per-rule resource overrides).", file=sys.stderr)
+    print(f"  partition, per-rule resource overrides).", file=sys.stderr)
     print(f"  Then run:  epicc run --samples <file.tsv> --profile {profile_name}",
           file=sys.stderr)
     return 0
@@ -1397,10 +1617,13 @@ def add_common_options(parser):
     )
     parser.add_argument(
         "--use-node-tmpdir", action="store_true",
-        help="Skip the workflow-level TMPDIR override and inherit the "
-             "cluster's default TMPDIR. By default, every job gets its own "
-             "subdir under <output_dir>/.tmp/ to avoid ENOSPC on sites with "
-             "a small in-memory /tmp tmpfs.",
+        help="Skip the workflow-level TMPDIR override so jobs inherit TMPDIR "
+             "from the environment. This does NOT force /tmp: an exported "
+             "TMPDIR reaches jobs (sbatch --export=ALL), as does one set by a "
+             "site prolog or the profile's precommand; /tmp is only the "
+             "fallback when nothing sets it. By default, every job gets its "
+             "own subdir under <output_dir>/.tmp/ to avoid ENOSPC on sites "
+             "with a small in-memory /tmp tmpfs.",
     )
     verbosity = parser.add_mutually_exclusive_group()
     verbosity.add_argument(
@@ -1784,6 +2007,17 @@ def build_parser():
         help="Remove old snakemake log files (keeps most recent)",
     )
     p_clean.add_argument(
+        "--tmp", action="store_true",
+        help="Reclaim leaked per-job scratch dirs under <output_dir>/.tmp/ "
+             "(left behind by jobs killed with SIGKILL, e.g. SLURM timeouts)",
+    )
+    p_clean.add_argument(
+        "--tmp-min-age", metavar="HOURS", type=float, default=6.0,
+        help="With --tmp, only reclaim scratch dirs untouched for this many "
+             "hours (default: 6). Guards against deleting scratch out from "
+             "under a running job.",
+    )
+    p_clean.add_argument(
         "--all", action="store_true",
         help="All of the above",
     )
@@ -1820,6 +2054,9 @@ def main():
     if handler is None:
         parser.print_help()
         return 1
+
+    if args.command in SNAKEMAKE_COMMANDS:
+        check_snakemake_version()
 
     return handler(args, extra_args)
 

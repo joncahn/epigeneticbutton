@@ -178,7 +178,32 @@ This runs the standard configuration checks and dry-run, then calls `snakemake -
 
 By default, every pipeline job sets `TMPDIR` to a per-job subdirectory under `{output_dir}/.tmp/` (e.g. `results/.tmp/<SLURM_JOB_ID>.<PID>`). Tools that spill large temporary data through `TMPDIR` — such as samtools sort, STAR, fasterq-dump, and deeptools — therefore write to the project filesystem rather than the cluster's `/tmp`. This avoids `ENOSPC` errors on sites where `/tmp` is a tmpfs sized to the job's RAM allocation.
 
-To disable this override and inherit whatever `TMPDIR` the cluster provides (e.g. when `/tmp` is fast local NVMe scratch with adequate capacity), pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. The shipped SLURM profile also documents a `precommand` approach for sites that need per-job scratch under a shared path (see `profiles/slurm/config.yaml`).
+To disable this override, pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. This does **not** mean "use `/tmp`" — it means EPICC sets no `TMPDIR` at all, and jobs inherit one from the environment. Precedence is then:
+
+1. `TMPDIR` exported in the shell you launch from — it reaches the jobs, because the SLURM plugin submits with `sbatch --export=ALL`
+2. `TMPDIR` set by the site: a SLURM prolog, `job_container/tmpfs`, or an environment module
+3. `TMPDIR` set by the SLURM profile's `precommand` — this is the case where it finally takes effect, since nothing overwrites it afterwards
+4. Each tool's own default, which is usually `/tmp`, only if nothing above set one
+
+So directing temp work at node-local NVMe scratch, or at a filesystem that isn't under metadata pressure, is just `export TMPDIR=...` before the run. `fasterq-dump` is explicit about this (`--temp "${TMPDIR:-/tmp}"`), and sort, samtools, STAR and deeptools follow `TMPDIR` the same way.
+
+Two rules opt out in either mode: `STAR_map_pe`/`STAR_map_se` deliberately keep temp work in the `genomes/` and `results/` trees to stay off any tmpfs, and Bismark uses its own `--temp_dir` under `results/mC/mapped/<sample>/`. So `use_node_tmpdir` reduces project-filesystem load without eliminating it.
+
+Each scratch directory is removed by an `EXIT` trap when its job finishes, including on most failures — but `SIGKILL` escapes the trap, so jobs killed by a SLURM timeout, an OOM kill, or a node failure leak one each. To reclaim them:
+
+```bash
+epicc clean --tmp
+```
+
+This only removes a directory when both safety conditions hold: it does not belong to a SLURM job that is still queued or running, and it has not been modified for `--tmp-min-age` hours (default 6). Directories it leaves alone are listed with the reason. If `squeue` is unavailable, every SLURM-named directory is skipped rather than assumed dead.
+
+Note that this routing trades cluster `/tmp` pressure for metadata load on the project filesystem — one directory created and removed per job, across as many jobs as run concurrently. On a shared parallel filesystem that is worth knowing about: if the filesystem administrators report metadata contention, `use_node_tmpdir: true` and a lower `jobs:` setting in the profile are the two levers that reduce EPICC's contribution.
+
+### Launching from a login node, not from inside a job
+
+Start `epicc run` from a login or dev node rather than wrapping it in `sbatch`. When Snakemake detects it is already inside a SLURM allocation, `snakemake-executor-plugin-slurm` deletes every `SLURM_*` environment variable — `SLURM_CONF` included. On clusters where `SLURM_CONF` is the only route to `slurm.conf`, every submitted job then fails with `srun: fatal: Could not establish a configuration source`. If submitting from within a job is unavoidable, restore the path via the profile's `precommand`; see the comments in `profiles/slurm/config.yaml` and `dev/docs/upstream_blockers.md`.
+
+Note that this interacts with the pre-building step above: if `conda env create` fails inside allocations on your cluster, run `epicc validate --build-envs` from the login node and then launch the run from the login node too.
 
 ## Sample file configuration
 
