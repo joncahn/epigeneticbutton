@@ -1617,10 +1617,13 @@ def add_common_options(parser):
     )
     parser.add_argument(
         "--use-node-tmpdir", action="store_true",
-        help="Skip the workflow-level TMPDIR override and inherit the "
-             "cluster's default TMPDIR. By default, every job gets its own "
-             "subdir under <output_dir>/.tmp/ to avoid ENOSPC on sites with "
-             "a small in-memory /tmp tmpfs.",
+        help="Skip the workflow-level TMPDIR override so jobs inherit TMPDIR "
+             "from the environment. This does NOT force /tmp: an exported "
+             "TMPDIR reaches jobs (sbatch --export=ALL), as does one set by a "
+             "site prolog or the profile's precommand; /tmp is only the "
+             "fallback when nothing sets it. By default, every job gets its "
+             "own subdir under <output_dir>/.tmp/ to avoid ENOSPC on sites "
+             "with a small in-memory /tmp tmpfs.",
     )
     verbosity = parser.add_mutually_exclusive_group()
     verbosity.add_argument(

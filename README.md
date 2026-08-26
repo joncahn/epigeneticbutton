@@ -178,7 +178,16 @@ This runs the standard configuration checks and dry-run, then calls `snakemake -
 
 By default, every pipeline job sets `TMPDIR` to a per-job subdirectory under `{output_dir}/.tmp/` (e.g. `results/.tmp/<SLURM_JOB_ID>.<PID>`). Tools that spill large temporary data through `TMPDIR` — such as samtools sort, STAR, fasterq-dump, and deeptools — therefore write to the project filesystem rather than the cluster's `/tmp`. This avoids `ENOSPC` errors on sites where `/tmp` is a tmpfs sized to the job's RAM allocation.
 
-To disable this override and inherit whatever `TMPDIR` the cluster provides (e.g. when `/tmp` is fast local NVMe scratch with adequate capacity), pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. Only then does the SLURM profile's `precommand` become the place to wire local scratch — it runs before the rule body, so otherwise the routing above overrides it (see `profiles/slurm/config.yaml`).
+To disable this override, pass `--use-node-tmpdir` on the command line or set `use_node_tmpdir: true` in `config/epicc-options.yaml`. This does **not** mean "use `/tmp`" — it means EPICC sets no `TMPDIR` at all, and jobs inherit one from the environment. Precedence is then:
+
+1. `TMPDIR` exported in the shell you launch from — it reaches the jobs, because the SLURM plugin submits with `sbatch --export=ALL`
+2. `TMPDIR` set by the site: a SLURM prolog, `job_container/tmpfs`, or an environment module
+3. `TMPDIR` set by the SLURM profile's `precommand` — this is the case where it finally takes effect, since nothing overwrites it afterwards
+4. Each tool's own default, which is usually `/tmp`, only if nothing above set one
+
+So directing temp work at node-local NVMe scratch, or at a filesystem that isn't under metadata pressure, is just `export TMPDIR=...` before the run. `fasterq-dump` is explicit about this (`--temp "${TMPDIR:-/tmp}"`), and sort, samtools, STAR and deeptools follow `TMPDIR` the same way.
+
+Two rules opt out in either mode: `STAR_map_pe`/`STAR_map_se` deliberately keep temp work in the `genomes/` and `results/` trees to stay off any tmpfs, and Bismark uses its own `--temp_dir` under `results/mC/mapped/<sample>/`. So `use_node_tmpdir` reduces project-filesystem load without eliminating it.
 
 Each scratch directory is removed by an `EXIT` trap when its job finishes, including on most failures — but `SIGKILL` escapes the trap, so jobs killed by a SLURM timeout, an OOM kill, or a node failure leak one each. To reclaim them:
 

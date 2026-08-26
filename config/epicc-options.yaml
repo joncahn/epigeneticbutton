@@ -103,7 +103,18 @@ keep_dmc_intermediates: false # dmC aligned modBAMs and bedMethyl pileup files (
 # spill onto the project filesystem rather than the cluster's /tmp. Avoids
 # ENOSPC on sites where /tmp is a tmpfs sized off the job's RAM allocation
 # (e.g. SLURM JobContainerType=job_container/tmpfs). Set true to skip the
-# override and inherit whatever TMPDIR the cluster provides.
+# override, so jobs inherit TMPDIR from the environment instead.
+#
+# True does NOT mean "use /tmp" -- it means "don't override". Precedence is
+# then: TMPDIR exported in the launching shell (it reaches jobs via
+# `sbatch --export=ALL`), else one set by a site prolog or the profile's
+# precommand, else each tool's own default, which is usually /tmp. So
+# pointing temp work at node-local scratch, or at a filesystem that isn't
+# under metadata pressure, is just `export TMPDIR=...` before the run.
+#
+# Two rules opt out either way: STAR_map_{pe,se} keep temp work in the
+# genomes/ and results/ trees on purpose, and bismark uses its own
+# --temp_dir under results/mC/mapped/<sample>/.
 use_node_tmpdir: false
 
 # Trimming and processing parameters (fastp):
