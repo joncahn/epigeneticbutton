@@ -84,6 +84,7 @@ dev/
         README.md             # This file
         design-decisions.md   # Architectural decisions and rationale
         sample-sheet-spec.md  # Sample sheet format specification
+        sample-uid-cache.md   # Proposal: per-sample caching via derived UIDs
         benchmarks.md         # Pipeline benchmarking notes
         TODO.md               # Active roadmap and backlog
         upstream_blockers.md  # Pins/workarounds tied to upstream constraints
