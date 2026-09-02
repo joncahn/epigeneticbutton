@@ -51,15 +51,23 @@ default-resources:
 # routing TMPDIR to /tmp there trades an NFS bottleneck for ENOSPC. Detect with
 # `scontrol show config | grep JobContainerType` on a login node.
 #
-# SLURM_CONF: launching epicc from *inside* a SLURM allocation (sbatch, salloc)
-# makes snakemake-executor-plugin-slurm delete every SLURM_* variable from its
-# environment, SLURM_CONF included. On clusters where SLURM_CONF is the only
-# route to slurm.conf, every job then dies with
+# SLURM_CONF: two separate upstream bugs strip it, and both end the same way --
+# every job dies with
 #   srun: fatal: Could not establish a configuration source
-# Prefer launching from a login/dev node. If you must submit from within a job,
-# restore the path here -- precommand runs downstream of the wipe:
+# on clusters where SLURM_CONF is the only route to slurm.conf (no
+# /etc/slurm/slurm.conf on the compute nodes; the path comes from a module).
 #
-#   precommand: 'export SLURM_CONF=/path/to/slurm.conf'
+#   1. snakemake-executor-plugin-slurm deletes every SLURM_* variable when
+#      snakemake itself runs inside an allocation. Prefer launching from a
+#      login/dev node. If you must submit from within a job, restore the path
+#      here -- precommand runs downstream of that wipe:
+#
+#        precommand: 'export SLURM_CONF=/path/to/slurm.conf'
+#
+#   2. snakemake-executor-plugin-slurm-jobstep 0.6.1 strips it from the inner
+#      srun's environment on *every* run, wherever it was launched. precommand
+#      does NOT help -- the strip happens inside the job. Pin the plugin to
+#      <0.6.1 (config/epicc-env.txt does this).
 #
 # See dev/docs/upstream_blockers.md.
 

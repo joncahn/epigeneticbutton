@@ -1,3 +1,7 @@
 snakemake>=9
 snakemake-executor-plugin-slurm
+# jobstep 0.6.1 strips SLURM_CONF from the env it hands the inner srun, which
+# breaks every job on clusters where that variable is the only route to
+# slurm.conf. See dev/docs/upstream_blockers.md.
+snakemake-executor-plugin-slurm-jobstep<0.6.1
 snakemake-executor-plugin-cluster-generic

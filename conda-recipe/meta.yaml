@@ -33,6 +33,9 @@ requirements:
     - snakemake >=9.0
     - pyyaml
     - snakemake-executor-plugin-slurm
+    # 0.6.1 strips SLURM_CONF from the inner srun's environment; see
+    # dev/docs/upstream_blockers.md.
+    - snakemake-executor-plugin-slurm-jobstep <0.6.1
     - snakemake-executor-plugin-cluster-generic
     # Bioinformatics tools are managed via per-rule conda environments
     # declared in workflow/envs/. Snakemake creates them on first use.

@@ -203,6 +203,8 @@ Note that this routing trades cluster `/tmp` pressure for metadata load on the p
 
 Start `epicc run` from a login or dev node rather than wrapping it in `sbatch`. When Snakemake detects it is already inside a SLURM allocation, `snakemake-executor-plugin-slurm` deletes every `SLURM_*` environment variable — `SLURM_CONF` included. On clusters where `SLURM_CONF` is the only route to `slurm.conf`, every submitted job then fails with `srun: fatal: Could not establish a configuration source`. If submitting from within a job is unavoidable, restore the path via the profile's `precommand`; see the comments in `profiles/slurm/config.yaml` and `dev/docs/upstream_blockers.md`.
 
+The same failure has a second cause that a login-node launch does *not* avoid: `snakemake-executor-plugin-slurm-jobstep` 0.6.1 strips `SLURM_CONF` from the environment it hands the inner `srun`, so every job fails no matter where the run was started, and `precommand` cannot restore it. `config/epicc-env.txt` pins the plugin below that release. If you built your environment before this pin was added, fix an existing one with `conda install -n epicc 'snakemake-executor-plugin-slurm-jobstep<0.6.1'`.
+
 Note that this interacts with the pre-building step above: if `conda env create` fails inside allocations on your cluster, run `epicc validate --build-envs` from the login node and then launch the run from the login node too.
 
 ## Sample file configuration

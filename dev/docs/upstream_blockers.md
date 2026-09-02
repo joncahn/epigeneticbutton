@@ -130,6 +130,47 @@ it before merging the entry; otherwise the file will rot.
   point the separate `bam2nuc` step can be dropped and the align-time flag +
   original nucleotide-report path restored.
 
+## `snakemake-executor-plugin-slurm-jobstep<0.6.1`
+
+- **Constraint:** jobstep 0.6.1 sanitizes the environment it hands the nested
+  `srun` (`__init__.py`, `popen_env`): every `SLURM_*` variable not on a
+  nine-name `keep_slurm` allow-list is dropped. `SLURM_CONF` is not on the
+  list. On clusters where `SLURM_CONF` is the only route to `slurm.conf` —
+  no `/etc/slurm/slurm.conf` on the compute nodes, path supplied by an
+  environment module, as on Bright Cluster Manager sites — the `srun` falls
+  through to a configless DNS SRV lookup and every rule dies:
+
+  ```
+  srun: error: resolve_ctls_from_dns_srv: res_nsearch error: Unknown host
+  srun: error: fetch_config: DNS SRV lookup failed
+  srun: error: _establish_config_source: failed to fetch config
+  srun: fatal: Could not establish a configuration source
+  ```
+
+  This is a *separate* bug from the `delete_slurm_environment()` entry below,
+  and worse: that one only fires when snakemake itself runs inside an
+  allocation, this one fires on every run regardless of where it was launched,
+  and the profile's `precommand` cannot rescue it — the strip happens inside
+  the job, downstream of anything the job shell exports. The same allow-list
+  drops `SLURM_MEM_PER_CPU`, which makes steps fall back to `DefMemPerCPU` and
+  get OOM-killed (upstream issue #53).
+- **Workaround:** pin `snakemake-executor-plugin-slurm-jobstep<0.6.1` in
+  `config/epicc-env.txt`, `pyproject.toml` and `conda-recipe/meta.yaml`.
+  0.6.0 has the same API surface (`pass_command_as_script`, `array_execs`)
+  and satisfies the submit plugin's `>=0.6.0,<1` requirement, so 2.8.0 pairs
+  with it unchanged.
+- **Upstream:**
+  - Regression: <https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep/pull/46>
+    (released as 0.6.1, 2026-05-27)
+  - Fix: <https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep/pull/52>
+    — one-line addition of `SLURM_CONF` to `keep_slurm`, open since 2026-07-09
+  - Memory fallout: <https://github.com/snakemake/snakemake-executor-plugin-slurm-jobstep/issues/53>
+- **Check:** `python -c "import snakemake_executor_plugin_slurm_jobstep as j, inspect; s = inspect.getsource(j.Executor.run_job); print('SLURM_CONF' in s or 'popen_env' not in s)"`
+  — prints `True` once the allow-list keeps `SLURM_CONF` (or the sanitization
+  is gone).
+- **Remove when:** PR #52 (or equivalent) ships in a release, at which point
+  the pin becomes `>=<that version>` or drops entirely.
+
 ## `delete_slurm_environment()` strips `SLURM_CONF`
 
 - **Constraint:** when Snakemake is launched from inside a SLURM allocation,
